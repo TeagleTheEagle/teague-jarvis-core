@@ -38,7 +38,7 @@ Not installed yet: requirements-wearables.txt (PC microphone input for wearables
 
 ```powershell
 .venv\Scripts\python.exe -m unittest                       # 271 tests, all pass
-cd desktop;      node --test test\*.test.cjs              # 32 tests, all pass
+cd desktop;      node --test test\*.test.cjs              # 34 tests, all pass
 cd intelligence; node --test test\*.test.cjs              # 18 tests, all pass
 Get-ChildItem test_*.cjs | ForEach-Object { node $_.Name } # 16 more root JS test scripts, all pass
 ```
