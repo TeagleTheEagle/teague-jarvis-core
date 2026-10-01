@@ -12,9 +12,11 @@ only records where the work stands. Historical handover context: `docs/PROJECT-C
   (2026-09-30, sealed); owner created `jarvis-s6-val`. Experiment 5 unconsumed, its budget
   frozen at 4/5 (that is the experiment budget, **not** a count of Stage 6 attempts).
   Stage 7 not started. Production cutover not authorized.
-- **The VM isolation proof is the blocker**, not the package. Read
-  `docs/stage6-freshvm/STAGE6-COMPLETION-PLAN.md`: options A/B/C and decisions D1–D9 await
-  the owner (Claude recommends option B).
+- **Owner chose option B and approved amendment v3 on 2026-10-01** ("i approve everything"):
+  the two unprovable isolation cases are dispositioned with a stated limitation, D1–D9 are
+  settled at their recommended selections, Claude Code is the executor. Record:
+  `../governance/STAGE6-AMENDMENT-v3-RECORD.json` (text `STAGE6-AMENDMENT-v3.md`, sha256
+  5f4d3b63…). Gate pointer still OWNER STOP #1R; no token issued; nothing executed.
 - **Release candidate: 1.0.10** (built from 915e906; regression, zip, Gate 18 and local
   Gate 17 rehearsals were running at the last status update, results in
   `docs/release-rehearsal-20261001/README.md` section 6). 1.0.8 passed the full regression;
@@ -31,9 +33,10 @@ Owner only (Claude must stop and ask, never infer or pre-stage tokens):
 
 1. ~~Confirm the release design choices~~ **Done: approved by the owner 2026-10-01**
    (recorded in `docs/RELEASE-DESIGN.md`, "Owner decision").
-2. Choose a way forward in `docs/stage6-freshvm/STAGE6-COMPLETION-PLAN.md` (A, B or C)
-   and settle D1–D9. Only then an execution prompt for Gate 16R can be drafted for approval.
-3. `RESUME_STAGE6_FRESH_VM` with that approved prompt; `RESUME_STAGE6_RECOVERY` before Gate 18.
+2. ~~Choose A/B/C and settle D1–D9~~ **Done 2026-10-01 (option B, amendment v3).**
+   Next: approve the Gate 16R execution prompt (`docs/stage6-freshvm/GATE16R-EXECUTION-PROMPT.md`
+   once drafted), then issue `RESUME_STAGE6_FRESH_VM` with it when ready.
+3. `RESUME_STAGE6_RECOVERY` before Gate 18.
 4. After Stage 6 passes: FINAL selection, switching the everyday JARVIS over, Stage 7.
    The owner's freeze from P0 still applies: keep VirtualBox closed under the owner account
    and do not install, upgrade or repair it until Gate 20.
@@ -87,6 +90,11 @@ because creating them changes the owner's real Desktop/Startup folders). Check o
   set. Tests and tools must not assume the process environment describes the installation
   under test (use `runtime_paths.config_dir_for(root)`); run suspect modules under an
   installed-style environment before building.
+- `tools/build_release.py` refuses to build from a dirty tree ("a release is built from HEAD
+  only"): commit everything before starting a build chain, or the whole chain cascades.
+- Maintenance commands (`installer.py uninstall/rollback/install`) must run with the
+  package's Python beside `release\`, never the installed release's own Python: they stop
+  every process running from the install folder, including that interpreter.
 - `$Home` and `$args` are PowerShell automatic variables: never use them as parameter or
   variable names in scripts (`$HOME` is read-only).
 - Do not read the sealed P0 evidence folder `D:\JARVIS-S6-FRESHVM\evidence\P0\` or the

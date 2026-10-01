@@ -119,6 +119,7 @@ launchers and their RECORD files) differ between releases; the sources do not.
 | 1.0.8-d326428391cc | d326428 | regression tests for the main-desktop header and delete/admission defects (15a1ad1) |
 | 1.0.9-37eb838823dc | 37eb838 | backup/restore from an installed release; installer phase timings |
 | 1.0.10-915e906516dc | 915e906 | owner-config location follows the installation; offline voice check uses the bundled model; zip 525,619,975 bytes, SHA-256 `a945b38a3aff733d3228d617812c8ab7f85f0f8b09c66b2aaed5212c2ec771d4` |
+| 1.0.11-60d406fb6398 | 60d406f | backup works while the Core runs; Core state, logs and session token never saved; zip 525,622,280 bytes, SHA-256 `1923651176dd3095e84b0628a5c7a90608b6db57fe06986670e0ea8246225a58` |
 
 **1.0.8 regression:** 318 Python, 36 desktop, 18 Intelligence, 16 JS scripts, all pass
 (`regression-1.0.8-report.json`).
@@ -177,7 +178,18 @@ unchanged. Against 1.0.10 the run **failed at step 2** (defect 6 above); rerun a
 
 **Gate 17 guest script, local rehearsal** (`tools/guest/Invoke-Gate17.ps1`, output
 `gate17_local_rehearsal-1.0.10.output.txt`; sandbox home on D:, `-NoShortcuts`,
-`-SkipBaseline` because this is a development PC): RESULT_PENDING_GATE17
+`-SkipBaseline` because this is a development PC). Against 1.0.10 (evidence folder
+`gate17-20261001-134026`): package identity, extract, `install.cmd` (shortcuts off), verify,
+launch (identity `1.0.10-915e906516dc` from the running Core, memory in the canonical
+folder, no process image outside the install), duplicate-Core fencing, **offline speech
+recognition with the bundled model (the defect-4 fix confirmed in the packaged release)**,
+and stop/verify/restart all PASS; **U1-uninstall FAIL** was a harness defect: the script ran
+maintenance commands with the installed release's Python, and `uninstall` first stops every
+process running from the install folder, so it stopped its own interpreter before removing
+anything (no output, 10,646 files untouched). Documented usage runs `installer.py` with the
+package's Python beside `release\`, which is what the script does now. Follow-up noted, not
+done: `installer.stop_running_jarvis` could exclude its own process defensively.
+Rerun against 1.0.11: RESULT_PENDING_GATE17
 
 Limitation recorded for both rehearsals: "clean shutdown" is scripted through
 `/api/shutdown` (the Core stops on request and releases its lock); the desktop shell then

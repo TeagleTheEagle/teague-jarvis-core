@@ -1,0 +1,57 @@
+{
+  "schema": "stage6-owner-amendment-record-v1",
+  "amendment_id": "STAGE6-ROUTE-FRESH-VM-20261001-v3",
+  "amends": "STAGE6-ROUTE-FRESH-VM-20260930-v2 (RECORDED_ACTIVE since the 2026-09-30 activation), only in the sections v3 names",
+  "recorded_utc": "2026-10-01T13:51:01Z",
+  "text": {
+    "path": "C:\\Users\\jonny\\JARVIS-claude-workspace\\governance\\STAGE6-AMENDMENT-v3.md",
+    "sha256": "5f4d3b63430863781d96530280018ae5b1dc574df7f5b4387142714cc44f6170",
+    "note": "The approved draft with only its status lines changed to record the approval."
+  },
+  "source_draft": {
+    "path": "repo\\docs\\stage6-freshvm\\AMENDMENT-v3-DRAFT.md",
+    "commit": "4fffc3e",
+    "sha256": "ce74f3ff3b98cef9f561a6af4e5d7f6d34edab76ab6ec6c3b8e9afad101e1427"
+  },
+  "owner_approval": {
+    "source": "Direct human message in the Claude Code chat, 2026-10-01, after the owner chose option B and read the draft",
+    "text": "i approve everything",
+    "preceding_owner_messages": ["what is A B C", "what's the best", "i don't have a spare pc", "what's next"],
+    "scope": "Section A dispositions A1-A5 and Section B selections D1-D9 as drafted, each D-item at its recommended selection (D8: the owner's real verified backup, copied read-only from E: by the owner)."
+  },
+  "effect": {
+    "status": "RECORDED_ACTIVE",
+    "dispositions": {
+      "7(e) broker case (VBoxSDS/VBoxSVC)": "APPROVED_DISPOSITION with stated limitation (A1)",
+      "7(e) short-name (8.3) alias case": "NOT_APPLICABLE_WITH_EVIDENCE when absent on the volume and fixture (A2); never enabled",
+      "7(b) two credential entries": "APPROVED_DISPOSITION, remain UNRESOLVED under the 2026-09-30 bounded decision (A3)",
+      "7(b) launch path": "APPROVED_DISPOSITION: VirtualBox UI under jarvis-s6-val with VBOX_USER_HOME on D:, no elevation (A4)",
+      "executor": "Claude Code in the engineer role wherever v2 names Codex; Codex reviews only on owner request (A5)"
+    },
+    "selections": {
+      "D1 prerequisites": "none; FRESH-PREREQ equals FRESH-CLEAN-BASELINE; cleanliness checks re-run after install",
+      "D2 media": "owner's existing official Win11_25H2_English_x64_v2.iso, hash compared with Microsoft's published value; acquisition date a recorded LIMITATION; else a fresh official download",
+      "D3 local account": "Microsoft-documented autounattend.xml on a second read-only ISO, one local standard account; STOP OWNER_DECISION_REQUIRED_FRESH_VM_ACCOUNT if refused",
+      "D4 egress and Guest Additions": "GA 7.2.18 from the installed VirtualBox's own ISO before FRESH-CLEAN-BASELINE; one shared folder to D:\\JARVIS-S6-FRESHVM\\evidence\\guest-egress-01\\ only, manual mount",
+      "D5 FINAL candidate": "1.0.11-60d406fb6398 if its regression, zip, Gate 18 and Gate 17 rehearsals pass; FINAL selection remains a separate owner act",
+      "D6 voice and providers": "offline local STT with the bundled model; no provider keys in Stage 6",
+      "D7 who runs what": "owner operates VirtualBox and the guest in the jarvis-s6-val session; Claude Code prepares, checkpoints on authorization, and verifies evidence",
+      "D8 Gate 18 backup": "the owner's real verified backup, copied read-only from E: (hash before and after), restored inside the guest into a second install folder; VM storage never leaves D:\\JARVIS-S6-FRESHVM\\; disposal is the Gate 20 owner decision",
+      "D9 timing bound": "set from measured per-phase values on the VM, never chosen in advance"
+    },
+    "gate_pointer": "OWNER STOP #1R (unchanged)",
+    "tokens_issued": "none; RESUME_STAGE6_FRESH_VM and RESUME_STAGE6_RECOVERY remain unissued and are never requested",
+    "execution_authorized": false,
+    "experiment5": "UNCONSUMED, budget frozen at 4/5 (unchanged)",
+    "rc_obligations": ["protected-original preservation mandatory", "backup/restore-source preservation mandatory"]
+  },
+  "unchanged": ["P0-P5 and the section 8 reference values", "owner freeze 7(f) and 7(g)", "zero silent retries", "no UAC", "secrets never emitted", "no production, no Stage 7", "AMENDMENT-v2 section 13 (not authorised)"],
+  "recording_checks": [
+    "v3 names only 7(b), 7(e), the executor and section 6 selections; every other v2 provision is untouched",
+    "no disposition is recorded as PASS",
+    "both R-C obligations are preserved",
+    "no token is issued, requested, simulated or pre-staged",
+    "the approved text is byte-identical to the draft except the status lines; both hashes recorded above"
+  ],
+  "recorded_by": "Claude Code (Claude Fable 5.1) under the owner's standing authority to prepare Stage 6 plans and evidence tooling. This record documents the owner's decision; it grants no authority of its own."
+}
