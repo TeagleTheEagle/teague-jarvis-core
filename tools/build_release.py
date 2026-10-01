@@ -86,11 +86,12 @@ def require(condition, message):
         raise SystemExit('BUILD REFUSED: ' + message)
 
 
-def build(version, make_zip=True):
+def build(version, make_zip=True, out_root=None):
     require(not git('status', '--porcelain', '--untracked-files=no').strip(), 'commit or stash changes first; a release is built from HEAD only.')
     commit = git('rev-parse', 'HEAD').decode().strip()
     name = f'JARVIS-{version}-{commit[:12]}'
-    out_root = BUILD / 'release'
+    out_root = Path(out_root) if out_root else BUILD / 'release'
+    out_root.mkdir(parents=True, exist_ok=True)
     tree = out_root / name
     require(not tree.exists(), f'{tree} already exists.')
     release = tree / 'release'
@@ -191,5 +192,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--version', required=True)
     parser.add_argument('--no-zip', action='store_true', help='rehearsal build: release tree only, no distributable zip')
+    parser.add_argument('--out', help='output folder (default build\release); e.g. a larger drive')
     args = parser.parse_args()
-    print(json.dumps(build(args.version, make_zip=not args.no_zip), indent=2))
+    print(json.dumps(build(args.version, make_zip=not args.no_zip, out_root=args.out), indent=2))
