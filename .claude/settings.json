@@ -1,0 +1,58 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git show *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git switch *)",
+      "Bash(git branch *)",
+      "Bash(python -m pytest *)",
+      "Bash(python -m unittest *)",
+      "Bash(node --test *)"
+    ],
+    "ask": [
+      "Bash(curl *)",
+      "PowerShell(Invoke-WebRequest *)",
+      "PowerShell(Invoke-RestMethod *)"
+    ],
+    "deny": [
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Edit(**/.env)",
+      "Edit(**/.env.*)",
+      "Read(**/*.db)",
+      "Read(**/*.sqlite*)",
+      "Read(**/.jarvis-session.json)",
+      "Edit(//c/Users/jonny/Documents/Codex/**)",
+      "Edit(//c/Users/jonny/OneDrive/**)",
+      "Edit(//c/Users/jonny/JARVIS-claude-workspace/reference/**)",
+      "Bash(git push *)",
+      "Bash(git remote add *)",
+      "Bash(git remote set-url *)",
+      "Bash(git config --global *)",
+      "Bash(git config --system *)",
+      "Bash(netsh *)",
+      "Bash(icacls *)",
+      "Bash(takeown *)",
+      "Bash(reg add *)",
+      "Bash(reg delete *)",
+      "Bash(runas *)",
+      "Bash(ssh *)",
+      "Bash(VBoxManage *)",
+      "PowerShell(git push *)",
+      "PowerShell(git remote add *)",
+      "PowerShell(git remote set-url *)",
+      "PowerShell(netsh *)",
+      "PowerShell(icacls *)",
+      "PowerShell(Set-Acl *)",
+      "PowerShell(New-NetFirewallRule *)",
+      "PowerShell(Set-NetFirewallRule *)",
+      "PowerShell(New-ItemProperty *)",
+      "PowerShell(Set-ItemProperty *)",
+      "PowerShell(VBoxManage *)"
+    ]
+  }
+}
