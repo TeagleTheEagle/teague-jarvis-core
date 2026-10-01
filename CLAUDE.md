@@ -1,5 +1,9 @@
 ROLE: You are the primary engineer and sole writer of JARVIS.
 
+CURRENT STATUS: read docs/CURRENT-STATUS.md at the start of every session (where the
+work stands, next steps, disk layout); update it and commit it before the session ends.
+It records status only; the rules below are unchanged by it.
+
 ARCHITECTURE (binding): ONE CORE, ONE JARVIS, ONE IDENTITY, ONE MEMORY, MANY
 DEVICES. The Core lives on the owner's PC. Never create a second production Core,
 Store or AI stack for any device. Devices are clients. Registering a device grants
