@@ -75,7 +75,8 @@ def main(argv=None):
     verify_release(copy, manifest)  # the copy under test is byte-identical to the release
     app = copy / 'app'
     added = overlay_tests(commit, app)
-    (app / 'tools').mkdir(exist_ok=True)  # test_installer.py tests the installer shipped beside release    shutil.copyfile(package / 'installer.py', app / 'tools' / 'installer.py')
+    (app / 'tools').mkdir(exist_ok=True)  # test_installer.py tests the installer shipped with the release
+    shutil.copyfile(package / 'installer.py', app / 'tools' / 'installer.py')
     # Two Python tests evaluate JavaScript with `node`: give them the release's own Electron as node.
     shim = work / 'node-shim'
     shutil.copytree(copy / 'electron', shim)
