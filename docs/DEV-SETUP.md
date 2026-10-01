@@ -101,3 +101,15 @@ output folder, `--no-zip` skips the distributable zip for rehearsal builds):
 own commit to the copy only, and runs every suite with the release's bundled Python and
 Electron (no .venv, no system node; data and config point at the scratch folder). It
 writes `regression-report.json` in the work folder and checks the release is unchanged.
+
+## Stage 6 tooling (fresh-VM route; see docs/stage6-freshvm/STAGE6-COMPLETION-PLAN.md)
+
+- `tools\New-PackageIso.ps1 -Payload <folder> -Out <iso>`: read-only package ISO with every
+  file's SHA-256 inside and the ISO's own hash beside it (Windows IMAPI2, no install, no
+  elevation). Packages enter the acceptance VM only this way.
+- `tools\guest\Invoke-Gate17.ps1`: the Gate 17 run inside the acceptance machine (PowerShell
+  5.1 only, nothing installed). Local rehearsal on this PC:
+  `-Package <folder with the zip and its .release.json> -Evidence <folder> -InstallHome D:\...\sandbox -NoShortcuts -SkipBaseline`.
+- `tools\host\Invoke-PreservationCheckpoint.ps1`: checkpoints P0–P5 under the owner account.
+  Without `-OwnerAuthorized` it only prints what it would read. Never run it on Claude's own
+  initiative: each checkpoint is an owner authorization.
