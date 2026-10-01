@@ -105,11 +105,20 @@ def read_current(home):
         return None
 
 
+def atomic_write(path, text):
+    """Write via a flushed side file and one rename, so a crash or power cut leaves the old or the new file."""
+    path = Path(path)
+    pending = path.with_name(path.name + '.pending')
+    with pending.open('w', encoding='utf-8', newline='') as f:
+        f.write(text)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(pending, path)
+
+
 def write_current(home, release_id, previous):
-    path = Path(home) / 'current.json'
-    pending = path.with_suffix('.json.pending')
-    pending.write_text(json.dumps({'release': release_id, 'previous': previous, 'switched_at': time.time()}), encoding='utf-8')
-    os.replace(pending, path)  # atomic: either the old or the new release is current
+    atomic_write(Path(home) / 'current.json',
+                 json.dumps({'release': release_id, 'previous': previous, 'switched_at': time.time()}))
 
 
 def stop_running_jarvis(home, timeout=30):
@@ -161,12 +170,20 @@ def install(package, home, shortcuts=True, stop=stop_running_jarvis, replace_leg
     releases = home / 'releases'
     for folder in (releases, home / 'data', home / 'config', home / 'profile'):
         folder.mkdir(parents=True, exist_ok=True)
-    for leftover in releases.glob('.incoming-*'):  # an earlier interrupted install
+    for leftover in [*releases.glob('.incoming-*'), *releases.glob('.damaged-*')]:  # an earlier interrupted install
         shutil.rmtree(leftover, ignore_errors=True)
     target = releases / release_id
+    current = read_current(home)
     if target.exists():
-        verify_release(target, manifest)
-    else:
+        try:
+            verify_release(target, manifest)
+        except InstallError:  # damaged: replace it from the package instead of refusing forever
+            if current and current['release'] == release_id:
+                stop(home)  # repairing the running release: its files must be free to move
+            damaged = releases / f'.damaged-{release_id}-{int(time.time())}'
+            os.replace(target, damaged)
+            shutil.rmtree(damaged, ignore_errors=True)
+    if not target.exists():
         incoming = releases / ('.incoming-' + release_id)
         shutil.copytree(source, incoming)
         verify_release(incoming, manifest)
@@ -174,11 +191,10 @@ def install(package, home, shortcuts=True, stop=stop_running_jarvis, replace_leg
     personality = home / 'config' / 'personality.txt'
     if not personality.exists():
         shutil.copyfile(target / 'app' / 'personality.txt', personality)
-    current = read_current(home)
     previous = current['release'] if current and current['release'] != release_id else (current or {}).get('previous')
     if current and current['release'] != release_id:
         stop(home)
-    (home / 'JARVIS.ps1').write_text(LAUNCHER, encoding='utf-8')
+    atomic_write(home / 'JARVIS.ps1', LAUNCHER)
     write_current(home, release_id, previous)
     if shortcuts:
         write_shortcuts(home)
@@ -208,7 +224,7 @@ def uninstall(home, remove_data=None, shortcuts=True, stop=stop_running_jarvis):
     releases = home / 'releases'
     if releases.is_dir():
         for release in releases.iterdir():
-            if release.name.startswith('.incoming-'):
+            if release.name.startswith(('.incoming-', '.damaged-')):
                 shutil.rmtree(release, ignore_errors=True)
                 continue
             try:

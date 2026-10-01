@@ -87,6 +87,68 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(self.current()['release'], '1.1.0-abc')
         self.assertFalse((self.home / 'releases' / '.incoming-1.1.0-abc').exists())
 
+    def test_a_crash_at_any_update_step_leaves_a_startable_jarvis_and_a_rerun_finishes(self):
+        real_copytree, real_replace = shutil.copytree, installer.os.replace
+
+        def half_copy(src, dst, **kw):  # power cut part-way through copying the new release
+            files = sorted(p for p in Path(src).rglob('*') if p.is_file())
+            for p in files[:len(files) // 2]:
+                (Path(dst) / p.relative_to(src)).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(p, Path(dst) / p.relative_to(src))
+            raise OSError('power cut')
+
+        def replace_fails_for(suffix):  # crash just before one rename (flushed side file already written)
+            def replace(src, dst):
+                if str(src).endswith(suffix):
+                    raise OSError('power cut')
+                return real_replace(src, dst)
+            return patch.object(installer.os, 'replace', side_effect=replace)
+
+        def crash(exc=OSError('power cut')):
+            raise exc
+
+        faults = {
+            'part-way through copying': lambda: patch.object(installer.shutil, 'copytree', side_effect=half_copy),
+            'before the release folder is renamed into place': lambda: replace_fails_for('.incoming-1.1.0-abc'),
+            'while stopping the running JARVIS': lambda: patch.object(self, 'stop', side_effect=lambda h: crash()),
+            'while writing the launcher': lambda: replace_fails_for('JARVIS.ps1.pending'),
+            'while switching current.json': lambda: replace_fails_for('current.json.pending'),
+            'while writing shortcuts': lambda: patch.object(installer, 'write_shortcuts', side_effect=lambda h: crash()),
+        }
+        for step, fault in faults.items():
+            with self.subTest(step=step):
+                shutil.rmtree(self.home, ignore_errors=True)
+                self.install(self.v1)
+                (self.home / 'data' / 'jarvis.sqlite3').write_bytes(b'memory')
+                with patch.object(installer, 'write_shortcuts'), fault(), self.assertRaises(OSError):  # never real shortcuts
+                    installer.install(self.v2, self.home, shortcuts=True, stop=lambda h: self.stop(h))
+                current = self.current()['release']
+                self.assertIn(current, ('1.0.0-abc', '1.1.0-abc'))
+                installer.verify_release(self.home / 'releases' / current)  # whichever is current is intact
+                self.assertEqual((self.home / 'JARVIS.ps1').read_text(encoding='utf-8'), installer.LAUNCHER)
+                self.assertEqual((self.home / 'data' / 'jarvis.sqlite3').read_bytes(), b'memory')
+                self.install(self.v2)  # running the installer again completes the update
+                self.assertEqual((self.current()['release'], self.current()['previous']), ('1.1.0-abc', '1.0.0-abc'))
+                installer.verify_release(self.home / 'releases' / '1.1.0-abc')
+                self.assertEqual([p.name for p in (self.home / 'releases').iterdir() if p.name.startswith('.')], [])
+                self.assertEqual((self.home / 'data' / 'jarvis.sqlite3').read_bytes(), b'memory')
+        self.assertIs(installer.shutil.copytree, real_copytree)
+
+    def test_a_damaged_installed_release_is_repaired_by_reinstalling(self):
+        self.install(self.v1)
+        self.install(self.v2)
+        (self.home / 'releases' / '1.1.0-abc' / 'app' / 'server.py').write_bytes(b'# damaged')
+        self.stops.clear()
+        self.install(self.v2)  # the running release: JARVIS is stopped, then the folder is replaced
+        installer.verify_release(self.home / 'releases' / '1.1.0-abc')
+        self.assertEqual(len(self.stops), 1)
+        self.assertEqual((self.current()['release'], self.current()['previous']), ('1.1.0-abc', '1.0.0-abc'))
+        (self.home / 'releases' / '1.0.0-abc' / 'app' / 'server.py').unlink()
+        self.install(self.v1)  # a damaged older release is repaired too
+        installer.verify_release(self.home / 'releases' / '1.0.0-abc')
+        self.assertEqual(self.current()['release'], '1.0.0-abc')
+        self.assertEqual([p.name for p in (self.home / 'releases').iterdir() if p.name.startswith('.')], [])
+
     def test_rollback_and_refusals(self):
         self.install(self.v1)
         with self.assertRaises(installer.InstallError):
