@@ -21,3 +21,24 @@ desktop/.jarvis-session.json
 *.sqlite3-shm
 *.pem
 *.key
+
+# Workspace secret/runtime exclusions
+.env
+.env.*
+!.env.example
+data/
+**/data/
+logs/
+*.log
+*.jsonl
+*.db
+*.sqlite*
+.jarvis-session.json
+**/.jarvis-session.json
+sessions/
+.venv/
+venv/
+node_modules/
+__pycache__/
+.cache/
+caches/
