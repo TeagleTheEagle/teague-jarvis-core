@@ -82,8 +82,12 @@ def main(argv=None):
     shutil.copytree(copy / 'electron', shim)
     shutil.copyfile(shim / 'electron.exe', shim / 'node.exe')
 
-    for folder in ('data', 'config', 'models-unused', 'home'):
-        (work / folder).mkdir(parents=True, exist_ok=True)
+    # A brand-new Windows account, laid out as Windows lays it out (one shared folder for
+    # profile, AppData and Temp is not realistic and makes browsers refuse to start).
+    home = work / 'home'
+    local, roaming, temp = home / 'AppData' / 'Local', home / 'AppData' / 'Roaming', home / 'AppData' / 'Local' / 'Temp'
+    for folder in (work / 'data', work / 'config', roaming, temp):
+        folder.mkdir(parents=True, exist_ok=True)
     python, electron = copy / 'python' / 'python.exe', copy / 'electron' / 'electron.exe'
     keep = ('SYSTEMROOT', 'SYSTEMDRIVE', 'WINDIR', 'COMSPEC', 'PATHEXT', 'NUMBER_OF_PROCESSORS', 'PROCESSOR_ARCHITECTURE',
             'PROGRAMFILES', 'PROGRAMFILES(X86)', 'PROGRAMW6432', 'PROGRAMDATA', 'ALLUSERSPROFILE',
@@ -91,8 +95,8 @@ def main(argv=None):
     env = {k: v for k, v in os.environ.items() if k.upper() in keep}
     env.update({'PATH': os.pathsep.join([str(python.parent), str(Path(os.environ['SYSTEMROOT']) / 'System32'),
                                          str(Path(os.environ['SYSTEMROOT']) / 'System32' / 'WindowsPowerShell' / 'v1.0')]),
-                'TEMP': str(work / 'home'), 'TMP': str(work / 'home'), 'USERPROFILE': str(work / 'home'),
-                'LOCALAPPDATA': str(work / 'home'), 'APPDATA': str(work / 'home'),
+                'TEMP': str(temp), 'TMP': str(temp), 'USERPROFILE': str(home),
+                'LOCALAPPDATA': str(local), 'APPDATA': str(roaming),
                 'JARVIS_DATA_DIR': str(work / 'data'), 'JARVIS_CONFIG_DIR': str(work / 'config'),
                 'JARVIS_MODELS_DIR': str(copy / 'models'), 'JARVIS_PYTHON': str(python),
                 'PYTHONDONTWRITEBYTECODE': '1', 'PYTHONIOENCODING': 'utf-8'})

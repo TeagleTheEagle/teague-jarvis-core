@@ -5,8 +5,10 @@ import json
 import mimetypes
 import re
 import sqlite3
+import sys
 import threading
 import time
+import traceback
 import uuid
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -109,9 +111,10 @@ INIT = r"""(() => {
 
 def launch_browser(playwright):
     """Microsoft Edge, present on every Windows 11 PC, else installed Chrome. Playwright's own
-    browser downloads are never used, so the release has no hidden browser dependency."""
+    browser downloads are never used, so the release has no hidden browser dependency.
+    Each is tried twice: a browser's first start on a new Windows account can exit at once."""
     failure = None
-    for channel in ('msedge', 'chrome'):
+    for channel in ('msedge', 'msedge', 'chrome', 'chrome'):
         try:
             return playwright.chromium.launch(channel=channel, headless=True)
         except Exception as exc:
@@ -257,6 +260,8 @@ def run(root, database, origin, arguments, transmit=False, analyzer=None, provid
         elif transmit:
             report['limitations'].append('No vision analyzer available; no external request made.')
     except Exception:
+        # Diagnosable from data/logs/core.log; the report itself stays free of internals.
+        print('Interface inspection failed: ' + traceback.format_exc(limit=6)[-3000:], file=sys.stderr, flush=True)
         report['errors'].append('Inspection unavailable or rendering failed. No success is claimed; check worker installation and rendering tests.')
     finally:
         report['duration_ms']=round((time.perf_counter()-started)*1000)
