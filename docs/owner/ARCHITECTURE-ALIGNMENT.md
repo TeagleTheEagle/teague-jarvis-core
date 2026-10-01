@@ -12,6 +12,6 @@ Compares docs/owner/JARVIS-MASTER-ARCHITECTURE.md with the claude/main code.
 | §5 Discovery is not permission; device registry | device_registry.py: registration grants no tool authority | Aligned; network discovery (mDNS/ARP) not implemented |
 | §7 Remote access via private networking (Tailscale-style) | Core bound to 127.0.0.1 only | Deferred by owner decision (2026-10-01) |
 | §8 Native SwiftUI iOS app in Xcode | Repository holds only ios/JARVIS/{Domain,SessionModel,MockCoreClient}.swift | The Xcode project is not in this workspace; supply it if iOS work starts |
-| §9 Brilliant Labs Halo glasses | wearables/ code and AGENTS.md refer to Meta glasses ("No physical Meta integration is authorized yet"); no Halo/Brilliant references | **Mismatch: owner to confirm which glasses are the target** |
+| §9 Brilliant Labs Halo glasses | wearables/ code and AGENTS.md refer to Meta glasses ("No physical Meta integration is authorized yet"); no Halo/Brilliant references | **Owner decision 2026-10-01: the target glasses are Brilliant Labs (Halo).** Meta references are historical. Physical glasses integration is still not started and needs its own go-ahead; the AGENTS.md hardware caution applies to Halo too. |
 | §14 Tesla, §15 Mark I / ESP32 | No code | Future, as the document states |
 | §17 Codex as engineering operator | Superseded: Claude Code is sole writer, Codex reviewer-only (governance/OWNER-DELEGATION.md) | Document predates delegation |
