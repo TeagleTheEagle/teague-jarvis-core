@@ -19,8 +19,9 @@ Releases were built with `tools/build_release.py --no-zip --out D:\JARVIS-releas
 | 1.0.4-5eb1df88bf4a | 5eb1df8 | installer: crash-safe launcher/current.json, damaged-release repair |
 | 1.0.5-4838941b3037 | 4838941 | inspection renders with Edge instead of a hidden Chrome dependency |
 | 1.0.6-c31cccf9ee1a | c31cccf | inspection retries a failed first browser start; failures logged to core.log |
+| 1.0.7-6c356bf982de | 6c356bf | same sources as 1.0.6; built with the distributable zip |
 
-Release records (`*.release.json`) for 1.0.2, 1.0.3, 1.0.4 and 1.0.6 are in this folder.
+Release records (`*.release.json`) for 1.0.2, 1.0.3, 1.0.4, 1.0.6 and 1.0.7 are in this folder.
 
 ## 1. Lifecycle rehearsal, 1.0.2 → 1.0.3 (superseded by section 4)
 
@@ -94,9 +95,26 @@ Every step passed:
 | Reinstall 1.0.6 | installed; memory restored |
 | Verify installed files | verified |
 
+## 5. Distributable zip, 1.0.7
+
+1.0.7-6c356bf982de was built **with** its zip (`build_release.py --version 1.0.7 --out ...`),
+from commit 6c356bf (this evidence; application sources identical to 1.0.6). Zip:
+525,590,739 bytes, SHA-256 `024c6166866a505700019d25f95e1e8f99dc34ab2f0fa011c81be6bbd4995396`.
+
+`zip_install_rehearsal.py`, output `zip_install_rehearsal.output.txt`: the zip matches the
+hash in its release record; Windows `Expand-Archive` extracts `install.cmd`, `installer.py`
+and `release\`; `install.cmd --home <sandbox> --no-shortcuts` installs in 27 s (exit 0);
+JARVIS launches (8 processes, Core answering); verify after use passes; uninstall removes
+10,645 program files, keeps `data`/`config`/`profile`, leaves 0 processes and 0 program files.
+
+Full regression on 1.0.7 itself (`regression-1.0.7-report.json`): 316 Python, 34 desktop,
+18 Intelligence and 16 JS scripts, all pass. It was rerun rather than inherited from 1.0.6
+because build-time files that record the build folder (bytecode, pip console-script
+launchers and their RECORD files) differ between releases; the sources do not.
+
 ## Not covered (still needed before or during Stage 6)
 
-- The distributable zip: building it, extracting it, and installing with `install.cmd`.
-- Desktop and Startup shortcuts (all runs used `--no-shortcuts`).
+- Desktop and Startup shortcuts (all runs used `--no-shortcuts`; creating them changes the
+  owner's real Desktop and Startup folders).
 - A clean Windows 11 machine (Gate 16R, owner only): no development tools, no Chrome.
 - Real providers and audible voice (owner configuration; not part of this rehearsal).
