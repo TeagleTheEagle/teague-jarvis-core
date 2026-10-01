@@ -39,8 +39,8 @@ PERSONAL_CONFIG = {'app/personality.txt': 'personality.txt', 'app/desktop/prefer
 def personal_config_targets(root):
     """Where the owner's personality and desktop preferences live: the config folder in an
     installed release (never inside the verified program files), beside the code in development."""
-    config = runtime_paths.config_dir()
-    if runtime_paths.installed() and config.resolve() != Path(root).resolve():
+    config = runtime_paths.config_dir_for(root)
+    if config != Path(root).resolve():
         return {'app/personality.txt': config / 'personality.txt', 'app/desktop/preferences.json': config / 'preferences.json'}
     return {name: Path(root) / target for name, target in PERSONAL_CONFIG.items()}
 

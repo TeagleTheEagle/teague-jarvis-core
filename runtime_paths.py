@@ -53,6 +53,19 @@ def config_dir():
     return home / 'config' if home else APP_ROOT
 
 
+def config_dir_for(root):
+    """The owner-config folder of the installation whose app folder is `root`: this process's
+    configured folder when root is this code's own folder; the install layout beside root when
+    root is another installed release; otherwise root itself (development keeps config beside
+    the code). Tools that operate on a given installation must use this, not config_dir()."""
+    root = Path(root).resolve()
+    if root == ROOT:
+        return config_dir()
+    if root.name == 'app' and root.parent.parent.name == 'releases' and (root.parent / 'manifest.json').is_file():
+        return root.parent.parent.parent / 'config'
+    return root
+
+
 def models_dir():
     # Development keeps downloaded models in the repository's data folder, independent of
     # any --data-dir used by tests.

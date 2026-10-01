@@ -76,8 +76,8 @@ def owner_config(root):
     """The owner's personality and desktop preferences when they live outside the program
     (installed release, config folder). In development they are already under root."""
     import runtime_paths
-    config=runtime_paths.config_dir()
-    if not runtime_paths.installed() or config.resolve()==Path(root).resolve(): return {}
+    config=runtime_paths.config_dir_for(root)
+    if config==Path(root).resolve(): return {}
     files=(('app/personality.txt','personality.txt'),('app/desktop/preferences.json','preferences.json'))
     return {name:config/file for name,file in files if (config/file).is_file()}
 

@@ -1,7 +1,7 @@
 from contextlib import closing
 import json
-import os
 from pathlib import Path
+import shutil
 import sqlite3
 import tempfile
 import unittest
@@ -100,16 +100,16 @@ class RecoveryTests(unittest.TestCase):
 
     def test_installed_release_backs_up_the_owner_configuration_not_the_shipped_defaults(self):
         (self.root/'personality.txt').write_text('shipped default')
-        home=self.base/'home';(home/'config').mkdir(parents=True)
-        (home/'config'/'personality.txt').write_text('owner personality');(home/'config'/'preferences.json').write_text('{"owner":true}')
         selected,_=recovery.inventory(self.root,self.data)
         self.assertEqual(selected['app/personality.txt'],self.root/'personality.txt')  # development: beside the code
-        with patch.dict(os.environ,{'JARVIS_DATA_DIR':str(self.data),'JARVIS_CONFIG_DIR':str(home/'config')}):
-            selected,_=recovery.inventory(self.root,self.data)
-            backup=self.manager.create()
+        home=self.base/'home';app=home/'releases'/'1.0.0-abc'/'app';(home/'config').mkdir(parents=True)
+        shutil.copytree(self.root,app);(app.parent/'manifest.json').write_text('{"product":"JARVIS"}')  # an installed release's layout
+        (home/'config'/'personality.txt').write_text('owner personality');(home/'config'/'preferences.json').write_text('{"owner":true}')
+        selected,_=recovery.inventory(app,self.data)
         self.assertEqual(selected['app/personality.txt'],home/'config'/'personality.txt')
         self.assertEqual(selected['app/desktop/preferences.json'],home/'config'/'preferences.json')
-        with zipfile.ZipFile(self.manager.archive(backup['id'])) as z:
+        backup=recovery.Recovery(app,self.data,home/'data-backups').create()
+        with zipfile.ZipFile(home/'data-backups'/(backup['id']+'.zip')) as z:
             self.assertEqual(z.read('app/personality.txt'),b'owner personality')
 
     def test_concurrent_operation_rejected(self):

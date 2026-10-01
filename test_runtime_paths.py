@@ -54,6 +54,16 @@ class RuntimePathTests(unittest.TestCase):
                 (Path(config) / 'personality.txt').write_text('Owner personality.', encoding='utf-8')
                 self.assertEqual(runtime_paths.personality_file(), Path(config) / 'personality.txt')
 
+    def test_config_folder_follows_the_installation_being_operated_on(self):
+        with tempfile.TemporaryDirectory() as base, patch.dict(os.environ, {'JARVIS_CONFIG_DIR': base}):
+            base = Path(base)
+            self.assertEqual(runtime_paths.config_dir_for(runtime_paths.ROOT), base)  # this code's own installation: as configured
+            app = base / 'home' / 'releases' / '1.0.0-abc' / 'app'
+            app.mkdir(parents=True)
+            self.assertEqual(runtime_paths.config_dir_for(app), app.resolve())  # no manifest: development layout, config beside the code
+            (app.parent / 'manifest.json').write_text('{}', encoding='utf-8')
+            self.assertEqual(runtime_paths.config_dir_for(app), (base / 'home' / 'config').resolve())  # another installed release
+
     def test_offline_voice_check_uses_the_release_models_not_a_development_path(self):
         import importlib
         import check_voice_offline
