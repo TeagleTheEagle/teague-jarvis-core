@@ -1,9 +1,24 @@
 {
-  "file": "Win11_25H2_English_x64_v2.iso",
-  "bytes": 8471603200,
-  "sha256": "768984706b909479417b2368438909440f2967ff05c6a9195ed2667254e465e3",
-  "file_modified_local": "2026-09-17 16:27:19",
-  "hashed_utc": "2026-10-01T14:08:04Z",
-  "seconds": 58,
-  "microsoft_published_hash": "NOT YET COMPARED (step 0.3 of the Gate 16R prompt)"
+  "schema": "stage6-media-verification-v1",
+  "owner_iso": {
+    "file": "Win11_25H2_English_x64_v2.iso",
+    "path": "D:\\C-drive-overflow\\Users\\jonny\\Downloads\\",
+    "bytes": 8471603200,
+    "sha256": "768984706b909479417b2368438909440f2967ff05c6a9195ed2667254e465e3",
+    "file_modified_local": "2026-09-17 16:27:19",
+    "hashed_utc": "2026-10-01T14:08:04Z",
+    "hash_seconds": 58,
+    "acquisition_url_and_date": "not recorded at download time (LIMITATION under AMENDMENT-v2 6(a))"
+  },
+  "microsoft_published": {
+    "page": "https://www.microsoft.com/en-au/software-download/windows11",
+    "read_utc": "2026-10-01T14:10:00Z",
+    "current_release_on_page": "Windows 11 2026 Update, version 26H2",
+    "selection": "Windows 11 (multi-edition ISO for x64 devices), English (United States)",
+    "english_64bit_sha256": "BD4307DF32BC8AF33B39CCECB1174AEB345386630F89A2B86C7A4E36B55EA650",
+    "english_international_64bit_sha256": "7E3F373BD3C2321B5D5125DFCF718DFBF1A0ABC50A267118669951890DF98A5D",
+    "note": "The page publishes hashes for the current release only; no 25H2 value is published."
+  },
+  "result": "NO PUBLISHED HASH EXISTS for the owner's 25H2 ISO (the published English 64-bit value is for 26H2 and does not match, as expected). Per AMENDMENT-v3 D2: either record the 25H2 ISO as a LIMITATION (official media, but hash unverifiable against Microsoft and acquisition date unrecorded) or obtain a fresh official 26H2 download from microsoft.com by the owner, whose SHA-256 must then equal BD4307DF...EA650, with URL, date, size and hash recorded.",
+  "recommendation": "Fresh official 26H2 download by the owner (no limitation on the media; the answer file and Gate 17 script are version-independent)."
 }
