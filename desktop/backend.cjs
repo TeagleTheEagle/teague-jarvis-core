@@ -35,7 +35,9 @@ async function coreAlive(link){
 }
 function spawnBackgroundCore(root,dataDir){
  const logs=path.join(dataDir||path.join(root,'data'),'logs');fs.mkdirSync(logs,{recursive:true});
- const out=fs.openSync(path.join(logs,'core.log'),'a');
+ const log=path.join(logs,'core.log');
+ try{if(fs.statSync(log).size>5*1024*1024)fs.renameSync(log,log+'.1');}catch{} // keep one previous 5 MB log
+ const out=fs.openSync(log,'a');
  const env={...process.env};delete env.JARVIS_DESKTOP_TOKEN;delete env.ELECTRON_RUN_AS_NODE;
  const child=spawn(path.join(root,'.venv','Scripts','python.exe'),['-u',path.join(root,'server.py'),'--port','0','--background',...(dataDir?['--data-dir',dataDir]:[])],{cwd:root,detached:true,windowsHide:true,env,stdio:['ignore',out,out]});
  fs.closeSync(out);child.unref();
@@ -59,7 +61,7 @@ async function connectCore(root,options={}){
     // Another Core owns this data folder. If it is a background Core started by another
     // client at the same moment, its connection file appears shortly; attach to it.
     started=false;refusedAt||=Date.now();
-    if(Date.now()-refusedAt>5000){const error=new Error('JARVIS is already running as the browser version, which other apps cannot join. Close it, then open JARVIS again.');error.code='CORE_ALREADY_RUNNING';throw error;}
+    if(Date.now()-refusedAt>5000){const error=new Error('Another JARVIS (the browser version, or an older or test copy) already owns this memory and cannot be joined. Close it, then open JARVIS again.');error.code='CORE_ALREADY_RUNNING';throw error;}
    }else if(code!==null){
     const error=new Error('JARVIS Core exited during startup. See data/logs/core.log.');error.code='CORE_START_FAILED';throw error;
    }

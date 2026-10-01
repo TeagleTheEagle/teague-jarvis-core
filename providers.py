@@ -464,15 +464,27 @@ def audio_mime(audio):
     return 'audio/wav' if audio[:4] == b'RIFF' else 'audio/mpeg'
 
 
+def qwen_tts_url():
+    """Qwen-TTS endpoint: DASHSCOPE_TTS_URL if set (for workspace-style accounts whose
+    synthesis address differs), otherwise derived from the chat base URL. Alibaba hosts only."""
+    explicit = os.getenv('DASHSCOPE_TTS_URL', '').strip()
+    if explicit:
+        parsed = urllib.parse.urlparse(explicit)
+        if parsed.scheme != 'https' or not (parsed.hostname or '').endswith('.aliyuncs.com'):
+            raise ProviderError('DASHSCOPE_TTS_URL must be an https://….aliyuncs.com Model Studio address.')
+        return explicit
+    base = qwen_base()
+    if not base.endswith('/compatible-mode/v1'):
+        raise ProviderError('DASHSCOPE_BASE_URL must end with /compatible-mode/v1, or set DASHSCOPE_TTS_URL.')
+    return base[:-len('/compatible-mode/v1')] + '/api/v1/services/aigc/multimodal-generation/generation'
+
+
 def qwen_speech(text):
     """Cloned JARVIS voice through Model Studio non-real-time Qwen-TTS."""
     key, voice = os.getenv('DASHSCOPE_API_KEY'), os.getenv('QWEN_TTS_VOICE')
     if not (key and voice):
         raise ProviderError('Qwen voice needs DASHSCOPE_API_KEY and QWEN_TTS_VOICE (your cloned voice ID).')
-    base = qwen_base()
-    if not base.endswith('/compatible-mode/v1'):
-        raise ProviderError('DASHSCOPE_BASE_URL must end with /compatible-mode/v1.')
-    endpoint = base[:-len('/compatible-mode/v1')] + '/api/v1/services/aigc/multimodal-generation/generation'
+    endpoint = qwen_tts_url()
     model = os.getenv('QWEN_TTS_MODEL', QWEN_TTS_DEFAULT_MODEL)
     clips = []
     for chunk in speech_chunks(text):

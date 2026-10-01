@@ -59,3 +59,19 @@ class LocalSpeechTests(unittest.TestCase):
         self.assertTrue(self.engine.status()['loaded'])
         self.assertTrue(self.engine.lock.acquire(False))  # lock released after warm-up
         self.engine.lock.release()
+
+    def test_request_during_warm_up_waits_instead_of_failing_busy(self):
+        import threading, time
+        (self.engine.directory / 'model.bin').touch()
+        def transcribe(samples, **kwargs):
+            return iter([SimpleNamespace(text=' Ready. ')]), None
+        self.engine.lock.acquire()
+        self.engine.warming.set()          # simulate preload() in progress
+        def finish_warm_up():
+            time.sleep(0.3)
+            self.engine.model = SimpleNamespace(transcribe=transcribe)
+            self.engine.warming.clear()
+            self.engine.lock.release()
+        threading.Thread(target=finish_warm_up).start()
+        result = self.engine.transcribe({'data': base64.b64encode(bytes(3200)).decode()})
+        self.assertEqual(result['text'], 'Ready.')

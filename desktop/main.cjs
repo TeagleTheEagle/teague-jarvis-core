@@ -20,7 +20,10 @@ if(!app.requestSingleInstanceLock()){app.quit();}else{
  app.whenReady().then(start).catch(async(error)=>{if((process.argv.includes('--smoke-test')||process.argv.includes('--animation-test')||process.argv.includes('--live-test')))require('node:fs').writeFileSync(path.join(__dirname,'smoke-result.json'),JSON.stringify({passed:false,error:String(error)}));else dialog.showErrorBox('JARVIS desktop',['CORE_ALREADY_RUNNING','CORE_START_FAILED'].includes(error?.code)?error.message:'The desktop shell could not start. The browser version has not been stopped. Check that the JARVIS Python environment exists.');await quit();});
 }
 function show(){if(win&&!win.isDestroyed()){if(win.isMinimized())win.restore();win.show();win.focus();win.webContents.send('jarvis:reset-navigation');if(resumeMicOnShow){resumeMicOnShow=false;win.webContents.send('jarvis:resume-mic');}}}
-function stop(){liveGrantUntil=0;capture?.stop();backend?.stop();if(win&&!win.isDestroyed()){win.webContents.send('jarvis:stop');}}
+// stopLocal: this app's own activity (screen grant, capture, mic/speech in the window).
+// stop: emergency stop for the whole shared Core (tray, shortcut, companion STOP ALL).
+function stopLocal(){liveGrantUntil=0;capture?.stop();if(win&&!win.isDestroyed()){win.webContents.send('jarvis:stop');}}
+function stop(){stopLocal();backend?.stop();}
 async function quit(stopCore=false){if(quitting)return;quitting=true;updates?.close();liveGrantUntil=0;capture?.stop();unwatchCore?.();if(stopCore)await backend?.shutdown();else await backend?.quit();try{require('node:fs').unlinkSync(sessionFile);}catch{}globalShortcut.unregisterAll();companion?.destroy();tray?.destroy();app.quit();}
 async function start(){
  app.setAppUserModelId('local.jarvis.desktop');
@@ -91,7 +94,7 @@ async function start(){
  win.webContents.on('will-navigate',(event,url)=>{if(!trusted(url,origin)){event.preventDefault();openExternal(url);}});
  win.webContents.on('will-redirect',(event,url)=>{if(!trusted(url,origin))event.preventDefault();});
  win.webContents.on('render-process-gone',()=>{capture?.stop();backend.stop();dialog.showErrorBox('JARVIS desktop','The interface stopped. Voice requests were cancelled. Quit and relaunch JARVIS Desktop.');});
- win.on('close',event=>{if(!quitting){event.preventDefault();stop();resumeMicOnShow=!!preferences.micOnLaunch;win.hide();}});
+ win.on('close',event=>{if(!quitting){event.preventDefault();stopLocal();resumeMicOnShow=!!preferences.micOnLaunch;win.hide();}});
  win.on('show',()=>win.webContents.setAudioMuted(false));
  unwatchCore=backend.watch(()=>{if(!quitting){dialog.showErrorBox('JARVIS desktop','The JARVIS Core stopped. Open JARVIS again to restart it.');void quit();}});
  tray=new Tray(nativeImage.createFromPath(path.join(__dirname,'tray.png')));

@@ -91,5 +91,15 @@ class QwenVoiceTests(unittest.TestCase):
             self.assertEqual(store.settings()['voice_profile'], 'qwen')
 
 
+    def test_tts_url_override_for_workspace_accounts_is_alibaba_only(self):
+        os.environ['DASHSCOPE_BASE_URL'] = 'https://ws1.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1'
+        os.environ['DASHSCOPE_TTS_URL'] = 'https://dashscope-intl.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation'
+        self.assertEqual(providers.qwen_tts_url(), os.environ['DASHSCOPE_TTS_URL'])
+        os.environ['DASHSCOPE_TTS_URL'] = 'https://evil.example/tts'
+        with patch.object(providers, 'request') as request, self.assertRaises(providers.ProviderError):
+            providers.speech('Hello.', 'qwen')
+        request.assert_not_called()
+
+
 if __name__ == '__main__':
     unittest.main()
