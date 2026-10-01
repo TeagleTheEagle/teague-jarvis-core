@@ -192,6 +192,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--version', required=True)
     parser.add_argument('--no-zip', action='store_true', help='rehearsal build: release tree only, no distributable zip')
-    parser.add_argument('--out', help='output folder (default build\release); e.g. a larger drive')
+    parser.add_argument('--out', help='output folder (default build/release); e.g. a larger drive')
     args = parser.parse_args()
     print(json.dumps(build(args.version, make_zip=not args.no_zip, out_root=args.out), indent=2))
