@@ -22,15 +22,25 @@ The downloaded electron.exe SHA-256 is
 `07b043bf9b0a0ac14a82fac0b612b7b7ed13cde727d706d74e41a45278ab51f1`, identical to the
 binary used by the twelve-fix Electron verification.
 
-Optional, not installed yet: requirements-local-voice.txt (local speech-to-text) and
-requirements-wearables.txt (PC microphone input for wearables).
+Local voice (installed and verified 2026-10-01; the VC++ x64 runtime was already present):
+
+```powershell
+.venv\Scripts\python.exe -m pip install -r requirements-local-voice.txt   # faster-whisper 1.2.1, ctranslate2 4.8.2
+.venv\Scripts\python.exe setup_local_voice.py                             # Whisper base.en -> data\speech-models
+.venv\Scripts\python.exe check_voice_offline.py                           # network blocked; must transcribe the test sentence
+```
+
+The first model load after a download or reboot can take about a minute (measured
+51 s once, then 0.6 s); a background Core warms the model at startup.
+Not installed yet: requirements-wearables.txt (PC microphone input for wearables).
 
 ## Test
 
 ```powershell
-.venv\Scripts\python.exe -m unittest                       # 263 tests, all pass
+.venv\Scripts\python.exe -m unittest                       # 271 tests, all pass
 cd desktop;      node --test test\*.test.cjs              # 32 tests, all pass
 cd intelligence; node --test test\*.test.cjs              # 18 tests, all pass
+Get-ChildItem test_*.cjs | ForEach-Object { node $_.Name } # 16 more root JS test scripts, all pass
 ```
 
 The desktop backend test needs the wake models from setup_wake.py.

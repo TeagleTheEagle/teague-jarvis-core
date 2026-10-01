@@ -16,6 +16,20 @@ class LocalSTT:
                 'loaded': self.model is not None, 'engine': 'Whisper base.en · CPU int8',
                 'cloud_fallback': False}
 
+    def preload(self):
+        """Load the installed model ahead of first use (a cold Windows load can take ~1 minute).
+
+        Holds the transcription lock while loading, so a request during warm-up gets the
+        existing 'busy' answer instead of starting a second load."""
+        if self.model is not None or not self.status()['installed']:
+            return False
+        with self.lock:
+            if self.model is None:
+                from faster_whisper import WhisperModel
+                self.model = WhisperModel(str(self.directory), device='cpu', compute_type='int8',
+                                          cpu_threads=4, local_files_only=True)
+        return True
+
     def transcribe(self, body):
         import numpy as np
         raw = base64.b64decode(body.get('data', ''), validate=True)

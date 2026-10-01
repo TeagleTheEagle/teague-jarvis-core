@@ -1058,6 +1058,14 @@ def main():
             # Core has none and stops only through the authenticated /api/shutdown.
             threading.Thread(target=desktop_control, daemon=True).start()
     if args.background:
+        # The background Core starts at login, long before the first spoken command:
+        # warm the local speech model then rather than on first use.
+        def warm_speech():
+            try:
+                server.app.local_stt.preload()
+            except Exception:
+                pass  # Optional voice failures are reported by the voice endpoint.
+        threading.Thread(target=warm_speech, daemon=True).start()
         ownership.publish_connection(origin, os.environ['JARVIS_DESKTOP_TOKEN'])
     print(f'JARVIS ready at {origin}', flush=True)
     try:

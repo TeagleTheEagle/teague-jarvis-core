@@ -43,3 +43,19 @@ class LocalSpeechTests(unittest.TestCase):
         result = self.engine.transcribe({'data': base64.b64encode(bytes(3200)).decode()})
         self.assertEqual(result['text'], 'Hello sir.')
         self.assertTrue(result['local'])
+
+    def test_preload_skips_missing_model_and_loads_installed_model_once(self):
+        import sys
+        from unittest.mock import patch
+        self.assertFalse(self.engine.preload())          # nothing installed: no load, no error
+        (self.engine.directory / 'model.bin').touch()
+        loads = []
+        fake = SimpleNamespace(WhisperModel=lambda *args, **kwargs: loads.append(kwargs) or SimpleNamespace())
+        with patch.dict(sys.modules, {'faster_whisper': fake}):
+            self.assertTrue(self.engine.preload())
+            self.assertFalse(self.engine.preload())      # already loaded
+        self.assertEqual(len(loads), 1)
+        self.assertTrue(loads[0]['local_files_only'])    # never downloads during warm-up
+        self.assertTrue(self.engine.status()['loaded'])
+        self.assertTrue(self.engine.lock.acquire(False))  # lock released after warm-up
+        self.engine.lock.release()
