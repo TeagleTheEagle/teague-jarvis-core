@@ -909,8 +909,7 @@ class Handler(BaseHTTPRequestHandler):
                 if set(body)-{'action','id'}: raise ValueError('Unknown recovery fields.')
                 operation=body.get('action')
                 if operation not in ('list','create','rehearse','restore'):raise ValueError('Unknown recovery operation.')
-                backup_folder=ROOT.parent/'jarvis-backups' if self.app.store.root==(ROOT/'data').resolve() else self.app.store.root.parent/(self.app.store.root.name+'-backups')
-                service=recovery.Recovery(ROOT,self.app.store.root,backup_folder)
+                service=recovery.Recovery(ROOT,self.app.store.root,recovery.default_folder(ROOT,self.app.store.root))
                 try:
                     if operation=='list': result=service.listing()
                     elif operation=='create': result=service.create()

@@ -26,6 +26,7 @@ import zipfile
 
 import core_lock
 import recovery
+import runtime_paths
 
 ROOT = Path(__file__).resolve().parent
 # Present only in this installation; an import never replaces them.
@@ -33,6 +34,15 @@ PROTECTED = {core_lock.LOCK_NAME, core_lock.OWNER_NAME, core_lock.CONNECTION_NAM
              'wake-models', 'logs', 'dev-electron-profile'}
 DATABASE_SIDE_FILES = ('jarvis.sqlite3-wal', 'jarvis.sqlite3-shm')
 PERSONAL_CONFIG = {'app/personality.txt': 'personality.txt', 'app/desktop/preferences.json': 'desktop/preferences.json'}
+
+
+def personal_config_targets(root):
+    """Where the owner's personality and desktop preferences live: the config folder in an
+    installed release (never inside the verified program files), beside the code in development."""
+    config = runtime_paths.config_dir()
+    if runtime_paths.installed() and config.resolve() != Path(root).resolve():
+        return {'app/personality.txt': config / 'personality.txt', 'app/desktop/preferences.json': config / 'preferences.json'}
+    return {name: Path(root) / target for name, target in PERSONAL_CONFIG.items()}
 
 
 def plan(archive, data_dir, root=ROOT):
@@ -49,10 +59,10 @@ def plan(archive, data_dir, root=ROOT):
         imported[name] = entry
     tops = sorted({recovery.safe_name(n).parts[1] for n in imported})
     replaced = sorted(t for t in tops if (data_dir / t).exists()) + [s for s in DATABASE_SIDE_FILES if (data_dir / s).exists()]
-    config = {}
+    config, targets = {}, personal_config_targets(root)
     for name, target in PERSONAL_CONFIG.items():
         if name in manifest['files']:
-            current = root / target
+            current = targets[name]
             same = current.is_file() and recovery.digest(current) == manifest['files'][name]['sha256']
             config[target] = 'same' if same else 'differs'
     return manifest, imported, skipped, replaced, config
@@ -91,7 +101,9 @@ def apply(archive, data_dir, root=ROOT, include_personal_config=False):
             with zipfile.ZipFile(archive) as z:
                 for name, target in PERSONAL_CONFIG.items():
                     if config.get(target) == 'differs':
-                        (root / target).write_bytes(z.read(name))
+                        destination = personal_config_targets(root)[name]
+                        destination.parent.mkdir(parents=True, exist_ok=True)
+                        destination.write_bytes(z.read(name))
                         written.append(target)
     except BaseException:
         for item in placed:  # undo: remove what was placed, put back what was moved aside
@@ -112,7 +124,8 @@ def apply(archive, data_dir, root=ROOT, include_personal_config=False):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--archive', required=True, help='Verified backup .zip created by recovery.py in the old installation')
-    parser.add_argument('--data', default=str(ROOT / 'data'))
+    parser.add_argument('--data', default=str(runtime_paths.data_dir()),
+                        help='saved-data folder (default: the installed data folder, else <app>/data)')
     parser.add_argument('--apply', action='store_true', help='Import (default is a dry run that changes nothing)')
     parser.add_argument('--include-personal-config', action='store_true',
                         help='Also take personality.txt and desktop/preferences.json from the backup where they differ')

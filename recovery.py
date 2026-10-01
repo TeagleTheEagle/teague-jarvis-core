@@ -42,6 +42,13 @@ def publish_backup(source,destination):
         if pending.exists():pending.unlink()
 
 
+def default_folder(root, data):
+    """Backups live beside the app in development and beside the data folder in an installed
+    release (docs/RELEASE-DESIGN.md), never inside the release's program files."""
+    root, data = Path(root).resolve(), Path(data).resolve()
+    return root.parent/'jarvis-backups' if data == root/'data' else data.parent/(data.name+'-backups')
+
+
 def safe_name(name):
     p = PurePosixPath(name)
     if not name or '\x00' in name or '\\' in name or ':' in name or p.is_absolute() or p.as_posix()!=name or any(x in ('..','.') or x.endswith((' ','.')) for x in name.split('/')):
@@ -65,6 +72,16 @@ def tree_files(folder):
             if not name.startswith('.env') and p.suffix not in ('.pyc',): yield p
 
 
+def owner_config(root):
+    """The owner's personality and desktop preferences when they live outside the program
+    (installed release, config folder). In development they are already under root."""
+    import runtime_paths
+    config=runtime_paths.config_dir()
+    if not runtime_paths.installed() or config.resolve()==Path(root).resolve(): return {}
+    files=(('app/personality.txt','personality.txt'),('app/desktop/preferences.json','preferences.json'))
+    return {name:config/file for name,file in files if (config/file).is_file()}
+
+
 def inventory(root, data):
     selected={}
     for p in root.iterdir():
@@ -78,6 +95,9 @@ def inventory(root, data):
                 if p.suffix not in ('.py','.md','.js','.css','.html'): continue
             if folder=='desktop' and p.name not in ('package.json','pnpm-lock.yaml','preferences.json','tray.png') and p.suffix not in ('.cjs','.js','.css','.html','.md'): continue
             selected['app/'+p.relative_to(root).as_posix()]=p
+    for name,source in owner_config(root).items():  # the owner's copies replace the shipped defaults
+        if source.is_symlink(): raise ValueError('Linked configuration file.')
+        selected[name]=source
     excluded=[]
     for p in data.iterdir():
         if p.name in ('jarvis.sqlite3','jarvis.sqlite3-wal','jarvis.sqlite3-shm'): continue
@@ -235,7 +255,11 @@ if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action',choices=['create','list','verify','rehearse','restore'])
     parser.add_argument('--id');parser.add_argument('--root',default=str(Path(__file__).parent))
-    args=parser.parse_args();root=Path(args.root).resolve();recovery=Recovery(root,root/'data')
+    parser.add_argument('--data',help='saved-data folder (default: the installed data folder, else <root>/data)')
+    args=parser.parse_args();root=Path(args.root).resolve()
+    import runtime_paths
+    data=Path(args.data).resolve() if args.data else (runtime_paths.data_dir() if runtime_paths.installed() else root/'data')
+    recovery=Recovery(root,data,default_folder(root,data))
     if args.action=='create':result=recovery.create()
     elif args.action=='list':result=recovery.listing()
     elif args.action=='rehearse':result=recovery.rehearse(args.id)

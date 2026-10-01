@@ -1,5 +1,6 @@
 from contextlib import closing
 import json
+import os
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -91,6 +92,25 @@ class RecoveryTests(unittest.TestCase):
             with self.assertRaises(ValueError):self.manager.create()
         self.assertEqual(self.manager.listing()['backups'],[])
         self.assertTrue((self.data/'jarvis.sqlite3').exists())
+
+    def test_default_backup_folder_is_never_inside_program_files(self):
+        self.assertEqual(recovery.default_folder(self.root,self.data),(self.base/'jarvis-backups').resolve())  # development: beside the app
+        home=self.base/'home';app=home/'releases'/'1.0.0-abc'/'app'
+        self.assertEqual(recovery.default_folder(app,home/'data'),(home/'data-backups').resolve())  # installed: beside the data
+
+    def test_installed_release_backs_up_the_owner_configuration_not_the_shipped_defaults(self):
+        (self.root/'personality.txt').write_text('shipped default')
+        home=self.base/'home';(home/'config').mkdir(parents=True)
+        (home/'config'/'personality.txt').write_text('owner personality');(home/'config'/'preferences.json').write_text('{"owner":true}')
+        selected,_=recovery.inventory(self.root,self.data)
+        self.assertEqual(selected['app/personality.txt'],self.root/'personality.txt')  # development: beside the code
+        with patch.dict(os.environ,{'JARVIS_DATA_DIR':str(self.data),'JARVIS_CONFIG_DIR':str(home/'config')}):
+            selected,_=recovery.inventory(self.root,self.data)
+            backup=self.manager.create()
+        self.assertEqual(selected['app/personality.txt'],home/'config'/'personality.txt')
+        self.assertEqual(selected['app/desktop/preferences.json'],home/'config'/'preferences.json')
+        with zipfile.ZipFile(self.manager.archive(backup['id'])) as z:
+            self.assertEqual(z.read('app/personality.txt'),b'owner personality')
 
     def test_concurrent_operation_rejected(self):
         recovery.LOCK.acquire()

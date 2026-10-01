@@ -165,7 +165,15 @@ def remove_shortcuts(name=SHORTCUT):
 def install(package, home, shortcuts=True, stop=stop_running_jarvis, replace_legacy_shortcuts=False):
     package, home = Path(package), Path(home)
     source = package / 'release'
+    timings, clock = {}, time.perf_counter()
+
+    def lap(phase):  # measured phases for the update-timing evidence (Gate 19)
+        nonlocal clock
+        timings[phase] = round(time.perf_counter() - clock, 3)
+        clock = time.perf_counter()
+
     manifest = verify_release(source)  # refuse a damaged or tampered package before touching anything
+    lap('verify_package')
     release_id = manifest['release_id']
     releases = home / 'releases'
     for folder in (releases, home / 'data', home / 'config', home / 'profile'):
@@ -186,7 +194,9 @@ def install(package, home, shortcuts=True, stop=stop_running_jarvis, replace_leg
     if not target.exists():
         incoming = releases / ('.incoming-' + release_id)
         shutil.copytree(source, incoming)
+        lap('copy')
         verify_release(incoming, manifest)
+        lap('verify_copy')
         os.replace(incoming, target)
     personality = home / 'config' / 'personality.txt'
     if not personality.exists():
@@ -194,13 +204,15 @@ def install(package, home, shortcuts=True, stop=stop_running_jarvis, replace_leg
     previous = current['release'] if current and current['release'] != release_id else (current or {}).get('previous')
     if current and current['release'] != release_id:
         stop(home)
+        lap('stop')
     atomic_write(home / 'JARVIS.ps1', LAUNCHER)
     write_current(home, release_id, previous)
+    lap('switch')
     if shortcuts:
         write_shortcuts(home)
         if replace_legacy_shortcuts:  # owner switch-over: the old JARVIS no longer starts at login
             remove_shortcuts(LEGACY_SHORTCUT)
-    return {'status': 'installed', 'release': release_id, 'previous': previous, 'home': str(home)}
+    return {'status': 'installed', 'release': release_id, 'previous': previous, 'home': str(home), 'seconds': timings}
 
 
 def rollback(home, stop=stop_running_jarvis):

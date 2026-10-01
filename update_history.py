@@ -6,6 +6,8 @@ import time
 import uuid
 from pathlib import Path
 
+import runtime_paths
+
 LOCK = threading.RLock()
 
 
@@ -58,7 +60,7 @@ def history(root, data_root, backend_revision):
         notes = json.loads(notes_path.read_text(encoding='utf-8'))
     except (OSError, ValueError):
         notes = []
-    return {'source_revision': current['revision'], 'backend_start_revision': backend_revision,
+    return {'installed_release': runtime_paths.release_id(), 'source_revision': current['revision'], 'backend_start_revision': backend_revision,
             'frontend_files': {k:v for k,v in current['files'].items() if k in ('static/app.js','static/assistant-controls.js')},
             'source_changed_since_backend_start': current['revision'] != backend_revision,
             'limitations': 'Backend-start revision is not proof of which frontend scripts are loaded. Automatic entries record observed file changes, not authorship, tests, or every edit between observations.',

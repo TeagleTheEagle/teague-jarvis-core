@@ -2,9 +2,9 @@
 
 Open **Settings → Backup & recovery**. Choose **Create verified backup**, then **Test restore in temporary folder**. A passing rehearsal confirms extraction, all file checksums, SQLite integrity and table row counts. It does not prove microphone, model or full application behaviour.
 
-Backups are saved beside the app in `outputs/jarvis-backups`. They contain saved personal information and are not encrypted. They are not uploaded, and no automatic deletion or retention rotation is enabled. Keep a protected copy on another disk for disk-loss recovery; a backup on this disk cannot provide that protection.
+Backups are saved beside the app in `outputs/jarvis-backups` when JARVIS runs from its source folder, and in `data-backups` beside the `data` folder of an installed release (`%LOCALAPPDATA%\JARVIS\data-backups` by default), never inside the release's program files. They contain saved personal information and are not encrypted. They are not uploaded, and no automatic deletion or retention rotation is enabled. Keep a protected copy on another disk for disk-loss recovery; a backup on this disk cannot provide that protection.
 
-Included: the complete SQLite database (all tables), generated documents, inspection archives when present, development proposals and backups, update-history records, source files, launch/setup scripts, desktop preferences, requirements and Node lockfile. SQLite online backup includes committed WAL data; a bounded write reservation prevents database mutations during the snapshot. Source/data files are hashed before and after copying; concurrent changes abort publication. Finish activity and stop editing before backup. Other processes may briefly wait on the database lock.
+Included: the complete SQLite database (all tables), generated documents, inspection archives when present, development proposals and backups, update-history records, source files, launch/setup scripts, your personality and desktop preferences (from the `config` folder of an installed release), requirements and Node lockfile. SQLite online backup includes committed WAL data; a bounded write reservation prevents database mutations during the snapshot. Source/data files are hashed before and after copying; concurrent changes abort publication. Finish activity and stop editing before backup. Other processes may briefly wait on the database lock.
 
 Excluded: `.env` and API credentials; Python/Node installed dependencies; downloaded speech/wake model caches; Windows shortcuts; Electron/browser cache and unsaved drafts; review/test artifacts outside saved data. Imported document text is in SQLite; external original files not copied into JARVIS remain outside the backup. This is a source/data recovery bundle, not a self-contained installer. Preserve/reconfigure credentials separately. Do not delete your current installation after making a backup.
 
@@ -18,7 +18,7 @@ No one-click replacement of the live installation is provided. Restore the separ
 
 ## Command-line use
 
-From the JARVIS folder with its existing Python environment:
+From the JARVIS source folder with its development Python environment:
 
 ```powershell
 .\.venv\Scripts\python.exe recovery.py create
@@ -26,6 +26,15 @@ From the JARVIS folder with its existing Python environment:
 .\.venv\Scripts\python.exe recovery.py verify --id BACKUP_ID
 .\.venv\Scripts\python.exe recovery.py rehearse --id BACKUP_ID
 .\.venv\Scripts\python.exe recovery.py restore --id BACKUP_ID
+```
+
+From an installed release, use its bundled Python; the command finds the install's own
+`data` and `config` folders from where it runs (quit JARVIS first for `create`):
+
+```powershell
+cd $env:LOCALAPPDATA\JARVIS
+$r = "releases\" + (Get-Content current.json | ConvertFrom-Json).release
+& "$r\python\python.exe" "$r\app\recovery.py" create
 ```
 
 Rehearsals remove their own disposable extraction folders after checking them and retain a small receipt beside the archive. Backups have a 2 GiB uncompressed / 20,000-entry limit. Duplicate paths, path traversal, reserved Windows names, linked files, checksum failures, unsupported manifests and existing destinations are rejected. If a backup fails, retry when activity is idle; no success is reported and no partial ZIP is published.

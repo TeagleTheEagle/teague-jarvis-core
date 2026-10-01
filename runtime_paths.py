@@ -24,22 +24,54 @@ def _env_path(name):
     return Path(value) if value else None
 
 
+def install_home():
+    """The per-user install folder when this code runs from an installed release
+    (<home>\\releases\\<id>\\app, beside the release manifest); None in development. Lets the
+    shipped command lines (recovery.py, switch_over.py) find the install without the launcher."""
+    if ROOT.name == 'app' and ROOT.parent.parent.name == 'releases' and (ROOT.parent / 'manifest.json').is_file():
+        return ROOT.parent.parent.parent
+    return None
+
+
 def installed():
-    return _env_path('JARVIS_DATA_DIR') is not None
+    return _env_path('JARVIS_DATA_DIR') is not None or install_home() is not None
 
 
 def data_dir():
-    return _env_path('JARVIS_DATA_DIR') or ROOT / 'data'
+    configured = _env_path('JARVIS_DATA_DIR')
+    if configured:
+        return configured
+    home = install_home()
+    return home / 'data' if home else ROOT / 'data'
 
 
 def config_dir():
-    return _env_path('JARVIS_CONFIG_DIR') or APP_ROOT
+    configured = _env_path('JARVIS_CONFIG_DIR')
+    if configured:
+        return configured
+    home = install_home()
+    return home / 'config' if home else APP_ROOT
 
 
 def models_dir():
     # Development keeps downloaded models in the repository's data folder, independent of
     # any --data-dir used by tests.
-    return _env_path('JARVIS_MODELS_DIR') or ROOT / 'data'
+    configured = _env_path('JARVIS_MODELS_DIR')
+    if configured:
+        return configured
+    return ROOT.parent / 'models' if install_home() else ROOT / 'data'
+
+
+def release_id():
+    """The installed release's identity from its manifest (docs/RELEASE-DESIGN.md); None in development."""
+    manifest = ROOT.parent / 'manifest.json'
+    if not installed() or not manifest.is_file():
+        return None
+    try:
+        import json
+        return json.loads(manifest.read_text(encoding='utf-8')).get('release_id')
+    except (OSError, ValueError):
+        return None
 
 
 def env_file():

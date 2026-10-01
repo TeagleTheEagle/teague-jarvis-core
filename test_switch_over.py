@@ -73,6 +73,17 @@ class SwitchOverTests(unittest.TestCase):
         self.assertEqual(result['personal_config_written'], ['personality.txt'])
         self.assertEqual((self.new / 'personality.txt').read_text(encoding='utf-8'), 'Old personality.\n')
 
+    def test_installed_release_restores_personal_config_into_the_config_folder(self):
+        home = self.new.parent / 'home'
+        (home / 'config').mkdir(parents=True)
+        with patch.dict(os.environ, {'JARVIS_DATA_DIR': str(self.data), 'JARVIS_CONFIG_DIR': str(home / 'config')}):
+            manifest, imported, skipped, replaced, config = switch_over.plan(self.archive, self.data, self.new)
+            self.assertEqual(config['personality.txt'], 'differs')  # the config folder has none yet
+            result = switch_over.apply(self.archive, self.data, self.new, include_personal_config=True)
+        self.assertEqual(result['personal_config_written'], ['personality.txt'])
+        self.assertEqual((home / 'config' / 'personality.txt').read_text(encoding='utf-8'), 'Old personality.\n')
+        self.assertEqual((self.new / 'personality.txt').read_text(encoding='utf-8'), 'New personality.\n')  # program files untouched
+
     def test_refuses_while_jarvis_is_running(self):
         running = core_lock.CoreLock(self.data)
         self.addCleanup(running.release)

@@ -71,6 +71,7 @@ class InstallerTests(unittest.TestCase):
         (self.home / 'config' / 'personality.txt').write_bytes(b'Owner personality.')
         result = self.install(self.v2)
         self.assertEqual(result['previous'], '1.0.0-abc')
+        self.assertEqual(set(result['seconds']), {'verify_package', 'copy', 'verify_copy', 'stop', 'switch'})  # update-timing evidence
         self.assertEqual(self.current(), {**self.current(), 'release': '1.1.0-abc', 'previous': '1.0.0-abc'})
         self.assertEqual(len(self.stops), 1)  # the running JARVIS is stopped before the switch
         self.assertEqual((self.home / 'data' / 'jarvis.sqlite3').read_bytes(), b'memory')

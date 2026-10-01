@@ -30,6 +30,23 @@ class RuntimePathTests(unittest.TestCase):
                 self.assertEqual(runtime_paths.models_dir(), home / 'release' / 'models')
                 self.assertEqual(runtime_paths.wearable_connection_file(), home / 'config' / '.env.wearable-connection.json')
 
+    def test_installed_release_is_found_from_its_own_layout_without_the_launcher(self):
+        with tempfile.TemporaryDirectory() as home, patch.dict(os.environ, {k: '' for k in LAYOUT}):
+            home = Path(home)
+            app = home / 'releases' / '1.0.0-abc' / 'app'
+            app.mkdir(parents=True)
+            with patch.object(runtime_paths, 'ROOT', app):
+                self.assertFalse(runtime_paths.installed())  # no manifest beside the app: development layout
+                (app.parent / 'manifest.json').write_text('{"product": "JARVIS", "release_id": "1.0.0-abc"}', encoding='utf-8')
+                self.assertTrue(runtime_paths.installed())
+                self.assertEqual(runtime_paths.install_home(), home)
+                self.assertEqual(runtime_paths.data_dir(), home / 'data')
+                self.assertEqual(runtime_paths.config_dir(), home / 'config')
+                self.assertEqual(runtime_paths.models_dir(), app.parent / 'models')
+                self.assertEqual(runtime_paths.release_id(), '1.0.0-abc')
+            with patch.object(runtime_paths, 'ROOT', home / 'elsewhere' / 'app'):
+                self.assertIsNone(runtime_paths.release_id())
+
     def test_personality_prefers_owner_config_then_shipped_default(self):
         with tempfile.TemporaryDirectory() as config:
             with patch.dict(os.environ, {'JARVIS_CONFIG_DIR': config}):
