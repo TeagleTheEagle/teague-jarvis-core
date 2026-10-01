@@ -10,7 +10,11 @@ function startBackend(root,options={}){
   let buffer='';const timer=setTimeout(()=>{child.kill();reject(new Error('JARVIS backend did not become ready within 90 seconds.'));},90000);
   child.once('error',()=>{clearTimeout(timer);reject(new Error('Could not start the existing JARVIS Python runtime.'));});
   child.once('exit',()=>{clearTimeout(timer);reject(new Error('JARVIS backend exited before startup completed.'));});
-  child.stdout.on('data',data=>{buffer=(buffer+data.toString()).slice(-4096);const match=buffer.match(/JARVIS ready at (http:\/\/127\.0\.0\.1:\d+)/);if(match){clearTimeout(timer);resolve({origin:match[1],token});}});
+  child.stdout.on('data',data=>{buffer=(buffer+data.toString()).slice(-4096);
+   // One Core per data folder: a second start is refused rather than sharing memory.
+   const owned=buffer.match(/JARVIS Core is already running for this data folder[^\r\n]*/);
+   if(owned){clearTimeout(timer);const error=new Error(owned[0]);error.code='CORE_ALREADY_RUNNING';reject(error);return;}
+   const match=buffer.match(/JARVIS ready at (http:\/\/127\.0\.0\.1:\d+)/);if(match){clearTimeout(timer);resolve({origin:match[1],token});}});
  });
  function stop(){if(child.exitCode===null&&!child.killed)child.stdin.write('stop\n');}
  async function quit(){if(!child.pid||child.exitCode!==null||child.killed)return;await new Promise(resolve=>{const timer=setTimeout(()=>{child.kill();resolve();},4000);child.once('exit',()=>{clearTimeout(timer);resolve();});child.stdin.end('quit\n');});}

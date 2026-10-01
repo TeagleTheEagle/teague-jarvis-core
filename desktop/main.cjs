@@ -17,7 +17,7 @@ if(!app.requestSingleInstanceLock()){app.quit();}else{
  app.on('second-instance',()=>show());
  app.on('before-quit',event=>{if(!quitting){event.preventDefault();void quit();}});
  app.on('window-all-closed',()=>{});
- app.whenReady().then(start).catch(async(error)=>{if((process.argv.includes('--smoke-test')||process.argv.includes('--animation-test')||process.argv.includes('--live-test')))require('node:fs').writeFileSync(path.join(__dirname,'smoke-result.json'),JSON.stringify({passed:false,error:String(error)}));else dialog.showErrorBox('JARVIS desktop','The desktop shell could not start. The browser version has not been stopped. Check that the JARVIS Python environment exists.');await quit();});
+ app.whenReady().then(start).catch(async(error)=>{if((process.argv.includes('--smoke-test')||process.argv.includes('--animation-test')||process.argv.includes('--live-test')))require('node:fs').writeFileSync(path.join(__dirname,'smoke-result.json'),JSON.stringify({passed:false,error:String(error)}));else dialog.showErrorBox('JARVIS desktop',error?.code==='CORE_ALREADY_RUNNING'?error.message+' Close the other JARVIS window (or the browser version) first: only one JARVIS Core may own its memory.':'The desktop shell could not start. The browser version has not been stopped. Check that the JARVIS Python environment exists.');await quit();});
 }
 function show(){if(win&&!win.isDestroyed()){if(win.isMinimized())win.restore();win.show();win.focus();win.webContents.send('jarvis:reset-navigation');if(resumeMicOnShow){resumeMicOnShow=false;win.webContents.send('jarvis:resume-mic');}}}
 function stop(){liveGrantUntil=0;capture?.stop();backend?.stop();if(win&&!win.isDestroyed()){win.webContents.send('jarvis:stop');}}

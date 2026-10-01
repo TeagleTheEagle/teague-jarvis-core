@@ -1008,11 +1008,20 @@ def main():
     parser.add_argument('--port', type=int, default=int(os.getenv('JARVIS_PORT', '8765')))
     parser.add_argument('--data-dir', default=str(ROOT / 'data'))
     args = parser.parse_args()
+    import core_lock
+    try:
+        # One Core per data folder: claim ownership before touching the store.
+        ownership = core_lock.CoreLock(args.data_dir)
+    except core_lock.CoreAlreadyRunning as exc:
+        print(str(exc), flush=True)
+        sys.exit(core_lock.ALREADY_RUNNING_EXIT_CODE)
     try:
         server = Server(('127.0.0.1', args.port), Handler)
     except OSError:
+        ownership.release()
         print('Port unavailable. JARVIS may already be running; open http://127.0.0.1:' + str(args.port))
         return
+    ownership.publish(server.server_port)
     server.app = App(args.data_dir)
     from wearables.service import publish_connection
     wearable_connection = publish_connection(server)
@@ -1043,6 +1052,7 @@ def main():
         for run in server.app.runs.values():
             run.cancel.set()
         server.server_close()
+        ownership.release()
 
 
 if __name__ == '__main__':

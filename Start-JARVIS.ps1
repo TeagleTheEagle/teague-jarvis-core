@@ -18,6 +18,19 @@ if (Test-Path -LiteralPath $jarvisConfig) {
     }
 }
 $jarvisUrl = "http://127.0.0.1:$jarvisPort"
+# One Core per data folder: if another launcher (normally the desktop app) already owns
+# the Core on a different port, do not start a second JARVIS that shares its memory.
+$jarvisOwnerFile = Join-Path $jarvisRoot 'data/core-owner.json'
+if (Test-Path -LiteralPath $jarvisOwnerFile) {
+    try {
+        $jarvisOwner = Get-Content -LiteralPath $jarvisOwnerFile -Raw | ConvertFrom-Json
+        if ($jarvisOwner.port -ne $jarvisPort -and (Get-Process -Id $jarvisOwner.pid -ErrorAction SilentlyContinue)) {
+            Add-Type -AssemblyName PresentationFramework
+            [void][System.Windows.MessageBox]::Show('JARVIS is already running in the desktop app. Use that window (or quit it first): only one JARVIS Core may own its memory.', 'JARVIS')
+            exit 0
+        }
+    } catch {}
+}
 $jarvisAlreadyRunning = $false
 try {
     $jarvisResponse = Invoke-WebRequest -Uri $jarvisUrl -UseBasicParsing -TimeoutSec 2

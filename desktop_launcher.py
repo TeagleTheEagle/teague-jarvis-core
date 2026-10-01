@@ -16,7 +16,13 @@ def main():
     try:
         for _ in range(40):
             try: urllib.request.urlopen(url, timeout=1).close(); break
-            except Exception: time.sleep(.25)
+            except Exception: pass
+            if process is not None and process.poll() == 3:
+                # core_lock.ALREADY_RUNNING_EXIT_CODE: another Core owns this data folder on
+                # a different port (normally the desktop app). Do not start a second Core.
+                print('JARVIS is already running in the desktop app; not starting a second Core.')
+                return
+            time.sleep(.25)
         edge = Path(os.environ.get('ProgramFiles(x86)', 'C:/Program Files (x86)')) / 'Microsoft/Edge/Application/msedge.exe'
         subprocess.Popen([str(edge), '--app=' + url]) if edge.exists() else os.startfile(url)
         if process is not None: process.wait()

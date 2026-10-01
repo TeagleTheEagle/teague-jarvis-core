@@ -15,3 +15,13 @@ test('desktop update script is served by the authenticated backend',async()=>{
   assert.match(await response.text(),/bridge\.onUpdateAvailable/);
  }finally{await b.quit();}
 });
+test('one Core per data folder: a second desktop backend is refused, not started',async()=>{
+ const folder=fs.mkdtempSync(path.join(os.tmpdir(),'jarvis-one-core-'));
+ const first=startBackend(path.resolve(__dirname,'../..'),{dataDir:folder});
+ try{
+  await first.ready;
+  const second=startBackend(path.resolve(__dirname,'../..'),{dataDir:folder});
+  await assert.rejects(second.ready,error=>error.code==='CORE_ALREADY_RUNNING'&&/already running for this data folder/.test(error.message));
+  await second.quit();
+ }finally{await first.quit();}
+});
