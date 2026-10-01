@@ -41,6 +41,8 @@ def request(url, data=None, headers=None, method=None, raw=False, timeout=35):
     service = {'api.openai.com': 'OpenAI', 'api.fish.audio': 'Fish Audio', 'api.groq.com': 'Groq', 'serpapi.com': 'SerpApi', 'api.search.brave.com': 'Brave Search'}.get(host, 'External service')
     if host == 'generativelanguage.googleapis.com':
         service = 'Gemini'
+    elif (host or '').endswith('.aliyuncs.com'):
+        service = 'Qwen'
     path = urllib.parse.urlparse(url).path
     operation = 'transcription' if 'transcriptions' in path else 'voice synthesis' if 'tts' in path or 'text-to-speech' in path else 'chat' if 'completions' in path else 'request'
     prefix = f'{service} {operation}: '
@@ -83,6 +85,13 @@ def capabilities():
                       model=os.getenv('GEMINI_MODEL', 'gemini-2.5-flash'),
                       vision_provider='Gemini', vision=configured)
         return result
+    if os.getenv('JARVIS_PROVIDER', '').lower() == 'qwen':
+        result = _base_capabilities()
+        configured = bool(os.getenv('DASHSCOPE_API_KEY'))
+        result.update(brain='Qwen configured' if configured else 'Qwen not configured',
+                      model=os.getenv('QWEN_MODEL', QWEN_DEFAULT_MODEL),
+                      vision_provider='Qwen', vision=configured and bool(os.getenv('QWEN_VISION_MODEL')))
+        return result
     return _base_capabilities()
 
 
@@ -108,8 +117,24 @@ def live_health():
     caps = capabilities()
     use_openai = bool(os.getenv('OPENAI_API_KEY') and os.getenv('JARVIS_PROVIDER', 'groq').lower() == 'openai')
     use_gemini = os.getenv('JARVIS_PROVIDER', '').lower() == 'gemini'
-    key = os.getenv('GEMINI_API_KEY') if use_gemini else os.getenv('OPENAI_API_KEY') if use_openai else os.getenv('GROQ_API_KEY')
-    if key:
+    use_qwen = os.getenv('JARVIS_PROVIDER', '').lower() == 'qwen'
+    key = os.getenv('GEMINI_API_KEY') if use_gemini else os.getenv('DASHSCOPE_API_KEY') if use_qwen else os.getenv('OPENAI_API_KEY') if use_openai else os.getenv('GROQ_API_KEY')
+    if key and use_qwen:
+        # Model Studio has no per-model lookup in compatible mode: a minimal real
+        # completion proves key, region and model authorisation together.
+        started = time.perf_counter()
+        try:
+            data = request(qwen_base() + '/chat/completions',
+                           {'model': caps['model'], 'messages': [{'role': 'user', 'content': 'Reply with OK.'}],
+                            'max_completion_tokens': 8, 'enable_thinking': False},
+                           {'Authorization': 'Bearer ' + key}, timeout=15)
+            valid = bool(data.get('choices'))
+            checks['Chat model access'] = {'status': 'reachable' if valid else 'unexpected_response',
+                                           'latency_ms': round((time.perf_counter()-started)*1000),
+                                           'detail': 'Qwen answered a minimal test request.' if valid else 'Qwen returned an unexpected response.'}
+        except ProviderError as exc:
+            checks['Chat model access'] = {'status': 'unavailable', 'latency_ms': round((time.perf_counter()-started)*1000), 'detail': str(exc)}
+    elif key:
         base = 'https://api.openai.com/v1/models/' if use_openai else 'https://api.groq.com/openai/v1/models/'
         if use_gemini:
             base = 'https://generativelanguage.googleapis.com/v1beta/openai/models/'
@@ -138,6 +163,8 @@ def chat(messages, tools, emit, cancel, vision=False):
         return None
     if os.getenv('JARVIS_PROVIDER', '').lower() == 'gemini':
         return gemini_chat(messages, tools, emit, cancel, vision)
+    if os.getenv('JARVIS_PROVIDER', '').lower() == 'qwen':
+        return qwen_chat(messages, tools, emit, cancel, vision)
     use_openai = bool(os.getenv('OPENAI_API_KEY') and os.getenv('JARVIS_PROVIDER', 'groq').lower() == 'openai')
     key = os.getenv('OPENAI_API_KEY') if use_openai else os.getenv('GROQ_API_KEY')
     if not key:
@@ -283,27 +310,57 @@ def gemini_chat(messages, tools, emit, cancel, vision=False):
     key = os.getenv('GEMINI_API_KEY')
     if not key:
         raise ProviderError('Gemini is selected. Add GEMINI_API_KEY locally and restart JARVIS.')
+    return _compatible_chat('Gemini', 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+                            key, os.getenv('GEMINI_MODEL', 'gemini-2.5-flash'), messages, tools, emit, cancel, vision)
+
+
+# Alibaba Cloud Model Studio (DashScope), OpenAI-compatible mode. The address depends on
+# the account's region; the default is the international (Singapore) endpoint.
+QWEN_DEFAULT_BASE = 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1'
+QWEN_DEFAULT_MODEL = 'qwen3.8-max'
+
+
+def qwen_base():
+    """Validated DashScope base URL: the key is only ever sent to an Alibaba Cloud host."""
+    base = os.getenv('DASHSCOPE_BASE_URL', QWEN_DEFAULT_BASE).strip().rstrip('/')
+    parsed = urllib.parse.urlparse(base)
+    if parsed.scheme != 'https' or not (parsed.hostname or '').endswith('.aliyuncs.com'):
+        raise ProviderError('DASHSCOPE_BASE_URL must be an https://….aliyuncs.com Model Studio address.')
+    return base
+
+
+def qwen_chat(messages, tools, emit, cancel, vision=False):
+    """Qwen through Model Studio; results still pass through server evidence/action guards."""
+    key = os.getenv('DASHSCOPE_API_KEY')
+    if not key:
+        raise ProviderError('Qwen is selected. Add DASHSCOPE_API_KEY locally and restart JARVIS.')
+    model = os.getenv('QWEN_VISION_MODEL') if vision else os.getenv('QWEN_MODEL', QWEN_DEFAULT_MODEL)
+    if not model:
+        raise ProviderError('Image understanding needs a Qwen vision model. Authorise one for your key and set QWEN_VISION_MODEL.')
+    return _compatible_chat('Qwen', qwen_base() + '/chat/completions', key, model, messages, tools, emit, cancel, vision)
+
+
+def _compatible_chat(service, endpoint, key, model, messages, tools, emit, cancel, vision):
+    """Shared non-streaming OpenAI-compatible adapter (Gemini, Qwen)."""
     if cancel.is_set():
         return None
     # OpenAI Responses metadata is provider-specific; retain ordinary conversation
     # content and tool results when changing provider within an existing session.
     clean = [{k: v for k, v in m.items() if not k.startswith('_')} for m in messages]
-    body = {'model': os.getenv('GEMINI_MODEL', 'gemini-2.5-flash'),
-            'messages': clean, 'stream': False, 'max_completion_tokens': 8192}
+    body = {'model': model, 'messages': clean, 'stream': False, 'max_completion_tokens': 8192}
     if tools and not vision:
         body.update(tools=tools, tool_choice='auto')
-    result = request('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-                     body, {'Authorization': f'Bearer {key}'}, timeout=120)
+    result = request(endpoint, body, {'Authorization': f'Bearer {key}'}, timeout=120)
     if cancel.is_set():
         return None
     choice = (result.get('choices') or [{}])[0]
     if choice.get('finish_reason') not in ('stop', 'tool_calls'):
-        raise ProviderError('Gemini did not return a complete response. No partial answer was accepted.')
+        raise ProviderError(f'{service} did not return a complete response. No partial answer was accepted.')
     message = choice.get('message') or {}
     content = message.get('content') or ''
     calls = message.get('tool_calls') or []
     if not content and not calls:
-        raise ProviderError('Gemini returned no answer or tool request.')
+        raise ProviderError(f'{service} returned no answer or tool request.')
     response = {'role': 'assistant', 'content': content or None}
     if calls:
         response['tool_calls'] = calls
