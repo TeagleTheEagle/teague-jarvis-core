@@ -36,6 +36,16 @@ def rate_limit(model, headers):
     return error
 
 
+def _qwen_error_code(exc):
+    """Model Studio's machine-readable error code, if present (bounded read)."""
+    try:
+        body = json.loads(exc.read(4096) or b'{}')
+        code = (body.get('error') or body).get('code')
+        return code if isinstance(code, str) and len(code) <= 64 else None
+    except (ValueError, AttributeError, OSError):
+        return None
+
+
 def request(url, data=None, headers=None, method=None, raw=False, timeout=35):
     host = urllib.parse.urlparse(url).hostname
     service = {'api.openai.com': 'OpenAI', 'api.fish.audio': 'Fish Audio', 'api.groq.com': 'Groq', 'serpapi.com': 'SerpApi', 'api.search.brave.com': 'Brave Search'}.get(host, 'External service')
@@ -58,6 +68,9 @@ def request(url, data=None, headers=None, method=None, raw=False, timeout=35):
     except urllib.error.HTTPError as exc:
         # Never return raw upstream response bodies: they can contain sensitive data.
         label = {400: 'Request rejected. Check model and integration settings.', 401: 'Authentication failed. Check your local credentials.', 402: 'Insufficient API credit. Fish Audio API credit is separate from website credit; add API credit in the Fish developer dashboard.', 403: 'Access denied. Check account permissions and subscription.', 404: 'Resource or model not found.', 429: 'Rate limit reached. Wait before retrying; no keys were rotated.'}.get(exc.code, 'The provider could not complete the request.')
+        if service == 'Qwen' and _qwen_error_code(exc) == 'Arrearage':
+            # Only the documented error code is used, never the response text.
+            label = 'Alibaba Cloud refused access: the account balance is overdue or empty. Top up in Alibaba Cloud Billing, then retry.'
         raise ProviderError(f'{prefix}{label} (HTTP {exc.code})') from None
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
         reason = getattr(exc, 'reason', exc)

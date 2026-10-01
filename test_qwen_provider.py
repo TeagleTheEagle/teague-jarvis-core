@@ -82,5 +82,26 @@ class QwenTests(unittest.TestCase):
         self.assertFalse(body['enable_thinking'])
 
 
+class QwenErrorTests(unittest.TestCase):
+    def raise_http(self, status, body):
+        import io, urllib.error
+        error = urllib.error.HTTPError('https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions',
+                                       status, 'error', {}, io.BytesIO(body))
+        with patch('urllib.request.urlopen', side_effect=error), self.assertRaises(providers.ProviderError) as raised:
+            providers.request('https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions', {'model': 'x'})
+        return str(raised.exception)
+
+    def test_overdue_account_is_explained_without_echoing_the_response(self):
+        message = self.raise_http(400, b'{"error":{"code":"Arrearage","message":"UPSTREAM-DETAIL-NOT-SHOWN"}}')
+        self.assertIn('Qwen chat', message)
+        self.assertIn('balance is overdue or empty', message)
+        self.assertNotIn('UPSTREAM-DETAIL-NOT-SHOWN', message)
+
+    def test_other_errors_keep_the_generic_label(self):
+        message = self.raise_http(400, b'{"error":{"code":"InvalidParameter","message":"x"}}')
+        self.assertIn('Request rejected', message)
+        self.assertIn('Request rejected', self.raise_http(400, b'not json'))
+
+
 if __name__ == '__main__':
     unittest.main()
