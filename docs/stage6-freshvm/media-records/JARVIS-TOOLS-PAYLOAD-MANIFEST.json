@@ -1,0 +1,42 @@
+{
+    "schema":  "jarvis-package-iso-payload-v1",
+    "created_utc":  "2026-10-01T14:09:51.3373098Z",
+    "label":  "JARVIS_TOOLS",
+    "files":  [
+                  {
+                      "path":  "guest/Invoke-Gate17.ps1",
+                      "bytes":  21772,
+                      "sha256":  "4f29c219d7f88ee61ef4bbd0191a0e4b02c899a40476ba9c902131fe2e1e026b"
+                  },
+                  {
+                      "path":  "host/Invoke-IsolationCheck.ps1",
+                      "bytes":  6301,
+                      "sha256":  "d14076a07c83ad6c33ce917391f74fb8b908a81adb65614ea75cbbeb046d2007"
+                  },
+                  {
+                      "path":  "host/Invoke-PreservationCheckpoint.ps1",
+                      "bytes":  8261,
+                      "sha256":  "139d4465ed0fbea1fa82cc122f1fcb30b056a2f16061fe1428b57a5c3eafeea9"
+                  },
+                  {
+                      "path":  "host/Invoke-ValidationAccountCheck.ps1",
+                      "bytes":  3772,
+                      "sha256":  "85b4871817d7a28b505d3fab86f7f60fc1a35d55de9be9377a65122439dbae7c"
+                  },
+                  {
+                      "path":  "host/New-FreshVm.ps1",
+                      "bytes":  4962,
+                      "sha256":  "07b797f4c771e0fe4cde937595cff3426f8cf0bfa24e27b1e466f20564304df3"
+                  },
+                  {
+                      "path":  "host/New-IsolationFixtures.ps1",
+                      "bytes":  7124,
+                      "sha256":  "0239306ab466c046e72ac463706d608fc94bfd693c08dcf03d3c7e242672117c"
+                  },
+                  {
+                      "path":  "README.txt",
+                      "bytes":  458,
+                      "sha256":  "c0659b7797673f5c44ba77cd9a3e86d87bbb8fef8440440b1d753f4fc6583fc0"
+                  }
+              ]
+}
