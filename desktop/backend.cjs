@@ -6,7 +6,7 @@ function pythonPath(root){return process.env.JARVIS_PYTHON||path.join(root,'.ven
 function defaultDataDir(root){return process.env.JARVIS_DATA_DIR||path.join(root,'data');}
 function startBackend(root,options={}){
  const token=randomBytes(32).toString('hex');
- const child=spawn(pythonPath(root),['-u',path.join(root,'server.py'),'--port','0',...(options.dataDir?['--data-dir',options.dataDir]:[])],{cwd:root,windowsHide:true,env:{...process.env,JARVIS_DESKTOP_TOKEN:token},stdio:['pipe','pipe','pipe']});
+ const child=spawn(pythonPath(root),['-B','-u',path.join(root,'server.py'),'--port','0',...(options.dataDir?['--data-dir',options.dataDir]:[])],{cwd:root,windowsHide:true,env:{...process.env,JARVIS_DESKTOP_TOKEN:token},stdio:['pipe','pipe','pipe']});
  child.stdin.on('error',()=>{});child.stderr.resume();
  const ready=new Promise((resolve,reject)=>{
   // Cold Windows native-library loading can take over 30 seconds before wake preparation finishes.
@@ -42,7 +42,7 @@ function spawnBackgroundCore(root,dataDir){
  try{if(fs.statSync(log).size>5*1024*1024)fs.renameSync(log,log+'.1');}catch{} // keep one previous 5 MB log
  const out=fs.openSync(log,'a');
  const env={...process.env};delete env.JARVIS_DESKTOP_TOKEN;delete env.ELECTRON_RUN_AS_NODE;
- const child=spawn(pythonPath(root),['-u',path.join(root,'server.py'),'--port','0','--background',...(dataDir?['--data-dir',dataDir]:[])],{cwd:root,detached:true,windowsHide:true,env,stdio:['ignore',out,out]});
+ const child=spawn(pythonPath(root),['-B','-u',path.join(root,'server.py'),'--port','0','--background',...(dataDir?['--data-dir',dataDir]:[])],{cwd:root,detached:true,windowsHide:true,env,stdio:['ignore',out,out]});
  fs.closeSync(out);child.unref();
  let exitCode=null;child.once('exit',code=>{exitCode=code;});child.once('error',()=>{exitCode=-1;});
  return {exited:()=>exitCode};

@@ -126,6 +126,14 @@ def build(version):
         require(source.is_file(), f'{dll} not found; install the Microsoft Visual C++ x64 runtime on the build PC.')
         shutil.copyfile(source, release / 'python' / dll)
 
+    # Precompile with unchecked-hash bytecode (PEP 552): Python never rewrites these files,
+    # and the launcher runs Python with -B, so the installed release stays byte-identical to
+    # its manifest (verification and rollback stay possible after use).
+    import compileall, py_compile
+    for folder in (release / 'app', release / 'python' / 'Lib' / 'site-packages'):
+        compileall.compile_dir(str(folder), quiet=2, workers=0,
+                               invalidation_mode=py_compile.PycInvalidationMode.UNCHECKED_HASH)
+
     # 3. Electron, verified.
     electron = ROOT / 'desktop' / 'node_modules' / 'electron' / 'dist'
     require(file_sha256(electron / 'electron.exe') == ELECTRON['sha256'], 'Electron identity mismatch.')
