@@ -76,3 +76,15 @@ running for the Intelligence window and future phone/glasses clients; tray
 Without a `.env` file no AI provider key is present, so AI replies are not expected
 to work in this build (provider behaviour without keys not yet verified). Real provider keys are placed by the
 owner only (git-ignored) and are never read or printed by Claude.
+
+## Build and install a release (docs/RELEASE-DESIGN.md)
+
+```powershell
+.venv\Scripts\python.exe tools\build_release.py --version 1.0.0     # from a clean committed tree
+build\release\JARVIS-<version>-<commit>\install.cmd                 # per user, no admin
+```
+
+Inputs are pinned (Python embeddable, requirements-lock.txt, Electron, models); the build
+refuses anything that does not match. Rehearse in a sandbox before a real install:
+`release\python\python.exe installer.py install --package . --home %TEMP%\jarvis-sandbox-home --no-shortcuts`,
+then `JARVIS.ps1` in that home. Rollback / uninstall / verify / status: `installer.py <action> --home <home>`.
