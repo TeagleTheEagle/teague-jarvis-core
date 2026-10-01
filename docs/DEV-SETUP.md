@@ -113,3 +113,9 @@ writes `regression-report.json` in the work folder and checks the release is unc
 - `tools\host\Invoke-PreservationCheckpoint.ps1`: checkpoints P0–P5 under the owner account.
   Without `-OwnerAuthorized` it only prints what it would read. Never run it on Claude's own
   initiative: each checkpoint is an owner authorization.
+- Gate 16R (see `docs/stage6-freshvm/GATE16R-EXECUTION-PROMPT.md`): `tools\guest\autounattend.xml`
+  (local guest account), `tools\host\Invoke-ValidationAccountCheck.ps1` and
+  `Invoke-IsolationCheck.ps1` (run by the owner in the `jarvis-s6-val` session),
+  `New-IsolationFixtures.ps1` (owner account; `-Phase Create` then `-Phase Postflight`),
+  `New-FreshVm.ps1` (validation session, VBoxManage). Rehearse the owner-account half with
+  `-Root`/`-Evidence` pointing at a scratch folder on D:, never at `D:\JARVIS-S6-FRESHVM`.

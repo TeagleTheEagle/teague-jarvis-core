@@ -1,0 +1,14 @@
+1 source install A                   {"result": "installed", "release": "1.0.11-60d406fb6398", "installed_release": "1.0.11-60d406fb6398", "source_revision": "d6dfac6c1711497b", "memories_saved": true}
+2 backup identity                    {"result": "backup_verified", "id": "190c27203df0413e8248bbbe053da140", "bytes": 403932, "sha256": "1d0b214dadf6cfb35c0ff5ddd489aacfae44229fcc2c32c083583df73e11bfe7", "database_counts": {"items": 2, "messages": 0, "reminders": 0, "settings": 0, "audit": 0, "feedback": 0, "documents": 0, "task_meta": 0, "research": 0, "turn_evidence": 0, "workspaces": 0, "workspace_links": 0, "project_budget_limits": 0, "project_budget_reservations": 0, "inspection_records": 0, "inspection_findings": 0, "inspection_finding_sources": 0, "inspection_finding_events": 0}, "rehearsal": "restore_rehearsal_passed", "archive_outside_program_files": true}
+  shipped CLI verify, no env         {"result": "backup_verified", "files": 156, "error": null}
+  owner configuration in backup      {"personality_txt": false, "preferences_json": true}
+  shutdown A                         {"core_stopped_on_request": true, "desktop_processes_left_then_closed": 7, "processes_now": 0}
+3 target install B                   {"release": "1.0.11-60d406fb6398", "previous": "1.0.8-d326428391cc"}
+  switch-over dry run                {"result": "dry_run_only", "files_to_import": 2, "personal_config": {"personality.txt": "differs", "desktop/preferences.json": "differs"}, "error": null}
+  switch-over import                 {"result": "switch_over_imported", "files_imported": 2, "database_counts": {"items": 2, "messages": 0, "reminders": 0, "settings": 0, "audit": 0, "feedback": 0, "documents": 0, "task_meta": 0, "research": 0, "turn_evidence": 0, "workspaces": 0, "workspace_links": 0, "project_budget_limits": 0, "project_budget_reservations": 0, "inspection_records": 0, "inspection_findings": 0, "inspection_finding_sources": 0, "inspection_finding_events": 0}, "personal_config_written": ["personality.txt", "desktop/preferences.json"], "error": null}
+  restored state before launch       {"memories_restored": true, "personality_in_config": true, "program_files": "verified"}
+4 startup on restored data           {"processes": 8, "installed_release": "1.0.11-60d406fb6398", "source_revision": "d6dfac6c1711497b", "same_identity_as_A": true, "memories_via_api": 2, "second_launch_joined_same_core": true}
+  shutdown B                         {"core_stopped_on_request": true, "desktop_processes_left_then_closed": 7, "processes_now": 0}
+5 rollback with restored data        {"result": "rolled_back", "release": "1.0.8-d326428391cc", "memories_kept": true, "processes": 8, "installed_release": null, "source_revision": "b39092fe0cd8d92f"}
+  shutdown after rollback            {"core_stopped_on_request": true, "desktop_processes_left_then_closed": 7, "processes_now": 0}
+6 backup source unchanged            {"sha256_unchanged": true, "bytes": 403932}

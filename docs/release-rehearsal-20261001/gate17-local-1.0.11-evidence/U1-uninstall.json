@@ -1,0 +1,17 @@
+{
+    "status":  "PASS",
+    "result":  "uninstalled",
+    "output":  null,
+    "program_files_removed":  10645,
+    "kept":  [
+                 "data",
+                 "config",
+                 "profile"
+             ],
+    "leftover_program_files":  0,
+    "processes":  0,
+    "data_kept":  true,
+    "config_kept":  true,
+    "desktop_shortcut_gone":  true,
+    "startup_shortcut_gone":  true
+}

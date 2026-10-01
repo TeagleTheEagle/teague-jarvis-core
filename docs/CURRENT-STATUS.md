@@ -17,11 +17,14 @@ only records where the work stands. Historical handover context: `docs/PROJECT-C
   settled at their recommended selections, Claude Code is the executor. Record:
   `../governance/STAGE6-AMENDMENT-v3-RECORD.json` (text `STAGE6-AMENDMENT-v3.md`, sha256
   5f4d3b63…). Gate pointer still OWNER STOP #1R; no token issued; nothing executed.
-- **Release candidate: 1.0.10** (built from 915e906; regression, zip, Gate 18 and local
-  Gate 17 rehearsals were running at the last status update, results in
-  `docs/release-rehearsal-20261001/README.md` section 6). 1.0.8 passed the full regression;
-  1.0.9 exposed a config-location defect fixed in 1.0.10. Earlier fully rehearsed build,
-  now superseded: **1.0.7-6c356bf982de**, with its distributable zip:
+- **Release candidate: 1.0.11-60d406fb6398** (built from 60d406f; zip 525,622,280 bytes,
+  SHA-256 `19236511…`, in `D:\JARVIS-release-work\release\`). Full regression (325/36/18/16),
+  zip install, the Gate 18 backup/restore rehearsal and the local Gate 17 rehearsal **all
+  pass on it** (`docs/release-rehearsal-20261001/README.md` section 6). It is the candidate
+  for the owner's FINAL selection. 1.0.10 failed Gate 18 (backup
+  blocked by the Core lock, fixed in 1.0.11); 1.0.9 exposed a config-location defect fixed
+  in 1.0.10. Earlier fully rehearsed build, now superseded: **1.0.7-6c356bf982de**, with its
+  distributable zip:
   `D:\JARVIS-release-work\release\JARVIS-1.0.7-6c356bf982de.zip`
   (525,590,739 bytes, SHA-256 `024c6166866a505700019d25f95e1e8f99dc34ab2f0fa011c81be6bbd4995396`).
   Full regression, zip install, lifecycle and interrupted-update evidence:
@@ -124,3 +127,10 @@ because creating them changes the owner's real Desktop/Startup folders). Check o
   (`tools/guest/Invoke-Gate17.ps1`), P0–P5 checkpoint draft (`tools/host/`, dry mode only).
   1.0.8 regression passed; 1.0.9 had the config-location failure; 1.0.10 built with the fix,
   rehearsals pending at the time of writing. Nothing pushed or synced.
+- **2026-10-01/02, Stage 6 decisions and 1.0.11.** Owner chose option B and approved
+  amendment v3 (recorded in `../governance/`). Gate 18 rehearsal of 1.0.10 found the backup
+  blocked by the Core lock (defect 6); fixed in 1.0.11, which then passed regression, zip
+  install, Gate 18 and the local Gate 17 rehearsal. Drafted the Gate 16R execution prompt
+  and its support files (answer file, validation-account check, VM creation, isolation
+  fixtures and check; owner-account half rehearsed in a scratch folder). Next: the owner
+  approves the 16R prompt, then issues `RESUME_STAGE6_FRESH_VM`. Nothing pushed or synced.

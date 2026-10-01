@@ -165,7 +165,15 @@ use; uninstall removes 10,645 program files, keeps `data`/`config`/`profile`, 0 
 0 leftover program files. The running Core reported `installed_release`
 `1.0.10-915e906516dc` and `source_revision e9c5a87060d78190` (Gate 18 step 1).
 
-**Gate 18 rehearsal, 1.0.8 → 1.0.10** (`gate18_rehearsal.py`, output
+**1.0.11 regression** (`regression-1.0.11-report.json`): 325 Python, 36 desktop, 18
+Intelligence, 16 JS scripts, all pass.
+
+**1.0.11 zip install** (`zip_install_rehearsal-1.0.11.output.txt`): hash matches the
+record; `install.cmd` installs in 31 s; launch (8 processes, Core answering); verify after
+use; uninstall removes 10,645 program files, keeps `data`/`config`/`profile`, 0 processes,
+0 leftover program files.
+
+**Gate 18 rehearsal, 1.0.8 → 1.0.10 and 1.0.8 → 1.0.11** (`gate18_rehearsal.py`, output
 `gate18_rehearsal-1.0.10.output.txt`): install A (1.0.10), owner personality in `config\`,
 memories saved; backup through the Core, hash recorded, rehearsal verified, the shipped
 command line verifies it with no environment; owner configuration present in the backup;
@@ -174,7 +182,26 @@ import with personal config; restored data and config before launch, program fil
 verify; startup on restored data with identity, duplicate-Core fencing (a second launch
 joins the same Core), shutdown; rollback with the restored data in place; backup source
 unchanged. Against 1.0.10 the run **failed at step 2** (defect 6 above); rerun against
-1.0.11: RESULT_PENDING_GATE18
+1.0.11 (`gate18_rehearsal-1.0.11.output.txt`): **every step passed.**
+
+| Step | Result |
+|---|---|
+| Source install A (1.0.11), memories, identity | installed; Core reports `installed_release 1.0.11-60d406fb6398`; 2 memories saved |
+| Backup through the Core while running | `backup_verified`, 403,932 bytes, SHA-256 `1d0b214d…`; restore rehearsal passed; archive in `data-backups`, outside program files |
+| Shipped command line, no environment | `recovery.py verify` found the install's own data folder: `backup_verified`, 156 files |
+| Owner configuration in backup | personality and preferences present (see harness note below) |
+| Shutdown A | Core stopped on request; 7 shell processes ended by the harness; 0 left |
+| Disposable target B: 1.0.8 then 1.0.11 | installed, previous = 1.0.8 (rollback available) |
+| Switch-over dry run, then import with personal config | 2 files imported; database counts match the backup; personality and preferences written to `config\` |
+| Restored state before launch | memories restored; personality in `config\`; program files still verify |
+| Startup on restored data | 8 processes; identity equals A's; 2 memories via the API; a second launch joined the same Core |
+| Rollback to 1.0.8 with restored data | rolled back; memories kept; 8 processes |
+| Backup source unchanged | SHA-256 unchanged after everything |
+(Harness note: the 1.0.11 run's line "owner configuration in backup: personality_txt false"
+is a comparison mistake in the rehearsal script, not a product defect: the archive holds the
+owner's personality byte-for-byte as written to disk, with `\r\n` endings, and the script
+compared it with the `\n` string in memory; verified by reading the archive directly. The
+script compares line-ending-neutrally now.)
 
 **Gate 17 guest script, local rehearsal** (`tools/guest/Invoke-Gate17.ps1`, output
 `gate17_local_rehearsal-1.0.10.output.txt`; sandbox home on D:, `-NoShortcuts`,
@@ -189,7 +216,19 @@ process running from the install folder, so it stopped its own interpreter befor
 anything (no output, 10,646 files untouched). Documented usage runs `installer.py` with the
 package's Python beside `release\`, which is what the script does now. Follow-up noted, not
 done: `installer.stop_running_jarvis` could exclude its own process defensively.
-Rerun against 1.0.11: RESULT_PENDING_GATE17
+Rerun against 1.0.11 (`gate17_local_rehearsal-1.0.11.output.txt`, evidence folder
+`gate17-20261001-140105/`): **PASS on every step.** Package identity (zip hash matches the
+record); extract; `install.cmd` (shortcuts off); verify; launch in 13 s with
+`installed_release 1.0.11-60d406fb6398` from the running Core, memory saved in the
+canonical data folder, no process image outside the install; duplicate-Core fencing (a
+second launch joined the same Core); offline speech recognition with the bundled model
+("The meeting starts at 9 tomorrow morning", 4.5 s including model load); stop, verify
+after use, restart with memory and identity intact; uninstall (10,645 program files
+removed, `data`/`config`/`profile` kept, 0 leftover files, 0 processes); reinstall from the
+extracted package with memory restored and files verified; final stop.
+
+**Candidate for FINAL selection (owner act): 1.0.11-60d406fb6398.** Everything above
+passed on it: regression, zip install, Gate 18 rehearsal, Gate 17 rehearsal.
 
 Limitation recorded for both rehearsals: "clean shutdown" is scripted through
 `/api/shutdown` (the Core stops on request and releases its lock); the desktop shell then

@@ -133,7 +133,8 @@ cli = app_cli(A, 'recovery.py', 'verify', '--id', backup['id'])
 report('  shipped CLI verify, no env', result=cli.get('status'), files=cli.get('files'), error=cli.get('stderr'))
 with zipfile.ZipFile(archive) as z:
     names = set(z.namelist())
-    personality_in_backup = 'app/personality.txt' in names and z.read('app/personality.txt').decode('utf-8') == PERSONALITY
+    # Compare line-ending-neutrally: write_text() stores '\r\n' on Windows; the archive holds the raw bytes.
+    personality_in_backup = 'app/personality.txt' in names and z.read('app/personality.txt').decode('utf-8').replace('\r\n', '\n') == PERSONALITY
 report('  owner configuration in backup', personality_txt=personality_in_backup, preferences_json='app/desktop/preferences.json' in names)
 report('  shutdown A', **shutdown(A))
 
