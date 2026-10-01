@@ -1,9 +1,12 @@
 const {spawn}=require('node:child_process');
 const {randomBytes}=require('node:crypto');
 const path=require('node:path');
+// Installed releases set JARVIS_PYTHON / JARVIS_DATA_DIR (docs/RELEASE-DESIGN.md); development uses the repo.
+function pythonPath(root){return process.env.JARVIS_PYTHON||path.join(root,'.venv','Scripts','python.exe');}
+function defaultDataDir(root){return process.env.JARVIS_DATA_DIR||path.join(root,'data');}
 function startBackend(root,options={}){
  const token=randomBytes(32).toString('hex');
- const child=spawn(path.join(root,'.venv','Scripts','python.exe'),['-u',path.join(root,'server.py'),'--port','0',...(options.dataDir?['--data-dir',options.dataDir]:[])],{cwd:root,windowsHide:true,env:{...process.env,JARVIS_DESKTOP_TOKEN:token},stdio:['pipe','pipe','pipe']});
+ const child=spawn(pythonPath(root),['-u',path.join(root,'server.py'),'--port','0',...(options.dataDir?['--data-dir',options.dataDir]:[])],{cwd:root,windowsHide:true,env:{...process.env,JARVIS_DESKTOP_TOKEN:token},stdio:['pipe','pipe','pipe']});
  child.stdin.on('error',()=>{});child.stderr.resume();
  const ready=new Promise((resolve,reject)=>{
   // Cold Windows native-library loading can take over 30 seconds before wake preparation finishes.
@@ -25,7 +28,7 @@ function startBackend(root,options={}){
 // find it through <data>/core-connection.json and start it only if none is running.
 const fs=require('node:fs');
 const LOCAL_ORIGIN=/^http:\/\/127\.0\.0\.1:\d+$/;
-function connectionFile(root,dataDir){return path.join(dataDir||path.join(root,'data'),'core-connection.json');}
+function connectionFile(root,dataDir){return path.join(dataDir||defaultDataDir(root),'core-connection.json');}
 function readConnection(file){
  try{const link=JSON.parse(fs.readFileSync(file,'utf8'));if(LOCAL_ORIGIN.test(link.origin)&&typeof link.token==='string'&&link.token.length>=32)return link;}catch{}
  return null;
@@ -34,12 +37,12 @@ async function coreAlive(link){
  try{const response=await fetch(link.origin+'/',{headers:{'X-Jarvis-Desktop':link.token},signal:AbortSignal.timeout(3000)});return response.status===200&&(await response.text()).includes('JARVIS');}catch{return false;}
 }
 function spawnBackgroundCore(root,dataDir){
- const logs=path.join(dataDir||path.join(root,'data'),'logs');fs.mkdirSync(logs,{recursive:true});
+ const logs=path.join(dataDir||defaultDataDir(root),'logs');fs.mkdirSync(logs,{recursive:true});
  const log=path.join(logs,'core.log');
  try{if(fs.statSync(log).size>5*1024*1024)fs.renameSync(log,log+'.1');}catch{} // keep one previous 5 MB log
  const out=fs.openSync(log,'a');
  const env={...process.env};delete env.JARVIS_DESKTOP_TOKEN;delete env.ELECTRON_RUN_AS_NODE;
- const child=spawn(path.join(root,'.venv','Scripts','python.exe'),['-u',path.join(root,'server.py'),'--port','0','--background',...(dataDir?['--data-dir',dataDir]:[])],{cwd:root,detached:true,windowsHide:true,env,stdio:['ignore',out,out]});
+ const child=spawn(pythonPath(root),['-u',path.join(root,'server.py'),'--port','0','--background',...(dataDir?['--data-dir',dataDir]:[])],{cwd:root,detached:true,windowsHide:true,env,stdio:['ignore',out,out]});
  fs.closeSync(out);child.unref();
  let exitCode=null;child.once('exit',code=>{exitCode=code;});child.once('error',()=>{exitCode=-1;});
  return {exited:()=>exitCode};

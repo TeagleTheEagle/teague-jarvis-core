@@ -28,7 +28,7 @@ function host(link = {origin, token}, stage4 = false) {
     BrowserWindow: Window,
     session: {fromPartition(name) {assert.equal(name, 'jarvis-intelligence'); return session;}}
   };
-  const context = {URL, __dirname: path.join(sourceRoot, 'intelligence'), process: {argv: stage4 ? ['node', '--stage4-test'] : ['node'], platform: 'win32'},
+  const context = {URL, __dirname: path.join(sourceRoot, 'intelligence'), process: {argv: stage4 ? ['node', '--stage4-test'] : ['node'], platform: 'win32', env: {}},
     require(name) {
       if (name === 'electron') return electron;
       if (name === 'node:path') return path;

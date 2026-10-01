@@ -10,9 +10,13 @@ const {watchUpdates}=require('./local-updates.cjs');
 let updates;
 let companionWanted=false;
 let unwatchCore,win,tray,backend,quitting=false,origin='',capture,companion,lastCompanionState,resumeMicOnShow=false,liveGrantUntil=0;
-const sessionFile=path.join(__dirname,'.jarvis-session.json');
+// Installed releases keep owner files outside the read-only program folder.
+const configDir=process.env.JARVIS_CONFIG_DIR||__dirname;
+const sessionFile=path.join(process.env.JARVIS_DATA_DIR||__dirname,'.jarvis-session.json');
+const preferencesFile=path.join(configDir,'preferences.json');
+if(!require('node:fs').existsSync(preferencesFile))require('node:fs').copyFileSync(path.join(__dirname,'preferences.json'),preferencesFile);
 const loginLaunch=process.argv.includes('--login-launch');
-const preferences=JSON.parse(require('node:fs').readFileSync(path.join(__dirname,'preferences.json'),'utf8').replace(/^\uFEFF/,''));
+const preferences=JSON.parse(require('node:fs').readFileSync(preferencesFile,'utf8').replace(/^\uFEFF/,''));
 if(!app.requestSingleInstanceLock()){app.quit();}else{
  app.on('second-instance',()=>show());
  app.on('before-quit',event=>{if(!quitting){event.preventDefault();void quit();}});
@@ -38,7 +42,7 @@ async function start(){
   if(contents===win?.webContents&&trusted(contents.getURL(),origin)&&(permission==='display-capture'||(permission==='media'&&details.mediaTypes?.length===0&&details.isMainFrame))&&capture?.source&&Date.now()<liveGrantUntil){liveGrantUntil=0;return callback(true);}
   if(contents!==win?.webContents||!trusted(contents.getURL(),origin)||permission!=='media'||!details.mediaTypes?.includes('audio')||details.mediaTypes.includes('video'))return callback(false);
   if(micApproved)return callback(true);
-  const result=await dialog.showMessageBox(win,{type:'question',buttons:['Keep microphone off','Enable microphone'],defaultId:0,cancelId:0,message:'Enable JARVIS microphone?',detail:'Microphone audio uses the existing local voice pipeline. Closing to tray stops activity. You can mute it in JARVIS.'});micApproved=result.response===1;if(micApproved){preferences.microphoneAllowed=true;require('node:fs').writeFileSync(path.join(__dirname,'preferences.json'),JSON.stringify(preferences,null,2));}callback(micApproved);
+  const result=await dialog.showMessageBox(win,{type:'question',buttons:['Keep microphone off','Enable microphone'],defaultId:0,cancelId:0,message:'Enable JARVIS microphone?',detail:'Microphone audio uses the existing local voice pipeline. Closing to tray stops activity. You can mute it in JARVIS.'});micApproved=result.response===1;if(micApproved){preferences.microphoneAllowed=true;require('node:fs').writeFileSync(preferencesFile,JSON.stringify(preferences,null,2));}callback(micApproved);
  });
  ses.setDisplayMediaRequestHandler((_request,callback)=>callback({}));
  win=new BrowserWindow({width:1280,height:900,minWidth:720,minHeight:540,show:false,...(process.platform==='win32'?{titleBarStyle:'hidden',titleBarOverlay:{color:'#03111b',symbolColor:'#bcefff',height:36}}:{}),backgroundColor:'#101820',title:'Teague Industries Command Center · JARVIS',webPreferences:{preload:path.join(__dirname,'preload.cjs'),session:ses,nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true,backgroundThrottling:false}});
@@ -83,8 +87,8 @@ async function start(){
  ipcMain.on('jarvis:companion-action',(event,action)=>{if(!companion||event.sender!==companion.webContents||event.senderFrame!==companion.webContents.mainFrame)return;if(action==='show')show();else if(action==='hide'){companionWanted=false;companion.hide();}else if(action==='stop')stop();else if(['capture','mic','live','stop-screen'].includes(action))win.webContents.send('jarvis:companion-command',action);});
  const stopKey=preferences.emergencyStopShortcut||'CommandOrControl+Alt+Shift+X';
  if(!globalShortcut.register(stopKey,stop))dialog.showMessageBox(win,{type:'warning',message:'The emergency stop shortcut is unavailable.',detail:'Use the tray Stop activity or the floating companion STOP ALL button.'});
- ipcMain.handle('jarvis:screen-preference', (event,value)=>{captureSender(event);if(typeof value==='boolean'){preferences.requestedPrimaryDisplayScreenshots=value;capture.stop();require('node:fs').writeFileSync(path.join(__dirname,'preferences.json'),JSON.stringify(preferences,null,2));}return {primary:!!preferences.requestedPrimaryDisplayScreenshots,shortcut:stopKey,micOnLaunch:!!preferences.micOnLaunch&&!process.argv.some(a=>['--smoke-test','--animation-test','--live-test'].includes(a))};});
- ipcMain.handle('jarvis:mic-preference',(event,value)=>{captureSender(event);if(typeof value!=='boolean')throw new Error('Invalid microphone preference.');preferences.micOnLaunch=value;require('node:fs').writeFileSync(path.join(__dirname,'preferences.json'),JSON.stringify(preferences,null,2));return {saved:true};});
+ ipcMain.handle('jarvis:screen-preference', (event,value)=>{captureSender(event);if(typeof value==='boolean'){preferences.requestedPrimaryDisplayScreenshots=value;capture.stop();require('node:fs').writeFileSync(preferencesFile,JSON.stringify(preferences,null,2));}return {primary:!!preferences.requestedPrimaryDisplayScreenshots,shortcut:stopKey,micOnLaunch:!!preferences.micOnLaunch&&!process.argv.some(a=>['--smoke-test','--animation-test','--live-test'].includes(a))};});
+ ipcMain.handle('jarvis:mic-preference',(event,value)=>{captureSender(event);if(typeof value!=='boolean')throw new Error('Invalid microphone preference.');preferences.micOnLaunch=value;require('node:fs').writeFileSync(preferencesFile,JSON.stringify(preferences,null,2));return {saved:true};});
  const revokeCapture=()=>{capture.stop();if(!win.isDestroyed())win.webContents.send('jarvis:screen-revoked');};
  screen.on('display-removed',revokeCapture);screen.on('display-metrics-changed',revokeCapture);
  win.webContents.on('did-start-navigation',(_e,_url,inPlace,mainFrame)=>{if(mainFrame&&!inPlace)capture.stop();});

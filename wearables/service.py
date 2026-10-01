@@ -106,9 +106,9 @@ def handle(handler):
 def publish_connection(server):
     server.wearable_service=Service(server.app)
     # Only publish discovery for the live data directory, never isolated test instances.
-    root=Path(__file__).resolve().parents[1]
-    if server.app.store.root != (root/'data').resolve():return lambda:None
-    path=root/'.env.wearable-connection.json'
+    import runtime_paths
+    if server.app.store.root != runtime_paths.data_dir().resolve():return lambda:None
+    path=runtime_paths.wearable_connection_file()
     data={'url':f'http://127.0.0.1:{server.server_port}','token':server.wearable_service.token}
     path.write_text(json.dumps(data),encoding='utf-8')
     def cleanup():

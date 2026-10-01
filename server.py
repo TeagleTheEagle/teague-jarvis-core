@@ -17,6 +17,8 @@ import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+import runtime_paths
+
 ROOT = Path(__file__).resolve().parent
 # In source mode the configuration lives beside server.py. Only bundled builds
 # use the executable directory as their application root.
@@ -24,7 +26,7 @@ APP_ROOT = Path(sys.executable).resolve().parent if getattr(sys, 'frozen', False
 
 
 def load_env():
-    path = APP_ROOT / '.env'
+    path = runtime_paths.env_file()
     if path.is_file():
         for line in path.read_text(encoding='utf-8-sig').splitlines():
             line = line.strip()
@@ -93,11 +95,13 @@ class Run:
 
 
 class App:
-    def __init__(self, root=ROOT / 'data'):
+    def __init__(self, root=None):
         self.stage4 = _stage4_context
         if self.stage4 is not None:
             self.stage4.claim_app(root)
-        self.store = Store(APP_ROOT / 'data' if getattr(sys, 'frozen', False) and root == ROOT / 'data' else root)
+        if root is None:
+            root = APP_ROOT / 'data' if getattr(sys, 'frozen', False) else runtime_paths.data_dir()
+        self.store = Store(root)
         from device_registry import DeviceRegistry
         self.devices = DeviceRegistry()
         self.devices.register('pc', {'display','microphone','speakers','files','applications','desktop_control'}, ready={'files'}, ttl=3600)
@@ -116,12 +120,12 @@ class App:
         self.update_record = {'revision': 'STAGE4_TEST'} if self.stage4 else update_history.history(ROOT, self.store.root, self.backend_revision)
         self.update_checked = time.monotonic()
         self.voice_engine = VoiceEngine()
-        self.local_stt = LocalSTT((self.store.root if self.stage4 else ROOT / 'data') / 'speech-models' / 'base.en')
+        self.local_stt = LocalSTT((self.store.root if self.stage4 else runtime_paths.models_dir()) / 'speech-models' / 'base.en')
         self.attachments = {}
         self.spotify = providers.Spotify()
         self.ollama_shadow = ShadowObserver(self.store.root)
         self.started = time.time()
-        self.wake = WakeDetector((self.store.root if self.stage4 else ROOT / 'data') / 'wake-models')
+        self.wake = WakeDetector((self.store.root if self.stage4 else runtime_paths.models_dir()) / 'wake-models')
         if self.stage4:
             self.stage4.bind_app(self)
 
@@ -454,7 +458,7 @@ class App:
                     context['desktop_capabilities'] = {'screen_vision': 'Live local sharing on explicit start; AI receives changed frames periodically and notes are saved in Communications. Screenshot commands request one immediate frame. Commands: analyse my screen, take a screenshot Jarvis, start screen sharing, stop sharing.', 'companion': 'Floating hologram with analyse screen, microphone and stop controls. Command: show hologram.', 'limits': 'AI receives sampled images, not every video frame. No arbitrary mouse/keyboard control. Only claim to see supplied images. Screen observations are analysis-only; separate explicit user commands can use existing tools.'}
                 context['recent_research'] = self.store.recent_research(run.conversation)
                 context['recent_tool_evidence'] = self.store.recent_evidence(run.conversation)
-                system = ((self.store.root / 'personality.txt') if self.stage4 else (ROOT / 'personality.txt')).read_text(encoding='utf-8')
+                system = ((self.store.root / 'personality.txt') if self.stage4 else runtime_paths.personality_file()).read_text(encoding='utf-8')
                 system += '\n' + conversation_context.TOOL_GUIDANCE
                 system += '\n' + verified_status.GUIDANCE
                 if getattr(run,'wearable',False):
@@ -1011,7 +1015,7 @@ def main():
         raise RuntimeError('Stage 4 lifecycle is owned by its isolated runtime, not server.main.')
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=int(os.getenv('JARVIS_PORT', '8765')))
-    parser.add_argument('--data-dir', default=str(ROOT / 'data'))
+    parser.add_argument('--data-dir', default=str(runtime_paths.data_dir()))
     parser.add_argument('--background', action='store_true',
                         help='Run as the shared background Core: it outlives any one app, and local '
                              'clients attach through <data>/core-connection.json.')

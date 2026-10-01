@@ -20,6 +20,7 @@ from unittest.mock import Mock, patch
 import uuid
 
 import providers
+import runtime_paths
 from store import Store
 
 ROOT = Path(__file__).resolve().parent
@@ -39,7 +40,7 @@ def definitions(filename, names, namespace):
 
 def app_fixture():
     ns = definitions('server.py', {'Run', 'App', 'WEARABLE_READ_TOOLS'}, dict(
-        ROOT=ROOT, threading=threading, time=time, uuid=uuid, re=re,
+        ROOT=ROOT, runtime_paths=runtime_paths, threading=threading, time=time, uuid=uuid, re=re,
         providers=providers, companion_tools=types.SimpleNamespace(stamp=lambda: {'at': 0}),
     ))
     app = ns['App'].__new__(ns['App'])
@@ -420,7 +421,7 @@ class WorkerCancellationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             ns['ROOT'] = Path(folder)
             (ns['ROOT'] / 'personality.txt').write_text('Synthetic offline fixture.', encoding='utf-8')
-            with patch.dict(os.environ, {'OPENAI_API_KEY': 'synthetic'}, clear=True), patch.object(providers, 'chat', side_effect=response) as chat, patch.object(run.cancel, 'wait', side_effect=cancel_wait), patch.object(time, 'sleep'):
+            with patch.dict(os.environ, {'OPENAI_API_KEY': 'synthetic', 'JARVIS_CONFIG_DIR': folder}, clear=True), patch.object(providers, 'chat', side_effect=response) as chat, patch.object(run.cancel, 'wait', side_effect=cancel_wait), patch.object(time, 'sleep'):
                 app.work(run, 'fixture', None)
             self.assertEqual(chat.call_count, 1)
         self.assertTrue(run.done)

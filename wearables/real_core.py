@@ -13,7 +13,8 @@ from .contracts import WearableError
 class RealCore:
     def __init__(self, connection=None):
         if connection is None:
-            try:connection=json.loads((Path(__file__).resolve().parents[1]/'.env.wearable-connection.json').read_text(encoding='utf-8'))
+            import runtime_paths
+            try:connection=json.loads(runtime_paths.wearable_connection_file().read_text(encoding='utf-8'))
             except (OSError,ValueError):raise WearableError('START_OR_RESTART_PC_JARVIS') from None
         self.url=connection['url'];self.token=connection['token']
         if not re.fullmatch(r'http://127\.0\.0\.1:[0-9]{1,5}',self.url):raise WearableError('LOOPBACK_REQUIRED')
