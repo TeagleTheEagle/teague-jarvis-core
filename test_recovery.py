@@ -112,6 +112,20 @@ class RecoveryTests(unittest.TestCase):
         with zipfile.ZipFile(home/'data-backups'/(backup['id']+'.zip')) as z:
             self.assertEqual(z.read('app/personality.txt'),b'owner personality')
 
+    def test_backup_works_while_a_core_runs_and_never_saves_its_state_logs_or_session_token(self):
+        import core_lock
+        (self.data/'logs').mkdir();(self.data/'logs'/'core.log').write_text('log lines')
+        (self.data/'.jarvis-session.json').write_text('{"token":"not-a-real-secret"}')
+        (self.data/core_lock.CONNECTION_NAME).write_text('{"origin":"http://127.0.0.1:1","token":"not-a-real-secret"}')
+        held=core_lock.CoreLock(self.data)  # a running Core holds the lock file open
+        try: result=self.manager.create()
+        finally: held.release()
+        manifest=recovery.verify(self.manager.archive(result['id']))
+        for name in ('data/logs/core.log','data/.jarvis-session.json','data/'+core_lock.CONNECTION_NAME,'data/'+core_lock.LOCK_NAME,'data/'+core_lock.OWNER_NAME):
+            self.assertNotIn(name,manifest['files'])
+        self.assertIn('logs',manifest['excluded_cache_folders'])
+        self.assertIn('data/jarvis.sqlite3',manifest['files'])
+
     def test_concurrent_operation_rejected(self):
         recovery.LOCK.acquire()
         try:

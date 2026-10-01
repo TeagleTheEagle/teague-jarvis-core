@@ -15,10 +15,16 @@ import time
 import uuid
 import zipfile
 
+import core_lock
+
 LOCK = threading.Lock()
+# Live Core state and the desktop's session token are never saved: a running Core holds the
+# lock file open, the token is a credential, and all of it is recreated on launch
+# (switch_over never restores them either).
+RUNTIME_FILES = {core_lock.LOCK_NAME, core_lock.OWNER_NAME, core_lock.CONNECTION_NAME, '.jarvis-session.json'}
 MAX_BYTES = 2 * 1024**3
 MAX_FILES = 20000
-EXCLUSIONS = ['API credentials (.env); keep/reconfigure separately', 'Python/Node runtimes and installed dependencies; reinstall from requirements/lockfile', 'Downloaded speech/wake model caches; recreate with setup scripts', 'Temporary captures, logs and review/test artifacts outside saved data', 'Windows shortcuts and Electron/browser cache; recreate on recovery']
+EXCLUSIONS = ['API credentials (.env); keep/reconfigure separately', 'Python/Node runtimes and installed dependencies; reinstall from requirements/lockfile', 'Downloaded speech/wake model caches; recreate with setup scripts', 'Temporary captures, logs, live Core state, the desktop session token and review/test artifacts','Windows shortcuts and Electron/browser cache; recreate on recovery']
 
 
 def digest(path):
@@ -101,7 +107,7 @@ def inventory(root, data):
     excluded=[]
     for p in data.iterdir():
         if p.name in ('jarvis.sqlite3','jarvis.sqlite3-wal','jarvis.sqlite3-shm'): continue
-        if p.name in ('speech-models','wake-models'):
+        if p.name in ('speech-models','wake-models','logs') or p.name in RUNTIME_FILES:
             excluded.append(p.name);continue
         if p.is_symlink() or (hasattr(p,'is_junction') and p.is_junction()): raise ValueError('Linked data path.')
         paths=tree_files(p) if p.is_dir() else [p]
