@@ -118,7 +118,8 @@ def _base_capabilities():
         'transcription': bool(os.getenv('OPENAI_API_KEY') or os.getenv('GROQ_API_KEY')),
         'elevenlabs': bool(os.getenv('ELEVENLABS_API_KEY') and os.getenv('ELEVENLABS_VOICE_ID')),
         'fish': bool(os.getenv('FISH_API_KEY') and os.getenv('FISH_VOICE_ID')),
-        'voice_provider': 'fish' if os.getenv('FISH_API_KEY') and os.getenv('FISH_VOICE_ID') else 'elevenlabs' if os.getenv('ELEVENLABS_API_KEY') and os.getenv('ELEVENLABS_VOICE_ID') else 'browser',
+        'qwen_voice': qwen_voice_configured(),
+        'voice_provider': 'qwen' if qwen_voice_configured() else 'fish' if os.getenv('FISH_API_KEY') and os.getenv('FISH_VOICE_ID') else 'elevenlabs' if os.getenv('ELEVENLABS_API_KEY') and os.getenv('ELEVENLABS_VOICE_ID') else 'browser',
         'search': 'SerpApi configured' if os.getenv('SERPAPI_API_KEY') else 'Brave configured' if os.getenv('BRAVE_API_KEY') else 'DuckDuckGo best effort',
         'youtube': bool(os.getenv('YOUTUBE_API_KEY')),
         'spotify': bool(os.getenv('SPOTIFY_CLIENT_ID')),
@@ -403,12 +404,102 @@ def speech_text(text):
     return re.sub(r'\s+', ' ', text).strip().replace(' :', ':').replace(' ,', ',')
 
 
+QWEN_TTS_DEFAULT_MODEL = 'qwen3-tts-vc-2026-01-22'  # must match the model the voice was enrolled for
+QWEN_TTS_CHUNK = 500  # Model Studio accepts about 600 characters per synthesis request
+
+
+def qwen_voice_configured():
+    return bool(os.getenv('DASHSCOPE_API_KEY') and os.getenv('QWEN_TTS_VOICE'))
+
+
+def speech_chunks(text, limit=QWEN_TTS_CHUNK):
+    """Split at sentence ends (then spaces) into pieces of at most `limit` characters."""
+    chunks, current = [], ''
+    for sentence in re.split(r'(?<=[.!?])\s+', text.strip()):
+        while len(sentence) > limit:
+            cut = sentence.rfind(' ', 0, limit)
+            cut = cut if cut > limit // 2 else limit
+            if current:
+                chunks.append(current)
+                current = ''
+            chunks.append(sentence[:cut].strip())
+            sentence = sentence[cut:].strip()
+        if current and len(current) + 1 + len(sentence) > limit:
+            chunks.append(current)
+            current = sentence
+        else:
+            current = (current + ' ' + sentence).strip()
+    if current:
+        chunks.append(current)
+    return [c for c in chunks if c]
+
+
+def join_audio(clips):
+    """Join synthesized clips into one playable file (WAV frames merged; MP3 frames concatenated)."""
+    if len(clips) == 1:
+        return clips[0]
+    if all(c[:4] == b'RIFF' for c in clips):
+        import io, wave
+        frames, params = [], None
+        for clip in clips:
+            with wave.open(io.BytesIO(clip), 'rb') as part:
+                if params is None:
+                    params = part.getparams()
+                elif part.getparams()[:3] != params[:3]:
+                    raise ProviderError('Qwen voice returned clips in different audio formats.')
+                frames.append(part.readframes(part.getnframes()))
+        out = io.BytesIO()
+        with wave.open(out, 'wb') as whole:
+            whole.setnchannels(params.nchannels)
+            whole.setsampwidth(params.sampwidth)
+            whole.setframerate(params.framerate)
+            whole.writeframes(b''.join(frames))
+        return out.getvalue()
+    if any(c[:4] == b'RIFF' for c in clips):
+        raise ProviderError('Qwen voice returned clips in different audio formats.')
+    return b''.join(clips)
+
+
+def audio_mime(audio):
+    return 'audio/wav' if audio[:4] == b'RIFF' else 'audio/mpeg'
+
+
+def qwen_speech(text):
+    """Cloned JARVIS voice through Model Studio non-real-time Qwen-TTS."""
+    key, voice = os.getenv('DASHSCOPE_API_KEY'), os.getenv('QWEN_TTS_VOICE')
+    if not (key and voice):
+        raise ProviderError('Qwen voice needs DASHSCOPE_API_KEY and QWEN_TTS_VOICE (your cloned voice ID).')
+    base = qwen_base()
+    if not base.endswith('/compatible-mode/v1'):
+        raise ProviderError('DASHSCOPE_BASE_URL must end with /compatible-mode/v1.')
+    endpoint = base[:-len('/compatible-mode/v1')] + '/api/v1/services/aigc/multimodal-generation/generation'
+    model = os.getenv('QWEN_TTS_MODEL', QWEN_TTS_DEFAULT_MODEL)
+    clips = []
+    for chunk in speech_chunks(text):
+        result = request(endpoint, {'model': model, 'input': {'text': chunk, 'voice': voice, 'language_type': 'English'}},
+                         {'Authorization': f'Bearer {key}'}, timeout=60)
+        audio = ((result.get('output') or {}).get('audio') or {})
+        if audio.get('data'):
+            clips.append(base64.b64decode(audio['data']))
+            continue
+        url = audio.get('url') or ''
+        parsed = urllib.parse.urlparse(url)
+        if parsed.scheme != 'https' or not (parsed.hostname or '').endswith('.aliyuncs.com'):
+            raise ProviderError('Qwen voice returned no usable audio link.')
+        clips.append(request(url, raw=True, timeout=60))  # presigned link: no credentials sent
+    if not clips:
+        raise ValueError('No spoken text remains after formatting cleanup.')
+    return join_audio(clips)
+
+
 def speech(text, profile='auto'):
-    if profile not in ('auto','fish','openai','eleven_flash','eleven_quality'):
+    if profile not in ('auto','fish','openai','eleven_flash','eleven_quality','qwen'):
         raise ValueError('Unknown voice profile.')
     text = speech_text(text)
     if not text:
         raise ValueError('No spoken text remains after formatting cleanup.')
+    if profile == 'qwen' or (profile == 'auto' and qwen_voice_configured()):
+        return qwen_speech(text)
     if profile == 'openai':
         if not os.getenv('OPENAI_API_KEY'): raise ProviderError('OpenAI speech is not configured.')
         return request('https://api.openai.com/v1/audio/speech', {'model':'gpt-4o-mini-tts','voice':'cedar','input':text[:4000],'response_format':'mp3','instructions':'Speak with a composed British accent, warm understated wit, flowing sentences and natural pauses. Avoid a robotic or theatrical delivery.'}, {'Authorization':'Bearer '+os.environ['OPENAI_API_KEY']},raw=True)

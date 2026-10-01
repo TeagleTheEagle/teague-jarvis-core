@@ -336,7 +336,7 @@ async function speak(text){ if(window.JARVIS_INSPECTION)return;
   if(!state.data?.settings.voice||!text||state.data?.settings.quiet_hours)return;
   stopSpeech();voiceDiagnostic('Audibility','Not confirmed for this reply');voiceDiagnostic('Playback','Waiting for speech');pauseRecognition();$('#stopButton').disabled=false;const generation=state.voiceGeneration;const controller=new AbortController();speechRequest=controller;
   try{
-    if(state.data.settings.voice_profile==='openai' || state.data.capabilities.fish || state.data.capabilities.elevenlabs){
+    if(['openai','qwen'].includes(state.data.settings.voice_profile) || state.data.capabilities.qwen_voice || state.data.capabilities.fish || state.data.capabilities.elevenlabs){
       JarvisLatency.mark('TTS_started');const synthesisStarted=performance.now();voiceDiagnostic('Speech generation','Request started');
       const response=await fetch('/api/speech',{method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
       if(!response.ok){const data=await response.json();throw new Error(data.error||'Voice request failed.');}

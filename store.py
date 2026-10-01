@@ -200,7 +200,7 @@ class Store:
                     raise ValueError('Invalid setting.')
                 if isinstance(val, str) and len(val) > 100:
                     raise ValueError('Setting too long.')
-                if key == 'voice_profile' and val not in ('auto','fish','openai','eleven_flash','eleven_quality'): raise ValueError('Invalid voice profile.')
+                if key == 'voice_profile' and val not in ('auto','fish','openai','eleven_flash','eleven_quality','qwen'): raise ValueError('Invalid voice profile.')
                 if key == 'response_length' and val not in ('brief', 'balanced', 'detailed'):
                     raise ValueError('Invalid response length.')
                 if key == 'tone' and val not in ('cinematic','professional','casual'): raise ValueError('Invalid tone.')

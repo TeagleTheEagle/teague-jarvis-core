@@ -2,7 +2,7 @@
   const box=document.createElement('fieldset');box.style.cssText='padding:18px;margin:18px 0;border:1px solid #285164';
   const title=document.createElement('legend');title.textContent='VOICE PREVIEW';
   const select=document.createElement('select');select.setAttribute('aria-label','Voice profile');
-  [['auto','Current automatic voice'],['fish','Fish — current voice'],['openai','OpenAI — Cedar'],['eleven_flash','ElevenLabs — Flash'],['eleven_quality','ElevenLabs — Multilingual v2']].forEach(([v,t])=>select.add(new Option(t,v)));
+  [['auto','Current automatic voice'],['qwen','Qwen — cloned JARVIS voice'],['fish','Fish — current voice'],['openai','OpenAI — Cedar'],['eleven_flash','ElevenLabs — Flash'],['eleven_quality','ElevenLabs — Multilingual v2']].forEach(([v,t])=>select.add(new Option(t,v)));
   const info=document.createElement('p');info.textContent='Preview uses provider credits. OpenAI Cedar is an AI-generated voice. ElevenLabs requires a locally configured key and voice ID.';
   const preview=document.createElement('button');preview.type='button';preview.textContent='PREVIEW VOICE';
   const save=document.createElement('button');save.type='button';save.textContent='USE THIS VOICE';save.style.marginLeft='8px';

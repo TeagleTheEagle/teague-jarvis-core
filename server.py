@@ -963,7 +963,7 @@ class Handler(BaseHTTPRequestHandler):
                     raise ValueError('Missing speech text.')
                 tts_started = time.perf_counter()
                 audio = self.app.voice_engine.synthesize(body['text'], body.get('profile', self.app.store.settings().get('voice_profile','auto')))
-                return self.send(200, audio, 'audio/mpeg', extra={'Server-Timing': 'tts;dur='+str(round((time.perf_counter()-tts_started)*1000))})
+                return self.send(200, audio, providers.audio_mime(audio), extra={'Server-Timing': 'tts;dur='+str(round((time.perf_counter()-tts_started)*1000))})
             elif path == '/api/wake/prepare':
                 result = self.app.wake.prepare()
             elif path == '/api/wake':
