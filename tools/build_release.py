@@ -86,7 +86,7 @@ def require(condition, message):
         raise SystemExit('BUILD REFUSED: ' + message)
 
 
-def build(version):
+def build(version, make_zip=True):
     require(not git('status', '--porcelain', '--untracked-files=no').strip(), 'commit or stash changes first; a release is built from HEAD only.')
     commit = git('rev-parse', 'HEAD').decode().strip()
     name = f'JARVIS-{version}-{commit[:12]}'
@@ -166,14 +166,17 @@ def build(version):
         '"%~dp0release\\python\\python.exe" "%~dp0installer.py" install --package "%~dp0." %*\r\n'
         'if errorlevel 1 pause\r\n', encoding='ascii')
 
-    # 6. Distributable zip and release record.
+    # 6. Distributable zip (skipped for local rehearsal builds) and release record.
     archive_path = out_root / (name + '.zip')
-    with zipfile.ZipFile(archive_path, 'w', zipfile.ZIP_DEFLATED) as z:
-        for p in sorted(tree.rglob('*')):
-            if p.is_file():
-                z.write(p, Path(name) / p.relative_to(tree))
+    if make_zip:
+        with zipfile.ZipFile(archive_path, 'w', zipfile.ZIP_DEFLATED) as z:
+            for p in sorted(tree.rglob('*')):
+                if p.is_file():
+                    z.write(p, Path(name) / p.relative_to(tree))
     record = {'release_id': manifest['release_id'], 'version': version, 'commit': commit,
-              'zip': archive_path.name, 'zip_sha256': file_sha256(archive_path), 'zip_bytes': archive_path.stat().st_size,
+              'zip': archive_path.name if make_zip else None,
+              'zip_sha256': file_sha256(archive_path) if make_zip else None,
+              'zip_bytes': archive_path.stat().st_size if make_zip else None,
               'manifest_sha256': file_sha256(release / 'manifest.json'), 'files': len(files),
               'release_bytes': sum(f['bytes'] for f in files),
               'canonical_data_path': '%LOCALAPPDATA%\\JARVIS\\data', 'config_path': '%LOCALAPPDATA%\\JARVIS\\config',
@@ -187,4 +190,6 @@ def build(version):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--version', required=True)
-    print(json.dumps(build(parser.parse_args().version), indent=2))
+    parser.add_argument('--no-zip', action='store_true', help='rehearsal build: release tree only, no distributable zip')
+    args = parser.parse_args()
+    print(json.dumps(build(args.version, make_zip=not args.no_zip), indent=2))
