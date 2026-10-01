@@ -3,7 +3,7 @@ if (process.argv.includes('--stage4-test')) {
 } else {
 const {app,BrowserWindow,Tray,Menu,nativeImage,dialog,shell,session,ipcMain,desktopCapturer,screen,globalShortcut}=require('electron');
 const path=require('node:path');
-const {trusted,external}=require('./policy.cjs');
+const {trusted,external,desktopHeaders}=require('./policy.cjs');
 const {connectCore}=require('./backend.cjs');
 const {ScreenCapture}=require('./capture.cjs');
 const {watchUpdates}=require('./local-updates.cjs');
@@ -35,7 +35,7 @@ async function start(){
  const ready=await backend.ready;origin=ready.origin;
  require('node:fs').writeFileSync(sessionFile,JSON.stringify({origin,token:ready.token,created:new Date().toISOString()}),'utf8');
  const ses=session.fromPartition('jarvis-desktop'); // memory-only session
- ses.webRequest.onBeforeSendHeaders((details,callback)=>{const headers={...details.requestHeaders};for(const key of Object.keys(headers))if(key.toLowerCase()==='x-jarvis-desktop')delete headers[key];if(trusted(details.url,origin))headers['X-Jarvis-Desktop']=ready.token;callback({requestHeaders:headers});});
+ ses.webRequest.onBeforeSendHeaders((details,callback)=>callback({requestHeaders:desktopHeaders(details.requestHeaders,details.url,origin,ready.token)}));
  let micApproved=Boolean(preferences.microphoneAllowed);
  ses.setPermissionCheckHandler((contents,permission,requestingOrigin,details)=>((permission==='media'&&micApproved&&details.mediaType!=='video')||(permission==='display-capture'&&capture?.source&&Date.now()<liveGrantUntil))&&contents===win?.webContents&&trusted(requestingOrigin,origin));
  ses.setPermissionRequestHandler(async(contents,permission,callback,details)=>{

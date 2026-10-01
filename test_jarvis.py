@@ -243,6 +243,55 @@ class HTTPTests(unittest.TestCase):
             self.req('/api/files/..%2F..%2F.env')
         self.assertEqual(error.exception.code, 404)
 
+    def test_delete_is_refused_while_that_conversation_is_running(self):
+        app = self.server.app
+        app.store.message('target', 'user', 'fixture')
+        run = Run('target')
+        app.runs[run.id] = run
+        with self.assertRaises(urllib.error.HTTPError) as error:
+            self.req('/api/conversation/delete', {'id': 'target'})
+        self.assertEqual(error.exception.code, 400)
+        self.assertIn('Stop the running request first', json.load(error.exception)['error'])
+        self.assertTrue(app.store.history('target'))
+        run.done = True
+        with self.req('/api/conversation/delete', {'id': 'target'}) as response:
+            self.assertEqual(json.load(response)['status'], 'deleted')
+        self.assertEqual(app.store.history('target'), [])
+
+    def test_delete_and_new_request_admission_never_interleave(self):
+        app = self.server.app
+        app.store.message('target', 'user', 'fixture')
+        entered, release, order = threading.Event(), threading.Event(), []
+        clear = app.store.clear_conversation
+
+        def slow_clear(conversation):  # hold the delete inside the store, after its active-run check
+            entered.set()
+            release.wait(5)
+            clear(conversation)
+            order.append('cleared')
+
+        def work(run, text, attachment):
+            with run.condition:
+                run.done = True
+                run.condition.notify_all()
+            app.devices.finish(run.id)
+
+        app.work = work
+        admitted = []
+        with patch.object(app.store, 'clear_conversation', side_effect=slow_clear):
+            deleting = threading.Thread(target=lambda: self.req('/api/conversation/delete', {'id': 'target'}).close())
+            deleting.start()
+            self.assertTrue(entered.wait(5))
+            admitting = threading.Thread(target=lambda: (admitted.append(app.start_run({'text': 'hello', 'conversation': 'target'})), order.append('admitted')))
+            admitting.start()
+            time.sleep(0.3)
+            self.assertEqual(admitted, [])  # admission waits for the delete's lock
+            release.set()
+            deleting.join(5)
+            admitting.join(5)
+        self.assertEqual(order, ['cleared', 'admitted'])
+        self.assertEqual(len(admitted), 1)
+
     def test_settings_persist(self):
         with self.req('/api/settings', {'name': 'Test User'}) as response:
             self.assertEqual(json.load(response)['name'], 'Test User')
