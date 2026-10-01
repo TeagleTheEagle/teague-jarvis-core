@@ -9,6 +9,10 @@ from unittest.mock import patch
 import numpy as np
 from scipy.signal import resample_poly
 from local_stt import LocalSTT
+import runtime_paths
+
+# The same model the Core loads: bundled inside an installed release, data\ in development.
+MODEL = runtime_paths.models_dir() / 'speech-models' / 'base.en'
 
 script = """$ErrorActionPreference='Stop'
 Add-Type -AssemblyName System.Speech
@@ -30,7 +34,7 @@ if __name__ == '__main__':
             raise SystemExit('Unexpected synthetic audio format.')
         samples = np.frombuffer(wav.readframes(wav.getnframes()), dtype='<i2')
         pcm = resample_poly(samples.astype(np.float32), 16000, wav.getframerate()).clip(-32768, 32767).astype('<i2').tobytes()
-    engine = LocalSTT(Path(__file__).resolve().parent / 'data' / 'speech-models' / 'base.en')
+    engine = LocalSTT(MODEL)
     with patch.object(socket.socket, 'connect', side_effect=AssertionError('Unexpected network connection')):
         for attempt in range(2):
             result = engine.transcribe({'data': base64.b64encode(pcm).decode()})

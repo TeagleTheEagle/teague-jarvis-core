@@ -54,6 +54,14 @@ class RuntimePathTests(unittest.TestCase):
                 (Path(config) / 'personality.txt').write_text('Owner personality.', encoding='utf-8')
                 self.assertEqual(runtime_paths.personality_file(), Path(config) / 'personality.txt')
 
+    def test_offline_voice_check_uses_the_release_models_not_a_development_path(self):
+        import importlib
+        import check_voice_offline
+        with tempfile.TemporaryDirectory() as models, patch.dict(os.environ, {'JARVIS_MODELS_DIR': models}):
+            self.assertEqual(importlib.reload(check_voice_offline).MODEL, Path(models) / 'speech-models' / 'base.en')
+        with patch.dict(os.environ, {k: '' for k in LAYOUT}):
+            self.assertEqual(importlib.reload(check_voice_offline).MODEL, runtime_paths.ROOT / 'data' / 'speech-models' / 'base.en')
+
     def test_core_reads_keys_from_the_config_folder_when_installed(self):
         import server
         with tempfile.TemporaryDirectory() as config:
