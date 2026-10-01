@@ -107,6 +107,18 @@ INIT = r"""(() => {
 })();"""
 
 
+def launch_browser(playwright):
+    """Microsoft Edge, present on every Windows 11 PC, else installed Chrome. Playwright's own
+    browser downloads are never used, so the release has no hidden browser dependency."""
+    failure = None
+    for channel in ('msedge', 'chrome'):
+        try:
+            return playwright.chromium.launch(channel=channel, headless=True)
+        except Exception as exc:
+            failure = exc
+    raise failure
+
+
 def capture(root, origin, request, data):
     """Render supplied real assets. Every browser request is intercepted locally.
 
@@ -126,7 +138,7 @@ def capture(root, origin, request, data):
     report['viewport'] = {'width':1440,'height':900}
     images = []
     with sync_playwright() as p:
-        browser = p.chromium.launch(channel='chrome', headless=True)
+        browser = launch_browser(p)
         try:
             context = browser.new_context(viewport=report['viewport'], service_workers='block',
                                           accept_downloads=False, reduced_motion='reduce')

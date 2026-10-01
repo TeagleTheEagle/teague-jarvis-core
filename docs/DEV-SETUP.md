@@ -88,3 +88,16 @@ Inputs are pinned (Python embeddable, requirements-lock.txt, Electron, models); 
 refuses anything that does not match. Rehearse in a sandbox before a real install:
 `release\python\python.exe installer.py install --package . --home %TEMP%\jarvis-sandbox-home --no-shortcuts`,
 then `JARVIS.ps1` in that home. Rollback / uninstall / verify / status: `installer.py <action> --home <home>`.
+
+C: is nearly full on this PC, so local builds and rehearsals use D: (`--out` picks the
+output folder, `--no-zip` skips the distributable zip for rehearsal builds):
+
+```powershell
+.venv\Scripts\python.exe tools\build_release.py --version 1.0.4 --no-zip --out D:\JARVIS-release-work\release
+.venv\Scripts\python.exe tools\release_regression.py --package D:\JARVIS-release-work\release\JARVIS-<id> --work D:\JARVIS-release-work\regression-<version>
+```
+
+`release_regression.py` verifies the release, copies it, adds the tests from the release's
+own commit to the copy only, and runs every suite with the release's bundled Python and
+Electron (no .venv, no system node; data and config point at the scratch folder). It
+writes `regression-report.json` in the work folder and checks the release is unchanged.
