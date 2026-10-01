@@ -57,8 +57,9 @@ node --test desktop/test/*.test.cjs intelligence/test/*.test.cjs
 node test_voice.cjs
 ```
 
-Use `npm ci` in each client directory when source desktop dependencies are needed;
-preserve each existing package-lock.json. Native TEST bridge compilation has its
+JavaScript dependencies use pnpm, not npm: the only lockfile is
+desktop/pnpm-lock.yaml (there is no package-lock.json, so `npm ci` cannot work).
+See docs/DEV-SETUP.md for the exact commands. Native TEST bridge compilation has its
 separate toolchain requirements in stage4_native/README.md. Neither this setup nor
 Build-JARVIS.ps1 grants production cutover or changes runtime routing.
 
