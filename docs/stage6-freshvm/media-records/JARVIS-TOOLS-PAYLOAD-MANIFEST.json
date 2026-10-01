@@ -1,6 +1,6 @@
 {
     "schema":  "jarvis-package-iso-payload-v1",
-    "created_utc":  "2026-10-01T14:09:51.3373098Z",
+    "created_utc":  "2026-10-01T14:29:30.0766940Z",
     "label":  "JARVIS_TOOLS",
     "files":  [
                   {
@@ -25,8 +25,8 @@
                   },
                   {
                       "path":  "host/New-FreshVm.ps1",
-                      "bytes":  4962,
-                      "sha256":  "07b797f4c771e0fe4cde937595cff3426f8cf0bfa24e27b1e466f20564304df3"
+                      "bytes":  4974,
+                      "sha256":  "86488234c3990ecceef13bdec5afca7da9fe2477dc13c8ce74482ed0db15994e"
                   },
                   {
                       "path":  "host/New-IsolationFixtures.ps1",

@@ -30,8 +30,12 @@ Nothing here touches the protected paths or VirtualBox.
     published value for that download (D2). **Done 2026-10-01** (`media-records/windows-iso-hash.json`):
     the owner's file hashes `76898470…`; Microsoft's page now publishes hashes only for the
     current release (26H2, English 64-bit `BD4307DF…`), so no published value exists for
-    25H2. Owner decision under D2: a fresh official 26H2 download (recommended; hash then
-    verifiable, no media limitation) or proceed with the 25H2 ISO recorded as a LIMITATION.
+    25H2. **Owner chose the fresh download ("yes, download it", 2026-10-02):**
+    `Windows11_Client_x64_en-us_26300_9457.iso` (26H2, English US, 9,047,330,816 bytes) was
+    downloaded from Microsoft's official host to `D:\JARVIS-release-work\stage6-media\`
+    and its SHA-256 `bd4307df…ea650` **equals Microsoft's published value**
+    (`media-records/windows-iso-26H2-acquisition.json`). No media limitation remains; the
+    25H2 file is not used.
 0.4 Build the discs with `tools\New-PackageIso.ps1` (each hash recorded, each read back):
     - `JARVIS-TOOLS.iso`: the guest-side scripts (`Invoke-Gate17.ps1` for its Baseline
       phase) and a README. (The JARVIS package itself ships at Gate 17.)
@@ -88,8 +92,10 @@ of 2026-09-30 stay UNRESOLVED (v3 A3). Any other unmet item: STOP.
 
 Create `D:\JARVIS-S6-FRESHVM\vbox-home\`, `machines\`, `media\` and grant `jarvis-s6-val`
 modify rights on those three new folders only (new-object DACLs; no change to the existing
-parent or to `evidence\`). Copy the Windows ISO, `UNATTEND.iso`, `JARVIS-TOOLS.iso` and the
-host's `VBoxGuestAdditions.iso` into `media\`; record their hashes. In the validation
+parent or to `evidence\`). Copy the verified Windows ISO
+(`Windows11_Client_x64_en-us_26300_9457.iso`), `UNATTEND.iso`, `JARVIS-TOOLS.iso` and the
+host's `VBoxGuestAdditions.iso` into `media\`; record their hashes and confirm they equal
+the step-0 values. In the validation
 session set the **user** environment variable `VBOX_USER_HOME=D:\JARVIS-S6-FRESHVM\vbox-home`
 (that account only; never the owner account). Nothing under `C:\Users\jonny`; E: not used.
 

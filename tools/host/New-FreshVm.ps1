@@ -10,7 +10,7 @@ any other user, elevated, or with the wrong VirtualBox home. Records showvminfo 
 param(
     [string] $Name = 'JARVIS-S6-FRESH',
     [string] $Root = 'D:\JARVIS-S6-FRESHVM',
-    [string] $WindowsIso = 'D:\JARVIS-S6-FRESHVM\media\Win11_25H2_English_x64_v2.iso',
+    [string] $WindowsIso = 'D:\JARVIS-S6-FRESHVM\media\Windows11_Client_x64_en-us_26300_9457.iso',
     [string] $UnattendIso = 'D:\JARVIS-S6-FRESHVM\media\UNATTEND.iso',
     [Parameter(Mandatory)] [string] $Evidence
 )
