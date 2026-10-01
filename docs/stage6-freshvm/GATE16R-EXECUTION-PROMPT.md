@@ -27,8 +27,11 @@ Nothing here touches the protected paths or VirtualBox.
     installed VirtualBox 7.2.18.175117 (static file metadata only).
 0.2 Confirm D: free space ≥ 400 GiB (the Gate 16R reserve).
 0.3 Compute the SHA-256 of `Win11_25H2_English_x64_v2.iso` and compare it with Microsoft's
-    published value for that download (D2). Record the result; a mismatch means the owner
-    downloads fresh official media before the token.
+    published value for that download (D2). **Done 2026-10-01** (`media-records/windows-iso-hash.json`):
+    the owner's file hashes `76898470…`; Microsoft's page now publishes hashes only for the
+    current release (26H2, English 64-bit `BD4307DF…`), so no published value exists for
+    25H2. Owner decision under D2: a fresh official 26H2 download (recommended; hash then
+    verifiable, no media limitation) or proceed with the 25H2 ISO recorded as a LIMITATION.
 0.4 Build the discs with `tools\New-PackageIso.ps1` (each hash recorded, each read back):
     - `JARVIS-TOOLS.iso`: the guest-side scripts (`Invoke-Gate17.ps1` for its Baseline
       phase) and a README. (The JARVIS package itself ships at Gate 17.)
