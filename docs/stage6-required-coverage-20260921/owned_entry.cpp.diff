@@ -1,0 +1,29 @@
+--- D:\JARVIS-STAGE6-LIVE\a684e9f6f9ae4826af45c0a04c18d839\code\owned_entry.cpp
++++ D:\JARVIS-STAGE6-LIVE\cf20ac6a7a2e4cc69d944d7ffdfbc608\code\owned_entry.cpp
+@@ -84,3 +84,26 @@
+  if(!DebugSetProcessKillOnExit(FALSE))return 96;
+  int trace=TraceOwned(pi.hProcess,pi.hThread,pi.dwProcessId,pi.dwThreadId,path,launch,FALSE,launch,createEnd);DWORD status=STILL_ACTIVE;GetExitCodeProcess(pi.hProcess,&status);CloseHandle(pi.hThread);CloseHandle(pi.hProcess);return trace?trace:int(status);
+ }
++
++extern "C" __declspec(dllexport) int RunQualification(const wchar_t* path){
++ std::wstring root=path;if(!Bounded(root))return 91;
++ auto code=root.substr(0,root.find_last_of(L'\\'));auto run=root.substr(root.find_last_of(L'\\')+1);
++ std::wstring exe=L"C:\\Users\\jonny\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe";
++ std::wstring cmd=L"\""+exe+L"\" -B \""+code+L"\\qualified_worker.py\" "+run;
++ SECURITY_ATTRIBUTES sa{sizeof(sa),0,TRUE};HANDLE handles[3];
++ handles[0]=CreateFileW(L"NUL",GENERIC_READ,FILE_SHARE_READ|FILE_SHARE_WRITE,&sa,OPEN_EXISTING,0,0);
++ handles[1]=CreateFileW((root+L"\\worker.stdout").c_str(),GENERIC_WRITE,FILE_SHARE_READ,&sa,CREATE_NEW,FILE_ATTRIBUTE_NORMAL,0);
++ handles[2]=CreateFileW((root+L"\\worker.stderr").c_str(),GENERIC_WRITE,FILE_SHARE_READ,&sa,CREATE_NEW,FILE_ATTRIBUTE_NORMAL,0);
++ for(auto h:handles)if(h==INVALID_HANDLE_VALUE){for(auto x:handles)if(x!=INVALID_HANDLE_VALUE)CloseHandle(x);return 93;}
++ STARTUPINFOEXW si{};si.StartupInfo.cb=sizeof(si);si.StartupInfo.dwFlags=STARTF_USESTDHANDLES|STARTF_USESHOWWINDOW;si.StartupInfo.wShowWindow=SW_HIDE;si.StartupInfo.hStdInput=handles[0];si.StartupInfo.hStdOutput=handles[1];si.StartupInfo.hStdError=handles[2];
++ SIZE_T size=0;InitializeProcThreadAttributeList(0,1,0,&size);std::vector<BYTE> attrs(size);si.lpAttributeList=reinterpret_cast<LPPROC_THREAD_ATTRIBUTE_LIST>(attrs.data());
++ if(!InitializeProcThreadAttributeList(si.lpAttributeList,1,0,&size)||!UpdateProcThreadAttribute(si.lpAttributeList,0,PROC_THREAD_ATTRIBUTE_HANDLE_LIST,handles,sizeof(handles),0,0))return 94;
++ PROCESS_INFORMATION pi{};auto launch=Q();BOOL ok=CreateProcessW(exe.c_str(),cmd.data(),0,0,TRUE,CREATE_NEW_CONSOLE|EXTENDED_STARTUPINFO_PRESENT|DEBUG_ONLY_THIS_PROCESS,0,code.c_str(),&si.StartupInfo,&pi);
++ auto createEnd=Q();DeleteProcThreadAttributeList(si.lpAttributeList);for(auto h:handles)CloseHandle(h);if(!ok)return 95;
++ int captureError=DebugSetProcessKillOnExit(FALSE)?0:96;FILETIME a{},b{},c{},d{};wchar_t image[32768];DWORD count=32768;
++ if(!GetProcessTimes(pi.hProcess,&a,&b,&c,&d)||!QueryFullProcessImageNameW(pi.hProcess,0,image,&count))captureError=98;
++ std::ostringstream ident;ident<<"{\"pid\":"<<pi.dwProcessId<<",\"created\":\""<<FT(a)<<"\",\"image\":"<<J(U(std::wstring(image,count)))<<",\"createBeginQpc\":"<<launch<<",\"createEndQpc\":"<<createEnd<<"}";
++ if(captureError==0&&!Write(root+L"\\worker-created.json",ident.str()))captureError=99;
++ 
++ int trace=TraceOwned(pi.hProcess,pi.hThread,pi.dwProcessId,pi.dwThreadId,path,launch,FALSE,launch,createEnd);DWORD status=STILL_ACTIVE;GetExitCodeProcess(pi.hProcess,&status);CloseHandle(pi.hThread);CloseHandle(pi.hProcess);return captureError?captureError:(trace?trace:int(status));
++}

@@ -1,0 +1,22 @@
+--- C:\Users\jonny\Documents\Codex\2026-09-07\cr\outputs\TEST-STAGE6-SOURCE-03c76cdb24e84b58b715d4585163c3fc\tests\deployment_contract\fixtures.py
++++ C:\Users\jonny\Documents\Codex\2026-09-07\cr\outputs\TEST-STAGE6-SOURCE-03c76cdb24e84b58b715d4585163c3fc\tests\deployment_contract\fixtures.py
+@@ -19,6 +19,10 @@
+ 
+ OUT=ROOT/'docs/deployment-completion-20260916'
+ VALIDATION=ROOT.parent/'deployment-test-releases'
++
++def control_timeout(action):
++    # Observed verified staging: 37.110s; 20% headroom rounded up. TEST only.
++    return 45 if action == 'stage-update' else 35
+ 
+ class InstalledCampaign(ClientCampaign):
+     def __init__(self):
+@@ -47,7 +51,7 @@
+         p=subprocess.Popen(command,cwd=self.cwd,env=self.env,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,
+                            text=True,close_fds=True,creationflags=0x08000000)
+         peer=self.r.transport.identity(p.pid)
+-        stdout,stderr=p.communicate(json.dumps(req)+'\n',timeout=35)
++        stdout,stderr=p.communicate(json.dumps(req)+'\n',timeout=control_timeout(action))
+         record={'identity':peer,'exit':p.returncode,'action':action}
+         self.controls.append(record)
+         if p.returncode:

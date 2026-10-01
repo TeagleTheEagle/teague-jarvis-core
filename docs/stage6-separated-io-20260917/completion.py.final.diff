@@ -1,0 +1,21 @@
+--- before/tests/deployment_contract/completion.py
++++ final/tests/deployment_contract/completion.py
+@@ -88,7 +88,8 @@
+     c.check('explicit B restart succeeds',state['result']=='STARTED',state=state)
+     second_id=state['identity'];c.cores.append((root,newcore,second_id))
+     c.check('new epoch same canonical identity',second_id['startup_epoch']!=first['startup_epoch'] and second_id['data_id']==data)
+-    c.check('old controller credentials rejected',c.denied(lambda:c.attach(core,second_id,'controller')))
++    stale_reply=c.core_call(core,second_id,'controller','attach',{'scopes':core['enrollments']['controller']['scopes']})
++    c.check('old controller credentials rejected',stale_reply.get('result')=='DENIED',reply=stale_reply)
+     stale=copy.deepcopy(oldsettings);stale['expectedIdentity']={**second_id,'created':str(second_id['created'])}
+     stale['pinnedPeer']={k:stale['expectedIdentity'][k] for k in ('pid','created','exe_digest')}
+     stale['deployment']['app']=str(new.app);stale['deployment']['packageHash']=new.record['package_hash'];stale['deployment']['nativePath']=str(new.release/'native/peer_identity.node')
+@@ -132,7 +133,7 @@
+                 c.check('explicit abort preserves failed staging files',result['result']=='ABORTED_STOPPED' and result['files_preserved'])
+             b=refresh(c,b)
+         c.check('interruption preserves data and lifetime lock',upgrade.snapshot(b)==before,boundary=boundary)
+-        with c.r.exclusion.Lock(root,'core.lock'):c.check('no unintended Core after update interruption',True,boundary=boundary)
++        c.check('no unintended Core after update interruption',c.verify_idle(c.bindings[root]),boundary=boundary)
+         restarted=c.core_config(data);controller,newid=c.start(root,restarted,identity)
+         c.check('recovered package requires explicit fresh epoch',newid['startup_epoch']!=identity['startup_epoch'])
+         c.stop(root,restarted,newid);c.close(controller)

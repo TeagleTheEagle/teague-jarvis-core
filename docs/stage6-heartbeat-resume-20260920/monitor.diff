@@ -1,0 +1,31 @@
+--- C:\Users\jonny\Documents\Codex\2026-09-07\cr\outputs\jarvis\docs\stage6-monitor-timing-20260918\monitor.ps1
++++ C:\Users\jonny\Documents\Codex\2026-09-07\cr\outputs\jarvis\docs\stage6-heartbeat-decoupled-20260918\monitor.ps1
+@@ -40,7 +40,7 @@
+  Mark 'journal.open.begin';$stream=[IO.FileStream]::new((Join-Path $root 'heartbeat.jsonl'),[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::Read);Mark 'journal.open.end'
+  $self=Get-Process -Id $PID
+  $identity=@{run=$nonce;pid=$PID;created=$created;frequency=[Diagnostics.Stopwatch]::Frequency}
+- Save 'monitor-config.json' @{identity=$identity;priority=[string]$self.PriorityClass;threads=@($self.Threads|Select-Object Id,BasePriority,CurrentPriority);stopwatchHighResolution=[Diagnostics.Stopwatch]::IsHighResolution;traceMode='bounded memory, written at exit';staleThreshold=10;rotation='not used';osFlush='FileStream.Flush(true); includes managed flush plus Windows file flush, not separately timed';scriptHash=(Get-FileHash -LiteralPath $PSCommandPath).Hash}
++ Save 'monitor-config.json' @{identity=$identity;priority=[string]$self.PriorityClass;threads=@($self.Threads|Select-Object Id,BasePriority,CurrentPriority);stopwatchHighResolution=[Diagnostics.Stopwatch]::IsHighResolution;traceMode='bounded memory, written at exit';staleThreshold=10;rotation='not used';osFlush='Live Flush(false); final Flush(true) after collection freezes; all evidence fsync/archive required separately';scriptHash=(Get-FileHash -LiteralPath $PSCommandPath).Hash}
+  while($clock.Elapsed.TotalSeconds -lt 600){
+   Mark 'loop.begin';Drain
+   $seq++;Mark 'record.begin';$q=[Diagnostics.Stopwatch]::GetTimestamp()
+@@ -48,7 +48,7 @@
+   $bytes=[Text.Encoding]::UTF8.GetBytes((($record|ConvertTo-Json -Compress)+"`n"));Mark 'record.end'
+   Mark 'journal.size.begin';if($bytes.Length -gt 4096 -or $stream.Length+$bytes.Length -gt 1048576){throw 'Journal capacity reached'};Mark 'journal.size.end'
+   Mark 'journal.write.begin';$stream.Write($bytes,0,$bytes.Length);Mark 'journal.write.end'
+-  Mark 'journal.flush.begin';$stream.Flush($true);Mark 'journal.flush.end';Mark 'publication.complete'
++  Mark 'journal.flush.begin';$stream.Flush($false);Mark 'journal.flush.end';Mark 'publication.complete'
+   if($seq -eq 1){Mark 'ready.begin';Save 'ready.json' $identity;Mark 'ready.end'}
+   Mark 'finish.query.begin';$finished=Test-Path -LiteralPath (Join-Path $root 'collector-finished.json');Mark 'finish.query.end'
+   if($finished){Mark 'loop.end';break}
+@@ -58,7 +58,9 @@
+  Mark 'grace.begin';Start-Sleep -Seconds 2;Mark 'grace.end';Drain
+  Mark 'final.enumeration.begin';$final=@(Get-CimInstance Win32_Process|Where-Object{$_.Name -match '^(VBox|VirtualBox)'});Mark 'final.enumeration.end' $final.Count
+  if($final.Count){throw 'VirtualBox active at end'}
+- Save 'monitor-result.json' @{status='EVENT_MONITOR_EXIT_CLEAN';run=$nonce;sequences=$seq;events=$count;violations=$violations}
++ Mark 'collection.freeze';Mark 'durable.flush.begin';$stream.Flush($true);Mark 'durable.flush.end'
++ Mark 'journal.close.begin';$stream.Dispose();$stream=$null;Mark 'journal.close.end'
++ Save 'monitor-result.json' @{status='LIVE_COLLECTION_CLOSED';run=$nonce;sequences=$seq;events=$count;violations=$violations;journalDurableFlush=$true;acceptance=$false}
+ }catch{Save 'monitor-failure.json' @{error=$_.Exception.Message;stack=$_.ScriptStackTrace;utc=[DateTime]::UtcNow.ToString('o')};exit 1}
+ finally{
+  if($null -ne $stream){Mark 'journal.close.begin';$stream.Dispose();Mark 'journal.close.end'}

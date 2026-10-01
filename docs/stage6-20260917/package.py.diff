@@ -1,0 +1,11 @@
+--- accepted/deployment_test/package.py
++++ candidate/deployment_test/package.py
+@@ -98,7 +98,7 @@
+     _copy(Path(node),destination/'node/node.exe')
+     _copy(Path(native),destination/'native/peer_identity.node')
+     from . import native as nd
+-    for component in ('python','electron','node'):
++    for component in ('python','electron','node','native'):
+         for name in nd.CRT:
+             need(nd.version(nd.REDIST/name)==nd.CRT_VERSION,'BUILD_CRT_VERSION')
+             _copy(nd.REDIST/name,destination/component/name)

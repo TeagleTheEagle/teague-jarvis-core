@@ -1,0 +1,11 @@
+--- D:\JARVIS-STAGE6-LIVE\1c1f5d0c390b42cc9ba9f4f6221dabc6\code\probe_timing.py
++++ D:\JARVIS-STAGE6-LIVE\cd45670bb1894d5b99a1b469e4771535\code\probe_timing.py
+@@ -27,7 +27,7 @@
+    subprocess._winapi.CreateProcess=measured
+    self.process=subprocess.Popen([str(executable),*args],startupinfo=startupinfo,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,creationflags=0x08000000)
+   finally:subprocess._winapi.CreateProcess=original
+-  self.row['popenReturnedQpc']=ticks();self.row['pid']=self.process.pid
++  self.row['handleRetainedQpc']=ticks();self.row['popenReturnedQpc']=ticks();self.row['pid']=self.process.pid
+   try:self.row['initialKernelTimes']=process_times(self.process);self.row['identityCapturedQpc']=ticks()
+   except BaseException as ex:self.row['startupIdentityError']=repr(ex)
+   self.observer=threading.Thread(target=self.observe,name='probe-exit-observer',daemon=True);self.observer.start()

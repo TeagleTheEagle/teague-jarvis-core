@@ -1,0 +1,45 @@
+--- frozen/cleanup_checker.py
++++ D:\JARVIS-STAGE6-LIVE\6d305fb9fc7440c5bf485466e9d708df\code\cleanup_checker.py
+@@ -2,14 +2,19 @@
+ Reads frozen evidence; never fabricates lifecycle events or edits primary failures.
+ """
+ import pathlib,json,collections,sys
+-from lineage import associate,parent_valid
++from lineage import associate,parent_valid
++from application_authority import load_inputs,verify as verify_authority
++from process_instances import InstanceTable
+ HANDLE='HANDLE_CONFIRMED_EXIT'
+ KERNEL='KERNEL_CONFIRMED_POST_EXIT_HANDLE_ACQUISITION'
+ INSUFFICIENT='INSUFFICIENT_EVIDENCE'
+ def load(root):
+  root=pathlib.Path(root)
+  def read(n):return json.loads((root/n).read_text(encoding='utf-8-sig'))
+- return dict(kernel=read('etw-result.json'),ready=read('etw-ready.json'),app=read('app-result.json'),events=[json.loads(l) for l in (root/'app-events.jsonl').read_text(encoding='utf-8-sig').splitlines()],receipts=read('app-receipts.json'),tap=read('app-tap.json'),heartbeat=read('app-heartbeats.json'),handles=read('tree-handles.json'),producer=read('stress-result.json'),launcher=read('launcher.json'),launchResult=read('launcher-result.json'),appExit=read('app-exit.json'),appReady=read('app-ready.json'),observers=read('observer-identities.json'),volumeMap=read('volume-map.json')['mapping'],internal=[[json.loads(l) for l in p.read_text().splitlines()] for p in root.glob('internal-*.jsonl')])
++ tap,events,receipts=load_inputs(root)
++ mirrored=[json.loads(l) for l in (root/'app-events.jsonl').read_text(encoding='utf-8-sig').splitlines()]
++ if events!=mirrored or receipts!=read('app-receipts.json'):raise ValueError('AUTHORITATIVE_MIRROR_MISMATCH')
++ return dict(authoritative=verify_authority(root),kernel=read('etw-result.json'),ready=read('etw-ready.json'),app=read('app-result.json'),events=events,receipts=receipts,tap=tap,heartbeat=read('app-heartbeats.json'),handles=read('tree-handles.json'),producer=read('stress-result.json'),launcher=read('launcher.json'),launchResult=read('launcher-result.json'),appExit=read('app-exit.json'),appReady=read('app-ready.json'),observers=read('observer-identities.json'),volumeMap=read('volume-map.json')['mapping'],internal=[[json.loads(l) for l in p.read_text().splitlines()] for p in root.glob('internal-*.jsonl')])
+ def normalize(path,mapping):
+  p=str(path).replace('/','\\').lower()
+  for drive,device in mapping.items():
+@@ -50,7 +55,10 @@
+   scope=new
+  tracked=[x for x in rows if x['sequence'] in scope];pids={x['pid'] for x in tracked};byseq={x['sequence']:x for x in rows};bykey={(x['pid'],x['created']):x for x in rows}
+  # Bind independent application records to time-qualified identities, never PID-only ancestry.
+- association=associate(rows,events,scope)
++ association=associate(rows,events,scope)
++ table=InstanceTable(rows,d['ready']['session'])
++ enrichments=[table.correlate(e) for e in events if e['pid'] in pids]
++ if any(e['result']!='UNIQUE_MATCH' for e in enrichments):fail('INDEPENDENT_EVENT_INSTANCE_IDENTITY_UNPROVEN')
+  if association['unknown']:fail('UNKNOWN_APPLICATION_LINEAGE')
+  for x in tracked:
+   if x['sequence']!=roots[0]['sequence'] and not parent_valid(x,byseq.get(x['parentSequence'],dict(pid=-1,sequence='',created='0',exitFiletime='0',startQpc=0,stopQpc=0))):fail('UNKNOWN_PARENT_IDENTITY')
+@@ -101,7 +109,7 @@
+   if why or errors:classification=INSUFFICIENT
+   result.append(dict(pid=x['pid'],created=x['created'],sequence=x['sequence'],parentPid=x['parentPid'],image=x['image'],classification=classification,errors=why,appStartCount=len(starts),appStopCount=len(stops)))
+  counts=collections.Counter(x['classification'] for x in result)
+- return dict(status='PASS' if not errors and not counts[INSUFFICIENT] else 'FAIL',total=len(result),handleConfirmed=counts[HANDLE],kernelPostExit=counts[KERNEL],insufficient=counts[INSUFFICIENT],appStarts=sum(x['appStartCount'] for x in result),appStops=sum(x['appStopCount'] for x in result),kernelCreates=sum(bool(x['startQpc']) for x in tracked),kernelExits=sum(bool(x['stopQpc']) for x in tracked),errors=errors,identities=result,lineageUnknown=association['unknown'],lineageExcluded=association['outside'],primaryFailure=producer.get('primary_failure'),producerStatus=producer['status'],acceptance=False,outsideKernel=[dict(pid=x['pid'],created=x['created'],image=x['image']) for x in rows if x['sequence'] not in scope],outsideAppEvents=[x for x in events if x['pid'] not in pids],externalEventIdentifierCollisions=len(events)-len({x['eventIdentifier'] for x in events}),queueIdentityCollisions=len(events)-len({x['queueSequence'] for x in events}))
++ return dict(authoritative=d['authoritative'],identityEnrichment=enrichments,status='PASS' if not errors and not counts[INSUFFICIENT] else 'FAIL',total=len(result),handleConfirmed=counts[HANDLE],kernelPostExit=counts[KERNEL],insufficient=counts[INSUFFICIENT],appStarts=sum(x['appStartCount'] for x in result),appStops=sum(x['appStopCount'] for x in result),kernelCreates=sum(bool(x['startQpc']) for x in tracked),kernelExits=sum(bool(x['stopQpc']) for x in tracked),errors=errors,identities=result,lineageUnknown=association['unknown'],lineageExcluded=association['outside'],primaryFailure=producer.get('primary_failure'),producerStatus=producer['status'],acceptance=False,outsideKernel=[dict(pid=x['pid'],created=x['created'],image=x['image']) for x in rows if x['sequence'] not in scope],outsideAppEvents=[x for x in events if x['pid'] not in pids],externalEventIdentifierCollisions=len(events)-len({x['eventIdentifier'] for x in events}),queueIdentityCollisions=len(events)-len({x['queueSequence'] for x in events}))
+ def evaluate(root):
+  try:return check(load(root))
+  except (OSError,ValueError,KeyError,TypeError,IndexError) as ex:return dict(status='FAIL',errors=['MISSING_OR_INVALID_EVIDENCE: '+str(ex)],identities=[],acceptance=False)

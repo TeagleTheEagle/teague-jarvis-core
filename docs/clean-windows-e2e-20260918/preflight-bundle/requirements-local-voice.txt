@@ -1,0 +1,3 @@
+# Optional local STT. Windows x64 / Python 3.12; requires VC++ x64 runtime.
+faster-whisper==1.2.1
+ctranslate2==4.8.2

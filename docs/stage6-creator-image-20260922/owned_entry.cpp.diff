@@ -1,0 +1,32 @@
+--- D:\JARVIS-STAGE6-LIVE\cf20ac6a7a2e4cc69d944d7ffdfbc608\code\owned_entry.cpp
++++ D:\JARVIS-STAGE6-LIVE\c090f8cbc0d444e493f1d801e36fd1bb\code\owned_entry.cpp
+@@ -22,7 +22,19 @@
+  std::vector<std::string> events;bool fault=false,deadline=false,entry=false,debug=true;DWORD error=0;
+  auto record=[&](std::string name,DWORD t,ULONGLONG address,std::wstring p=L""){if(events.size()>=4096){fault=true;return;}std::ostringstream s;s<<"{\"event\":"<<J(name)<<",\"qpc\":"<<Q()<<",\"tid\":"<<t<<",\"address\":"<<address<<",\"path\":"<<J(U(p))<<"}";events.push_back(s.str());};
+  FILETIME created{},exited{},kt{},ut{};if(GetProcessId(ph)!=pid||GetThreadId(th)!=tid||!GetProcessTimes(ph,&created,&exited,&kt,&ut))return 92;
+- auto acquired=Q();HANDLE independent=nullptr;
++ auto acquired=Q();
++ // Direct process identity comes from the creator's handle, before any debug continuation.
++ auto imageBegin=Q();wchar_t imageBuffer[32768]{};DWORD imageCount=32768;
++ BOOL imageOK=QueryFullProcessImageNameW(ph,0,imageBuffer,&imageCount);
++ DWORD imageError=imageOK?0:GetLastError();auto imageEnd=Q();
++ DWORD identityWait=WaitForSingleObject(ph,0);auto stateQpc=Q();
++ std::wstring fullImage=imageOK?std::wstring(imageBuffer,imageCount):L"";
++ bool identityOK=imageOK&&imageCount>0&&imageCount<32768&&identityWait==WAIT_TIMEOUT;
++ std::ostringstream early;
++ early<<"{\"source\":\"creator-owned-handle\",\"recordId\":"<<J(std::to_string(pid)+"-"+std::to_string(FT(created)))<<",\"creatorPid\":"<<GetCurrentProcessId()<<",\"pid\":"<<pid<<",\"tid\":"<<tid<<",\"handlePid\":"<<GetProcessId(ph)<<",\"handleIdentity\":\""<<reinterpret_cast<ULONG_PTR>(ph)<<"\",\"created\":\""<<FT(created)<<"\",\"handleCreated\":\""<<FT(created)<<"\",\"frequency\":"<<freq.QuadPart<<",\"createBeginQpc\":"<<cb<<",\"createEndQpc\":"<<ce<<",\"handleAcquiredQpc\":"<<acquired<<",\"queryBeginQpc\":"<<imageBegin<<",\"queryEndQpc\":"<<imageEnd<<",\"stateQpc\":"<<stateQpc<<",\"processState\":"<<identityWait<<",\"image\":"<<J(U(fullImage))<<",\"imageError\":"<<imageError<<",\"imageCharacters\":"<<imageCount<<",\"success\":"<<(identityOK?"true":"false")<<"}";
++ bool identityWritten=Write(root+L"\\early-image-"+std::to_wstring(pid)+L"-"+std::to_wstring(FT(created))+L".json",early.str());
++ auto identityPersisted=identityWritten?Q():0;if(!identityOK||!identityWritten)fault=true;
++ HANDLE independent=nullptr;
+  std::atomic<DWORD> observed{UINT_MAX};LONGLONG ob=0,oe=0;std::thread observer;
+  if(isProbe){if(!DuplicateHandle(GetCurrentProcess(),ph,GetCurrentProcess(),&independent,SYNCHRONIZE|PROCESS_QUERY_LIMITED_INFORMATION,FALSE,0))fault=true;
+  if(independent)observer=std::thread([&]{ob=Q();observed=WaitForSingleObject(independent,15000);oe=Q();});}
+@@ -61,7 +73,7 @@
+  if(debug&&!done){DebugActiveProcessStop(pi.dwProcessId);fault=true;}
+  if(isProbe&&FT(exited)&&double(FT(exited)-FT(created))/10000000.0>=13.6){deadline=true;if(!hard)hard=signal;}
+  if(observer.joinable())observer.join();else WaitForSingleObject(pi.hProcess,1000);finalWait=WaitForSingleObject(pi.hProcess,0);signal=Q();GetExitCodeProcess(pi.hProcess,&exitCode);GetProcessTimes(pi.hProcess,&created,&exited,&kt,&ut);if(isProbe&&FT(exited)&&double(FT(exited)-FT(created))/10000000.0>=13.6)deadline=true;if(independent)CloseHandle(independent);
+- std::ostringstream s;s<<"{\"mode\":"<<J(U(mode))<<",\"pid\":"<<pi.dwProcessId<<",\"tid\":"<<pi.dwThreadId<<",\"frequency\":"<<freq.QuadPart<<",\"launchQpc\":"<<launch<<",\"createBeginQpc\":"<<cb<<",\"createEndQpc\":"<<ce<<",\"handleAcquiredQpc\":"<<acquired<<",\"created\":\""<<FT(created)<<"\",\"exitFiletime\":\""<<FT(exited)<<"\",\"entryQpc\":"<<marker<<",\"entryAddress\":"<<ep<<",\"hardDeadlineQpc\":"<<hard<<",\"deadlineExceeded\":"<<(deadline?"true":"false")<<",\"signalObservedQpc\":"<<signal<<",\"finalWait\":"<<finalWait<<",\"exitCode\":"<<exitCode<<",\"observerBeginQpc\":"<<ob<<",\"observerEndQpc\":"<<oe<<",\"observerResult\":"<<observed<<",\"fault\":"<<(fault?"true":"false")<<",\"error\":"<<error<<",\"debugPauses\":"<<pauses<<",\"debugHandlingTicks\":"<<pauseTicks<<",\"events\":[";
++ std::ostringstream s;s<<"{\"identityPersistedQpc\":"<<identityPersisted<<",\"mode\":"<<J(U(mode))<<",\"pid\":"<<pi.dwProcessId<<",\"tid\":"<<pi.dwThreadId<<",\"frequency\":"<<freq.QuadPart<<",\"launchQpc\":"<<launch<<",\"createBeginQpc\":"<<cb<<",\"createEndQpc\":"<<ce<<",\"handleAcquiredQpc\":"<<acquired<<",\"created\":\""<<FT(created)<<"\",\"exitFiletime\":\""<<FT(exited)<<"\",\"entryQpc\":"<<marker<<",\"entryAddress\":"<<ep<<",\"hardDeadlineQpc\":"<<hard<<",\"deadlineExceeded\":"<<(deadline?"true":"false")<<",\"signalObservedQpc\":"<<signal<<",\"finalWait\":"<<finalWait<<",\"exitCode\":"<<exitCode<<",\"observerBeginQpc\":"<<ob<<",\"observerEndQpc\":"<<oe<<",\"observerResult\":"<<observed<<",\"fault\":"<<(fault?"true":"false")<<",\"error\":"<<error<<",\"debugPauses\":"<<pauses<<",\"debugHandlingTicks\":"<<pauseTicks<<",\"events\":[";
+  for(size_t i=0;i<events.size();i++){if(i)s<<",";s<<events[i];}s<<"]}";
+ 
+  bool wrote=Write(root+L"\\native-"+std::to_wstring(pid)+L"-"+std::to_wstring(FT(created))+L".json",s.str());return !wrote||fault||deadline||finalWait!=0||!entry?97:0;

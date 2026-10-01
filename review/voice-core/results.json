@@ -1,0 +1,9 @@
+{
+  "loud": 0.4246397903683298,
+  "quiet": 0.09500887767008731,
+  "peak": 0.1249999925494194,
+  "settling": 0.0869281093289969,
+  "silence": 1.3432337313420907e-07,
+  "audio": "Real Web Audio oscillator; muted output; no provider calls",
+  "errors": []
+}

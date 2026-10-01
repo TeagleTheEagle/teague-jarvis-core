@@ -1,0 +1,142 @@
+--- before/tests/lifecycle_stage4/fixtures.py
++++ after/tests/lifecycle_stage4/fixtures.py
+@@ -1011,19 +1011,86 @@
+         if crash:config['TEST_crash_stage']=crash
+         proc=subprocess.Popen(r.test_child_command('--restart-coordinator-worker',root),env=self.env,
+             stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,close_fds=True,creationflags=0x08000000)
+-        proc.stdin.write(json.dumps(config)+'\n');proc.stdin.close()
+-        item={'process':proc,'configuration':config,'root':root,'token':None};self.coordinators.append(item)
+-        until=time.monotonic()+8;path=root/('coordinator-'+name+'.json')
+-        while not path.exists():
+-            if proc.poll() is not None:raise RuntimeError('Coordinator startup: '+proc.stderr.read())
+-            if time.monotonic()>until:raise TimeoutError('Coordinator readiness')
+-            time.sleep(.02)
+-        item['ready']=r.exclusion.read(path)
+-        self.check('coordinator exact live identity',r.transport.identity(proc.pid)==item['ready']['peer'],identity=item['ready']['identity'])
+-        result=self.cc(item,'attach');item['token']=result['token']
+-        return item
++        item={'process':proc,'configuration':config,'root':root,'token':None,'ready':None,
++              'spawn_peer':None,'attach_started':False,'started':time.monotonic(),
++              'readiness_path':root/('coordinator-'+name+'.json'),'read_attempts':0,'wait_polls':0}
++        self.coordinators.append(item)
++        try:
++            item['operation']='record spawned process identity'
++            item['spawn_peer']=r.transport.identity(proc.pid)
++            item['operation']='send private TEST bootstrap configuration'
++            proc.stdin.write(json.dumps(config)+'\n');proc.stdin.close()
++            item['ready']=self.coordinator_readiness(item,wait=True)
++            self.check('coordinator exact live identity',True,identity=item['ready']['identity'])
++            self.coordinator_attach(item)
++            return item
++        except BaseException as exc:
++            item['startup_failure']=self.coordinator_diagnostic(item,exc,'startup')
++            self.records.append({'case':'coordinator startup failed','passed':False,**item['startup_failure']});self.save()
++            raise
++    def coordinator_state(self,item):
++        # The existing installed TEST fixture records this same independent pin
++        # as initial_peer. Do not derive a trusted pin from readiness-file content.
++        item.setdefault('spawn_peer',item.get('initial_peer'))
++        item.setdefault('ready',None)
++        item.setdefault('attach_started',item.get('token') is not None)
++        item.setdefault('started',time.monotonic())
++        item.setdefault('read_attempts',0);item.setdefault('wait_polls',0)
++        item.setdefault('readiness_path',item['root']/('coordinator-'+item['configuration']['name']+'.json'))
++    def coordinator_diagnostic(self,item,exc,phase):
++        self.coordinator_state(item)
++        # Whitelist metadata: never serialize configuration, credentials or tokens.
++        return {'phase':phase,'operation':item.get('operation'),'path':str(item['readiness_path']),
++                'pid':item['process'].pid,'spawn_peer':item.get('spawn_peer'),'namespace':item['root'].name,
++                'exception':type(exc).__name__,'message':str(exc),'errno':getattr(exc,'errno',None),
++                'winerror':getattr(exc,'winerror',None),'traceback':''.join(traceback.format_exception(type(exc),exc,exc.__traceback__)),
++                'read_attempts':item['read_attempts'],'wait_polls':item['wait_polls'],
++                'elapsed':time.monotonic()-item['started'],'at':time.time()}
++    def coordinator_ready_identity(self,item,ready):
++        self.coordinator_state(item)
++        if type(ready) is not dict or not {'peer','identity','endpoint'}<=ready.keys():
++            raise ValueError('Coordinator readiness requires peer, identity and endpoint')
++        peer,identity=ready['peer'],ready['identity']
++        keys={'pid','created','exe_digest','mode','namespace','installation_id','data_id',
++              'core_instance_id','startup_epoch','runtime_build','protocol'}
++        if type(peer) is not dict or set(peer)!={'pid','created','exe_digest'} or type(identity) is not dict or not keys<=identity.keys():
++            raise ValueError('Coordinator readiness has incomplete peer or identity fields')
++        if type(peer['pid']) is not int or type(peer['created']) is not int or type(peer['exe_digest']) is not str:
++            raise ValueError('Coordinator readiness has invalid peer types')
++        r=self.r;c=item['configuration'];pin=item.get('spawn_peer')
++        r.require(pin is not None and peer==pin and r.transport.identity(item['process'].pid)==pin,'COORDINATOR_PROCESS_IDENTITY')
++        r.require({k:identity[k] for k in peer}==peer and ready['endpoint']==c['endpoint'] and
++                  identity['mode']=='TEST' and identity['namespace']==item['root'].name and identity['data_id']==c['core']['data_id'] and
++                  identity['installation_id']==identity['runtime_build']=='STAGE4_TEST_COORDINATOR','COORDINATOR_READY_IDENTITY')
++        r.require(type(identity['startup_epoch']) is str and len(identity['startup_epoch'])==32 and
++                  identity['startup_epoch']==identity['core_instance_id'],'COORDINATOR_READY_EPOCH')
++        uuid.UUID(hex=identity['startup_epoch'])
++        r.authentication.negotiate(identity['protocol'],[2,3])
++        return ready
++    def coordinator_readiness(self,item,wait=False):
++        path=item['readiness_path'];until=item['started']+8
++        item['operation']='wait for coordinator readiness publication'
++        if wait:
++            while not path.exists():
++                item['wait_polls']+=1
++                if item['process'].poll() is not None:raise RuntimeError('Coordinator exited before readiness publication')
++                if time.monotonic()>until:raise TimeoutError('Coordinator readiness publication deadline')
++                time.sleep(.02)
++        # Exactly one strict read. No shared sentinel helper and no read-error retry.
++        item['read_attempts']+=1;item['operation']='read coordinator readiness UTF-8 file'
++        content=path.read_text(encoding='utf8')
++        item['operation']='parse coordinator readiness JSON';ready=json.loads(content)
++        item['operation']='validate coordinator readiness and live identity'
++        return self.coordinator_ready_identity(item,ready)
++    def coordinator_attach(self,item):
++        item['operation']='authenticate coordinator attachment';item['attach_started']=True
++        result=self.cc(item,'attach')
++        if type(result) is not dict or result.get('result')!='ATTACHED' or type(result.get('token')) is not str or result.get('identity')!=item['ready']['identity']:
++            raise ValueError('Coordinator attachment did not establish a known session')
++        item['token']=result['token']
+     def cc(self,item,op,args=None,token=None):
+-        c=item['configuration'];ready=item['ready'];r=self.r
++        c=item['configuration'];ready=self.coordinator_ready_identity(item,item.get('ready'));r=self.r
++        if op=='attach':item['attach_started']=True
+         return r.authentication.client(c['endpoint'],ready['peer'],ready['identity'],bytes.fromhex(c['server_key']),
+             'controller',bytes.fromhex(c['owner_key']),{'op':op,'token':None if op=='attach' else item['token'] if token is None else token,'args':args or {}})
+     def issue(self,item,prior=None,ttl=30):
+@@ -1070,10 +1137,36 @@
+         with r.exclusion.Lock(root,'core.lock'):
+             self.check('verified TEST exit and lifetime-lock release',True,identity=identity)
+     def close(self,item):
+-        if item['process'].poll() is None:
+-            self.check('explicit coordinator close',self.cc(item,'close')['result']=='CLOSED')
+-            item['process'].wait(5)
+-        self.check('coordinator exit recorded',item['process'].returncode in (0,93),identity=item['ready']['identity'],exit=item['process'].returncode)
++        self.coordinator_state(item)
++        proc=item['process'];outcome='NOT_ATTEMPTED_IDENTITY_UNESTABLISHED'
++        try:
++            if proc.poll() is not None:
++                ready=item.get('ready')
++                self.check('coordinator exit recorded',proc.returncode in (0,93),
++                           identity=ready.get('identity') if type(ready) is dict else None,
++                           spawn_peer=item.get('spawn_peer'),exit=proc.returncode,cleanup_result='PROCESS_ALREADY_EXITED')
++                return
++            item['operation']='verify spawned coordinator for cleanup'
++            self.r.require(item.get('spawn_peer') is not None and self.r.transport.identity(proc.pid)==item['spawn_peer'],'COORDINATOR_CLEANUP_IDENTITY')
++            if item.get('ready') is None:
++                # Independent, single cleanup-only load. Never resume failed startup.
++                item['ready']=self.coordinator_readiness(item)
++            else:self.coordinator_ready_identity(item,item['ready'])
++            outcome='NOT_ATTEMPTED_SESSION_UNESTABLISHED'
++            if item['token'] is None:
++                if item['attach_started']:raise RuntimeError('Coordinator attachment outcome unknown; cleanup retained')
++                self.coordinator_attach(item)
++            outcome='AUTHENTICATED_CLOSE_FAILED';item['operation']='authenticated coordinator close'
++            result=self.cc(item,'close')
++            self.check('explicit coordinator close',type(result) is dict and result.get('result')=='CLOSED')
++            outcome='AUTHENTICATED_CLOSE_ACKNOWLEDGED_EXIT_UNCONFIRMED';item['operation']='wait for authenticated coordinator exit'
++            proc.wait(5)
++            self.check('coordinator exit recorded',proc.returncode==0,identity=item['ready']['identity'],
++                       spawn_peer=item['spawn_peer'],exit=proc.returncode,cleanup_result='AUTHENTICATED_CLOSE_SUCCEEDED')
++        except BaseException as exc:
++            self.records.append({'case':'coordinator cleanup failed','passed':False,'cleanup_result':outcome,
++                                 **self.coordinator_diagnostic(item,exc,'cleanup')});self.save()
++            raise
+     def snapshot(self,root):
+         import sqlite3
+         path=root/'STAGE4_TEST-data/jarvis.sqlite3'

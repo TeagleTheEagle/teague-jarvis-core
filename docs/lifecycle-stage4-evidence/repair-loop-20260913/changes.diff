@@ -1,0 +1,356 @@
+--- before/stage4_runtime.py
++++ current/stage4_runtime.py
+@@ -72,6 +72,59 @@
+     require(_context is not None, 'TEST_CONTEXT_REQUIRED')
+     _context.check_lock()
+     return _context
++
++
++class RepairLoopHost:
++    """Trusted TEST bootstrap owns one internal wakeup socket pair.
++
++    No policy override or connection exception is installed. Sequential workers
++    borrow the idle loop; their own executor is joined before they finish.
++    """
++    def __init__(self, *, mode):
++        require(mode == 'STAGE4_TEST', 'TEST_ONLY')
++        import asyncio
++        self.loop = asyncio.new_event_loop()
++        self.pid = os.getpid()
++        self.lock = threading.Lock()
++        self.closed = False
++        self.poisoned = False
++
++    def run(self, factory):
++        import asyncio
++        from concurrent.futures import ThreadPoolExecutor
++        require(self.pid == os.getpid() and not self.closed and not self.poisoned, 'REPAIR_LOOP_UNAVAILABLE')
++        require(self.lock.acquire(False), 'REPAIR_LOOP_BUSY')
++        try:
++            require(not self.loop.is_running(), 'REPAIR_LOOP_BUSY')
++            # Executor shutdown belongs to the tracked worker, including when
++            # cancellation or an exception leaves a thread still cleaning up.
++            with ThreadPoolExecutor(max_workers=1, thread_name_prefix='STAGE4_TEST-repair') as executor:
++                self.loop.set_default_executor(executor)
++                try:
++                    return self.loop.run_until_complete(factory())
++                finally:
++                    pending = asyncio.all_tasks(self.loop)
++                    if pending:
++                        self.poisoned = True
++                        for task in pending:task.cancel()
++                        self.loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
++                    self.loop.run_until_complete(self.loop.shutdown_asyncgens())
++                    require(not pending, 'REPAIR_UNEXPECTED_PENDING_TASKS')
++        except BaseException:
++            self.poisoned = True
++            raise
++        finally:
++            self.lock.release()
++
++    def close(self):
++        require(self.pid == os.getpid(), 'REPAIR_LOOP_OWNER')
++        require(self.lock.acquire(False), 'REPAIR_LOOP_BUSY')
++        try:
++            if not self.closed:
++                require(not self.loop.is_running(), 'REPAIR_LOOP_BUSY')
++                self.loop.close()
++                self.closed = True
++        finally:self.lock.release()
+ 
+ 
+ class Context:
+@@ -94,6 +147,7 @@
+         self.repair_requests = {}
+         self.repair_results = {}
+         self.repair_admission = threading.Lock()
++        self.repair_loop = None  # Created only by trusted TEST bootstrap before audit.
+         from stage4_response_history import History
+         self.response_history = History(self.data/'jarvis.sqlite3')
+         self.text_router = None
+@@ -278,7 +332,6 @@
+ 
+     def repair_dispatch(self, token, body):
+         """Owner-bound fixed TEST fixture using the existing reservation runner."""
+-        import asyncio
+         import budgeted_repair
+         require(type(body) is dict, 'REQUEST')
+         with self.owners.lock:
+@@ -336,11 +389,16 @@
+                         cancel.set()
+                         raise InterruptedError('TEST repair admission closed') from None
+                 try:
+-                    result = asyncio.run(budgeted_repair.run(self.app.store,fixture['responder'],fixture['project'],fixture['task'],
++                    require(self.repair_loop is not None, 'REPAIR_LOOP_UNAVAILABLE')
++                    result = self.repair_loop.run(lambda: budgeted_repair.run(self.app.store,fixture['responder'],fixture['project'],fixture['task'],
+                         operation,confirmation,cancel,fixture['checker'],before_step=checkpoint,test_workflow=fixture['workflow']))
+                 except Exception as exc:
++                    import traceback
++                    diagnostic={'error_type':type(exc).__name__, 'errno':getattr(exc,'errno',None),
++                        'winerror':getattr(exc,'winerror',None), 'phase':'registered TEST repair worker',
++                        'frames':[{'file':f.filename,'line':f.lineno,'function':f.name} for f in traceback.extract_tb(exc.__traceback__)]}
+                     with self.owners.lock:
+-                        self.repair_results[wid]={'status':'UNKNOWN','error_type':type(exc).__name__,'deployed':False,'simulated':True}
++                        self.repair_results[wid]={'status':'UNKNOWN',**diagnostic,'deployed':False,'simulated':True}
+                     return 'UNKNOWN'
+                 with self.owners.lock:
+                     self.repair_results[wid]={**result,'simulated':True,'actual_repair_executed':False}
+@@ -575,6 +633,11 @@
+             from stage4_ollama_transport import real_router
+             context.allow_local_ollama=True
+             context.text_router=real_router()
++        if configuration.get('repair_fixture') is True:
++            require(repair_setup is not None, 'TRUSTED_REPAIR_FIXTURE_REQUIRED')
++            # This fixed runtime resource is created before the permanent audit
++            # hook. No request callback or provider code runs during bootstrap.
++            context.repair_loop = RepairLoopHost(mode='STAGE4_TEST')
+         app=construct_app(context)
+         if configuration.get('inspection_fixture') is True:
+             require(inspection_setup is not None, 'TRUSTED_INSPECTION_FIXTURE_REQUIRED')
+@@ -640,6 +703,20 @@
+             if controller.is_alive():
+                 context.lifecycle._recovery('CONTROL_THREAD_STILL_ACTIVE')
+                 while True:time.sleep(1)
++            if context.repair_loop is not None:
++                close_errors=[]
++                def close_repair_loop():
++                    try:context.repair_loop.close()
++                    except BaseException as exc:close_errors.append(type(exc).__name__)
++                closer=threading.Thread(target=close_repair_loop,daemon=True)
++                closer.start()
++                remaining=max(0,30-(context.owners.clock()-context.lifecycle.accepted_at))
++                closer.join(min(2,remaining))
++                if closer.is_alive() or close_errors or not context.repair_loop.closed:
++                    context.lifecycle._recovery('REPAIR_LOOP_CLEANUP_UNCERTAIN')
++                    exclusion.event(root,'RECOVERY_REQUIRED',reason='REPAIR_LOOP_CLEANUP_UNCERTAIN')
++                    while True:time.sleep(1)
++                exclusion.event(root,'repair_loop_closed')
+             try:context.lifecycle.record_exit_ready()
+             except Exception:
+                 exclusion.event(root,'RECOVERY_REQUIRED',reason='EXIT_READINESS_PERSISTENCE_FAILED')
+--- before/tests/lifecycle_stage4/fixtures.py
++++ current/tests/lifecycle_stage4/fixtures.py
+@@ -333,7 +333,7 @@
+     h=sys.modules[context.__class__.__module__].exclusion
+     async def respond(prompt, *, cancel):
+         h.event(context.root,'repair_attempt_started')
+-        if not cancel.wait(5):raise TimeoutError('TEST cancellation not received')
++        if not cancel.wait(15):raise TimeoutError('TEST cancellation not received')
+         h.event(context.root,'repair_cleanup_started')
+         until=time.monotonic()+5
+         while not (context.root/'repair-release').exists():
+@@ -491,6 +491,10 @@
+             record('repair is explicitly synthetic and not deployed',started['simulated'] and not started['actual_repair_executed'] and not started['deployed'])
+             until=time.monotonic()+3
+             while not list(root.glob('*-repair_attempt_started.json')):
++                status=call('teague','repair',{'request':{'action':'status','request_id':repair}})
++                if status['done']:
++                    report.append({'case':'repair ended before resource attempt','passed':False,'diagnostic':status['result']})
++                    raise AssertionError('Repair ended before first attempt; inspect preserved diagnostic')
+                 if time.monotonic()>until:raise TimeoutError('Synthetic repair resource started')
+                 time.sleep(.01)
+             record('resource attempts charged before completion',row()['state']=='started' and row()['used_core']==1 and row()['used_container']==1)
+@@ -498,7 +502,11 @@
+             record('foreign repair result denied',call('intelligence','repair',{'request':{'action':'status','request_id':repair}}).get('result')=='DENIED')
+             record('foreign repair cancellation denied',call('intelligence','repair',{'request':{'action':'cancel','request_id':repair}}).get('result')=='DENIED')
+             record('foreign operation ID does not grant authority',call('intelligence','repair',{'request':body}).get('result')=='DENIED')
+-            if final_case=='repair-detach':
++            if final_case=='repair-drain':
++                measurements['repair_shutdown_started']=time.monotonic()
++                call('controller','shutdown',{'operation':uuid.uuid4().hex})
++                record('shutdown grace retains active repair',call('controller','lifecycle-status')['state']=='DRAINING' and row()['state']=='started')
++            elif final_case=='repair-detach':
+                 call('teague','detach')
+                 tokens['teague']=call('teague','attach',{'scopes':enrolled['teague']['scopes']})['token']
+                 record('reattachment does not inherit repair ownership',call('teague','repair',{'request':{'action':'status','request_id':repair}}).get('result')=='DENIED')
+@@ -507,13 +515,16 @@
+                 record('emergency cancels repair without Core exit',core.poll() is None)
+             else:
+                 call('teague','repair',{'request':{'action':'cancel','request_id':repair}})
+-            until=time.monotonic()+3
++            until=time.monotonic()+(13 if final_case=='repair-drain' else 3)
+             while not list(root.glob('*-repair_cleanup_started.json')):
+                 if time.monotonic()>until:raise TimeoutError('Repair cleanup started')
+                 time.sleep(.01)
+             record('cancellation did not settle or refund active repair',row()['state']=='started' and row()['used_core']==1 and row()['used_container']==1)
+             record('cleanup remains registered active work',call('controller','lifecycle-status')['active_work']==1)
+-            call('controller','shutdown',{'operation':uuid.uuid4().hex})
++            if final_case=='repair-drain':
++                measurements['repair_cancellation_after_seconds']=time.monotonic()-measurements.pop('repair_shutdown_started')
++                record('repair cancellation follows ten-second grace',10<=measurements['repair_cancellation_after_seconds']<13)
++            else:call('controller','shutdown',{'operation':uuid.uuid4().hex})
+             record('repair admission closed during drain',call('intelligence','repair',{'request':{**body,'operation':uuid.uuid4().hex}}).get('result')=='DENIED')
+             held=False
+             try:
+@@ -570,6 +581,7 @@
+         record('graceful drain journal contains only terminal records',bool(rows))
+         if final_case.startswith('repair-'):
+             result=row()
++            record('TEST asyncio loop closed before Core exit',len(list(root.glob('*-repair_loop_closed.json')))==1)
+             record('known cleanup settles only observed partial usage',result['state']=='settled' and result['outcome']=='failed' and result['used_core']==1 and result['used_container']==1)
+             record('terminal journal keeps exact budget reference',any(r['operation']==repair and r['phase']=='FAILED' and r['budget_ref']==fixture['project']+':'+operation for r in rows))
+             record('no next check or duplicate resource attempt',len(list(root.glob('*-repair_attempt_started.json')))==1 and len(list(root.glob('*-repair_check_attempt.json')))==1)
+@@ -789,6 +801,7 @@
+     elif '--real-app-repair-cleanup' in sys.argv:real_app_probe('repair-cleanup')
+     elif '--real-app-repair-detach' in sys.argv:real_app_probe('repair-detach')
+     elif '--real-app-repair-emergency' in sys.argv:real_app_probe('repair-emergency')
++    elif '--real-app-repair-drain' in sys.argv:real_app_probe('repair-drain')
+     elif '--electron-app-probe' in sys.argv:electron_app_probe()
+     elif '--app-worker' in sys.argv:
+         repo=Path(__file__).resolve().parents[2];sys.path.insert(0,str(repo))
+--- before/tests/lifecycle_stage4/test_stage4.py
++++ current/tests/lifecycle_stage4/test_stage4.py
+@@ -499,6 +499,80 @@
+     raise SystemExit(not result.wasSuccessful())
+ 
+ 
++def repair_loop_audit():
++    """No App/Core: run the exact runtime audit function with synthetic context."""
++    import ast, asyncio, socket, threading
++    from types import SimpleNamespace
++    sys.path.insert(0,str(REPO))
++    import stage4_runtime as runtime
++    root=REPO/'tests/lifecycle_stage4/evidence'/('STAGE4_TEST-loop-'+uuid.uuid4().hex);root.mkdir(parents=True)
++    host=runtime.RepairLoopHost(mode='STAGE4_TEST');poison=runtime.RepairLoopHost(mode='STAGE4_TEST')
++    context=SimpleNamespace(root=root,data=root/'data',allow_local_ollama=False)
++    tree=ast.parse(Path(runtime.__file__).read_text(encoding='utf8'))
++    audit=next(n for n in ast.walk(tree) if isinstance(n,ast.FunctionDef) and n.name=='isolated_io')
++    namespace={**vars(runtime),'context':context}
++    exec(compile(ast.Module(body=[audit],type_ignores=[]),str(runtime.__file__),'exec'),namespace)
++    sys.addaudithook(namespace['isolated_io'])
++    records=[]
++    def check(label,ok):
++        records.append({'case':label,'passed':bool(ok)})
++        if not ok:raise AssertionError(label)
++    try:
++        for address in (('127.0.0.1',1),('127.0.0.1',11434),('192.168.1.1',80),('198.51.100.1',443)):
++            denied=False
++            with socket.socket() as sock:
++                try:sock.connect(address)
++                except runtime.Denied:denied=True
++            check('network denied '+str(address),denied)
++        denied=False
++        try:socket.getaddrinfo('stage4-test.invalid',443)
++        except runtime.Denied:denied=True
++        check('DNS denied',denied)
++        results=[]
++        async def request():return await asyncio.to_thread(lambda:'synthetic response')
++        for _ in range(2):
++            t=threading.Thread(target=lambda:results.append(host.run(request)));t.start();t.join(3)
++            check('registered sequential worker exits',not t.is_alive())
++        check('sequential requests complete under unchanged audit',results==['synthetic response']*2)
++        check('executor threads joined',not any(t.name.startswith('STAGE4_TEST-repair') for t in threading.enumerate()))
++        entered=threading.Event();release=threading.Event()
++        async def blocking():await asyncio.to_thread(lambda:(entered.set(),release.wait(3)))
++        t=threading.Thread(target=lambda:host.run(blocking));t.start();check('blocking worker entered',entered.wait(2))
++        try:
++            denied=False
++            try:host.run(request)
++            except runtime.Denied:denied=True
++            check('simultaneous loop borrow denied',denied)
++            denied=False
++            try:host.close()
++            except runtime.Denied:denied=True
++            check('close active loop denied',denied)
++        finally:release.set();t.join(3)
++        check('blocked executor cleanup joined',not t.is_alive())
++        async def leak():
++            asyncio.create_task(asyncio.sleep(60))
++            return 'not a clean outcome'
++        denied=False
++        try:poison.run(leak)
++        except runtime.Denied:denied=True
++        check('unexpected pending task fails closed',denied and poison.poisoned and not asyncio.all_tasks(poison.loop))
++        host.close();poison.close()
++        check('idle loop resources closed',host.closed and poison.closed)
++        denied=False
++        try:host.run(request)
++        except runtime.Denied:denied=True
++        check('closed loop cannot be reused',denied)
++    except Exception as exc:
++        records.append({'case':'probe failure','passed':False,'error':type(exc).__name__,'traceback':traceback.format_exc()})
++        raise
++    finally:
++        for owner in (host,poison):
++            if not owner.closed and not owner.lock.locked():owner.close()
++        dest=root/'result.json';dest.write_text(json.dumps({'cases':records,'scope':'No App/Core, exact extracted runtime audit; internal socketpairs created before hook; no permitted external connections'},indent=2))
++        print('EVIDENCE',dest)
++    print('loop audit checks',len(records),'PASS')
++
++
+ def repair_tests():
+     import concurrent.futures
+     import threading
+@@ -510,7 +584,7 @@
+     from store import Store
+     from stage4_sessions import Ownership, Denied
+     from stage4_lifecycle import Lifecycle, Journal
+-    from stage4_runtime import Context
++    from stage4_runtime import Context, RepairLoopHost
+     from fixtures import provision_repair_fixture
+     runroot=REPO/'tests/lifecycle_stage4/evidence'/('STAGE4_TEST-repair-'+uuid.uuid4().hex)
+     runroot.mkdir(parents=True);records=[]
+@@ -529,6 +603,7 @@
+             self.j=Journal(jr,identity);self.life=Lifecycle(self.o,self.j)
+             self.ctx=Context.__new__(Context);self.ctx.owners=self.o;self.ctx.lifecycle=self.life;self.ctx.epoch=self.o.epoch
+             self.ctx.repair_fixture=None;self.ctx.repair_requests={};self.ctx.repair_results={};self.ctx.repair_admission=threading.Lock()
++            self.ctx.repair_loop=RepairLoopHost(mode='STAGE4_TEST')
+             self.s=Store(self.root/'data');self.ctx.app=SimpleNamespace(store=self.s,stage4=self.ctx)
+             workspaces.setup(self.s)
+             self.project,self.task=provision_repair_fixture(self.ctx,SimpleNamespace(respond=self.respond),self.checker)
+@@ -550,6 +625,7 @@
+             self.release.set()
+             for w in self.o.work.values():w.cancel.set()
+             self.join()
++            self.ctx.repair_loop.close()
+             with self.s.connect() as db:rows=[dict(r) for r in db.execute('SELECT * FROM project_budget_reservations')]
+             records.append({'case':self._testMethodName,'root':str(self.root),'calls':self.calls,'reservations':rows,
+                 'work':[{'id':w.id,'phase':w.phase,'outcome':w.outcome,'done':w.done.is_set()} for w in self.o.work.values()],
+@@ -691,6 +767,20 @@
+             self.assertEqual(self.o.state,'RECOVERY_REQUIRED');self.assertEqual(self.row()['state'],'settled')
+             self.assertEqual(self.row()['used_core'],1)
+             with self.assertRaises(Denied):self.j.inspect()
++        def test_21_sequential_repairs_reuse_only_idle_loop(self):
++            budgets.change(self.s,{'action':'budget_configure','project':self.project,'limits':{'core_requests':2,'container_checks':4}})
++            first=self.start();self.join()
++            second=self.start(body={**self.body,'operation':uuid.uuid4().hex});self.join()
++            self.assertNotEqual(first,second);self.assertEqual(self.calls.count('core'),2)
++            self.assertFalse(self.ctx.repair_loop.loop.is_running());self.assertFalse(self.ctx.repair_loop.closed)
++            self.assertTrue(all(w.outcome=='SUCCEEDED' for w in self.o.work.values()))
++        def test_22_missing_loop_records_phase_without_reserving(self):
++            host=self.ctx.repair_loop;self.ctx.repair_loop=None
++            try:
++                w=self.start();self.join();self.assertIsNone(self.row())
++                self.assertEqual(self.status(w)['result']['error_type'],'Denied')
++                self.assertTrue(self.status(w)['result']['frames']);self.assertEqual(self.o.work[w].outcome,'UNKNOWN')
++            finally:self.ctx.repair_loop=host
+ 
+     result=unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromTestCase(Tests))
+     dest=REPO/'docs/lifecycle-stage4-evidence'/('repair-workers-'+uuid.uuid4().hex+'.json')
+@@ -702,6 +792,7 @@
+ 
+ 
+ if __name__=='__main__':
++    if '--repair-loop-audit' in sys.argv:repair_loop_audit();raise SystemExit(0)
+     if '--repair-tests' in sys.argv:repair_tests()
+     if '--inspection-tests' in sys.argv:inspection_tests()
+     if '--ownership-tests' in sys.argv:ownership_tests()
+--- before/docs/CANONICAL-CORE-STAGE-4.md
++++ current/docs/CANONICAL-CORE-STAGE-4.md
+@@ -691,3 +691,16 @@
+ preserved. Separately approved identity-verified cleanup of TEST Core 16580 is
+ complete; its launcher exited naturally. No production runtime/data changes or activation.
+ A bounded TEST loop-host proposal requires review; no acceptance commit or Stage5.
++
++## Approved TEST loop host checkpoint — 2026-09-13
++
++See [loop host implementation review](lifecycle-stage4-evidence/repair-loop-20260913/REVIEW.md).
++The approved isolated host resolves the reproduced loop-initialization/audit
++conflict in passing authenticated TEST runs. Audit policy is unchanged; 22 focused
++tests and 16 audit checks passed, as did Stage 1–3, Python/desktop/provider and
++Electron regressions. A subsequent emergency rerun encountered a broken pipe
++after an unusually long interval; repair remained NEVER_STARTED with no reservation,
++and controller STATUS was denied. That failure is preserved and not erased by
++prior passes. Separately approved cleanup of TEST Core 17320 completed, with its
++launcher exiting naturally. Acceptance remains incomplete pending review, including
++the controller-expiry finding. No production activation, acceptance commit or Stage5.

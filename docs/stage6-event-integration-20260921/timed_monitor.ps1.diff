@@ -1,0 +1,52 @@
+--- frozen/timed_monitor.ps1
++++ D:\JARVIS-STAGE6-LIVE\6d305fb9fc7440c5bf485466e9d708df\code\timed_monitor.ps1
+@@ -1,10 +1,11 @@
+ param([string]$Run,[int]$KernelPid)
+ $ErrorActionPreference='Stop';. (Join-Path $PSScriptRoot 'workspace.ps1');$root=Get-LiveRun $Run;Set-LiveTemp $root
+-Add-Type -Path @((Join-Path $PSScriptRoot 'LoopTiming.cs'),(Join-Path $PSScriptRoot 'event_queue.cs'),(Join-Path $PSScriptRoot 'EventTap.cs'))
++Add-Type -Path @((Join-Path $PSScriptRoot 'AuthoritativeEvents.cs'),(Join-Path $PSScriptRoot 'LoopTiming.cs'),(Join-Path $PSScriptRoot 'event_queue.cs'),(Join-Path $PSScriptRoot 'EventTap.cs'))
+ function Invoke-J6TimedStage([string]$Name,[scriptblock]$Code){$span=[LoopTiming]::Span($Name);try{& $Code}finally{$span.Dispose()}}
+-function Save($n,$v){Invoke-J6TimedStage ('output.'+$n) {[IO.File]::WriteAllText((Join-Path $root $n),($v|ConvertTo-Json -Depth 12))}}
++function Save($n,$v){Invoke-J6TimedStage ('output.'+$n) {$mode=if($n -eq 'app-health.json'){[IO.FileMode]::Create}else{[IO.FileMode]::CreateNew};$f=[IO.FileStream]::new((Join-Path $root $n),$mode,[IO.FileAccess]::Write,[IO.FileShare]::Read);try{$b=[Text.Encoding]::UTF8.GetBytes(($v|ConvertTo-Json -Depth 12));$f.Write($b,0,$b.Length);$f.Flush($true)}finally{$f.Dispose()}}}
+ $s='J6TimedStart-'+[guid]::NewGuid().ToString('N');$t='J6TimedStop-'+[guid]::NewGuid().ToString('N');$ids=@($s,$t)
+-$exact=[ExactEventQueue]::new($ExecutionContext.Events.ReceivedEvents,[string[]]$ids)
++$exact=[ExactEventQueue]::new($ExecutionContext.Events.ReceivedEvents,[string[]]$ids,$true)
++[EventTap]::Initialize($root)
+ $receipts=[Collections.Generic.List[object]]::new();$heartbeats=[Collections.Generic.List[object]]::new();$lastEvent=[Diagnostics.Stopwatch]::GetTimestamp();$frequency=[Diagnostics.Stopwatch]::Frequency
+ $clock=[Diagnostics.Stopwatch]::StartNew();$closingAt=$null;$success=$false;$unsubscribed=$false;$errorRecord=$null;$lastHeartbeat=$lastEvent
+ function Drain {
+@@ -16,7 +17,7 @@
+   $serialized=Invoke-J6TimedStage 'event.serialization' {(($row|ConvertTo-Json -Compress)+"`n")}
+   $path=Invoke-J6TimedStage 'evidence.path' {Join-Path $root 'app-events.jsonl'}
+   Invoke-J6TimedStage 'event.append-and-remove' {$exact.PersistAndRemove($entry,$path,$serialized)}
+-  $script:lastEvent=[Diagnostics.Stopwatch]::GetTimestamp();$receipts.Add(@{queueSequence=$entry.QueueSequence;pid=$row.pid;kind=$row.kind;persistedQpc=$script:lastEvent;removed=$entry.Removed})
++  $script:lastEvent=[Diagnostics.Stopwatch]::GetTimestamp();$receipt=@{queueSequence=$entry.QueueSequence;pid=$row.pid;kind=$row.kind;persistedQpc=$script:lastEvent;removed=$entry.Removed};$receipts.Add($receipt);[EventTap]::Persisted(($row|ConvertTo-Json -Compress),($receipt|ConvertTo-Json -Compress))
+  }
+ }
+ try{
+@@ -28,7 +29,7 @@
+  Save 'app-ready.json' @{pid=$PID;created=$me.StartTime.ToUniversalTime().ToFileTimeUtc().ToString();image=$me.Path;frequency=$frequency;qpc=[Diagnostics.Stopwatch]::GetTimestamp();source='independent CIM subscriptions'}
+  while($clock.Elapsed.TotalSeconds -lt 1200){
+   [LoopTiming]::BeginLoop();Invoke-J6TimedStage 'loop.wake' {[LoopTiming]::Note('awake')}
+-  Invoke-J6TimedStage 'queue.health' {if($exact.Failed -or [EventTap]::Errors -or [EventTap]::Overflow -or [LoopTiming]::Overflow){throw 'Collector/timing overflow or failure'}}
++  Invoke-J6TimedStage 'queue.health' {if($exact.Failed -or [EventTap]::Errors -or [EventTap]::StreamFailure -or [LoopTiming]::Overflow){throw 'Collector/timing overflow or failure'}}
+   $subscriptions=Invoke-J6TimedStage 'event.source.subscription-check' {@(Get-EventSubscriber|Where-Object SourceIdentifier -in $ids).Count}
+   if($subscriptions -ne 2){throw 'Subscription lost'}
+   Invoke-J6TimedStage 'event.drain' {Drain}
+@@ -52,12 +53,13 @@
+ }catch{$errorRecord=@{error=$_.Exception.Message;stack=$_.ScriptStackTrace;qpc=[Diagnostics.Stopwatch]::GetTimestamp()}}
+ finally{
+  if(!$unsubscribed){foreach($id in $ids){Unregister-Event -SourceIdentifier $id -ErrorAction SilentlyContinue}}
+- [EventTap]::Detach()
++ [EventTap]::Detach()
++ try{[EventTap]::Finish();if([EventTap]::StreamFailure){$success=$false;$errorRecord=@{error=[EventTap]::StreamFailure}}}catch{$success=$false;$errorRecord=@{error=$_.Exception.Message}}
+  Save 'app-receipts.json' @($receipts.ToArray());Save 'app-tap.json' @([EventTap]::Snapshot());Save 'app-heartbeats.json' @($heartbeats.ToArray())
+- Save 'app-result.json' @{success=$success;error=$errorRecord;queue=$exact.Stats();tapErrors=[EventTap]::Errors;tapOverflow=[EventTap]::Overflow;source='CIM_PROCESS_NOTIFICATION';durableFinalization=$success;unsubscribed=$unsubscribed}
++ Save 'app-result.json' @{success=$success;error=$errorRecord;queue=$exact.Stats();tapErrors=[EventTap]::Errors;tapOverflow=[EventTap]::Overflow;tapTruncated=[EventTap]::Truncated;authoritativeManifest="app-authority.json";source='CIM_PROCESS_NOTIFICATION';durableFinalization=$success;unsubscribed=$unsubscribed}
+  $exact.Dispose()
+  # Frozen memory trace is written only after subscriptions and live collection end.
+  $trace=@{frequency=$frequency;overflow=[LoopTiming]::Overflow;spans=@([LoopTiming]::SpanSnapshot());points=@([LoopTiming]::Snapshot());optionalResourceInspection='MOVED_OUT_OF_MONITOR';evidenceExistenceCheck='NONE: append opens directly'}
+- [IO.File]::WriteAllText((Join-Path $root 'stage-timing.json'),($trace|ConvertTo-Json -Depth 8))
++ Save 'stage-timing.json' $trace
+ }
+ if(!$success){exit 1}

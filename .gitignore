@@ -1,0 +1,23 @@
+.env
+.env.*
+!.env.example
+.venv/
+data/
+__pycache__/
+*.pyc
+node_modules/
+dist/
+build/
+release/
+review/
+# Machine-local desktop preferences and test captures are not source checkpoints.
+desktop/preferences.json
+desktop/*-result.json
+desktop/*-test.png
+desktop/live-permissions.txt
+desktop/.jarvis-session.json
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+*.pem
+*.key

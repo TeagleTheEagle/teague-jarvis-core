@@ -1,0 +1,8 @@
+node_modules/
+.pnpm-store/
+.electron-cache/
+smoke-result.json
+
+companion-test.png
+
+animation-result.json

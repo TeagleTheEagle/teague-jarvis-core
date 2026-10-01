@@ -1,0 +1,66 @@
+--- previous/collect.py
++++ diagnostic/collect.py
+@@ -2,7 +2,7 @@
+ import ctypes as c,ctypes.wintypes as w,datetime,json,pathlib,subprocess,sys,time,traceback,hashlib
+ from journal import Reader,PublisherWatch,ticks
+ from workspace import CODE as R,run_dir,activate_temp
+-from probe_timing import Probe
++from controls import make_probe, VARIANTS
+ run=sys.argv[1];out=run_dir(run);activate_temp(out)
+ config=json.loads((out/'case.json').read_text());mode=config['mode'];duration=config['duration']
+ assert mode in ('idle','disk','sustained','cpu','Dhash','dry') and 0<duration<=160
+@@ -38,7 +38,8 @@
+    save('rejected-poll.json',dict(before=before,after=ticks(),last=reader.last,traceback=traceback.format_exc()));raise
+   samples.append(dict(v,qpc=before,pollEnd=ticks(),phase=mode))
+   if time.monotonic()-began-last>=1:
+-   measured_probe=Probe(R/'J6Probe.exe');measured.append(measured_probe)
++   variant=VARIANTS[(len(measured)+config['offset'])%len(VARIANTS)]
++   measured_probe=make_probe(variant);measured.append(measured_probe)
+    p=measured_probe.process;handles.append(p);t=measured_probe.row['launchRequestedQpc']
+    created=times(p)[0]
+    code=measured_probe.wait_original();ts=times(p)
+--- previous/probe_timing.py
++++ diagnostic/probe_timing.py
+@@ -14,8 +14,9 @@
+  if not K.GetProcessTimes(int(p._handle),*[c.byref(t) for t in ts]):raise c.WinError(c.get_last_error())
+  return [str(ft(t)) for t in ts]
+ class Probe:
+- def __init__(self,executable):
+-  self.row=dict(parentPid=os.getpid(),executable=str(executable),arguments=[],cwd=os.getcwd(),stdout='DEVNULL',stderr='DEVNULL',creationflags='CREATE_NO_WINDOW',close_fds=True,frequency=frequency(),clockBefore=bridge(),launchRequestedQpc=ticks())
++ def __init__(self,executable,args=None,startupinfo=None):
++  args=[] if args is None else args
++  self.row=dict(parentPid=os.getpid(),executable=str(executable),arguments=args,cwd=os.getcwd(),stdout='DEVNULL',stderr='DEVNULL',creationflags='CREATE_NO_WINDOW',close_fds=True,frequency=frequency(),clockBefore=bridge(),launchRequestedQpc=ticks())
+   original=subprocess._winapi.CreateProcess
+   def measured(*args,**kwargs):
+    self.row['createProcessCalledQpc']=ticks()
+@@ -23,7 +24,7 @@
+    finally:self.row['createProcessReturnedQpc']=ticks()
+   try:
+    subprocess._winapi.CreateProcess=measured
+-   self.process=subprocess.Popen([str(executable)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,creationflags=0x08000000)
++   self.process=subprocess.Popen([str(executable),*args],startupinfo=startupinfo,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,creationflags=0x08000000)
+   finally:subprocess._winapi.CreateProcess=original
+   self.row['popenReturnedQpc']=ticks();self.row['pid']=self.process.pid
+   self.row['initialKernelTimes']=process_times(self.process);self.row['identityCapturedQpc']=ticks()
+--- previous/launch.ps1
++++ diagnostic/launch.ps1
+@@ -1,10 +1,10 @@
+-param([ValidateSet('idle','disk','sustained','cpu','Dhash')][string]$Mode,[ValidateRange(5,160)][int]$Duration,[ValidatePattern('^[a-z][a-z0-9-]{0,20}$')][string]$Label)
++param([ValidateSet('idle','disk','sustained','cpu','Dhash')][string]$Mode,[ValidateRange(5,160)][int]$Duration,[ValidatePattern('^[a-z][a-z0-9-]{0,20}$')][string]$Label,[ValidateRange(0,6)][int]$Offset=0)
+ $ErrorActionPreference='Stop';. (Join-Path $PSScriptRoot 'workspace.ps1');Assert-LiveCode;Set-Location -LiteralPath $PSScriptRoot
+ if(@(Get-Process|Where-Object ProcessName -match '^(VBox|VirtualBox)').Count){throw 'VirtualBox must remain closed'}
+ $Run=$Label+'-'+[guid]::NewGuid().ToString('N');$root=Join-Path $PSScriptRoot $Run
+ New-Item -ItemType Directory -Path $root -ErrorAction Stop|Out-Null
+ New-Item -ItemType Directory -Path (Join-Path $root 'temp') -ErrorAction Stop|Out-Null;Set-LiveTemp $root
+-@{run=$Run;mode=$Mode;journalVolume='D';eventVolume='D';controlVolume='D';telemetry='full';duration=$Duration;threshold=10;acceptance=$false;purpose='probe diagnosis only'}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $root 'case.json')
++@{run=$Run;mode=$Mode;journalVolume='D';eventVolume='D';controlVolume='D';telemetry='full';duration=$Duration;threshold=10;acceptance=$false;purpose='native control diagnosis only';offset=$Offset}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $root 'case.json')
+ @(Get-ChildItem -LiteralPath $PSScriptRoot -File|Where-Object Extension -in '.ps1','.py','.cs','.exe'|ForEach-Object {@{path=$_.FullName;sha256=(Get-FileHash -LiteralPath $_.FullName).Hash}})|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $root 'source-hashes.json')
+ $pwsh='C:\Users\jonny\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\powershell\pwsh.exe';$hash=(Get-FileHash -LiteralPath $pwsh).Hash
+ $p=Start-Process -FilePath $pwsh -ArgumentList @('-NoProfile','-File',('"'+(Join-Path $PSScriptRoot 'monitor.ps1')+'"'),'-Run',$Run) -WorkingDirectory $PSScriptRoot -Verb RunAs -WindowStyle Hidden -PassThru
+@@ -17,4 +17,6 @@
+ & $python -B (Join-Path $PSScriptRoot 'event_analysis.py') $Run
+ if($LASTEXITCODE){throw 'Event analysis failure'}
+ & $python -B (Join-Path $PSScriptRoot 'probe_analysis.py') $Run
++if($LASTEXITCODE){throw 'Timing analysis failure'}
++& $python -B (Join-Path $PSScriptRoot 'control_analysis.py') $Run
+ if($LASTEXITCODE){throw 'Timing/identity uncertainty'}

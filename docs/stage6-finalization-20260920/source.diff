@@ -1,0 +1,230 @@
+--- before/accept_run.py
++++ candidate/accept_run.py
+@@ -14,6 +14,9 @@
+    for stage in ('A-callback','A-enqueue'):
+     if counts[x['pid'],kind,stage]!=1:raise RuntimeError('Callback/enqueue coverage')
+  if a['internalCollisions'] or q['remaining']:raise RuntimeError('Queue identity/residue')
++ f=read('finalization-state.json')
++ if f['state']!='SEALED' or f['failure'] or f['active'] or not f['allHandlesConfirmed'] or f['expected']!=len(p) or f['starts']!=len(p) or f['stops']!=len(p):raise RuntimeError('Finalization barrier not proved')
++ if read('monitor-result.json').get('finalization')!='SEALED':raise RuntimeError('Missing finalization receipt')
+  result=finalize(R)
+  if not accepted(R,0):raise RuntimeError('Final durable receipt invalid')
+  durable_write(R/'acceptance.json',dict(status='SACRIFICIAL_RUN_ACCEPTED',expectedStarts=len(p),callbackStarts=len(p),enqueuedStarts=len(p),persistedStarts=len(p),expectedStops=len(p),callbackStops=len(p),enqueuedStops=len(p),persistedStops=len(p),externalCollisions=a['externalCollisions'],internalCollisions=a['internalCollisions'],heartbeatInterval=a['maxHeartbeatInterval'],heartbeatAge=a['maxHeartbeatAge'],manifest_sha256=result['manifest_sha256'],protectedAccess=False))
+--- before/collect.py
++++ candidate/collect.py
+@@ -1,5 +1,5 @@
+ """Bounded diagnostic collection; health failures remain latched, never accepted."""
+-import ctypes as c,ctypes.wintypes as w,datetime,json,pathlib,subprocess,sys,time,traceback,hashlib
++import ctypes as c,ctypes.wintypes as w,datetime,json,pathlib,subprocess,sys,time,traceback,hashlib,os
+ from journal import Reader,PublisherWatch,ticks
+ from workspace import CODE as R,run_dir,activate_temp
+ from probe_timing import Probe
+@@ -7,7 +7,13 @@
+ config=json.loads((out/'case.json').read_text());mode=config['mode'];duration=config['duration']
+ assert mode in ('idle','disk','sustained','cpu','Dhash','dry') and 0<duration<=160
+ def save(n,v):
+- with (out/n).open('w',encoding='utf-8') as f:json.dump(v,f,indent=2)
++ if n in ('producer-closed.json','collector-finished.json'):
++  temporary=out/(n+'.publishing')
++  with temporary.open('x',encoding='utf-8') as f:
++   json.dump(v,f,indent=2);f.flush();os.fsync(f.fileno())
++  os.replace(temporary,out/n)
++ else:
++  with (out/n).open('w',encoding='utf-8') as f:json.dump(v,f,indent=2)
+ def utc():return datetime.datetime.now(datetime.timezone.utc).isoformat()
+ deadline=time.monotonic()+20
+ while not (out/'ready.json').exists():
+@@ -38,14 +44,19 @@
+    save('rejected-poll.json',dict(before=before,after=ticks(),last=reader.last,traceback=traceback.format_exc()));raise
+   samples.append(dict(v,qpc=before,pollEnd=ticks(),phase=mode))
+   if time.monotonic()-began-last>=1:
+-   measured_probe=Probe(R/'J6Probe.exe');measured.append(measured_probe)
+-   p=measured_probe.process;handles.append(p);t=measured_probe.row['launchRequestedQpc']
+-   created=times(p)[0]
+-   code=measured_probe.wait_original();ts=times(p)
+-   if any(x['pid']==p.pid for x in probes) or created!=ts[0] or k.WaitForSingleObject(int(p._handle),0)!=0:raise RuntimeError('Probe identity/exit failure')
+-   probes.append(dict(pid=p.pid,created=created,kernel_exit_filetime=ts[1],exit=code,start_qpc=t,end_qpc=ticks(),phase=mode,retained_handle=True,handle_signalled=True))
+-   save('probes.json',probes);measured_probe.row['recordPersistedQpc']=ticks();last=time.monotonic()-began
+-   if code:raise RuntimeError('Probe exit failed')
++   cluster=config.get('cluster',1) if not measured else 1
++   if type(cluster) is not int or not 1<=cluster<=8:raise RuntimeError('Bounded cluster fixture required')
++   batch=[]
++   for _ in range(cluster):
++    item=Probe(R/'J6Probe.exe');measured.append(item);handles.append(item.process);batch.append(item)
++   for measured_probe in batch:
++    p=measured_probe.process;t=measured_probe.row['launchRequestedQpc']
++    created=times(p)[0]
++    code=measured_probe.wait_original();ts=times(p)
++    if any(x['pid']==p.pid for x in probes) or created!=ts[0] or k.WaitForSingleObject(int(p._handle),0)!=0:raise RuntimeError('Probe identity/exit failure')
++    probes.append(dict(pid=p.pid,created=created,kernel_exit_filetime=ts[1],exit=code,start_qpc=t,end_qpc=ticks(),phase=mode,retained_handle=True,handle_signalled=True))
++    save('probes.json',probes);measured_probe.row['recordPersistedQpc']=ticks();last=time.monotonic()-began
++    if code:raise RuntimeError('Probe exit failed')
+   if time.monotonic()-began>duration+15:raise RuntimeError('Existing bounded workload deadline exceeded')
+   time.sleep(.05)
+  if child:
+@@ -56,13 +67,29 @@
+ except BaseException:
+  status='FAILED_CLOSED';error=traceback.format_exc();save('collector-failure.json',dict(error=error,qpc=ticks()))
+ finally:
++ save('producer-closed.json',dict(run=identity['run'],qpc=ticks(),new_probes_forbidden=True))
+  (out/'workload-stop').touch()
+  if child:
+   try:child.communicate(timeout=15)
+   except subprocess.TimeoutExpired:child.kill();child.communicate();save('workload-forced-cleanup.json',dict(pid=child.pid,method='directly retained child handle'))
+   phase['worker_exit']=child.returncode
+  phase.setdefault('end_qpc',ticks());save('probes.json',probes);save('phases.json',[phase]);save('collector-samples.json',samples)
+- save('collector-finished.json',dict(status=status,error=error,qpc=ticks(),utc=utc(),acceptance=False));reader.close()
++ try:
++  for measurement in measured:measurement.finish_observation()
++  save('probe-timings.json',[m.row for m in measured])
++  verified=[]
++  for p in handles:
++   if k.WaitForSingleObject(int(p._handle),0)!=0:raise RuntimeError('Probe still active')
++   p.poll();ts=times(p)
++   verified.append(dict(pid=p.pid,times=ts,exit=p.returncode))
++  if len({x['pid'] for x in verified})!=len(verified):raise RuntimeError('Duplicate PID')
++  save('retained-handle-verification.json',verified)
++ except BaseException:
++  status='FAILED_CLOSED';error=traceback.format_exc();save('collector-failure.json',dict(error=error,qpc=ticks()))
++  verified=[]
++ save('collector-finished.json',dict(run=identity['run'],status=status,error=error,qpc=ticks(),utc=utc(),acceptance=False,
++  allHandlesExited=bool(verified) and len(verified)==len(handles),identities=[dict(pid=x['pid'],created=x['times'][0],exited=x['times'][1],exit=x['exit']) for x in verified]))
++ reader.close()
+ try:
+  end=time.monotonic()+60
+  while k.WaitForSingleObject(watch.handle,0)==258:
+--- before/launch.ps1
++++ candidate/launch.ps1
+@@ -1,10 +1,10 @@
+-param([ValidateSet('idle','disk','sustained','cpu','Dhash')][string]$Mode,[ValidateRange(5,160)][int]$Duration,[ValidatePattern('^[a-z][a-z0-9-]{0,20}$')][string]$Label)
++param([ValidateSet('idle','disk','sustained','cpu','Dhash','dry')][string]$Mode,[ValidateRange(5,160)][int]$Duration,[ValidatePattern('^[a-z][a-z0-9-]{0,20}$')][string]$Label,[ValidateRange(1,8)][int]$Cluster=1)
+ $ErrorActionPreference='Stop';. (Join-Path $PSScriptRoot 'workspace.ps1');Assert-LiveCode;Set-Location -LiteralPath $PSScriptRoot
+ if(@(Get-Process|Where-Object ProcessName -match '^(VBox|VirtualBox)').Count){throw 'VirtualBox must remain closed'}
+ $Run=$Label+'-'+[guid]::NewGuid().ToString('N');$root=Join-Path $PSScriptRoot $Run
+ New-Item -ItemType Directory -Path $root -ErrorAction Stop|Out-Null
+ New-Item -ItemType Directory -Path (Join-Path $root 'temp') -ErrorAction Stop|Out-Null;Set-LiveTemp $root
+-@{run=$Run;mode=$Mode;journalVolume='D';eventVolume='D';controlVolume='D';telemetry='full';duration=$Duration;threshold=10;acceptance=$false;purpose='probe diagnosis only'}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $root 'case.json')
++@{run=$Run;mode=$Mode;journalVolume='D';eventVolume='D';controlVolume='D';telemetry='full';duration=$Duration;cluster=$Cluster;threshold=10;acceptance=$false;purpose='bounded finalization sacrificial validation'}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $root 'case.json')
+ @(Get-ChildItem -LiteralPath $PSScriptRoot -File|Where-Object Extension -in '.ps1','.py','.cs','.exe'|ForEach-Object {@{path=$_.FullName;sha256=(Get-FileHash -LiteralPath $_.FullName).Hash}})|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $root 'source-hashes.json')
+ $pwsh='C:\Users\jonny\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\powershell\pwsh.exe';$hash=(Get-FileHash -LiteralPath $pwsh).Hash
+ $p=Start-Process -FilePath $pwsh -ArgumentList @('-NoProfile','-File',('"'+(Join-Path $PSScriptRoot 'monitor.ps1')+'"'),'-Run',$Run) -WorkingDirectory $PSScriptRoot -Verb RunAs -WindowStyle Hidden -PassThru
+@@ -18,3 +18,6 @@
+ if($LASTEXITCODE){throw 'Event analysis failure'}
+ & $python -B (Join-Path $PSScriptRoot 'probe_analysis.py') $Run
+ if($LASTEXITCODE){throw 'Timing/identity uncertainty'}
++
++& $python -B (Join-Path $PSScriptRoot 'accept_run.py') $Run
++if($LASTEXITCODE){throw 'Durable acceptance failed'}
+--- before/monitor.ps1
++++ candidate/monitor.ps1
+@@ -1,7 +1,7 @@
+ param([ValidatePattern('^[a-z0-9-]+$')][string]$Run)
+ $ErrorActionPreference='Stop';. (Join-Path $PSScriptRoot 'workspace.ps1');$root=Get-LiveRun $Run;Set-LiveTemp $root
+ Add-Type -Path (Join-Path $PSScriptRoot 'EventTap.cs')
+-Add-Type -Path @((Join-Path $PSScriptRoot 'LoopTiming.cs'),(Join-Path $PSScriptRoot 'event_queue.cs'))
++Add-Type -Path @((Join-Path $PSScriptRoot 'LoopTiming.cs'),(Join-Path $PSScriptRoot 'event_queue.cs'),(Join-Path $PSScriptRoot 'FinalizationGate.cs'))
+ $config=Get-Content -LiteralPath (Join-Path $root 'case.json') -Raw|ConvertFrom-Json
+ $journalPath=Join-Path $root 'heartbeat.jsonl'
+ if($config.journalVolume -ne 'D' -or $config.eventVolume -ne 'D' -or $config.controlVolume -ne 'D'){throw 'D-only live workspace required'}
+@@ -18,6 +18,8 @@
+ $trace=[Collections.Generic.List[object]]::new();$stream=$null;$seq=0;$count=0;$violations=0
+ $s='J6TimingStart-'+[guid]::NewGuid().ToString('N');$t='J6TimingStop-'+[guid]::NewGuid().ToString('N');$ids=@($s,$t)
+ $exact=[ExactEventQueue]::new($ExecutionContext.Events.ReceivedEvents,[string[]]$ids)
++$gate=[FinalizationGate]::new($ExecutionContext.Events.ReceivedEvents,[string[]]$ids,4.6,45)
++$producerClosed=$false;$proofRead=$false;$subscriptionClosed=$false;$success=$false
+ $nonce=[guid]::NewGuid().ToString('N');$clock=[Diagnostics.Stopwatch]::StartNew()
+ $created=(Get-Process -Id $PID).StartTime.ToUniversalTime().ToFileTimeUtc().ToString()
+ function Mark([string]$stage,$detail=$null){
+@@ -31,6 +33,8 @@
+  while($true){
+   Mark 'queue.select.begin';$entry=$exact.Select();Mark 'queue.select.end'
+   if($null -eq $entry){break}
++   $gate.BeginPersistence()
++   try {
+    Mark 'entry.properties.begin';$ev=$entry.Event;$id=$ev.SourceIdentifier;Mark 'entry.properties.end'
+    Mark 'event.begin';Mark 'event.payload.begin';$n=$ev.SourceEventArgs.NewEvent;Mark 'event.payload.end';if($null -eq $n){throw 'Invalid CIM indication'}
+    $kind='stop';if($id -eq $s){$kind='start'};Stamp 'drain' $ev $n
+@@ -44,7 +48,9 @@
+    if($exists){Mark 'event.stat.begin';$length=(Get-Item -LiteralPath $eventPath).Length;Mark 'event.stat.end';if($length -gt 1044480){throw 'Event capacity reached'}}
+    Mark 'event.append.begin';Stamp 'write.begin' $ev $n
+    $exact.PersistAndRemove($entry,$eventPath,$serialized)
++   $gate.Persisted([int]$n.ProcessID,$kind)
+    Stamp 'persisted' $ev $n;Stamp 'removed' $ev $n;Mark 'event.append.end';$script:count++;Mark 'event.end'
++   } finally {$gate.EndPersistence()}
+  }
+  Mark 'queue.backlog.begin';$backlog=0;foreach($id in $ids){$backlog+=@(Get-Event -SourceIdentifier $id -ErrorAction SilentlyContinue).Count};Mark 'queue.backlog.end' $backlog
+  Mark 'drain.end' @{drained=$count-$nBefore;backlog=$backlog}
+@@ -78,20 +84,40 @@
+   $bytes=[Text.Encoding]::UTF8.GetBytes((($record|ConvertTo-Json -Compress)+"`n"));Mark 'record.end'
+   Mark 'journal.size.begin';if($bytes.Length -gt 4096 -or $stream.Length+$bytes.Length -gt 1048576){throw 'Journal capacity reached'};Mark 'journal.size.end'
+   Mark 'journal.write.begin';$stream.Write($bytes,0,$bytes.Length);Mark 'journal.write.end'
+-  Mark 'journal.flush.begin';$stream.Flush($false);Mark 'journal.flush.end';Mark 'publication.complete'
++  Mark 'journal.flush.begin';$stream.Flush($false);Mark 'journal.flush.end';Mark 'publication.complete';$gate.Heartbeat()
+   if($seq -eq 1){Mark 'ready.begin';Save 'ready.json' $identity;Mark 'ready.end'}
+   Mark 'runtime.telemetry.begin';if($config.telemetry -eq 'full'){[LoopTiming]::RuntimeSample()};Mark 'runtime.telemetry.end'
+   Mark 'finish.query.begin';$finished=Test-Path -LiteralPath (Join-Path $root 'collector-finished.json');Mark 'finish.query.end'
+-  if($finished){Mark 'loop.end';break}
++  if(-not $producerClosed -and (Test-Path -LiteralPath (Join-Path $root 'producer-closed.json'))){
++   $producer=Get-Content -LiteralPath (Join-Path $root 'producer-closed.json') -Raw|ConvertFrom-Json
++   if($producer.run -ne $nonce){throw 'Producer closure identity mismatch'}
++   $gate.ProducersClosed();$producerClosed=$true;Mark 'producers.closed'
++  }
++  if($finished -and -not $proofRead){
++   $proof=Get-Content -LiteralPath (Join-Path $root 'collector-finished.json') -Raw|ConvertFrom-Json
++   if(-not $producerClosed -or $proof.run -ne $nonce -or $proof.status -ne 'LIVE_MONITOR_HEALTHY' -or -not $proof.allHandlesExited){throw 'Incomplete or failed producer/handle closure'}
++   $gate.ConfirmExits([int[]]@($proof.identities|ForEach-Object{$_.pid}),[string[]]@($proof.identities|ForEach-Object{$_.created}),$true)
++   $proofRead=$true;Mark 'handles.confirmed'
++  }
++  $subscriberHealthy=(@(Get-EventSubscriber|Where-Object SourceIdentifier -in $ids).Count -eq 2)
++  if($producerClosed -and $gate.Ready(($exact.Stats().remaining -eq 0),$subscriberHealthy)){Mark 'loop.end';break}
+   Mark 'wait.begin';Wait-Event -Timeout 1|Out-Null;Mark 'wait.end';Mark 'loop.end' @{gc0=[GC]::CollectionCount(0);gc1=[GC]::CollectionCount(1);gc2=[GC]::CollectionCount(2)}
+  }
+  if($clock.Elapsed.TotalSeconds -ge 600){throw 'Monitor lifetime bound reached'}
+- Mark 'grace.begin';Start-Sleep -Seconds 2;Mark 'grace.end';Drain
+  Mark 'final.enumeration.begin';$final=@(Get-CimInstance Win32_Process|Where-Object{$_.Name -match '^(VBox|VirtualBox)'});Mark 'final.enumeration.end' $final.Count
+  if($final.Count){throw 'VirtualBox active at end'}
+- $exact.Reconcile();Mark 'collection.freeze';Mark 'durable.flush.begin';$stream.Flush($true);Mark 'durable.flush.end'
+- Mark 'journal.close.begin';$stream.Dispose();$stream=$null;Mark 'journal.close.end'
+- Save 'monitor-result.json' @{status='LIVE_COLLECTION_CLOSED';run=$nonce;sequences=$seq;events=$count;violations=$violations;journalDurableFlush=$true;acceptance=$false}
++ # Enumeration can take time and events may arrive during it. Revalidate the barrier.
++ Drain
++ $gate.BeginClose(($exact.Stats().remaining -eq 0),(@(Get-EventSubscriber|Where-Object SourceIdentifier -in $ids).Count -eq 2))
++ Mark 'subscription.close.begin'
++ foreach($id in $ids){Unregister-Event -SourceIdentifier $id -ErrorAction Stop}
++ $subscriptionClosed=$true;$gate.SubscriptionClosed();Mark 'subscription.close.end'
++ Drain;$exact.Reconcile();$gate.FinalDrainComplete(($exact.Stats().remaining -eq 0))
++ Mark 'collection.freeze';Mark 'durable.flush.begin';$stream.Flush($true)
++ $eventFlush=[IO.FileStream]::new((Join-Path $root 'events.jsonl'),[IO.FileMode]::Open,[IO.FileAccess]::ReadWrite,[IO.FileShare]::Read)
++ try{$eventFlush.Flush($true)}finally{$eventFlush.Dispose()}
++ Mark 'durable.flush.end';$stream.Dispose();$stream=$null
++ $exact.Reconcile();$gate.Seal($true,$true);$gate.AssertSealed();$success=$true
+ }catch{Save 'monitor-failure.json' @{error=$_.Exception.Message;stack=$_.ScriptStackTrace;utc=[DateTime]::UtcNow.ToString('o')};exit 1}
+ finally{
+  if($null -ne $stream){Mark 'journal.close.begin';$stream.Dispose();Mark 'journal.close.end'}
+@@ -99,7 +125,7 @@
+  foreach($id in $ids){
+   $pending=@(Get-Event -SourceIdentifier $id -ErrorAction SilentlyContinue)
+   foreach($ev in $pending){if($ev.SourceEventArgs.NewEvent){Stamp 'preunsubscribe.pending' $ev $ev.SourceEventArgs.NewEvent}}
+-  Unregister-Event -SourceIdentifier $id -ErrorAction SilentlyContinue
++  if(-not $subscriptionClosed){Unregister-Event -SourceIdentifier $id -ErrorAction SilentlyContinue}
+   $discard=@(Get-Event -SourceIdentifier $id -ErrorAction SilentlyContinue)
+   foreach($ev in $discard){if($ev.SourceEventArgs.NewEvent){Stamp 'teardown.discard' $ev $ev.SourceEventArgs.NewEvent}}
+   # Preserve residue; never delete pending evidence at teardown.
+@@ -110,6 +136,7 @@
+  Save 'queue-state.json' $exact.Stats()
+  Save 'queue-entries.json' @($exact.Snapshot()|ForEach-Object {@{queueSequence=$_.QueueSequence;eventId=$_.Event.EventIdentifier;source=$_.Event.SourceIdentifier;enqueueQpc=$_.EnqueueQpc;persisted=$_.Persisted;removed=$_.Removed}})
+  try {$exact.Reconcile()} catch {Save 'queue-failure.json' @{error=$_.Exception.Message};$global:LASTEXITCODE=1}
++ Save 'finalization-state.json' $gate.Snapshot()
+  $exact.Dispose()
+  Save 'tap.json' @([EventTap]::Snapshot());Save 'pipeline.json' @($pipeline.ToArray())
+  Save 'tap-state.json' @{errors=[EventTap]::Errors;overflow=[EventTap]::Overflow;queue_capacity='existing PowerShell collection; no diagnostic change';diagnostic_capacity=20000;native_drop_counter='not exposed by these temporary subscribers'}
+@@ -120,3 +147,9 @@
+  Save 'scheduler-observer.json' @([LoopTiming]::ObserverSnapshot())
+  Save 'timing-state.json' @{overflow=[LoopTiming]::Overflow;journalPath=$journalPath;telemetry=$config.telemetry;observerMeaning='100ms independent diagnostic sleep observer, not a health publisher; jitter is not proof of CPU starvation'}
+ }
++
++# A zero exit and this receipt are both required by external archival verification.
++$gate.AssertSealed();$exact.Reconcile()
++if(-not $success){throw 'No successful finalization'}
++Save 'monitor-result.json' @{status='LIVE_COLLECTION_CLOSED';run=$nonce;sequences=$seq;events=$count;violations=$violations;journalDurableFlush=$true;acceptance=$false;finalization='SEALED'}
++$gate.AssertSealed();$gate.Dispose()

@@ -1,0 +1,135 @@
+--- before/CANONICAL-CORE-STAGE-4.md
++++ current/CANONICAL-CORE-STAGE-4.md
+@@ -1,4 +1,34 @@
+ # Canonical Core Stage 4 — implementation preflight / scope review
++
++## Response-commit final validation — CLOSED — 2026-09-15
++
++The final three authorized requirements passed against the **frozen unchanged
++source**: fallback integration/restart 12+4; Deep Review integration/restart
++14+4 plus authenticated TEST pipe 8; four supplementary fresh TEST processes
++with 88 checks; syntax for 15 Python/five JavaScript files. All 62 affected
++provider regressions passed. Independent read-only inspection of five TEST
++databases found no orphan assistant messages, successful provenance or duplicate
++responses. All 26 bound source/executable hashes remain unchanged.
++
++The **response-commit/event-polling requirement is CLOSED**. The prior 918 race
++trials / 14,244 assertions, authenticated polling 43+43, broader final-source
++regressions and actual host-context Electron 29 remain retained evidence, not
++reruns in this checkpoint. Provider generation was deterministic/simulated; no
++paid calls or physical media. See [the final report, commands and evidence](lifecycle-stage4-evidence/response-commit-final-validation-20260915/REVIEW.md)
++and [updated remaining requirements](STAGE4-REMAINING-REQUIREMENTS-20260915.md).
++
++Fresh-process history and stale-authority validation does not replace the full
++coordinator/client crash-restart matrix. **Next: gate 2, still PARTIAL, not
++started.** Other gates are unchanged; approvals/uploads remain DEFERRED. The
++restricted-context Electron 44.2.0 GPU failure is retained as an environment
++limitation, with exact missing/inaccessible DLL and root cause UNCONFIRMED.
++The parse-only audit-command failure is preserved separately. No runtime,
++Electron, GPU, Store, production, security or lifecycle implementation changed.
++
++Stage 4 overall is incomplete and paused for review. No acceptance commit,
++production activation or Stage 5. The following chronological checkpoints
++retain their original results; this entry supersedes their response-commit
++PARTIAL/remaining-three-checks status only.
+ 
+ ## Approved host-context Electron acceptance — 2026-09-15
+ 
+--- before/STAGE4-REMAINING-REQUIREMENTS-20260915.md
++++ current/STAGE4-REMAINING-REQUIREMENTS-20260915.md
+@@ -1,30 +1,38 @@
+ # REMAINING REQUIREMENTS TO DECLARE STAGE 4 COMPLETE
+ 
+ 
+-## Latest superseding reconciliation — approved host-context Electron acceptance
++## Latest superseding reconciliation — response-commit gate CLOSED
+ 
+-2026-09-15. The actual Electron dependency is **CLOSED** against the frozen
+-response-commit source: one approved host-context rerun passed **29/29** checks,
+-both screenshots were visually inspected, all five clients and the TEST Core
+-exited normally, and all 19 sampled source/executable hashes stayed unchanged.
+-See [acceptance evidence and source binding](lifecycle-stage4-evidence/response-commit-electron-acceptance-20260915/REVIEW.md)
+-and the [approved procedure](STAGE4-ELECTRON-HOST-ACCEPTANCE.md).
++2026-09-15. The three remaining checks passed against **unchanged frozen source**:
++fallback integration/restart **12 + 4**, Deep Review integration/restart **14 + 4**,
++actual authenticated Deep Review pipe **8**, and supplemental fresh-process
++validation **88 checks in four sequential TEST processes**. Standalone syntax
++passed for **15 Python and five JavaScript files**; **62** affected provider
++regressions passed. Independent post-exit read-only inspection of five TEST
++SQLite databases found no orphan assistant messages, orphan successful
++provenance or duplicate responses. All 26 source/executable paths stayed unchanged.
+ 
+-Gate 1 remains **PARTIAL**, solely because the recorded final-source fallback
+-provenance/restart, dedicated deep-review integration/restart, and standalone
+-JS/Python syntax checks remain unexecuted. The Electron startup environment is
+-no longer an open response-commit validation blocker. This Electron-only approval
+-did not authorize running those other checks, and no requirement was waived.
++**Gate 1: CLOSED.** See [final validation, exact commands, hashes and limits](lifecycle-stage4-evidence/response-commit-final-validation-20260915/REVIEW.md)
++and [machine-readable results](lifecycle-stage4-evidence/response-commit-final-validation-20260915/validation-summary.json).
++The prior **29-check actual Electron** dependency remains CLOSED and was not
++rerun. The shared boundary's **918 trials / 14,244 assertions** and two
++**43-check** authenticated polling probes remain retained final-source evidence.
+ 
+-Preserve the restricted-context Electron 44.2.0 GPU failure as a disclosed
+-execution-environment limitation: observed STATUS_DLL_NOT_FOUND-compatible
+-status, exact DLL/root cause unconfirmed, same frozen source passing in host
+-context. Do not reclassify it as a JARVIS transaction/runtime defect. No runtime
+-code, GPU flags, security controls or production state changed in this checkpoint.
+-Approvals/uploads remain DEFERRED, not PASS. Other gates are unchanged; Stage 4
+-remains paused for review, with no acceptance commit, production activation or
+-Stage 5. Earlier dated/checkpoint statements below describe their historical
+-state; the updated gate-1 row and this section control the present status.
++Fresh-process answer/provenance persistence, new TEST epochs, owner-scoped
++queries and stale-authority rejection are established. These existing TEST
++composition/helper checks do not validate the coordinator's start-after-stop
++policy or full crash/restart matrix. **Next unresolved gate: gate 2**, still
++PARTIAL and not started. Other gates retain their existing status. Approvals
++and uploads remain DEFERRED, not PASS.
++
++The restricted-context Electron 44.2.0 GPU failure remains an execution-environment
++limitation: observed STATUS_DLL_NOT_FOUND-compatible status; exact DLL/root cause
++UNCONFIRMED. No GPU flags or runtime changes were made. A parse-only typo in an
++independent audit command is preserved separately; it caused no runtime execution.
++All previous failures remain retained. Production is unchanged and blocked;
++no Stage 4 acceptance commit or Stage 5. Stage 4 remains incomplete and paused
++for review. Earlier checkpoint statements below describe their historical state;
++this section and the CLOSED/backlog tables control the present status.
+ 
+ 2026-09-15. **REVIEW ONLY â€” Stage 4 remains paused.** This reconciliation records the user's acceptance of the controller reauthentication/lifecycle-only recovery requirement as validated against the final reviewed source. It does not accept Stage 4 as a whole or authorize further work.
+ 
+@@ -32,9 +40,9 @@
+ 
+ Historical gate-1 inspection (superseded by the explicit deferrals below): [approval/stream/upload scope review](STAGE4-APPROVAL-STREAM-UPLOAD-REVIEW-20260915.md). Gate 1 remains **PARTIAL**. Owner-bound event polling exists; approval/upload workflows are absent from the authenticated TEST surface. Adding their routes/action or indexing authority triggers the explicit scope-review condition. No runtime implementation or tests were performed in that inspection, and no acceptance exclusion was assumed.
+ 
+-## Latest event-polling decision and failure
++## Historical event-polling decision and failure (superseded above)
+ 
+-**Latest superseding checkpoint:** the reviewed shared response boundary is now
++**Historical correction checkpoint:** the reviewed shared response boundary is now
+ implemented and its targeted invariant passes: 918 final trials, 14,244
+ assertions, two 43-check authenticated probes, plus independent SQLite checks.
+ The final-source actual Electron regression failed at startup before attachment;
+@@ -77,6 +85,7 @@
+ 
+ | Requirement | Status | Evidence changing the status |
+ |---|---|---|
++| Event-polling ownership/cancellation/late-write gate, including shared response-commit acceptance | **CLOSED** | [Final validation](lifecycle-stage4-evidence/response-commit-final-validation-20260915/REVIEW.md): fallback 12+4, Deep Review 14+4 and authenticated pipe 8, four fresh processes / 88 checks, 62 provider regressions, syntax 15 Python / 5 JS, five independent TEST DB checks. Retained frozen-source 918 trials / 14,244 assertions, authenticated polling 43+43 and host-context Electron 29. No orphan/duplicate records; stale authority denied. This does not close the broader restart matrix below. |
+ | Explicit TEST controller reauthentication and lifecycle-only recovery after expiry | **CLOSED** | User-directed recording against the matching final source; R's 52 focused checks and X's 45 actual authenticated checks. Fresh family, same surviving Core, old authority denied, no replay; recovery cannot clear UNKNOWN, restart deadlines or obtain ordinary work/media authority. Expiry used a trusted TEST clock, not an idle/sleep endurance trial. |
+ | Automated inspection worker cancellation, archive completion and cleanup | **CLOSED** | I supersedes the missing synthetic archive-project blocker. Its original failure is retained. R later reran the 13 focused inspection checks successfully; relevant protected worker code is unchanged. |
+ | Synthetic repair worker/loop cleanup and conservative reservation accounting | **CLOSED** | W established cancellation/detach/drain and accounting; F closes the previously outstanding successful emergency rerun, and R/X close the controller-expiry recovery deficiency. The earlier interrupted run remains failed and its interruption cause unconfirmed. No real repair execution or comprehensive monetary metering is claimed. |
+@@ -90,14 +99,13 @@
+ 
+ | Gate | Status | Exact remaining proof / why existing evidence does not close it | Closure evidence and authorization |
+ |---|---|---|---|
+-| **1. Event-polling ownership/cancellation/late-write gate** | **PARTIAL** | Shared transaction invariant passes the retained 918 trials / 14,244 assertions and two 43-check authenticated probes with independent SQLite confirmation. Actual Electron is now CLOSED: the approved host-context rerun passed 29/29 against unchanged source. Only the previously pending final-source fallback provenance/restart, dedicated deep-review integration/restart, and standalone JS/Python syntax checks remain. | [Latest reconciliation](lifecycle-stage4-evidence/response-commit-electron-acceptance-20260915/REVIEW.md) removes the Electron blocker without waiving the remaining checks. No other tests ran in this Electron-only checkpoint. Preserve the original late-write failure and the separately disclosed restricted-context GPU limitation. |
+ | Authenticated TEST approvals | **DEFERRED** | **WORKFLOW NOT PRESENT IN CURRENT STAGE 4 PRODUCT SURFACE** — explicit subsequent user decision. | Excluded from Stage 4, not PASS. No routes/actions were added. |
+ | Authenticated TEST uploads | **DEFERRED** | **REQUIRES SEPARATE AUTHORITY / PERSISTENCE REVIEW** — explicit subsequent user decision. | Excluded from Stage 4, not PASS. Legacy extraction/indexing remains unexposed. |
+ | **2. Full real-Core stop/start, crash/restart and repeated race matrix** | **PARTIAL** | Original cases 20â€“28, 32â€“33 and 43 plus design I require more than same-Core reattachment. X/E prove survival/reattachment; Stage 1/2 prove their harness semantics. They do not prove the entire composed real App/Store/clients restart matrix. Explicit authorized start after a stop latch, new epoch/same data, old grant rejection, clients reauthenticating across epochs, and interrupted intent/journal/accounting reconciliation remain without complete integrated evidence. | At least four rounds of eight startup contenders and three rounds each of coordinator-loss/adoption and Core-crash scenarios, per design I; lock before Store/until exit, no replacement in recovery, new epoch/same canonical TEST state, no replay/refund or restored presence. Preserve every failure. No opportunistic latch deletion or unapproved termination; any missing start-policy implementation must be reviewed within scope. |
+ | **3. Full shared persistent TEST state and fresh presence evidence** | **PARTIAL** | Original cases 29â€“34. E/X show shared conversations/memory and identity. W proves actual repair accounting plus a focused subprocess persistence check. Current `shared_state` exposes memory/conversations/ownership, not a complete project/task/budget comparison through both actual clients. These are not full proof of all shared categories, their preservation across a real Core restart, or fresh device presence afterward. | Independent comparison of approved synthetic memory/conversation/project/task/budget/recovery records before/after, both authenticated clients tied to that data identity, no refund or authority restoration, disconnect removes only its presence, restart starts offline until fresh authenticated attachment. Combine with gate 2 to avoid duplicate tests. TEST-only; any Store/schema or device-architecture expansion needs review. |
+ | **4. Client-side lease watchdog and integrated media-control ownership** | **PARTIAL** | Core lease arbitration/idempotency/foreign-result rejection and silent existing-VoiceEngine delivery have model/actual-App coverage in R/X. The clients truthfully deny physical media. That does not demonstrate local watchdog expiry, stale callback rejection, partition/reconnect behavior or modeled capture/output stopping in the actual adapters while another client continues. | TEST-only deterministic adapter/renderer traces for capture/playback/request controls, lease expiry/heartbeat loss, no duplicate delivery/takeover, no auto-reacquisition after reopen, local mute preserving shared settings, and owner emergency revoking all relevant work/grants. No browser-TTS fallback. Physical microphone/headset/voice parity remains separately deferred; do not enable hardware as part of this gate without approval. |
+ | **5. Human-operated isolated acceptance of lifecycle controls / final client review** | **PARTIAL** | Automated authenticated management, inspected Electron images and explicit retained-controller commands are validated. No new user-performed native-controller exercise is evidenced by those automated results. Earlier production UI keyboard/time tests are not this isolated acceptance. | Record an explicit human TEST identity selection and separately authorized emergency/shutdown actions, ordinary-client denial, controller reachability after renderer failure, and matching lifecycle events. Review may explicitly accept existing evidence for a narrower criterion; do not silently mark manual PASS. Physical/manual media remains separately authorized/deferred. No new UI implementation is assumed necessary without review. |
+-| **6. Final acceptance reconciliation and source/evidence sign-off** | **OPEN** | The current checkpoint is validated, but gates 1â€“5 are not all closed. A full 47-case cross-reference and final acceptance source set do not yet establish overall PASS. This row is review/packaging, not a new feature or demand to rerun passing tests today. | Close remaining cases against exact final source, identify accepted deferrals versus blockers, preserve all failed evidence, retain rollback/source hashes and nonsecret record copies, and review scope-isolated staging before any acceptance commit. This request explicitly forbids that commit. Production activation and Stage 5 need their own authorization. |
++| **6. Final acceptance reconciliation and source/evidence sign-off** | **OPEN** | The current checkpoint is validated, but gates 2–5 are not all closed. A full 47-case cross-reference and final acceptance source set do not yet establish overall PASS. This row is review/packaging, not a new feature or demand to rerun passing tests today. | Close remaining cases against exact final source, identify accepted deferrals versus blockers, preserve all failed evidence, retain rollback/source hashes and nonsecret record copies, and review scope-isolated staging before any acceptance commit. This request explicitly forbids that commit. Production activation and Stage 5 need their own authorization. |
+ 
+ ## Not additional Stage 4 blockers
+ 

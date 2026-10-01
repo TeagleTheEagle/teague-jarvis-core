@@ -1,0 +1,44 @@
+--- frozen/sampler_worker.py
++++ diagnostic-copy/sampler_worker.py
+@@ -1,17 +1,39 @@
++# Diagnostic markers only; first observable Python-script point follows these imports.
++import time as _dt,sys as _ds,mmap as _dm,struct as _dst,os as _do,atexit as _da
++_dv=_dm.mmap(-1,65536,tagname=_ds.argv[3]+'-calls');_di=0
++def _mark(stage):
++ global _di
++ if _di>=1000:raise RuntimeError('Diagnostic marker overflow')
++ _dv[8+_di*60:8+(_di+1)*60]=_dst.pack('<QI48s',_dt.perf_counter_ns(),_do.getpid(),stage.encode()[:48]);_di+=1;_dv[:4]=_dst.pack('<I',_di)
++def _trace_close():
++ _mark('atexit_begin');_mark('atexit_end');_dv.close()
++_da.register(_trace_close)
++_mark('script_entry_observed');_mark('runtime_imports_begin')
+ """Fixed secondary telemetry only; no caller code, filesystem query or command API."""
+ import ctypes as c,ctypes.wintypes as w,sys,json,pathlib,time,os,mmap,struct
+ from workspace import run_dir
++_mark('runtime_imports_end');_mark('path_validation_begin')
+ root=run_dir(sys.argv[1]);mode=sys.argv[2];name=sys.argv[3]
++_mark('path_validation_end')
+ assert mode in ('normal','slow','hung','exception','crash') and name.startswith('Local\\J6Secondary-'+root.name+'-')
+-if mode=='slow':time.sleep(5)
+-if mode=='hung':time.sleep(60)
++if mode=='slow':_mark('delay_begin');time.sleep(5);_mark('delay_end')
++if mode=='hung':_mark('delay_begin');time.sleep(60);_mark('delay_end')
+ if mode=='exception':raise RuntimeError('Injected secondary telemetry exception')
+ if mode=='crash':os._exit(7)
++_mark('query_work_begin')
+ class MEM(c.Structure):_fields_=[('length',w.DWORD),('load',w.DWORD)]+[(n,c.c_ulonglong) for n in ('totalPhysical','availablePhysical','totalPage','availablePage','totalVirtual','availableVirtual','extended')]
+ k=c.WinDLL('kernel32',use_last_error=True);m=MEM();m.length=c.sizeof(m)
++_mark('memory_query_begin')
+ if not k.GlobalMemoryStatusEx(c.byref(m)):raise c.WinError(c.get_last_error())
++_mark('memory_query_end')
+ v=[w.FILETIME() for _ in range(3)]
++_mark('system_times_begin')
+ if not k.GetSystemTimes(*[c.byref(x) for x in v]):raise c.WinError(c.get_last_error())
++_mark('system_times_end')
++_mark('serialization_begin')
+ out=dict(pid=os.getpid(),monotonicNs=time.perf_counter_ns(),memoryLoad=m.load,availablePhysical=m.availablePhysical,systemTimes100ns=[(x.dwHighDateTime<<32)|x.dwLowDateTime for x in v],diskMetrics='NOT_COLLECTED',secondary=True)
+ raw=json.dumps(out).encode();assert len(raw)<4000
++_mark('serialization_end');_mark('result_mapping_begin')
+ with mmap.mmap(-1,4096,tagname=name) as view:view[:4+len(raw)]=struct.pack('<I',len(raw))+raw
++
++_mark('result_mapping_end');_mark('query_work_end');_mark('cleanup_begin');_mark('cleanup_end');_mark('return_script')

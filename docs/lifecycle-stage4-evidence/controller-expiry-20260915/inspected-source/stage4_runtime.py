@@ -1,0 +1,725 @@
+"""Isolated STAGE4_TEST runtime composition; no production startup entry point.
+
+Explicit synthetic provisioning is separate from open-existing App construction.
+This module must never read production .env, data, discovery or personality.
+"""
+import base64
+import hashlib
+import io
+import json
+import os
+from pathlib import Path
+import sqlite3
+import sys
+import threading
+import time
+import uuid
+import wave
+
+from stage4_sessions import Ownership, Denied, require
+from stage4_lifecycle import Journal, Lifecycle
+
+REPO = Path(__file__).resolve().parent
+sys.path.insert(0, str(REPO/'tests/lifecycle_stage1'))
+sys.path.insert(0, str(REPO/'tests/lifecycle_stage2'))
+import harness as exclusion
+import bootstrap as authentication
+import pipe_transport as transport
+
+_context = None
+TEST_DB_ID = 0x544934
+
+
+def validate_root(root):
+    root = exclusion.validate(root)
+    require(root.name.startswith('TEST-STAGE4-'), 'STAGE4_NAMESPACE')
+    return root
+
+
+def validate_data(root, data_id):
+    root = validate_root(root)
+    data = root/'STAGE4_TEST-data'
+    for p in (data, data/'jarvis.sqlite3', data/'STAGE4_TEST.json', data/'personality.txt'):
+        st = p.lstat()
+        require(not getattr(st, 'st_file_attributes', 0) & 0x400 and not p.is_symlink(), 'TEST_REPARSE')
+    require(json.loads((data/'STAGE4_TEST.json').read_text()) == {'mode':'STAGE4_TEST','data_id':data_id}, 'DATA_IDENTITY')
+    with sqlite3.connect((data/'jarvis.sqlite3').as_uri()+'?mode=ro', uri=True) as db:
+        require(db.execute('PRAGMA application_id').fetchone()[0] == TEST_DB_ID, 'DATABASE_IDENTITY')
+        require(db.execute('PRAGMA user_version').fetchone()[0] == 1, 'DATABASE_SCHEMA')
+        require(db.execute('PRAGMA quick_check').fetchone()[0] == 'ok', 'DATABASE_CORRUPT')
+    return data
+
+
+def provision(root, data_id):
+    """Synthetic fixture creation only; never migrates or copies production data."""
+    root = validate_root(root)
+    require(type(data_id) is str and data_id.startswith('TEST-'), 'TEST_DATA_ID')
+    data = root/'STAGE4_TEST-data'
+    require(not data.exists(), 'EXISTING_DATA_REFUSED')
+    data.mkdir()
+    (data/'STAGE4_TEST.json').write_text(json.dumps({'mode':'STAGE4_TEST','data_id':data_id},sort_keys=True))
+    (data/'personality.txt').write_text('STAGE4_TEST synthetic fixture. Deterministic test responses only.')
+    from store import Store
+    import workspaces
+    store = Store(data)
+    workspaces.setup(store)
+    with store.connect() as db:
+        db.execute('PRAGMA application_id='+str(TEST_DB_ID))
+    return validate_data(root, data_id)
+
+
+def context_for_import():
+    require(_context is not None, 'TEST_CONTEXT_REQUIRED')
+    _context.check_lock()
+    return _context
+
+
+class RepairLoopHost:
+    """Trusted TEST bootstrap owns one internal wakeup socket pair.
+
+    No policy override or connection exception is installed. Sequential workers
+    borrow the idle loop; their own executor is joined before they finish.
+    """
+    def __init__(self, *, mode):
+        require(mode == 'STAGE4_TEST', 'TEST_ONLY')
+        import asyncio
+        self.loop = asyncio.new_event_loop()
+        self.pid = os.getpid()
+        self.lock = threading.Lock()
+        self.closed = False
+        self.poisoned = False
+
+    def run(self, factory):
+        import asyncio
+        from concurrent.futures import ThreadPoolExecutor
+        require(self.pid == os.getpid() and not self.closed and not self.poisoned, 'REPAIR_LOOP_UNAVAILABLE')
+        require(self.lock.acquire(False), 'REPAIR_LOOP_BUSY')
+        try:
+            require(not self.loop.is_running(), 'REPAIR_LOOP_BUSY')
+            # Executor shutdown belongs to the tracked worker, including when
+            # cancellation or an exception leaves a thread still cleaning up.
+            with ThreadPoolExecutor(max_workers=1, thread_name_prefix='STAGE4_TEST-repair') as executor:
+                self.loop.set_default_executor(executor)
+                try:
+                    return self.loop.run_until_complete(factory())
+                finally:
+                    pending = asyncio.all_tasks(self.loop)
+                    if pending:
+                        self.poisoned = True
+                        for task in pending:task.cancel()
+                        self.loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+                    self.loop.run_until_complete(self.loop.shutdown_asyncgens())
+                    require(not pending, 'REPAIR_UNEXPECTED_PENDING_TASKS')
+        except BaseException:
+            self.poisoned = True
+            raise
+        finally:
+            self.lock.release()
+
+    def close(self):
+        require(self.pid == os.getpid(), 'REPAIR_LOOP_OWNER')
+        require(self.lock.acquire(False), 'REPAIR_LOOP_BUSY')
+        try:
+            if not self.closed:
+                require(not self.loop.is_running(), 'REPAIR_LOOP_BUSY')
+                self.loop.close()
+                self.closed = True
+        finally:self.lock.release()
+
+
+class Context:
+    def __init__(self, root, data_id, lock, enrollments):
+        self.root = validate_root(root)
+        self.data = validate_data(root, data_id)
+        self.data_id = data_id
+        self.lock = lock
+        self.pid = os.getpid()
+        self.claimed = False
+        self.app = None
+        self.runs = {}
+        self.audio_results = {}
+        self.voice_requests = {}
+        self.voice_leases = {}
+        self.inspection_jobs = {}
+        self.inspection_runner = None
+        self.inspection_finish = None  # Trusted synthetic fixture only; no capture/provider.
+        self.repair_fixture = None  # Trusted synthetic outcomes; never a real repair.
+        self.repair_requests = {}
+        self.repair_results = {}
+        self.repair_admission = threading.Lock()
+        self.repair_loop = None  # Created only by trusted TEST bootstrap before audit.
+        from stage4_response_history import History
+        self.response_history = History(self.data/'jarvis.sqlite3')
+        self.text_router = None
+        self.deep_reviewer = None  # Explicit trusted TEST configuration only.
+        self.allow_local_ollama = False  # Set only by trusted TEST parent configuration.
+        self.epoch = uuid.uuid4().hex
+        self.owners = Ownership(mode='STAGE4_TEST', epoch=self.epoch, enrollments=enrollments)
+        ident = {'mode':'STAGE4_TEST','data_id':data_id}
+        # Historical journals are recovery evidence, never runnable jobs. Refuse
+        # unresolved attempts before constructing any App/Store on a reused root.
+        for prior in self.root.glob('STAGE4_TEST-journal-*'):
+            Journal(prior, ident).inspect()
+        journal_root = self.root/('STAGE4_TEST-journal-'+self.epoch)
+        journal_root.mkdir()
+        (journal_root/'STAGE4_TEST.json').write_text(json.dumps(ident,sort_keys=True))
+        self.lifecycle = Lifecycle(self.owners, Journal(journal_root, ident))
+
+    def check_lock(self):
+        require(os.getpid() == self.pid and self.lock.handle is not None, 'LIFETIME_OWNERSHIP')
+        try:
+            with exclusion.Lock(self.root, 'core.lock'):
+                raise Denied('LIFETIME_OWNERSHIP')
+        except exclusion.Busy:
+            pass
+
+    def claim_app(self, root):
+        self.check_lock()
+        require(not self.claimed and Path(root).resolve() == self.data, 'ONE_TEST_APP')
+        validate_data(self.root, self.data_id)
+        self.claimed = True  # Failure stays failed; no fallback second construction.
+
+    def bind_app(self, app):
+        require(self.app is None, 'ONE_TEST_APP')
+        self.app = app
+        app.devices.disconnect('pc')  # Presence must be established by attachment.
+
+    def shared_state(self):
+        require(self.app is not None)
+        return {'mode':'STAGE4_TEST','data_id':self.data_id,'epoch':self.epoch,
+                'memory':self.app.store.items('memory'),
+                'conversations':self.app.store.conversations(),
+                'voice':'DETERMINISTIC_CORE_AUDIO_ONLY','wake':'UNAVAILABLE_NO_TEST_MODEL',
+                'ownership':self.owners.snapshot()}
+
+    def check_tool(self, name, run):
+        require(run is not None and getattr(run,'stage4_work',None) in self.owners.work, 'OWNER_REQUIRED')
+        require(getattr(run,'request_mode','normal') not in ('text-only','deep-review'), 'TEXT_ONLY_NO_TOOLS')
+        self.owners.next_step(run.stage4_work)
+        if name not in ('time_now','list_items','read_conversation','search_conversations'):
+            raise ValueError('STAGE4_TEST tool is outside the isolated allowlist.')
+
+    def start_request(self, token, text):
+        require(type(text) is str and 0 < len(text) <= 12000, 'TEXT')
+        import server
+        run = server.Run('STAGE4_TEST-conversation')
+        with self.owners.lock:
+            owner = self.owners._session(token,self.epoch,'request')
+        original_emit = run.emit
+        def emit(event, data):
+            if event == 'assistant.completed':
+                with self.owners.lock:
+                    self.owners.next_step(run.stage4_work)
+                    rid,_ = self.response_history.reserve(owner.client,owner.family,run.id,text,'normal')
+                    provenance = {'actual_final_provider':'TEST deterministic provider' if run.measurements else 'Core deterministic',
+                        'actual_final_model':'stage4-fixture' if run.measurements else None,
+                        'configured_model':'stage4-fixture' if run.measurements else None,
+                        'attempts':[{'provider':'TEST deterministic provider','requested_model':'stage4-fixture'}] if run.measurements else [],
+                        'fallback':False,'fallback_reason':None,'simulated':True}
+                    self.response_history.finish(owner.client,rid,'COMPLETED',data['text'],provenance)
+            original_emit(event,data)
+        run.emit = emit
+        ready = threading.Event()
+        def work(cancel):
+            # Worker may begin before dispatch returns; wait for immutable mapping.
+            ready.wait(2)
+            if not ready.is_set():return 'UNKNOWN'
+            run.cancel = cancel
+            if cancel.is_set():return 'FAILED'
+            self.app.devices.begin(run.id, 'STAGE4_TEST-'+self.owners.work[run.stage4_work].family)
+            self.app.work(run, text, None)
+            return 'FAILED' if any(e['event'] in ('run.failed','run.cancelled') for e in run.events) else 'SUCCEEDED'
+        wid = self.lifecycle.dispatch(token, self.epoch, 'chat', work)
+        run.stage4_work = wid
+        self.runs[wid] = run
+        self.app.runs[run.id] = run
+        ready.set()
+        return {'request_id':wid}
+
+    def start_text_request(self, token, text, operation):
+        """Explicit no-tool admission. Never enters App.work or command dispatch."""
+        require(type(text) is str and 0<len(text)<=11000,'TEXT')
+        require(type(operation) is str and len(operation)==32 and all(c in '0123456789abcdef' for c in operation),'OPERATION')
+        require(self.text_router is not None,'TEXT_PROVIDER_UNAVAILABLE')
+        import server
+        from stage4_provider_fallback import Failure
+        with self.owners.lock:
+            owner=self.owners._session(token,self.epoch,'request')
+            require(self.owners.state=='RUNNING','ADMISSION_CLOSED')
+            rid,fresh=self.response_history.reserve(owner.client,owner.family,operation,text,'text-only')
+            if not fresh:
+                return {'response_id':rid,'duplicate':True,'status':self.response_history.status(owner.client,rid)}
+            run=server.Run('STAGE4_TEST-text-only')
+            run.request_mode='text-only'
+            ready=threading.Event()
+            def work(cancel):
+                ready.wait(2)
+                if not ready.is_set(): return 'UNKNOWN'
+                run.cancel=cancel
+                try:
+                    result=self.text_router.generate(rid,[{'role':'system','content':'Text-only TEST response. No tools, browsing, device actions or external actions are available. Do not claim to have performed them.'},{'role':'user','content':text}],cancel,tool_attempted=False,partial_output=False,requires_tools=False)
+                    with self.owners.lock:
+                        self.owners.next_step(run.stage4_work)
+                        if cancel.is_set(): raise Failure('CANCELLED')
+                        provenance=self.text_router.status(rid)
+                        self.response_history.finish(owner.client,rid,'COMPLETED',result['content'],provenance)
+                        run.emit('response.provenance',self.response_history.last(owner.client))
+                        run.emit('assistant.completed',{'text':result['content']})
+                        run.emit('run.completed',{})
+                    return 'SUCCEEDED'
+                except Exception as error:
+                    status='CANCELLED' if cancel.is_set() else 'FAILED'
+                    provenance=self.text_router.status(rid) or {}
+                    provenance['actual_final_provider']=None
+                    provenance['actual_final_model']=None
+                    self.response_history.finish(owner.client,rid,status,None,provenance)
+                    run.emit('run.cancelled' if cancel.is_set() else 'run.failed',{'message':str(error) if isinstance(error,Failure) else 'TEXT_REQUEST_FAILED'})
+                    return 'FAILED'
+                finally:
+                    with run.condition:
+                        run.done=True;run.condition.notify_all()
+            try:
+                wid=self.lifecycle.dispatch(token,self.epoch,'chat',work)
+            except Exception:
+                self.response_history.finish(owner.client,rid,'FAILED',None,{})
+                raise
+            run.stage4_work=wid
+            self.runs[wid]=run
+            self.app.runs[run.id]=run
+            ready.set()
+            return {'request_id':wid,'response_id':rid,'request_mode':'text-only','simulated':self.text_router.local_simulated,'openai_simulated':True}
+
+    def start_inspection(self, token, request):
+        """Register the existing singleton job and archive callback as one worker."""
+        from inspection_jobs import JOBS
+        from interface_inspection import validate_request
+        request = validate_request(request)
+        require(self.inspection_runner is not None and self.inspection_finish is not None, 'TEST_INSPECTION_UNAVAILABLE')
+        ready = threading.Event()
+        mapping = {}
+        def work(cancel):
+            if not ready.wait(2):
+                return 'UNKNOWN'
+            wid = mapping['work']
+            def registered(key):
+                with self.owners.lock:
+                    self.inspection_jobs[wid] = key
+            try:
+                result = JOBS.run_registered(request, self.inspection_runner, on_finish=self.inspection_finish,
+                    cancel=cancel, before_step=lambda: self.owners.next_step(wid), registered=registered)
+            except ValueError:
+                # Busy/invalid job before effects; unexpected worker failures are
+                # retained by Lifecycle rather than asserted to be safe cleanup.
+                if wid in self.inspection_jobs:
+                    raise
+                return 'FAILED'
+            if result['archive'].get('status') != 'archived':
+                return 'UNKNOWN'  # A failed archive may have left partial writes.
+            return 'SUCCEEDED' if result['status'] == 'completed' else 'FAILED'
+        wid = self.lifecycle.dispatch(token, self.epoch, 'inspection', work)
+        mapping['work'] = wid
+        ready.set()
+        return {'request_id':wid, 'mode':'STAGE4_TEST', 'capture':'UNAVAILABLE_SYNTHETIC_ONLY'}
+
+    def inspection_status(self, token, wid):
+        from inspection_jobs import JOBS
+        with self.owners.lock:
+            self.owners.check_owner(token, self.epoch, wid)
+            require(self.owners.work[wid].kind == 'inspection', 'WORK_KIND')
+            key = self.inspection_jobs.get(wid)
+            done = self.owners.work[wid].done.is_set()
+        return {'request_id':wid, 'done':done, 'job':JOBS.get(key) if key else None}
+
+    def repair_dispatch(self, token, body):
+        """Owner-bound fixed TEST fixture using the existing reservation runner."""
+        import budgeted_repair
+        require(type(body) is dict, 'REQUEST')
+        with self.owners.lock:
+            self.owners._session(token, self.epoch, 'request')
+        require(self.repair_fixture is not None, 'TEST_REPAIR_UNAVAILABLE')
+        action = body.get('action')
+        if action in ('status','cancel'):
+            authentication.fields(body, ('action','request_id'))
+            wid = self.owners.check_owner(token, self.epoch, body['request_id'])
+            require(self.owners.work[wid].kind == 'repair', 'WORK_KIND')
+            if action == 'cancel':
+                self.owners.cancel_request(token, self.epoch, wid)
+            with self.owners.lock:
+                return {'request_id':wid, 'done':self.owners.work[wid].done.is_set(),
+                        'outcome':self.owners.work[wid].outcome,
+                        'cancel_requested':self.owners.work[wid].cancel.is_set(),
+                        'result':self.repair_results.get(wid), 'deployed':False}
+        require(action == 'run', 'OPERATION_DENIED')
+        authentication.fields(body, ('action','operation','project','task','confirmation'))
+        operation = body['operation']
+        require(type(operation) is str and len(operation)==32 and all(c in '0123456789abcdef' for c in operation), 'OPERATION')
+        require(type(body['confirmation']) is str and len(body['confirmation']) <= 100, 'CONFIRMATION')
+        confirmation = body['confirmation']
+        fixture = self.repair_fixture
+        require(body['project']==fixture['project'] and body['task']==fixture['task'], 'TEST_FIXTURE_ONLY')
+        # Never hold the ownership/admission mutex during SQLite or journal IO.
+        # Concurrent callers get BUSY rather than wait behind a stalled publisher.
+        require(self.repair_admission.acquire(blocking=False), 'BUSY')
+        try:
+            with self.owners.lock:
+                self.owners._session(token, self.epoch, 'request')
+                require(self.owners.state == 'RUNNING', 'ADMISSION_CLOSED')
+                prior = self.repair_requests.get(operation)
+                if prior:
+                    self.owners.check_owner(token, self.epoch, prior['request_id'])
+                    require(prior['confirmation']==body['confirmation'], 'IDEMPOTENCY_CONFLICT')
+                    return {'request_id':prior['request_id'], 'duplicate':True, 'deployed':False}
+                require(not any(w.kind=='repair' and (not w.done.is_set() or self.lifecycle.workers[w.id].is_alive())
+                                for w in self.owners.work.values()), 'BUSY')
+            with self.app.store.connect() as db:
+                # A historical reservation is not restored execution authority.
+                # No ownership inference from a known operation ID after restart.
+                require(db.execute('SELECT 1 FROM project_budget_reservations WHERE project=? AND operation=?',
+                    (fixture['project'],operation)).fetchone() is None, 'REPLAY_NOT_AUTHORIZED')
+                available = budgeted_repair.budgets.snapshot(db,fixture['project'])
+                require(available['configured'] and all(available['remaining'][k] >= v
+                        for k,v in budgeted_repair.ALLOCATION.items()), 'RESOURCE_LIMIT')
+            ready = threading.Event(); mapping = {}
+            def work(cancel):
+                if not ready.wait(2):return 'UNKNOWN'
+                wid = mapping['work']
+                def checkpoint():
+                    try:self.owners.next_step(wid)
+                    except Denied:
+                        cancel.set()
+                        raise InterruptedError('TEST repair admission closed') from None
+                try:
+                    require(self.repair_loop is not None, 'REPAIR_LOOP_UNAVAILABLE')
+                    result = self.repair_loop.run(lambda: budgeted_repair.run(self.app.store,fixture['responder'],fixture['project'],fixture['task'],
+                        operation,confirmation,cancel,fixture['checker'],before_step=checkpoint,test_workflow=fixture['workflow']))
+                except Exception as exc:
+                    import traceback
+                    diagnostic={'error_type':type(exc).__name__, 'errno':getattr(exc,'errno',None),
+                        'winerror':getattr(exc,'winerror',None), 'phase':'registered TEST repair worker',
+                        'frames':[{'file':f.filename,'line':f.lineno,'function':f.name} for f in traceback.extract_tb(exc.__traceback__)]}
+                    with self.owners.lock:
+                        self.repair_results[wid]={'status':'UNKNOWN',**diagnostic,'deployed':False,'simulated':True}
+                    return 'UNKNOWN'
+                with self.owners.lock:
+                    self.repair_results[wid]={**result,'simulated':True,'actual_repair_executed':False}
+                if result.get('budget_state') == 'recovery_required':return 'UNKNOWN'
+                return 'SUCCEEDED' if result['status']=='READY_FOR_REVIEW' else 'FAILED'
+            wid = self.lifecycle.dispatch(token,self.epoch,'repair',work,budget_ref=fixture['project']+':'+operation)
+            mapping['work'] = wid
+            self.repair_requests[operation]={'request_id':wid,'confirmation':confirmation}
+            ready.set()
+            return {'request_id':wid,'duplicate':False,'deployed':False,'simulated':True,'actual_repair_executed':False}
+        finally:
+            self.repair_admission.release()
+
+
+def construct_app(context):
+    global _context
+    require('server' not in sys.modules and _context is None, 'FRESH_TEST_PROCESS_REQUIRED')
+    context.check_lock()
+    # Sanitize only this disposable child's environment; never production settings.
+    for key in list(os.environ):
+        if key.upper() not in ('SYSTEMROOT','WINDIR','TEMP','TMP'):
+            os.environ.pop(key, None)
+    os.environ['JARVIS_STAGE4_TEST'] = '1'
+    os.environ['JARVIS_OLLAMA_SHADOW'] = '0'
+    sys.dont_write_bytecode = True
+    def isolated_io(event, args):
+        def path(value):
+            return Path(value).resolve() if isinstance(value,(str,bytes,os.PathLike)) and not isinstance(value,bytes) else None
+        if event == 'open':
+            target=path(args[0])
+            if target:
+                require(target.name!='.env' and target!=REPO/'personality.txt' and not target.is_relative_to(REPO/'data'), 'PRODUCTION_FILE_DENIED')
+                mode=args[1] or '';flags=args[2] or 0
+                writing=any(c in mode for c in 'wax+') or flags & (os.O_WRONLY|os.O_RDWR|os.O_CREAT|os.O_TRUNC)
+                require(not writing or target.is_relative_to(context.root), 'TEST_WRITE_BOUNDARY')
+        elif event == 'sqlite3.connect':
+            expected=context.data/'jarvis.sqlite3'
+            target=expected if args[0] in (expected.as_uri()+'?mode=ro',expected.as_uri()+'?mode=rw') else path(args[0])
+            require(target is not None and target.is_relative_to(context.root), 'TEST_DATABASE_BOUNDARY')
+        elif event == 'socket.connect':
+            from stage4_ollama_transport import permitted
+            require(context.allow_local_ollama and permitted(args[1],args[0].family,args[0].type),'TEST_DESTINATION_DENIED')
+        elif event in ('socket.getaddrinfo','socket.gethostbyname','socket.sendto','subprocess.Popen','os.system'):
+            raise Denied('TEST_EXTERNAL_EXECUTION_DENIED')
+    sys.addaudithook(isolated_io)  # This disposable process only; no OS settings.
+    _context = context
+    import server
+    def denied(*args, **kwargs):
+        raise server.providers.ProviderError('STAGE4_TEST live provider access denied')
+    server.providers.request = denied
+    server.providers.transcribe = denied
+    def chat(messages, tools, callback, cancel, vision=False):
+        # Fixed synthetic markers exercise cancellation/deadline boundaries only.
+        # No model/tool/resource execution or arbitrary client-selected duration.
+        last=next((m.get('content','') for m in reversed(messages) if m.get('role')=='user'),'')
+        if last == 'STAGE4_TEST cooperative wait':cancel.wait(2)
+        if last == 'STAGE4_TEST uncooperative deadline':
+            exclusion.event(context.root,'fixture_provider_wait_started')
+            time.sleep(33)
+        return {'role':'assistant','content':'STAGE4_TEST deterministic response; no live provider used.'}
+    server.providers.chat = chat
+    def speech(text, profile='auto'):
+        output = io.BytesIO()
+        with wave.open(output, 'wb') as audio:
+            audio.setnchannels(1);audio.setsampwidth(2);audio.setframerate(16000)
+            audio.writeframes(b'\0\0'*1600)
+        return output.getvalue()  # Explicit silent fixture, never real voice parity.
+    server.providers.speech = speech
+    counts={'App':0,'VoiceEngine':0,'WakeDetector':0,'Store':0}
+    for name in ('VoiceEngine','WakeDetector','Store'):
+        original=getattr(server,name)
+        def counted(*args,_name=name,_original=original,**kwargs):
+            counts[_name]+=1
+            return _original(*args,**kwargs)
+        setattr(server,name,counted)
+    app=server.App(context.data);counts['App']+=1
+    context.construction_counts=counts
+    # Negative construction must be refused before a second Store is opened.
+    try:server.App(context.data)
+    except Denied:context.second_app_refused=True
+    else:raise Denied('DUPLICATE_APP_NOT_REFUSED')
+    return app
+
+
+class Authority:
+    """Stage 2 serve_one authenticates before calling this Core-owned dispatcher."""
+    def __init__(self, context, identity, enrollments):
+        self.context, self.identity, self.enrollments = context, identity, enrollments
+
+    def active(self):
+        self.context.check_lock()
+        authentication.validate_identity(self.identity, self.identity)
+
+    def operation(self, client, request, selected):
+        authentication.fields(request, ('op','token','args'))
+        op, token, args = request['op'], request['token'], request['args']
+        require(type(args) is dict and client in self.enrollments, 'REQUEST')
+        o = self.context.owners
+        if op == 'attach':
+            authentication.fields(args, ('scopes',));require(token is None)
+            require(type(args['scopes']) is list and all(type(s) is str for s in args['scopes']), 'SCOPES')
+            issued = o.attach_verified(client, args['scopes'], selected)
+            with o.lock:
+                s = o._session(issued, o.epoch)
+                self.context.app.devices.register('STAGE4_TEST-'+s.family, {'display'}, ready={'display'}, ttl=900, simulated=True)
+            return {'result':'ATTACHED','token':issued,'epoch':o.epoch,'identity':self.identity}
+        with o.lock:
+            s = o._session(token, o.epoch)
+            require(s.client == client and s.protocol == selected, 'CLIENT_BINDING')
+        if op == 'renew':
+            authentication.fields(args, ())
+            issued=o.renew_verified(token,o.epoch,client)
+            self.context.app.devices.register('STAGE4_TEST-'+s.family, {'display'}, ready={'display'}, ttl=900, simulated=True)
+            return {'result':'RENEWED','token':issued,'epoch':o.epoch}
+        if op == 'shared':
+            authentication.fields(args, ());require('read' in s.scopes, 'SCOPE')
+            return self.context.shared_state()
+        if op == 'request':
+            authentication.fields(args, ('text',))
+            return self.context.start_request(token, args['text'])
+        if op == 'request-text-only':
+            authentication.fields(args, ('text','operation'))
+            return self.context.start_text_request(token,args['text'],args['operation'])
+        if op == 'inspection-start':
+            authentication.fields(args, ('request',))
+            return self.context.start_inspection(token, args['request'])
+        if op == 'inspection-status':
+            authentication.fields(args, ('request_id',))
+            return self.context.inspection_status(token, args['request_id'])
+        if op == 'repair':
+            authentication.fields(args, ('request',))
+            import budgeted_repair
+            return budgeted_repair.dispatch(self.context.app,None,args['request'],stage4_token=token)
+        if op == 'deep-review':
+            authentication.fields(args, ('review',))
+            from stage4_deep_review import admit
+            return admit(self.context,token,args['review'])
+        if op == 'response-provider':
+            authentication.fields(args, ('response_id',));require('read' in s.scopes,'SCOPE')
+            from stage4_response_history import describe
+            record=self.context.response_history.get(s.client,args['response_id'])
+            return {'provenance':record,'answer':describe(record)}
+        if op == 'last-response-provider':
+            authentication.fields(args, ());require('read' in s.scopes,'SCOPE')
+            from stage4_response_history import describe
+            record=self.context.response_history.last(s.client)
+            return {'provenance':record,'answer':describe(record)}
+        if op == 'request-status':
+            authentication.fields(args, ('request_id',));wid=o.check_owner(token,o.epoch,args['request_id'])
+            run=self.context.runs[wid]
+            return {'done':o.work[wid].done.is_set(),'events':list(run.events)}
+        if op == 'cancel':
+            authentication.fields(args, ('request_id',))
+            return {'result':o.cancel_request(token,o.epoch,args['request_id'])}
+        if op == 'media':
+            authentication.fields(args, ('purpose','request_id','lease_id'))
+            return o.media(token,o.epoch,args['purpose'],request_id=args['request_id'],lease_id=args['lease_id'])
+        if op in ('stop-capture','stop-playback'):
+            authentication.fields(args, ('lease_id',))
+            o.stop_media(token,o.epoch,'capture' if op=='stop-capture' else 'playback',args['lease_id'])
+            return {'result':'LEASE_RELEASED','hardware_control_verified':False}
+        if op == 'voice-synthesize':
+            authentication.fields(args, ('request_id','lease_id'))
+            wid=o.check_owner(token,o.epoch,args['request_id'])
+            require(o.work[wid].done.is_set(), 'RESPONSE_NOT_READY')
+            o.media(token,o.epoch,'playback',request_id=wid,lease_id=args['lease_id'])
+            if wid in self.context.voice_requests:
+                return {'request_id':self.context.voice_requests[wid]}
+            run=self.context.runs[wid]
+            completed=[e['data']['text'] for e in run.events if e['event']=='assistant.completed']
+            require(bool(completed),'NO_RESPONSE')
+            output={}
+            def synthesize(cancel):
+                if cancel.is_set():return 'FAILED'
+                audio=self.context.app.voice_engine.synthesize(completed[-1])
+                output.update(audio=base64.b64encode(audio).decode(),mode='SILENT_DETERMINISTIC_CORE_FIXTURE',audibility_verified=False)
+                return 'SUCCEEDED'
+            voice_id=self.context.lifecycle.dispatch(token,o.epoch,'tts',synthesize)
+            self.context.audio_results[voice_id]=output
+            self.context.voice_requests[wid]=voice_id
+            self.context.voice_leases[voice_id]=(wid,args['lease_id'])
+            return {'request_id':voice_id}
+        if op == 'voice-status':
+            authentication.fields(args, ('request_id',));wid=o.check_owner(token,o.epoch,args['request_id'])
+            with o.lock:
+                o._expire();lease=o.leases.get('playback')
+                require(lease is not None and lease['family']==s.family and
+                        self.context.voice_leases.get(wid)==(lease['request'],lease['id']), 'PLAYBACK_LEASE_EXPIRED')
+            return {'done':o.work[wid].done.is_set(),**self.context.audio_results.get(wid,{})}
+        if op == 'lifecycle-status':
+            authentication.fields(args, ());require(bool(s.scopes & o.MANAGEMENT),'SCOPE')
+            return self.context.lifecycle.status()
+        if op == 'detach':
+            authentication.fields(args, ());o.detach(token,o.epoch)
+            self.context.app.devices.disconnect('STAGE4_TEST-'+s.family)
+            return {'result':'DETACHED','core_stopped':False}
+        if op in ('shutdown','emergency-stop'):
+            authentication.fields(args, ('operation',))
+            cap=o.management_capability(token,o.epoch,op,args['operation'])
+            result = self.context.lifecycle.request(token,o.epoch,cap,op,args['operation'])
+            try:
+                with (self.context.root/'stop').open('a') as f:
+                    f.flush();os.fsync(f.fileno())
+            except OSError:
+                self.context.lifecycle._recovery('STOP_LATCH_PERSISTENCE_FAILED')
+                return self.context.lifecycle.status()
+            return result
+        raise Denied('OPERATION_DENIED')
+
+
+def serve(root, configuration, *, inspection_setup=None, repair_setup=None):
+    """Explicit isolated child entry; caller coordinates startup under supervisor.lock.
+
+    No stdin lifetime ownership and no restart loop. Credentials arrive only from
+    the trusted disposable test parent and are never written to evidence.
+    """
+    root=validate_root(root)
+    require(not (root/'stop').exists(), 'STOP_LATCH')
+    enrollments=configuration['enrollments']
+    for entry in enrollments.values():entry['key']=bytes.fromhex(entry['key'])
+    key=bytes.fromhex(configuration['server_key'])
+    require(len(key)==32 and all(len(e['key'])==32 for e in enrollments.values()), 'TEST_KEYS')
+    with exclusion.Lock(root,'core.lock') as lock:
+        exclusion.event(root,'core_acquired',identity=exclusion.process_identity(os.getpid()))
+        context=Context(root,configuration['data_id'],lock,{k:v['scopes'] for k,v in enrollments.items()})
+        from stage4_provider_fallback import offline_router
+        context.text_router=offline_router(configuration.get('text_provider_scenario','openai'))
+        if configuration.get('deep_review_fixture') is True:
+            from stage4_deep_review import Engine, fixture_transport
+            context.deep_reviewer=Engine(fixture_transport,mode='STAGE4_TEST',simulated=True)
+        if configuration.get('real_local_ollama') is True:
+            from stage4_ollama_transport import real_router
+            context.allow_local_ollama=True
+            context.text_router=real_router()
+        if configuration.get('repair_fixture') is True:
+            require(repair_setup is not None, 'TRUSTED_REPAIR_FIXTURE_REQUIRED')
+            # This fixed runtime resource is created before the permanent audit
+            # hook. No request callback or provider code runs during bootstrap.
+            context.repair_loop = RepairLoopHost(mode='STAGE4_TEST')
+        app=construct_app(context)
+        if configuration.get('inspection_fixture') is True:
+            require(inspection_setup is not None, 'TRUSTED_INSPECTION_FIXTURE_REQUIRED')
+            inspection_setup(context)
+        if configuration.get('repair_fixture') is True:
+            require(repair_setup is not None, 'TRUSTED_REPAIR_FIXTURE_REQUIRED')
+            repair_setup(context)
+        metadata={**exclusion.process_identity(os.getpid()),'namespace':root.name,'mode':'TEST','epoch':context.epoch}
+        exclusion.write(root/'core.json',metadata)
+        identity={**transport.identity(os.getpid()),'mode':'TEST','namespace':root.name,
+                  'installation_id':'STAGE4_TEST','data_id':context.data_id,'core_instance_id':context.epoch,
+                  'startup_epoch':context.epoch,'runtime_build':'STAGE4_TEST-incomplete','protocol':[2,3]}
+        authority=Authority(context,identity,enrollments)
+        stopping=threading.Event()
+        def control_loop():
+            answered=object()
+            while not stopping.wait(.015):
+                try:
+                    request=exclusion.read(root/'challenge.json')
+                    if request and request.get('challenge') != answered:
+                        challenge=request.get('challenge')
+                        exclusion.write(root/'response.json',{'identity':metadata,'challenge':challenge})
+                        answered=challenge
+                    context.lifecycle.tick()
+                    with context.owners.lock:
+                        families={s.family for s in context.owners.sessions.values()}
+                    for device in app.devices.snapshot():
+                        if device['device_id'].startswith('STAGE4_TEST-') and device['device_id'][12:] not in families:
+                            app.devices.disconnect(device['device_id'])
+                except Exception as exc:
+                    import traceback
+                    exclusion.event(root,'FAILED_CLOSED',error=type(exc).__name__,code=getattr(exc,'errno',None),winerror=getattr(exc,'winerror',None),operation='Stage4 control loop',traceback=traceback.format_exc())
+                    context.lifecycle._recovery('CONTROL_LOOP_FAILURE')
+        controller=threading.Thread(target=control_loop,daemon=True);controller.start()
+        ready=False
+        try:
+            while context.owners.state!='FINALIZING':
+                pipe=transport.listen(configuration['endpoint'])
+                try:
+                    if not ready:
+                        exclusion.write(root/'stage4-ready.json',{'identity':identity,'peer':transport.identity(os.getpid()),
+                            'endpoint':configuration['endpoint'],'app_instances':context.construction_counts['App'],
+                            'voice_instances':context.construction_counts['VoiceEngine'],'wake_instances':context.construction_counts['WakeDetector'],
+                            'store_instances':context.construction_counts['Store'],
+                            'second_app_refused_before_store':context.second_app_refused,
+                            'data_root':str(app.store.root),'model_paths_isolated':app.wake.directory.is_relative_to(context.data) and app.local_stt.directory.is_relative_to(context.data),
+                            'source_env_loaded':False,'live_providers':False})
+                        ready=True
+                    pipe.io('connect');pipe.deadline=time.monotonic()+5
+                    authentication.serve_one(pipe,authority,key,'normal')
+                except (Denied, authentication.Denied, OSError, ValueError, TypeError, KeyError):
+                    try:pipe.send({'result':'DENIED'})
+                    except Exception:pass
+                finally:pipe.close()
+        finally:
+            # Only verified drained state is a graceful exit. Runtime faults while
+            # work remains must quarantine instead of releasing lifetime ownership.
+            if context.owners.state!='FINALIZING':
+                context.lifecycle._recovery('RUNTIME_LISTENER_FAILURE')
+                exclusion.event(root,'RECOVERY_REQUIRED')
+                while True:time.sleep(1)
+            stopping.set();controller.join(2)
+            if controller.is_alive():
+                context.lifecycle._recovery('CONTROL_THREAD_STILL_ACTIVE')
+                while True:time.sleep(1)
+            if context.repair_loop is not None:
+                close_errors=[]
+                def close_repair_loop():
+                    try:context.repair_loop.close()
+                    except BaseException as exc:close_errors.append(type(exc).__name__)
+                closer=threading.Thread(target=close_repair_loop,daemon=True)
+                closer.start()
+                remaining=max(0,30-(context.owners.clock()-context.lifecycle.accepted_at))
+                closer.join(min(2,remaining))
+                if closer.is_alive() or close_errors or not context.repair_loop.closed:
+                    context.lifecycle._recovery('REPAIR_LOOP_CLEANUP_UNCERTAIN')
+                    exclusion.event(root,'RECOVERY_REQUIRED',reason='REPAIR_LOOP_CLEANUP_UNCERTAIN')
+                    while True:time.sleep(1)
+                exclusion.event(root,'repair_loop_closed')
+            try:context.lifecycle.record_exit_ready()
+            except Exception:
+                exclusion.event(root,'RECOVERY_REQUIRED',reason='EXIT_READINESS_PERSISTENCE_FAILED')
+                while True:time.sleep(1)
+            exclusion.event(root,'stage4_drained',work=len(context.owners.work),production=False)
+    # No second startup or automatic restart follows process exit.

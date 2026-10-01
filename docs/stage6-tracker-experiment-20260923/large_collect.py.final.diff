@@ -1,0 +1,20 @@
+--- D:\JARVIS-STAGE6-LIVE\693f0cd17ff4419aaf404604a23edc5f\code\large_collect.py
++++ D:\JARVIS-STAGE6-LIVE\978b5ce769244ec9a580fb0846f9bfdc\code\large_collect.py
+@@ -8,7 +8,7 @@
+ from journal import ticks,frequency
+ from secondary_sampling import SecondarySampler
+ def main(root):
+- contract=load(root);ledger=Ledger(root);tree=TreeTracker();health=None;worker=None;sampler=None;probes=[];handles=[];launched=[];results=[]
++ contract=load(root);ledger=Ledger(root);tree=TreeTracker(collector_anchor=True);health=None;worker=None;sampler=None;probes=[];handles=[];launched=[];results=[]
+  def secondary(stage,fn):
+   try:return fn()
+   except BaseException:ledger.fail(stage)
+@@ -54,7 +54,7 @@
+    secondary('probe-cleanup',close_probe)
+   if sampler:secondary('sampler-close',sampler.close)
+   proof=secondary('tree-cleanup',lambda:tree.finish(root,20))
+-  if not proof or not proof['allExited'] or not proof['allHandlesClosed'] or not proof['threadStopped']:ledger.fail('tree-cleanup','Incomplete retained tree')
++  if not proof or not proof.get('supportingEvidenceValid',False) or not proof['allExited'] or not proof['allHandlesClosed'] or not proof['threadStopped']:ledger.fail('tree-cleanup','Incomplete retained tree')
+   if health:health.close();secondary('health-samples',lambda:save(root/'collector-health-samples.json',health.samples))
+   secondary('probe-timings',lambda:save(root/'probe-timings.json',[x.row for x in probes]))
+   secondary('probe-handles',lambda:save(root/'retained-handle-verification.json',handles))

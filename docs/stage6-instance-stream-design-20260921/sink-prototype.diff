@@ -1,0 +1,64 @@
+--- D:\JARVIS-STAGE6-LIVE\f469b94b665e4808af1c5bb6aa46b207\code\trace_sink.hpp
++++ D:\JARVIS-STAGE6-LIVE\instance-stream-62cd5dabd4cb46b593990f1fae4b2a28\code\trace_sink.hpp
+@@ -12,9 +12,9 @@
+ #include <iomanip>
+ // One producer queue, one writer. No filesystem operations while holding queue lock.
+ class TraceSink {
+- struct Segment {std::wstring name;unsigned long long bytes=0,records=0;std::string hash;};
++ struct Segment {std::wstring name;unsigned long long bytes=0,records=0,first=0,last=0;std::string hash;};
+  std::wstring root;std::deque<std::string> queue;std::mutex lock;std::condition_variable wake;
+- unsigned long long queued=0,accepted=0,totalBytes=0,persisted=0;bool closing=false;
++ unsigned long long queued=0,accepted=0,totalBytes=0,persisted=0,attempted=0;bool closing=false;
+  unsigned long long maxBytes,maxRecords,segmentLimit,queueLimit;int inject;std::thread writer;
+  std::string segmentBuffer;
+  std::vector<Segment> segments;HANDLE file=INVALID_HANDLE_VALUE;
+@@ -31,12 +31,12 @@
+  }
+  bool closeSegment(){
+   if(file==INVALID_HANDLE_VALUE)return true;
+-  BYTE digest[32];DWORD done=0;auto begin=q();LARGE_INTEGER freq;QueryPerformanceFrequency(&freq);
++  BYTE digest[32];DWORD done=0;auto begin=q();if(inject==4)Sleep(500);LARGE_INTEGER freq;QueryPerformanceFrequency(&freq);
+   bool ok=inject!=1&&inject!=2&&WriteFile(file,segmentBuffer.data(),DWORD(segmentBuffer.size()),&done,nullptr)&&done==segmentBuffer.size();
+   ok=FlushFileBuffers(file)!=0&&ok;ok=CloseHandle(file)!=0&&ok;file=INVALID_HANDLE_VALUE;
+   auto duration=double(q()-begin)/freq.QuadPart;if(duration>maxWriteSeconds)maxWriteSeconds=duration;
+   if(ok)persisted+=segments.back().records;else if(!failure)failure=inject==2?112:7;
+-  ok=BCryptFinishHash(hash,digest,32,0)>=0&&ok;BCryptDestroyHash(hash);hash=nullptr;
++  ok=inject!=5&&BCryptFinishHash(hash,digest,32,0)>=0&&ok;BCryptDestroyHash(hash);hash=nullptr;
+   if(!ok){if(!failure)failure=6;return false;}std::ostringstream h;for(auto b:digest)h<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(b);segments.back().hash=h.str();return true;
+  }
+  void run(){
+@@ -49,10 +49,11 @@
+    if(file==INVALID_HANDLE_VALUE&&!openSegment())continue;
+    if(segments.back().bytes+row.size()>segmentLimit){if(!closeSegment()||!openSegment())continue;}
+    if(BCryptHashData(hash,reinterpret_cast<PUCHAR>(row.data()),ULONG(row.size()),0)<0){failure=8;continue;}
+-   auto& s=segments.back();s.bytes+=row.size();++s.records;segmentBuffer+=row;
++   auto& s=segments.back();auto seq=acceptedSequence(row);if(!s.records)s.first=seq;s.last=seq;s.bytes+=row.size();++s.records;segmentBuffer+=row;
+   }
+   closeSegment();
+  }
++static unsigned long long acceptedSequence(const std::string& row){return std::stoull(row.substr(7));}
+ public:
+  TraceSink(std::wstring path,unsigned long long bytes=137438953472ULL,unsigned long long records=196531200ULL,unsigned long long segment=8388608ULL,unsigned long long memory=67108864ULL,int fault=0):root(path),maxBytes(bytes),maxRecords(records),segmentLimit(segment),queueLimit(memory),inject(fault){
+   DWORD size=0,got=0;
+@@ -60,7 +61,9 @@
+   object.resize(size);writer=std::thread([this]{run();});
+  }
+  bool add(std::string row){
+-  row+='\n';std::lock_guard<std::mutex> guard(lock);
++  std::lock_guard<std::mutex> guard(lock);++attempted;
++  if(row.size()<2||row.front()!='{'||row.back()!='}'){failure=11;return false;}
++  row="{\"seq\":"+std::to_string(accepted+1)+","+row.substr(1)+"\n";
+   if(failure||closing)return false;
+   if(row.size()>8192||row.size()>segmentLimit||accepted>=maxRecords||totalBytes+row.size()>maxBytes||queued+row.size()>queueLimit){failure=9;return false;}
+   ++accepted;totalBytes+=row.size();queued+=row.size();if(queued>peakQueue)peakQueue=queued;queue.push_back(std::move(row));wake.notify_one();return true;
+@@ -68,8 +71,8 @@
+  std::string finish(){
+   {std::lock_guard<std::mutex> guard(lock);closing=true;}wake.notify_one();writer.join();
+   if(persisted!=accepted&&!failure)failure=10;
+-  std::ostringstream s;s<<"{\"format\":\"segmented-jsonl-v1\",\"fault\":"<<failure<<",\"accepted\":"<<accepted<<",\"persisted\":"<<persisted<<",\"bytes\":"<<totalBytes<<",\"peakQueueBytes\":"<<peakQueue<<",\"maximumWriteSeconds\":"<<maxWriteSeconds<<",\"recordBudget\":"<<maxRecords<<",\"storageBudgetBytes\":"<<maxBytes<<",\"segments\":[";
+-  bool first=true;for(auto& x:segments){if(!first)s<<',';first=false;s<<"{\"name\":\""<<std::string(x.name.begin(),x.name.end())<<"\",\"bytes\":"<<x.bytes<<",\"records\":"<<x.records<<",\"sha256\":\""<<x.hash<<"\"}";}s<<"]}";
++  std::ostringstream s;s<<"{\"format\":\"sequenced-prototype-v1\",\"fault\":"<<failure<<",\"attempted\":"<<attempted<<",\"accepted\":"<<accepted<<",\"persisted\":"<<persisted<<",\"bytes\":"<<totalBytes<<",\"peakQueueBytes\":"<<peakQueue<<",\"maximumWriteSeconds\":"<<maxWriteSeconds<<",\"recordBudget\":"<<maxRecords<<",\"storageBudgetBytes\":"<<maxBytes<<",\"segments\":[";
++  bool first=true;for(auto& x:segments){if(!first)s<<',';first=false;s<<"{\"name\":\""<<std::string(x.name.begin(),x.name.end())<<"\",\"bytes\":"<<x.bytes<<",\"records\":"<<x.records<<",\"firstSequence\":"<<x.first<<",\"lastSequence\":"<<x.last<<",\"sha256\":\""<<x.hash<<"\"}";}s<<"]}";
+   BCryptCloseAlgorithmProvider(algorithm,0);algorithm=nullptr;return s.str();
+  }
+  unsigned fault()const{return failure.load();}

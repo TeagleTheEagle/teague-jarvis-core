@@ -1,0 +1,27 @@
+--- D:\JARVIS-STAGE6-LIVE\c090f8cbc0d444e493f1d801e36fd1bb\code\qualified_worker.py
++++ D:\JARVIS-STAGE6-LIVE\ee61943f57a04354b41526fac01bd52f\code\qualified_worker.py
+@@ -4,6 +4,9 @@
+ from probe_timing import Probe,process_times
+ from journal import ticks,frequency,PublisherWatch
+ root=run_dir(sys.argv[1]);activate_temp(root)
++from fresh_binding import bound
++_bound,declaration=bound(CODE)
++if _bound!=root:raise ValueError('WORKER_RUN_BINDING')
+ def save(name,obj):
+  with (root/name).open('x') as f:json.dump(obj,f,indent=2)
+ ready=json.loads((root/'app-ready.json').read_text(encoding='utf-8-sig'))
+@@ -16,10 +19,11 @@
+  health_samples.append(dict(qpc=ticks(),age=age))
+ b=NativeBridge(root);b.install();probes=[];failure=None
+ try:
+- for case in ('idle','churn','overlap'):
+-  for i in range(4):
++ for plan in declaration['cases']:
++  case=plan['name']
++  for i in range(plan['groups']):
+    group=[]
+-   for j in range(2 if case=='overlap' else 1):
++   for j in range(plan['width']):
+     p=Probe(CODE/'J6Probe.exe');p.row.update(case=case,index=i);group.append(p);probes.append(p)
+    for p in group:
+     p.wait_approved(health,lambda v:None,ticks()/frequency()+30)

@@ -1,0 +1,106 @@
+[
+  {
+    "panel": "command",
+    "elapsed_ms": 1629,
+    "isolation": {
+      "blocked_resources": 1,
+      "side_effect_attempts": []
+    }
+  },
+  {
+    "panel": "communications",
+    "elapsed_ms": 1669,
+    "isolation": {
+      "blocked_resources": 1,
+      "side_effect_attempts": []
+    }
+  },
+  {
+    "panel": "system",
+    "elapsed_ms": 1600,
+    "isolation": {
+      "blocked_resources": 1,
+      "side_effect_attempts": []
+    }
+  },
+  {
+    "panel": "mission",
+    "elapsed_ms": 1594,
+    "isolation": {
+      "blocked_resources": 1,
+      "side_effect_attempts": []
+    }
+  },
+  {
+    "panel": "focus",
+    "elapsed_ms": 1596,
+    "isolation": {
+      "blocked_resources": 1,
+      "side_effect_attempts": []
+    }
+  },
+  {
+    "panel": "projects",
+    "elapsed_ms": 1628,
+    "isolation": {
+      "blocked_resources": 1,
+      "side_effect_attempts": []
+    }
+  },
+  {
+    "panel": "memory",
+    "elapsed_ms": 1579,
+    "isolation": {
+      "blocked_resources": 1,
+      "side_effect_attempts": []
+    }
+  },
+  {
+    "panel": "files",
+    "elapsed_ms": 1585,
+    "isolation": {
+      "blocked_resources": 1,
+      "side_effect_attempts": []
+    }
+  },
+  {
+    "panel": "web",
+    "elapsed_ms": 1644,
+    "isolation": {
+      "blocked_resources": 1,
+      "side_effect_attempts": []
+    }
+  },
+  {
+    "panel": "diagrams",
+    "elapsed_ms": 1744,
+    "isolation": {
+      "blocked_resources": 1,
+      "side_effect_attempts": []
+    }
+  },
+  {
+    "panel": "settings",
+    "elapsed_ms": 1664,
+    "isolation": {
+      "blocked_resources": 1,
+      "side_effect_attempts": []
+    }
+  },
+  {
+    "panel": "changes",
+    "elapsed_ms": 1647,
+    "isolation": {
+      "blocked_resources": 1,
+      "side_effect_attempts": []
+    }
+  },
+  {
+    "panel": "maps",
+    "elapsed_ms": 1698,
+    "isolation": {
+      "blocked_resources": 1,
+      "side_effect_attempts": []
+    }
+  }
+]

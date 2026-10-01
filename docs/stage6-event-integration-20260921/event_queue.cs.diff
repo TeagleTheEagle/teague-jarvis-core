@@ -1,0 +1,39 @@
+--- frozen/event_queue.cs
++++ D:\JARVIS-STAGE6-LIVE\6d305fb9fc7440c5bf485466e9d708df\code\event_queue.cs
+@@ -19,6 +19,7 @@
+  public int GetHashCode(PSEventArgs a) {return RuntimeHelpers.GetHashCode(a);}
+ }
+ public sealed class ExactEventQueue : IDisposable {
++ readonly bool streaming;
+  readonly PSEventArgsCollection queue;
+  readonly HashSet<string> sources;
+  readonly Dictionary<PSEventArgs,QueueEntry> entries=new Dictionary<PSEventArgs,QueueEntry>(new EventReferenceComparer());
+@@ -28,7 +29,9 @@
+  public bool Failed {get; private set;}
+  public string Failure {get; private set;}
+  public int MaxDepth {get; private set;}
+- public ExactEventQueue(PSEventArgsCollection q,string[] ids) {
++ public ExactEventQueue(PSEventArgsCollection q,string[] ids):this(q,ids,false) {}
++ public ExactEventQueue(PSEventArgsCollection q,string[] ids,bool streamMode) {
++  streaming=streamMode;
+   queue=q;sources=new HashSet<string>(ids);
+   using(LoopTiming.Lock(queue.SyncRoot)) {
+    if(CountOwned()!=0)throw new InvalidOperationException("Attach before owned events exist");
+@@ -40,7 +43,7 @@
+   if(!sources.Contains(ev.SourceIdentifier))return;
+   using(LoopTiming.Lock(queue.SyncRoot)) {
+    if(entries.ContainsKey(ev)){Fail("Same event reference enqueued twice");return;}
+-   if(sequence>=20000){Fail("Bounded queue identity capacity exceeded");return;}
++   if(streaming?entries.Count>=20000:sequence>=20000){Fail("Bounded queue identity capacity exceeded");return;}
+    entries.Add(ev,new QueueEntry{QueueSequence=++sequence,Event=ev,EnqueueQpc=System.Diagnostics.Stopwatch.GetTimestamp()});
+    MaxDepth=Math.Max(MaxDepth,CountOwned());
+   }
+@@ -76,7 +79,7 @@
+     e.Persisted=true;persistedCount++;
+     Valid(e);
+     using(LoopTiming.Span("queue.exact.RemoveAt")){queue.RemoveAt(Index(e));} // exact reference matched, exactly one index, same SyncRoot
+-    e.Removed=true;removedCount++;selected=null;
++    e.Removed=true;removedCount++;selected=null;if(streaming)entries.Remove(e.Event);
+    }
+   } finally {Interlocked.Exchange(ref publishing,0);}
+  }

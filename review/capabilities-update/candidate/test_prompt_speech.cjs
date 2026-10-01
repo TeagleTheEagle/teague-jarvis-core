@@ -1,0 +1,11 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync(__dirname+'/static/app.js','utf8');
+const fn=source.slice(source.indexOf('function spokenReply('),source.indexOf('async function send('));
+const context={};vm.createContext(context);vm.runInContext(fn,context);
+const prompt='Here is your prompt: “Improve my JARVIS interface with readable typography, consistent spacing, dark backgrounds, restrained cyan accents, visible keyboard focus, and a responsive layout. Preserve existing functionality.”';
+assert.equal(context.spokenReply('Write me a prompt',prompt),'The prompt is finished, sir.');
+assert.equal(context.spokenReply('a prompt please',prompt),'The prompt is finished, sir.');
+assert.equal(context.spokenReply('Read the prompt aloud',prompt),prompt);
+assert.equal(context.spokenReply('What is a prompt?',prompt),prompt);
+const clarification='What kind of prompt would you like?';assert.equal(context.spokenReply('Write a prompt',clarification),clarification);
+console.log('PASS: prompt acknowledgement, explicit read-aloud and clarification handling.');

@@ -1,0 +1,686 @@
+--- before/store.py
++++ current/store.py
+@@ -120,7 +120,16 @@
+                 db.execute("DELETE FROM settings WHERE key='name'")
+             return db.execute('DELETE FROM items WHERE id=? AND kind=?', (item_id, kind)).rowcount > 0
+ 
+-    def message(self, conversation, role, content):
++    def message(self, conversation, role, content, *, transaction=None):
++        if transaction is not None:
++            # Opt-in TEST transaction participation. The caller owns commit/rollback.
++            # Never open another database or silently fall back to a separate write.
++            if (not isinstance(transaction, sqlite3.Connection) or not transaction.in_transaction
++                    or transaction.execute('PRAGMA application_id').fetchone()[0] != 0x544934
++                    or Path(transaction.execute('PRAGMA database_list').fetchone()[2]).resolve() != self.path.resolve()):
++                raise ValueError('TEST_MESSAGE_TRANSACTION_REQUIRED')
++            return transaction.execute('INSERT INTO messages(conversation,role,content,created) VALUES (?,?,?,?)',
++                (conversation, role, content, time.time())).lastrowid
+         with self.connect() as db:
+             db.execute('INSERT INTO messages(conversation,role,content,created) VALUES (?,?,?,?)', (conversation, role, content, time.time()))
+ 
+--- before/server.py
++++ current/server.py
+@@ -549,7 +549,17 @@
+                         messages.append({'role': 'tool', 'tool_call_id': call['id'], 'content': json.dumps(result)})
+                 else:
+                     raise ValueError('Tool iteration limit reached. Please narrow the request.')
+-            if run.cancel.is_set():
++            if self.stage4:
++                evidence = answer_evidence.evidence(run.events)
++                run.emit('answer.evidence', {'tools':evidence,'checked_at':time.time(),'basis':'Tool results are available; their scope and limitations still apply.' if evidence else 'No tool verification in this reply. Treat factual claims as unverified unless separately sourced.'})
++                provenance = {'actual_final_provider':'TEST deterministic provider' if run.measurements else 'Core deterministic',
++                    'actual_final_model':'stage4-fixture' if run.measurements else None,
++                    'configured_model':'stage4-fixture' if run.measurements else None,
++                    'attempts':[{'provider':'TEST deterministic provider','requested_model':'stage4-fixture'}] if run.measurements else [],
++                    'fallback':False,'fallback_reason':None,'simulated':True}
++                briefings=[e['data']['result'] for e in run.events if e['event']=='tool.completed' and e['data']['name']=='daily_briefing']
++                self.stage4.finish_response(run,answer,provenance,answer_evidence.briefing_details(briefings[-1]) if briefings else None)
++            elif run.cancel.is_set():
+                 run.emit('run.cancelled', {})
+             else:
+                 evidence = answer_evidence.evidence(run.events)
+@@ -559,10 +569,12 @@
+                 run.emit('assistant.completed', {'text': answer, 'details':answer_evidence.briefing_details(briefings[-1]) if briefings else None})
+                 run.emit('run.completed', {})
+         except (ValueError, providers.ProviderError) as exc:
+-            run.emit('run.cancelled' if run.cancel.is_set() else 'run.failed', {'message': str(exc), 'retry_after': getattr(exc, 'retry_after', 0)})
++            if self.stage4:self.stage4.fail_response(run)
++            else:run.emit('run.cancelled' if run.cancel.is_set() else 'run.failed', {'message': str(exc), 'retry_after': getattr(exc, 'retry_after', 0)})
+         except Exception:
+             self.store.audit('run', 'internal error')
+-            run.emit('run.failed', {'message': 'The request failed internally. See the mission log and retry. No success was assumed.'})
++            if self.stage4:self.stage4.fail_response(run)
++            else:run.emit('run.failed', {'message': 'The request failed internally. See the mission log and retry. No success was assumed.'})
+         finally:
+             with self.lock:
+                 self.timings.append({'finished_at':companion_tools.stamp()['at'],'queue_ms':round((work_started-run.monotonic_created)*1000),'context_ms':context_ms,'elapsed_ms':round((time.perf_counter()-run.monotonic_created)*1000),'provider_calls':run.measurements,'cancelled':run.cancel.is_set()})
+--- before/stage4_response_history.py
++++ current/stage4_response_history.py
+@@ -16,8 +16,8 @@
+                 status TEXT NOT NULL, timestamp REAL NOT NULL, text TEXT,
+                 provenance TEXT, UNIQUE(owner,operation))''')
+ 
+-    def connect(self):
+-        db = sqlite3.connect(self.database.as_uri()+'?mode=rw',uri=True,timeout=1)
++    def connect(self, timeout=1):
++        db = sqlite3.connect(self.database.as_uri()+'?mode=rw',uri=True,timeout=min(1,max(0,timeout)))
+         if db.execute('PRAGMA application_id').fetchone()[0] != 0x544934:
+             db.close()
+             raise ValueError('TEST_DATABASE_REQUIRED')
+@@ -36,13 +36,37 @@
+                        (response_id,owner,session,operation,fingerprint,mode,'PENDING',time.time(),None,None))
+             return response_id,True
+ 
+-    def finish(self, owner, response_id, status, text, provenance):
++    def finish(self, owner, response_id, status, text, provenance, *, session=None,
++               validate=None, append=None, timeout=1):
+         if status not in ('COMPLETED','FAILED','CANCELLED'): raise ValueError('STATUS')
+-        # Persistence commits before any completed response event is exposed.
+-        with self.connect() as db:
+-            count=db.execute('UPDATE stage4_response_provenance SET status=?,timestamp=?,text=?,provenance=? WHERE response_id=? AND owner=? AND status=?',
+-                (status,time.time(),text if status=='COMPLETED' else None,json.dumps(provenance),response_id,owner,'PENDING')).rowcount
+-            if count!=1: raise ValueError('RESPONSE_ALREADY_FINAL_OR_NOT_OWNED')
++        # One SQLite writer transaction decides cancellation versus completion.
++        # The optional Store INSERT is in THIS transaction, never a nested commit.
++        db=self.connect(timeout)
++        try:
++            with db:
++                db.execute('BEGIN IMMEDIATE')
++                row=db.execute('SELECT session,status,text,provenance FROM stage4_response_provenance WHERE response_id=? AND owner=?',
++                    (response_id,owner)).fetchone()
++                if row is None or session is not None and row[0]!=session:
++                    raise ValueError('RESPONSE_NOT_OWNED')
++                if row[1]!='PENDING':
++                    return {'status':row[1],'text':row[2],'provenance':json.loads(row[3] or '{}'),'changed':False}
++                if validate is not None and not validate():
++                    status='CANCELLED'
++                final=dict(provenance)
++                if status!='COMPLETED':
++                    text=None
++                    final.update(actual_final_provider=None,actual_final_model=None)
++                elif append is not None:
++                    final['message_id']=append(db)
++                count=db.execute('UPDATE stage4_response_provenance SET status=?,timestamp=?,text=?,provenance=? WHERE response_id=? AND owner=? AND session=? AND status=?',
++                    (status,time.time(),text,json.dumps(final),response_id,owner,row[0],'PENDING')).rowcount
++                if count!=1: raise ValueError('RESPONSE_ALREADY_FINAL_OR_NOT_OWNED')
++                result={'status':status,'text':text,'provenance':final,'changed':True}
++            # Success is visible only after the context manager COMMIT succeeds.
++            return result
++        finally:
++            db.close()
+ 
+     def last(self, owner):
+         with self.connect() as db:
+--- before/stage4_runtime.py
++++ current/stage4_runtime.py
+@@ -164,6 +164,83 @@
+         journal_root.mkdir()
+         (journal_root/'STAGE4_TEST.json').write_text(json.dumps(ident,sort_keys=True))
+         self.lifecycle = Lifecycle(self.owners, Journal(journal_root, ident))
++        self.response_bindings = {}
++        self.response_fault = False
++        self.owners.response_cancellations = self.seal_cancelled_responses
++
++    def response_timeout(self):
++        accepted=self.lifecycle.accepted_at
++        return 1 if accepted is None else min(1,max(0,30-(self.owners.clock()-accepted)))
++
++    def bind_response(self, run, owner, rid, wid):
++        with self.owners.lock:
++            require(self.owners.work[wid].family==owner.family, 'RESPONSE_OWNER')
++            run.stage4_work=wid
++            run.response_owner=owner
++            run.response_id=rid
++            run.response_record=None
++            self.runs[wid]=run
++            self.app.runs[run.id]=run
++            self.response_bindings[wid]=run
++
++    def settle_response(self, run, status, text=None, provenance=None):
++        require(not self.response_fault,'RESPONSE_PERSISTENCE_UNCERTAIN')
++        owner=run.response_owner
++        def valid():
++            try:self.owners.next_step(run.stage4_work)
++            except Denied:return False
++            return True
++        final={**(provenance or {}),'run_id':run.id,'work_id':run.stage4_work}
++        append=None
++        if getattr(run,'request_mode','normal')=='normal' and status=='COMPLETED':
++            append=lambda db:self.app.store.message(run.conversation,'assistant',text,transaction=db)
++        try:
++            record=self.response_history.finish(owner.client,run.response_id,status,text,final,
++                session=owner.family,validate=valid if status=='COMPLETED' else None,
++                append=append,timeout=self.response_timeout())
++        except Exception:
++            self.response_fault=True
++            self.lifecycle._recovery('RESPONSE_PERSISTENCE_UNCERTAIN')
++            raise
++        run.response_record=record
++        return record
++
++    def publish_response(self, run, record, details=None):
++        # Only a durably decided response can produce a response terminal event.
++        # Cancellation after a completed commit does not rewrite that decision.
++        with run.condition:
++            if any(e['event'] in ('run.completed','run.cancelled','run.failed') for e in run.events):
++                return 'SUCCEEDED' if record['status']=='COMPLETED' else 'FAILED'
++            if record['status']=='COMPLETED':
++                run.emit('response.provenance',self.response_history.get(run.response_owner.client,run.response_id))
++                run.emit('assistant.completed',{'text':record['text'],'details':details})
++                run.emit('run.completed',{})
++            else:
++                run.emit('run.cancelled' if record['status']=='CANCELLED' else 'run.failed',{'message':'Request cancelled.' if record['status']=='CANCELLED' else 'TEST request failed.'})
++        return 'SUCCEEDED' if record['status']=='COMPLETED' else 'FAILED'
++
++    def finish_response(self, run, text, provenance, details=None):
++        return self.publish_response(run,self.settle_response(run,'COMPLETED',text,provenance),details)
++
++    def fail_response(self, run, provenance=None):
++        return self.publish_response(run,self.settle_response(run,'CANCELLED' if run.cancel.is_set() else 'FAILED',provenance=provenance))
++
++    def seal_cancelled_responses(self):
++        require(not self.response_fault,'RESPONSE_PERSISTENCE_UNCERTAIN')
++        require(not self.owners.lock._is_owned(),'RESPONSE_LOCK_ORDER')
++        # Never invoke SQLite while the global admission/ownership mutex is held.
++        with self.owners.lock:
++            cancelled=[run for wid,run in self.response_bindings.items() if self.owners.work[wid].cancel.is_set()]
++        for run in cancelled:
++            if run.response_record is None:
++                self.settle_response(run,'CANCELLED')
++            if self.owners.work[run.stage4_work].done.is_set():
++                self.publish_response(run,run.response_record)
++
++    def response_state(self, wid):
++        run=self.response_bindings.get(wid)
++        if run is None:return 'NOT_APPLICABLE'
++        return self.response_history.status(run.response_owner.client,run.response_id)
+ 
+     def check_lock(self):
+         require(os.getpid() == self.pid and self.lock.handle is not None, 'LIFETIME_OWNERSHIP')
+@@ -205,20 +282,7 @@
+         run = server.Run('STAGE4_TEST-conversation')
+         with self.owners.lock:
+             owner = self.owners._session(token,self.epoch,'request')
+-        original_emit = run.emit
+-        def emit(event, data):
+-            if event == 'assistant.completed':
+-                with self.owners.lock:
+-                    self.owners.next_step(run.stage4_work)
+-                    rid,_ = self.response_history.reserve(owner.client,owner.family,run.id,text,'normal')
+-                    provenance = {'actual_final_provider':'TEST deterministic provider' if run.measurements else 'Core deterministic',
+-                        'actual_final_model':'stage4-fixture' if run.measurements else None,
+-                        'configured_model':'stage4-fixture' if run.measurements else None,
+-                        'attempts':[{'provider':'TEST deterministic provider','requested_model':'stage4-fixture'}] if run.measurements else [],
+-                        'fallback':False,'fallback_reason':None,'simulated':True}
+-                    self.response_history.finish(owner.client,rid,'COMPLETED',data['text'],provenance)
+-            original_emit(event,data)
+-        run.emit = emit
++        rid,_=self.response_history.reserve(owner.client,owner.family,run.id,text,'normal')
+         ready = threading.Event()
+         def work(cancel):
+             # Worker may begin before dispatch returns; wait for immutable mapping.
+@@ -229,12 +293,13 @@
+             self.app.devices.begin(run.id, 'STAGE4_TEST-'+self.owners.work[run.stage4_work].family)
+             self.app.work(run, text, None)
+             return 'FAILED' if any(e['event'] in ('run.failed','run.cancelled') for e in run.events) else 'SUCCEEDED'
+-        wid = self.lifecycle.dispatch(token, self.epoch, 'chat', work)
+-        run.stage4_work = wid
+-        self.runs[wid] = run
+-        self.app.runs[run.id] = run
++        try:wid = self.lifecycle.dispatch(token, self.epoch, 'chat', work)
++        except Exception:
++            self.response_history.finish(owner.client,rid,'FAILED',None,{},session=owner.family)
++            raise
++        self.bind_response(run,owner,rid,wid)
+         ready.set()
+-        return {'request_id':wid}
++        return {'request_id':wid,'response_id':rid}
+ 
+     def start_text_request(self, token, text, operation):
+         """Explicit no-tool admission. Never enters App.work or command dispatch."""
+@@ -246,48 +311,32 @@
+         with self.owners.lock:
+             owner=self.owners._session(token,self.epoch,'request')
+             require(self.owners.state=='RUNNING','ADMISSION_CLOSED')
+-            rid,fresh=self.response_history.reserve(owner.client,owner.family,operation,text,'text-only')
+-            if not fresh:
+-                return {'response_id':rid,'duplicate':True,'status':self.response_history.status(owner.client,rid)}
+-            run=server.Run('STAGE4_TEST-text-only')
+-            run.request_mode='text-only'
+-            ready=threading.Event()
+-            def work(cancel):
+-                ready.wait(2)
+-                if not ready.is_set(): return 'UNKNOWN'
+-                run.cancel=cancel
+-                try:
+-                    result=self.text_router.generate(rid,[{'role':'system','content':'Text-only TEST response. No tools, browsing, device actions or external actions are available. Do not claim to have performed them.'},{'role':'user','content':text}],cancel,tool_attempted=False,partial_output=False,requires_tools=False)
+-                    with self.owners.lock:
+-                        self.owners.next_step(run.stage4_work)
+-                        if cancel.is_set(): raise Failure('CANCELLED')
+-                        provenance=self.text_router.status(rid)
+-                        self.response_history.finish(owner.client,rid,'COMPLETED',result['content'],provenance)
+-                        run.emit('response.provenance',self.response_history.last(owner.client))
+-                        run.emit('assistant.completed',{'text':result['content']})
+-                        run.emit('run.completed',{})
+-                    return 'SUCCEEDED'
+-                except Exception as error:
+-                    status='CANCELLED' if cancel.is_set() else 'FAILED'
+-                    provenance=self.text_router.status(rid) or {}
+-                    provenance['actual_final_provider']=None
+-                    provenance['actual_final_model']=None
+-                    self.response_history.finish(owner.client,rid,status,None,provenance)
+-                    run.emit('run.cancelled' if cancel.is_set() else 'run.failed',{'message':str(error) if isinstance(error,Failure) else 'TEXT_REQUEST_FAILED'})
+-                    return 'FAILED'
+-                finally:
+-                    with run.condition:
+-                        run.done=True;run.condition.notify_all()
++        rid,fresh=self.response_history.reserve(owner.client,owner.family,operation,text,'text-only')
++        if not fresh:
++            return {'response_id':rid,'duplicate':True,'status':self.response_history.status(owner.client,rid)}
++        run=server.Run('STAGE4_TEST-text-only')
++        run.request_mode='text-only'
++        ready=threading.Event()
++        def work(cancel):
++            ready.wait(2)
++            if not ready.is_set(): return 'UNKNOWN'
++            run.cancel=cancel
+             try:
+-                wid=self.lifecycle.dispatch(token,self.epoch,'chat',work)
+-            except Exception:
+-                self.response_history.finish(owner.client,rid,'FAILED',None,{})
+-                raise
+-            run.stage4_work=wid
+-            self.runs[wid]=run
+-            self.app.runs[run.id]=run
+-            ready.set()
+-            return {'request_id':wid,'response_id':rid,'request_mode':'text-only','simulated':self.text_router.local_simulated,'openai_simulated':True}
++                result=self.text_router.generate(rid,[{'role':'system','content':'Text-only TEST response. No tools, browsing, device actions or external actions are available. Do not claim to have performed them.'},{'role':'user','content':text}],cancel,tool_attempted=False,partial_output=False,requires_tools=False)
++                return self.finish_response(run,result['content'],self.text_router.status(rid))
++            except Exception as error:
++                return self.fail_response(run,self.text_router.status(rid) or {})
++            finally:
++                with run.condition:
++                    run.done=True;run.condition.notify_all()
++        try:
++            wid=self.lifecycle.dispatch(token,self.epoch,'chat',work)
++        except Exception:
++            self.response_history.finish(owner.client,rid,'FAILED',None,{},session=owner.family)
++            raise
++        self.bind_response(run,owner,rid,wid)
++        ready.set()
++        return {'request_id':wid,'response_id':rid,'request_mode':'text-only','simulated':self.text_router.local_simulated,'openai_simulated':True}
+ 
+     def start_inspection(self, token, request):
+         """Register the existing singleton job and archive callback as one worker."""
+@@ -493,6 +542,14 @@
+         authentication.validate_identity(self.identity, self.identity)
+ 
+     def operation(self, client, request, selected):
++        try:
++            return self._operation(client,request,selected)
++        finally:
++            # Expiry detected during authentication also revokes pending responses.
++            # No successful RPC can leave a signalled response unsealed.
++            self.context.owners.flush_response_cancellations()
++
++    def _operation(self, client, request, selected):
+         authentication.fields(request, ('op','token','args'))
+         op, token, args = request['op'], request['token'], request['args']
+         require(type(args) is dict and client in self.enrollments, 'REQUEST')
+@@ -555,10 +612,13 @@
+         if op == 'request-status':
+             authentication.fields(args, ('request_id',));wid=o.check_owner(token,o.epoch,args['request_id'])
+             run=self.context.runs[wid]
+-            return {'done':o.work[wid].done.is_set(),'events':list(run.events)}
++            self.context.seal_cancelled_responses()
++            return {'done':o.work[wid].done.is_set(),'events':list(run.events),
++                    'response_status':self.context.response_state(wid),'worker_outcome':o.work[wid].outcome}
+         if op == 'cancel':
+             authentication.fields(args, ('request_id',))
+-            return {'result':o.cancel_request(token,o.epoch,args['request_id'])}
++            result=o.cancel_request(token,o.epoch,args['request_id'])
++            return {'result':result,'response_status':self.context.response_state(args['request_id'])}
+         if op == 'media':
+             authentication.fields(args, ('purpose','request_id','lease_id'))
+             return o.media(token,o.epoch,args['purpose'],request_id=args['request_id'],lease_id=args['lease_id'])
+--- before/stage4_sessions.py
++++ current/stage4_sessions.py
+@@ -71,6 +71,11 @@
+         self.deliveries = set()
+         self.capabilities = {}
+         self.state = 'RUNNING'
++        self.response_cancellations = None  # Trusted TEST runtime; I/O only outside lock.
++
++    def flush_response_cancellations(self):
++        if self.response_cancellations is not None:
++            self.response_cancellations()
+ 
+     def attach_verified(self, client, scopes, protocol):
+         """Trusted bootstrap callback only; not exposed as a request operation."""
+@@ -144,6 +149,7 @@
+             s = self._session(token, epoch)
+             del self.sessions[digest(token)]
+             self._cancel_family(s.family)
++        self.flush_response_cancellations()
+ 
+     def revoke_client(self, client):
+         """Trusted enrollment revocation, never a renderer-supplied admin flag."""
+@@ -155,6 +161,7 @@
+                 if s.client == client:
+                     del self.sessions[key]
+                     self._cancel_family(s.family)
++        self.flush_response_cancellations()
+ 
+     def admit(self, token, epoch, kind, *, operation=None, budget_ref=None):
+         with self.lock:
+@@ -184,7 +191,9 @@
+         with self.lock:
+             w = self._owned(token, epoch, wid)
+             w.cancel.set()
+-            return 'COMPLETED' if w.done.is_set() else 'CANCELLATION_REQUESTED'
++        # A successful acknowledgement must follow the durable response decision.
++        self.flush_response_cancellations()
++        return 'COMPLETED' if w.done.is_set() else 'CANCELLATION_REQUESTED'
+ 
+     def begin(self, wid):
+         """Trusted dispatcher gate, immediately before executing an authorized step."""
+--- before/stage4_lifecycle.py
++++ current/stage4_lifecycle.py
+@@ -115,6 +115,7 @@
+             else:
+                 outcome = function(cancel)
+                 require(outcome in ('SUCCEEDED', 'FAILED', 'UNKNOWN'), 'OUTCOME')
++            self.owners.flush_response_cancellations()
+             self.journal.write(w.id, outcome, kind=w.kind, budget_ref=w.budget_ref)
+             self.owners.complete(w.id, outcome)
+         except Exception:
+@@ -149,6 +150,7 @@
+                 if action == 'emergency-stop' or w.phase == 'ADMITTED' or w.kind == 'chat':
+                     w.cancel.set()
+         try:
++            self.owners.flush_response_cancellations()
+             self.journal.write(operation, 'STOP_INTENT', kind=action)
+         except Exception:
+             self._recovery('STOP_INTENT_PERSISTENCE_FAILED')
+@@ -159,6 +161,9 @@
+ 
+     def tick(self):
+         """Nonblocking drain observation; never joins or kills a worker."""
++        with self.owners.lock:
++            self.owners._expire()
++        self.owners.flush_response_cancellations()
+         with self.owners.lock:
+             self.owners._expire()
+             if self.owners.state not in ('DRAINING', 'CANCELLING'):
+--- before/stage4_deep_review.py
++++ current/stage4_deep_review.py
+@@ -148,30 +148,23 @@
+  review=validate(review);allowed(context.deep_reviewer is not None,'DEEP_REVIEW_UNAVAILABLE')
+  with context.owners.lock:
+   owner=context.owners._session(token,context.epoch,'request');allowed(context.owners.state=='RUNNING','ADMISSION_CLOSED')
+-  fingerprint=encode({k:v for k,v in review.items() if k!='operation'})
+-  rid,fresh=context.response_history.reserve(owner.client,owner.family,review['operation'],fingerprint,'deep-review')
+-  if not fresh:return {'response_id':rid,'duplicate':True,'status':context.response_history.status(owner.client,rid)}
+-  run=server.Run('STAGE4_TEST-deep-review');run.request_mode='deep-review';ready=threading.Event();record={}
+-  def work(cancel):
+-   ready.wait(2)
+-   if not ready.is_set():return 'UNKNOWN'
+-   run.cancel=cancel
+-   try:
+-    text=context.deep_reviewer.generate(review,cancel,record)
+-    with context.owners.lock:
+-     context.owners.next_step(run.stage4_work);allowed(not cancel.is_set(),'CANCELLED')
+-     context.response_history.finish(owner.client,rid,'COMPLETED',text,record)
+-     run.emit('response.provenance',context.response_history.last(owner.client));run.emit('assistant.completed',{'text':text});run.emit('run.completed',{})
+-    return 'SUCCEEDED'
+-   except Exception:
+-    record.update(status='CANCELLED' if cancel.is_set() else 'FAILED',actual_final_provider=None,actual_final_model=None)
+-    context.response_history.finish(owner.client,rid,record['status'],None,record)
+-    run.emit('run.cancelled' if cancel.is_set() else 'run.failed',{'message':record.get('failure','DEEP_REVIEW_FAILED')})
+-    return 'FAILED'
+-   finally:
+-    with run.condition:run.done=True;run.condition.notify_all()
+-  try:wid=context.lifecycle.dispatch(token,context.epoch,'chat',work)
++ fingerprint=encode({k:v for k,v in review.items() if k!='operation'})
++ rid,fresh=context.response_history.reserve(owner.client,owner.family,review['operation'],fingerprint,'deep-review')
++ if not fresh:return {'response_id':rid,'duplicate':True,'status':context.response_history.status(owner.client,rid)}
++ run=server.Run('STAGE4_TEST-deep-review');run.request_mode='deep-review';ready=threading.Event();record={}
++ def work(cancel):
++  ready.wait(2)
++  if not ready.is_set():return 'UNKNOWN'
++  run.cancel=cancel
++  try:
++   text=context.deep_reviewer.generate(review,cancel,record)
++   return context.finish_response(run,text,record)
+   except Exception:
+-   context.response_history.finish(owner.client,rid,'FAILED',None,{'status':'FAILED','spend_status':'NOT_ATTEMPTED'});raise
+-  run.stage4_work=wid;context.runs[wid]=run;context.app.runs[run.id]=run;ready.set()
+-  return {'request_id':wid,'response_id':rid,'request_mode':'deep-review','simulated':context.deep_reviewer.simulated}
++   return context.fail_response(run,record)
++  finally:
++   with run.condition:run.done=True;run.condition.notify_all()
++ try:wid=context.lifecycle.dispatch(token,context.epoch,'chat',work)
++ except Exception:
++  context.response_history.finish(owner.client,rid,'FAILED',None,{'status':'FAILED','spend_status':'NOT_ATTEMPTED'},session=owner.family);raise
++ context.bind_response(run,owner,rid,wid);ready.set()
++ return {'request_id':wid,'response_id':rid,'request_mode':'deep-review','simulated':context.deep_reviewer.simulated}
+--- before/tests/lifecycle_stage4/fixtures.py
++++ current/tests/lifecycle_stage4/fixtures.py
+@@ -380,21 +380,24 @@
+     h=stage4_runtime.exclusion
+     def construct(context):
+         app=original_construct(context)
+-        original_message=app.store.message;used=set()
+-        def message(conversation, role, content):
++        original_finish=context.finish_response;used=set()
++        # The caller now opens the response transaction before Store.message.
++        # Hold before that transaction, retaining the original cancel-before-write
++        # assertion; holding Store inside it instead would test commit-first.
++        def finish(run, content, provenance, details=None):
+             for case in ('control','cancel'):
+-                if role=='assistant' and case not in used and (root/('polling-'+case+'-arm')).exists():
++                if case not in used and (root/('polling-'+case+'-arm')).exists():
+                     used.add(case)
+                     h.event(root,'polling_commit_paused',case=case)
+                     until=time.monotonic()+5
+                     while not (root/('polling-'+case+'-release')).exists():
+                         if time.monotonic()>until:raise TimeoutError('TEST commit observation deadline')
+                         time.sleep(.005)
+-                    result=original_message(conversation,role,content)
++                    result=original_finish(run,content,provenance,details)
+                     h.event(root,'polling_commit_returned',case=case)
+                     return result
+-            return original_message(conversation,role,content)
+-        app.store.message=message
++            return original_finish(run,content,provenance,details)
++        context.finish_response=finish
+         return app
+     stage4_runtime.construct_app=construct
+     stage4_runtime.serve(root,configuration,inspection_setup=bind_inspection_fixture,repair_setup=bind_repair_fixture,expiry_setup=bind_expiry_fixture)
+@@ -528,7 +531,7 @@
+                     time.sleep(.005)
+                 repeated=call('teague','request-status',{'request_id':wid})
+                 after=assistant_rows()
+-                measurements['polling_'+case]={'assistant_rows_before':before,'assistant_rows_after':after,'event_types':[e['event'] for e in terminal['events']],'done':terminal['done'],'terminal_stable':terminal==repeated,'scheduling':'pause before actual Store.message body; no database/event mutation by observer'}
++                measurements['polling_'+case]={'assistant_rows_before':before,'assistant_rows_after':after,'event_types':[e['event'] for e in terminal['events']],'done':terminal['done'],'terminal_stable':terminal==repeated,'response_status':terminal['response_status'],'scheduling':'pause before shared response transaction; actual Store INSERT participates; no database/event mutation by observer'}
+                 record(case+' terminal poll deterministic',terminal==repeated)
+                 if case=='control':record('uncancelled control commits one final answer',after==before+1 and any(e['event']=='assistant.completed' for e in terminal['events']))
+                 else:record('cancelled request cannot commit late assistant message',after==before)
+--- before/tests/lifecycle_stage4/test_stage4.py
++++ current/tests/lifecycle_stage4/test_stage4.py
+@@ -881,7 +881,175 @@
+     raise SystemExit(not result.wasSuccessful())
+ 
+ 
++def response_commit_tests():
++    """Actual isolated App/Store/dispatcher; durable verification, offline providers."""
++    sys.path.insert(0,str(REPO))
++    import threading
++    import sqlite3
++    import stage4_runtime as runtime
++    from stage4_provider_fallback import offline_router
++    from stage4_deep_review import Engine, fixture_transport
++    from stage4_response_history import History
++    rounds=int(sys.argv[sys.argv.index('--response-rounds')+1]) if '--response-rounds' in sys.argv else 100
++    assert 1<=rounds<=100
++    root=h.BASE/('TEST-STAGE4-'+uuid.uuid4().hex);root.mkdir();(root/'TEST_ONLY').write_text('NO PRODUCTION SERVICES')
++    data_id='TEST-'+uuid.uuid4().hex;runtime.provision(root,data_id)
++    records=[];checks=0;failed=[];release=threading.Event();threads=[];ctx=None
++    def check(ok,label):
++        nonlocal checks
++        checks+=1
++        if not ok:raise AssertionError(label)
++    with h.Lock(root,'core.lock') as lock:
++        ctx=runtime.Context(root,data_id,lock,{name:runtime.Ownership.ORDINARY|(runtime.Ownership.MANAGEMENT if name=='controller' else set()) for name in ('A','B','controller')})
++        runtime.construct_app(ctx)
++        auth=runtime.Authority(ctx,{}, {name:{} for name in ('A','B','controller')});tokens={}
++        def call(name,op,args=None,token=None):
++            return auth.operation(name,{'op':op,'token':None if op=='attach' else tokens[name] if token is None else token,'args':args or {}},2)
++        def attach(name):tokens[name]=call(name,'attach',{'scopes':list(ctx.owners.enrollments[name])})['token']
++        for name in ('A','B','controller'):attach(name)
++        original_finish=ctx.finish_response;original_publish=ctx.publish_response
++        provider=sys.modules['server'].providers;original_chat=provider.chat
++        def persisted(reply):
++            with sqlite3.connect((ctx.data/'jarvis.sqlite3').as_uri()+'?mode=ro',uri=True) as db:
++                row=db.execute('SELECT owner,session,status,text,provenance FROM stage4_response_provenance WHERE response_id=?',(reply['response_id'],)).fetchone()
++                total=db.execute("SELECT count(*) FROM messages WHERE role='assistant'").fetchone()[0]
++                provenance=json.loads(row[4] or '{}');mid=provenance.get('message_id')
++                message=db.execute("SELECT role,content FROM messages WHERE id=?",(mid,)).fetchone() if mid else None
++            return row,total,provenance,message
++        def begin(mode):
++            if mode=='normal':return call('A','request',{'text':'STAGE4_TEST response commit boundary'})
++            if mode=='text-only':
++                ctx.text_router=offline_router('temporary')
++                return call('A','request-text-only',{'text':'Explain a triangle.','operation':uuid.uuid4().hex})
++            ctx.deep_reviewer=Engine(fixture_transport,mode='STAGE4_TEST')
++            return call('A','deep-review',{'review':{'mode':'DEEP_REVIEW','effort':'medium','operation':uuid.uuid4().hex,'task':'Review E1.','evidence':[{'id':'E1','title':'Fixture','text':'This is synthetic TEST evidence.'}]}})
++        def join(reply):
++            check(ctx.owners.work[reply['request_id']].done.wait(5),'bounded worker cleanup')
++            ctx.lifecycle.workers[reply['request_id']].join(2)
++            check(not ctx.lifecycle.workers[reply['request_id']].is_alive(),'worker ended')
++        try:
++            for mode in ('normal','text-only','deep-review'):
++                for ordering in ('cancel-first','commit-first','concurrent'):
++                    for trial in range(rounds):
++                        release=threading.Event();entered=threading.Event();barrier=threading.Barrier(2);ack={};errors=[]
++                        with sqlite3.connect((ctx.data/'jarvis.sqlite3').as_uri()+'?mode=ro',uri=True) as db:
++                            before=db.execute("SELECT count(*) FROM messages WHERE role='assistant'").fetchone()[0]
++                        def hold_finish(run,text,provenance,details=None):
++                            if ordering=='cancel-first':
++                                entered.set()
++                                if not release.wait(5):raise TimeoutError('TEST pre-transaction release')
++                            elif ordering=='concurrent':barrier.wait(5)
++                            return original_finish(run,text,provenance,details)
++                        def hold_publish(run,record,details=None):
++                            if (ordering=='commit-first' and record['status']=='COMPLETED' and not entered.is_set()
++                                    and not any(e['event'] in ('run.completed','run.cancelled','run.failed') for e in run.events)):
++                                entered.set()
++                                if not release.wait(5):raise TimeoutError('TEST post-commit release')
++                            return original_publish(run,record,details)
++                        ctx.finish_response=hold_finish;ctx.publish_response=hold_publish
++                        reply=begin(mode);wid=reply['request_id']
++                        if ordering=='concurrent':
++                            def cancel_concurrently():
++                                try:barrier.wait(5);ack.update(call('A','cancel',{'request_id':wid}))
++                                except BaseException:errors.append(traceback.format_exc())
++                            t=threading.Thread(target=cancel_concurrently);threads.append(t);t.start();t.join(5)
++                            check(not t.is_alive() and not errors,'concurrent cancellation completed')
++                        else:
++                            check(entered.wait(5),'real completion boundary reached')
++                            for op in ('cancel','request-status'):
++                                try:call('B',op,{'request_id':wid})
++                                except runtime.Denied:check(True,'foreign owner denied')
++                                else:check(False,'foreign owner accepted')
++                            ack=call('A','cancel',{'request_id':wid})
++                            check(ack['result']=='CANCELLATION_REQUESTED','cleanup distinct from response commit')
++                            check(not ctx.owners.work[wid].done.is_set(),'worker remains active until released')
++                            check(ack['response_status']==('COMPLETED' if ordering=='commit-first' else 'CANCELLED'),'expected durable winner')
++                        at_ack=persisted(reply);release.set();join(reply)
++                        ctx.finish_response=original_finish;ctx.publish_response=original_publish
++                        final=persisted(reply);status=call('A','request-status',{'request_id':wid})
++                        check(status==call('A','request-status',{'request_id':wid}),'terminal poll stable')
++                        check(final[0][2]==ack['response_status']==at_ack[0][2]==status['response_status'],'ack SQLite poll agreement')
++                        completed=final[0][2]=='COMPLETED'
++                        check(final[1]==before+int(completed and mode=='normal'),'no late or orphan assistant row')
++                        check(sum(e['event']=='assistant.completed' for e in status['events'])==int(completed),'exactly one or zero assistant events')
++                        check(sum(e['event'] in ('run.completed','run.failed','run.cancelled') for e in status['events'])==1,'one response terminal event')
++                        check(final[2]['run_id']==ctx.runs[wid].id and final[2]['work_id']==wid,'persistent run association')
++                        if completed:
++                            check(bool(final[0][3]) and bool(final[2]['actual_final_provider']),'final content and actual provenance preserved')
++                            if mode=='normal':check(final[3]==('assistant',final[0][3]),'message and provenance agree atomically')
++                        else:check(final[0][3] is None and final[2]['actual_final_provider'] is None,'cancelled content not successful')
++                        again=call('A','cancel',{'request_id':wid});check(again['response_status']==final[0][2],'idempotent cancellation')
++                        # A late/duplicate trusted worker callback must not write or republish.
++                        count=len(status['events']);original_finish(ctx.runs[wid],'late duplicate must not commit',{})
++                        check(persisted(reply)==final and len(ctx.runs[wid].events)==count,'late completion refused or preserves committed original')
++                        records.append({'mode':mode,'ordering':ordering,'trial':trial,'work_id':wid,'response_id':reply['response_id'],'winner':final[0][2],'rows_before':before,'rows_at_ack':at_ack[1],'rows_after':final[1],'message_id':final[2].get('message_id'),'terminal_count':1,'worker_outcome':status['worker_outcome']})
++            # Atomic rollback after the actual Store INSERT and before provenance commit.
++            rid,_=ctx.response_history.reserve('A','TEST-atomicity',uuid.uuid4().hex,'atomicity','normal')
++            with sqlite3.connect((ctx.data/'jarvis.sqlite3').as_uri()+'?mode=ro',uri=True) as db:before=db.execute('SELECT count(*) FROM messages').fetchone()[0]
++            def fail_after_insert(db):
++                ctx.app.store.message('TEST-atomicity','assistant','rolled back fixture',transaction=db)
++                raise ValueError('EXPECTED_TRANSACTION_ABORT')
++            try:ctx.response_history.finish('A',rid,'COMPLETED','rolled back fixture',{},session='TEST-atomicity',append=fail_after_insert)
++            except ValueError as exc:check(str(exc)=='EXPECTED_TRANSACTION_ABORT','injected failure preserved')
++            else:check(False,'injected failure absent')
++            with sqlite3.connect((ctx.data/'jarvis.sqlite3').as_uri()+'?mode=ro',uri=True) as db:
++                check(db.execute('SELECT count(*) FROM messages').fetchone()[0]==before,'Store INSERT rolled back')
++            check(ctx.response_history.status('A',rid)=='PENDING','provenance rolled back with Store')
++            for owner,family in [('B','TEST-atomicity'),('A','wrong-family')]:
++                try:ctx.response_history.finish(owner,rid,'COMPLETED','foreign',{},session=family)
++                except ValueError:check(True,'foreign transaction rejected')
++                else:check(False,'foreign transaction accepted')
++            ctx.response_history.finish('A',rid,'FAILED',None,{},session='TEST-atomicity')
++            # Disconnect during generation, new same-client session gets no old Work authority.
++            entered=threading.Event();release=threading.Event()
++            def held(run,text,provenance,details=None):
++                entered.set()
++                if not release.wait(5):raise TimeoutError('detach release')
++                return original_finish(run,text,provenance,details)
++            def held_generation(*args,**kwargs):
++                entered.set()
++                if not release.wait(5):raise TimeoutError('TEST generation release')
++                return original_chat(*args,**kwargs)
++            provider.chat=held_generation;reply=begin('normal');check(entered.wait(5),'detach actual generation held')
++            old=tokens['A'];call('A','detach');check(persisted(reply)[0][2]=='CANCELLED','detach durably cancels')
++            attach('A')
++            for token in (old,tokens['A']):
++                for op in ('cancel','request-status'):
++                    try:call('A',op,{'request_id':reply['request_id']},token)
++                    except runtime.Denied:check(True,'old/fresh family cannot restore Work authority')
++                    else:check(False,'expired authority restored')
++            release.set();join(reply);provider.chat=original_chat
++            check(not any(e['event']=='assistant.completed' for e in ctx.runs[reply['request_id']].events),'disconnect no late answer')
++            # Existing durable history reopen retains exact last completed record.
++            previous=ctx.response_history.last('A');ctx.response_history=History(ctx.data/'jarvis.sqlite3')
++            check(ctx.response_history.last('A')==previous,'history reopen preserves completed winner')
++            # Actual request drain races its pending final response; management stays separate.
++            entered.clear();release.clear();ctx.finish_response=held;reply=begin('normal');check(entered.wait(5),'drain generation held')
++            stop=call('controller','shutdown',{'operation':uuid.uuid4().hex})
++            check(stop['state']=='DRAINING' and persisted(reply)[0][2]=='CANCELLED','drain seals before acknowledgement')
++            try:begin('normal')
++            except runtime.Denied:check(True,'new admission denied during drain')
++            else:check(False,'admission reopened')
++            release.set();join(reply);ctx.finish_response=original_finish;ctx.lifecycle.tick()
++            check(ctx.owners.state=='FINALIZING','known cleanup permits bounded finalization')
++            check(ctx.construction_counts=={'App':1,'VoiceEngine':1,'WakeDetector':1,'Store':1},'one App/Store')
++        except BaseException:
++            failed.append(traceback.format_exc())
++        finally:
++            release.set();ctx.finish_response=original_finish;ctx.publish_response=original_publish;provider.chat=original_chat
++            for work in ctx.owners.work.values():work.cancel.set()
++            for worker in list(ctx.lifecycle.workers.values()):
++                if worker.ident:worker.join(5)
++            live=sum(t.is_alive() for t in ctx.lifecycle.workers.values())
++            if live:failed.append('TEST workers did not exit: '+str(live))
++            report={'scope':'actual isolated App/Store + trusted authenticated dispatcher seam; offline generation; no paid or physical media; not a named-pipe or Electron test','checks':checks,'trials':records,'failures':failed,'live_workers':live,'state':ctx.owners.state,'history_reopen_not_core_restart':True,'root':str(root),'rounds':rounds,'production_changed':False}
++            (root/'response-commit-results.json').write_text(json.dumps(report,indent=2))
++            print(json.dumps({'checks':checks,'trials':len(records),'failures':failed,'live_workers':live,'evidence':str(root/'response-commit-results.json')},indent=2))
++    raise SystemExit(bool(failed))
++
++
+ if __name__=='__main__':
++    if '--response-commit-tests' in sys.argv:response_commit_tests()
+     if '--controller-recovery-tests' in sys.argv:controller_recovery_tests();raise SystemExit(0)
+     if '--repair-loop-audit' in sys.argv:repair_loop_audit();raise SystemExit(0)
+     if '--repair-tests' in sys.argv:repair_tests()

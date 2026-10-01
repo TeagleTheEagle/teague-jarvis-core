@@ -1,0 +1,46 @@
+--- before/deployment_test/upgrade.py
++++ candidate/deployment_test/upgrade.py
+@@ -9,13 +9,16 @@
+                        write_protected, private_directory, exclusive_json)
+ from . import enrollment as e
+ from . import package as p
++from . import update_io
+ 
+ def verify_release(release,package_hash,hold=False):
+     # Package verification is not an installation binding or authority grant.
+     verifier=object.__new__(Binding)
+     verifier.release=safe_path(release,directory=True)
+     verifier.record={'package_hash':package_hash,'data_schema':1};verifier.handles=[]
+-    try:verifier.verify_package(hold=hold)
++    try:
++        with update_io.verification(verifier.release,package_hash):
++            verifier.verify_package(hold=hold)
+     except BaseException:verifier.close();raise
+     return verifier
+ 
+@@ -44,8 +47,12 @@
+     return directory,index,path,intent
+ 
+ def operate(binding,request):
++    with update_io.authorized(binding,request) as body:
++        return _operate(binding,body)
++
++def _operate(binding,body):
+     import stage4_runtime as r
+-    body=e.authorize(binding,request);action,args=body['action'],body['args']
++    action,args=body['action'],body['args']
+     need(action in ('stage-update','stage-rollback','enroll-update','commit-update','abort-update'),'UPDATE_ACTION')
+     need(type(args)is dict,'UPDATE_ARGUMENTS')
+     with r.exclusion.Lock(binding.state,'supervisor.lock'),r.exclusion.Lock(binding.state,'core.lock'):
+@@ -86,10 +93,8 @@
+                 if target.exists():
+                     existing=verify_release(target,args['package_hash']);existing.close()
+                 else:
+-                    for item in new['files']:
+-                        p._copy(source/item['path'],target/item['path'])
++                    for relative in update_io.stage_copy(verified,target):
+                         _observe(binding,'during-staging',args['interruption'])
+-                    p._copy(source/'manifest.json',target/'manifest.json')
+                 complete=verify_release(target,args['package_hash']);complete.close()
+                 _observe(binding,'after-staging',args['interruption'])
+                 return dict(result='STAGED_STOPPED_REQUIRES_ENROLLMENT_AND_COMMIT',sequence=index,package_hash=args['package_hash'],

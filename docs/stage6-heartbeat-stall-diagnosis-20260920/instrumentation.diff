@@ -1,0 +1,164 @@
+--- frozen/monitor.ps1
++++ diagnostic/monitor.ps1
+@@ -1,7 +1,11 @@
+ param([ValidatePattern('^[a-z0-9-]+$')][string]$Run)
+ $ErrorActionPreference='Stop';$root=Join-Path $PSScriptRoot $Run
+ Add-Type -Path (Join-Path $PSScriptRoot 'EventTap.cs')
+-Add-Type -Path (Join-Path $PSScriptRoot 'event_queue.cs')
++Add-Type -Path @((Join-Path $PSScriptRoot 'LoopTiming.cs'),(Join-Path $PSScriptRoot 'event_queue.cs'))
++$config=Get-Content -LiteralPath (Join-Path $root 'case.json') -Raw|ConvertFrom-Json
++$journalPath=Join-Path $root 'heartbeat.jsonl'
++if($config.journalVolume -eq 'D'){$journalPath=Join-Path ('D:\JARVIS-STAGE6-HEARTBEAT-STALL-20260920\'+$Run) 'heartbeat.jsonl'}
++[LoopTiming]::StartObserver()
+ $pipeline=[Collections.Generic.List[object]]::new();$secondary=[Collections.Generic.List[object]]::new()
+ function Stamp($stage,$ev,$n) {
+  if($pipeline.Count -ge 20000){throw 'Pipeline trace capacity reached'}
+@@ -17,19 +21,23 @@
+ function Mark([string]$stage,$detail=$null){
+  if($trace.Count -ge 50000){throw 'Diagnostic trace capacity reached'}
+  $trace.Add(@{qpc=[Diagnostics.Stopwatch]::GetTimestamp();seq=$script:seq;stage=$stage;detail=$detail})
++ [LoopTiming]::Note($stage)
+ }
+ function Save($name,$value){[IO.File]::WriteAllText((Join-Path $root $name),($value|ConvertTo-Json -Depth 8))}
+ function Drain {
+  Mark 'drain.begin';$nBefore=$count
+- while($null -ne ($entry=$exact.Select())){
++ while($true){
++  Mark 'queue.select.begin';$entry=$exact.Select();Mark 'queue.select.end'
++  if($null -eq $entry){break}
+    $ev=$entry.Event;$id=$ev.SourceIdentifier
+    Mark 'event.begin';$n=$ev.SourceEventArgs.NewEvent;if($null -eq $n){throw 'Invalid CIM indication'}
+    $kind='stop';if($id -eq $s){$kind='start'};Stamp 'drain' $ev $n
+    if([string]$n.ProcessName -match '^(VBox|VirtualBox)'){$script:violations++}
+    $row=@{queueSequence=$entry.QueueSequence;eventIdentifier=$ev.EventIdentifier;kind=$kind;name=[string]$n.ProcessName;pid=[int]$n.ProcessID;nativeTime=[string]$n.TIME_CREATED;receivedQpc=[Diagnostics.Stopwatch]::GetTimestamp();utc=[DateTime]::UtcNow.ToString('o');queuedUtc=$ev.TimeGenerated.ToUniversalTime().ToString('o')}
+    Stamp 'serialize.begin' $ev $n;Mark 'event.serialize.begin';$serialized=($row|ConvertTo-Json -Compress)+"`n";Mark 'event.serialize.end';Stamp 'serialized' $ev $n
+-   $eventPath=Join-Path $root 'events.jsonl'
+-   if((Test-Path -LiteralPath $eventPath) -and (Get-Item -LiteralPath $eventPath).Length -gt 1044480){throw 'Event capacity reached'}
++   Mark 'event.path.begin';$eventPath=Join-Path $root 'events.jsonl';Mark 'event.path.end'
++   Mark 'event.exists.begin';$exists=Test-Path -LiteralPath $eventPath;Mark 'event.exists.end'
++   if($exists){Mark 'event.stat.begin';$length=(Get-Item -LiteralPath $eventPath).Length;Mark 'event.stat.end';if($length -gt 1044480){throw 'Event capacity reached'}}
+    Mark 'event.append.begin';Stamp 'write.begin' $ev $n
+    $exact.PersistAndRemove($entry,$eventPath,$serialized)
+    Stamp 'persisted' $ev $n;Stamp 'removed' $ev $n;Mark 'event.append.end';$script:count++;Mark 'event.end'
+@@ -55,12 +63,12 @@
+  Mark 'subscription.end';Mark 'enumeration.begin'
+  $initial=@(Get-CimInstance Win32_Process|Where-Object{$_.Name -match '^(VBox|VirtualBox)'});Mark 'enumeration.end' $initial.Count
+  if($initial.Count){throw 'VirtualBox initially active'}
+- Mark 'journal.open.begin';$stream=[IO.FileStream]::new((Join-Path $root 'heartbeat.jsonl'),[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::Read);Mark 'journal.open.end'
++ Mark 'journal.open.begin';$stream=[IO.FileStream]::new($journalPath,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::Read);Mark 'journal.open.end'
+  $self=Get-Process -Id $PID
+  $identity=@{run=$nonce;pid=$PID;created=$created;frequency=[Diagnostics.Stopwatch]::Frequency}
+  Save 'monitor-config.json' @{identity=$identity;priority=[string]$self.PriorityClass;threads=@($self.Threads|Select-Object Id,BasePriority,CurrentPriority);stopwatchHighResolution=[Diagnostics.Stopwatch]::IsHighResolution;traceMode='bounded memory, written at exit';staleThreshold=10;rotation='not used';osFlush='Live Flush(false); final Flush(true) after collection freezes; all evidence fsync/archive required separately';scriptHash=(Get-FileHash -LiteralPath $PSCommandPath).Hash}
+  while($clock.Elapsed.TotalSeconds -lt 600){
+-  Mark 'loop.begin';if([EventTap]::Errors -or [EventTap]::Overflow){throw 'Diagnostic hook error/overflow'};Drain
++  Mark 'loop.begin';Mark 'health.begin';if([EventTap]::Errors -or [EventTap]::Overflow -or [LoopTiming]::Overflow){throw 'Diagnostic hook error/overflow'};Mark 'health.end';Drain
+   $seq++;Mark 'record.begin';$q=[Diagnostics.Stopwatch]::GetTimestamp()
+   $record=@{run=$nonce;pid=$PID;created=$created;frequency=[Diagnostics.Stopwatch]::Frequency;seq=$seq;pump=$seq;ticks=$q;utc=[DateTime]::UtcNow.ToString('o');state='ACTIVE';violations=$violations;events=$count}
+   $bytes=[Text.Encoding]::UTF8.GetBytes((($record|ConvertTo-Json -Compress)+"`n"));Mark 'record.end'
+@@ -68,6 +76,7 @@
+   Mark 'journal.write.begin';$stream.Write($bytes,0,$bytes.Length);Mark 'journal.write.end'
+   Mark 'journal.flush.begin';$stream.Flush($false);Mark 'journal.flush.end';Mark 'publication.complete'
+   if($seq -eq 1){Mark 'ready.begin';Save 'ready.json' $identity;Mark 'ready.end'}
++  Mark 'runtime.telemetry.begin';if($config.telemetry -eq 'full'){[LoopTiming]::RuntimeSample()};Mark 'runtime.telemetry.end'
+   Mark 'finish.query.begin';$finished=Test-Path -LiteralPath (Join-Path $root 'collector-finished.json');Mark 'finish.query.end'
+   if($finished){Mark 'loop.end';break}
+   Mark 'wait.begin';Wait-Event -Timeout 1|Out-Null;Mark 'wait.end';Mark 'loop.end' @{gc0=[GC]::CollectionCount(0);gc1=[GC]::CollectionCount(1);gc2=[GC]::CollectionCount(2)}
+@@ -100,5 +109,10 @@
+  $exact.Dispose()
+  Save 'tap.json' @([EventTap]::Snapshot());Save 'pipeline.json' @($pipeline.ToArray())
+  Save 'tap-state.json' @{errors=[EventTap]::Errors;overflow=[EventTap]::Overflow;queue_capacity='existing PowerShell collection; no diagnostic change';diagnostic_capacity=20000;native_drop_counter='not exposed by these temporary subscribers'}
++ [LoopTiming]::StopObserver()
+  Save 'loop-trace.json' @($trace.ToArray())
++ Save 'fine-trace.json' @([LoopTiming]::Snapshot())
++ Save 'runtime-samples.json' @([LoopTiming]::RuntimeSnapshot())
++ Save 'scheduler-observer.json' @([LoopTiming]::ObserverSnapshot())
++ Save 'timing-state.json' @{overflow=[LoopTiming]::Overflow;journalPath=$journalPath;telemetry=$config.telemetry;observerMeaning='100ms independent diagnostic sleep observer, not a health publisher; jitter is not proof of CPU starvation'}
+ }
+--- frozen/event_queue.cs
++++ diagnostic/event_queue.cs
+@@ -30,7 +30,7 @@
+  public int MaxDepth {get; private set;}
+  public ExactEventQueue(PSEventArgsCollection q,string[] ids) {
+   queue=q;sources=new HashSet<string>(ids);
+-  lock(queue.SyncRoot) {
++  using(LoopTiming.Lock(queue.SyncRoot)) {
+    if(CountOwned()!=0)throw new InvalidOperationException("Attach before owned events exist");
+    queue.PSEventReceived+=Enqueued;
+   }
+@@ -38,7 +38,7 @@
+  int CountOwned() {int n=0;for(int i=0;i<queue.Count;i++)if(sources.Contains(queue[i].SourceIdentifier))n++;return n;}
+  void Enqueued(object sender,PSEventArgs ev) {
+   if(!sources.Contains(ev.SourceIdentifier))return;
+-  lock(queue.SyncRoot) {
++  using(LoopTiming.Lock(queue.SyncRoot)) {
+    if(entries.ContainsKey(ev)){Fail("Same event reference enqueued twice");return;}
+    if(sequence>=20000){Fail("Bounded queue identity capacity exceeded");return;}
+    entries.Add(ev,new QueueEntry{QueueSequence=++sequence,Event=ev,EnqueueQpc=System.Diagnostics.Stopwatch.GetTimestamp()});
+@@ -53,7 +53,7 @@
+   if(!sources.Contains(e.Event.SourceIdentifier) || Index(e)<0){Fail("Selected exact entry disappeared; competing consumer or corruption");Healthy();}
+  }
+  public QueueEntry Select() {
+-  lock(queue.SyncRoot) {
++  using(LoopTiming.Lock(queue.SyncRoot)) {
+    Healthy();if(selected!=null)throw new InvalidOperationException("One consumer/selection only");
+    for(int i=0;i<queue.Count;i++) {
+     var ev=queue[i];if(!sources.Contains(ev.SourceIdentifier))continue;
+@@ -69,23 +69,23 @@
+  public void PersistAndRemove(QueueEntry e,string path,string serialized) {
+   if(Interlocked.CompareExchange(ref publishing,1,0)!=0)throw new InvalidOperationException("Concurrent consumer rejected");
+   try {
+-   lock(queue.SyncRoot){Healthy();Valid(e);if(e.Persisted)throw new InvalidOperationException("Already persisted");}
+-   try {File.AppendAllText(path,serialized);}
+-   catch(Exception ex){lock(queue.SyncRoot){Fail("Persistence failed: "+ex.GetType().Name);}throw;}
+-   lock(queue.SyncRoot) {
++   using(LoopTiming.Lock(queue.SyncRoot)){Healthy();Valid(e);if(e.Persisted)throw new InvalidOperationException("Already persisted");}
++   try {using(LoopTiming.Span("event.File.AppendAllText")){File.AppendAllText(path,serialized);}}
++   catch(Exception ex){using(LoopTiming.Lock(queue.SyncRoot)){Fail("Persistence failed: "+ex.GetType().Name);}throw;}
++   using(LoopTiming.Lock(queue.SyncRoot)) {
+     e.Persisted=true;persistedCount++;
+     Valid(e);
+-    queue.RemoveAt(Index(e)); // exact reference matched, exactly one index, same SyncRoot
++    using(LoopTiming.Span("queue.exact.RemoveAt")){queue.RemoveAt(Index(e));} // exact reference matched, exactly one index, same SyncRoot
+     e.Removed=true;removedCount++;selected=null;
+    }
+   } finally {Interlocked.Exchange(ref publishing,0);}
+  }
+  public object Stats() {
+-  lock(queue.SyncRoot)return new {enqueued=sequence,selected=selectedCount,persisted=persistedCount,removed=removedCount,remaining=CountOwned(),maxDepth=MaxDepth,failed=Failed,failure=Failure,identity="reference + bounded monotonic enqueue sequence"};
++  using(LoopTiming.Lock(queue.SyncRoot))return new {enqueued=sequence,selected=selectedCount,persisted=persistedCount,removed=removedCount,remaining=CountOwned(),maxDepth=MaxDepth,failed=Failed,failure=Failure,identity="reference + bounded monotonic enqueue sequence"};
+  }
+- public QueueEntry[] Snapshot() {lock(queue.SyncRoot)return entries.Values.OrderBy(e=>e.QueueSequence).ToArray();}
++ public QueueEntry[] Snapshot() {using(LoopTiming.Lock(queue.SyncRoot))return entries.Values.OrderBy(e=>e.QueueSequence).ToArray();}
+  public void Reconcile() {
+-  lock(queue.SyncRoot){Healthy();if(selected!=null || CountOwned()!=0 || sequence!=persistedCount || sequence!=removedCount)throw new InvalidOperationException("Queue residue/count mismatch");}
++  using(LoopTiming.Lock(queue.SyncRoot)){Healthy();if(selected!=null || CountOwned()!=0 || sequence!=persistedCount || sequence!=removedCount)throw new InvalidOperationException("Queue residue/count mismatch");}
+  }
+- public void Dispose(){lock(queue.SyncRoot)queue.PSEventReceived-=Enqueued;}
++ public void Dispose(){using(LoopTiming.Lock(queue.SyncRoot))queue.PSEventReceived-=Enqueued;}
+ }
+--- frozen/resources.ps1
++++ diagnostic/resources.ps1
+@@ -3,9 +3,10 @@
+ try{
+  while(-not(Test-Path -LiteralPath (Join-Path $root 'collector-finished.json')) -and ([DateTime]::UtcNow-$begin).TotalSeconds -lt 590){
+   $q=[Diagnostics.Stopwatch]::GetTimestamp()
+-  $c=Get-Counter -Counter '\Processor(*)\% Processor Time','\PhysicalDisk(*)\% Idle Time','\PhysicalDisk(*)\Current Disk Queue Length','\PhysicalDisk(*)\Avg. Disk sec/Read','\PhysicalDisk(*)\Avg. Disk sec/Write','\PhysicalDisk(*)\Disk Read Bytes/sec','\PhysicalDisk(*)\Disk Write Bytes/sec','\Memory\Available MBytes','\Memory\Pages/sec','\System\Context Switches/sec' -MaxSamples 1
++  $counterStart=[Diagnostics.Stopwatch]::GetTimestamp();$c=Get-Counter -Counter '\Processor(*)\% Processor Time','\PhysicalDisk(*)\% Idle Time','\PhysicalDisk(*)\Current Disk Queue Length','\PhysicalDisk(*)\Avg. Disk sec/Read','\PhysicalDisk(*)\Avg. Disk sec/Write','\PhysicalDisk(*)\Disk Read Bytes/sec','\PhysicalDisk(*)\Disk Write Bytes/sec','\Memory\Available MBytes','\Memory\Pages/sec','\Memory\Page Faults/sec','\System\Context Switches/sec' -MaxSamples 1
++  $counterEnd=[Diagnostics.Stopwatch]::GetTimestamp();$processStart=$counterEnd
+   $p=@(Get-Process -Name pwsh,python,MsMpEng -ErrorAction SilentlyContinue|ForEach-Object{@{pid=$_.Id;name=$_.ProcessName;cpuSeconds=$_.CPU;workingSet=$_.WorkingSet64;priority=[string]$_.PriorityClass;threads=@($_.Threads|ForEach-Object{@{id=$_.Id;state=[string]$_.ThreadState;priority=$_.CurrentPriority}})}})
+-  $rows.Add(@{qpc=$q;endQpc=[Diagnostics.Stopwatch]::GetTimestamp();utc=[DateTime]::UtcNow.ToString('o');counters=@($c.CounterSamples|Select-Object Path,CookedValue);processes=$p})
++  $rows.Add(@{qpc=$q;counterStart=$counterStart;counterEnd=$counterEnd;processStart=$processStart;endQpc=[Diagnostics.Stopwatch]::GetTimestamp();utc=[DateTime]::UtcNow.ToString('o');counters=@($c.CounterSamples|Select-Object Path,CookedValue);processes=$p})
+   Start-Sleep -Seconds 1
+  }
+ }catch{[IO.File]::WriteAllText((Join-Path $root 'resource-failure.txt'),$_.Exception.ToString())}
+--- frozen/test_queue.ps1
++++ diagnostic/test_queue.ps1
+@@ -2,7 +2,7 @@
+ $out=Join-Path $PSScriptRoot ('queue-tests-'+[guid]::NewGuid().ToString('N'))
+ New-Item -ItemType Directory -Path $out|Out-Null
+ try{
+- Add-Type -Path @((Join-Path $PSScriptRoot 'event_queue.cs'),(Join-Path $PSScriptRoot 'queue_tests.cs'))
++ Add-Type -Path @((Join-Path $PSScriptRoot 'LoopTiming.cs'),(Join-Path $PSScriptRoot 'event_queue.cs'),(Join-Path $PSScriptRoot 'queue_tests.cs'))
+  $result=[QueueTests]::Run($out)
+  $s='SyntheticStart-'+[guid]::NewGuid();$t='SyntheticStop-'+[guid]::NewGuid()
+  $q=$ExecutionContext.Events.ReceivedEvents;$x=[ExactEventQueue]::new($q,[string[]]@($s,$t))

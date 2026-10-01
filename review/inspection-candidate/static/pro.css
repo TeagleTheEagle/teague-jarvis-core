@@ -1,0 +1,301 @@
+.brand { font-size: 24px; }
+.settings-section{max-width:900px;margin:0 auto 24px}
+.settings-section .stack-form{padding:8px;width:100%}
+#changesView{margin-bottom:24px;min-height:45vh}
+#mapsView{margin-bottom:24px}#mapsForm{max-width:700px}#googleMap{width:100%;height:520px;border:0;border-radius:12px;margin-top:20px}#googleMap[hidden]{display:none}#mapsResult{padding-top:18px}#mapsResult li{margin:8px 0}@media(max-width:600px){#googleMap{height:360px}}
+.core-visual.wake-heard #core{animation:wake-confirm 1.4s ease-out}
+body.listening .core-visual #core{filter:drop-shadow(0 0 18px #65e5ff80)}
+#wakeFeedback{position:absolute;bottom:0;left:50%;transform:translateX(-50%);white-space:nowrap;color:#c0f7ff;font-size:14px;letter-spacing:.03em;padding:8px 16px;border:1px solid #5edbed80;border-radius:20px;background:#102d38}
+#wakeFeedback[hidden]{display:none}
+@keyframes wake-confirm{0%{filter:brightness(1)}25%{filter:brightness(1.85) drop-shadow(0 0 28px #70ecff);transform:scale(1.035)}65%{filter:brightness(1.3) drop-shadow(0 0 16px #70ecff)}100%{filter:brightness(1);transform:scale(1)}}
+@media(prefers-reduced-motion:reduce){.core-visual.wake-heard #core{animation:none;filter:brightness(1.4)}}
+.answer-sources{margin-top:12px;font-size:13px}
+.answer-sources summary{cursor:pointer;color:var(--muted,#8aa6b2);padding:6px 0}
+.answer-sources summary:focus-visible{outline:2px solid #78dce8;outline-offset:3px}
+/* Consistent native UI typography; no remote font downloads. */
+body,body button,body input,body textarea,body select,body h1,body h2,body h3,body small,body span,body p,body label,body summary,body .utility,body .connection{font-family:'Segoe UI Variable','Segoe UI',Arial,sans-serif!important}
+body .brand{font-family:'Segoe UI Variable Display','Segoe UI',Arial,sans-serif!important;font-size:28px;font-weight:650;letter-spacing:3px;line-height:1.1;flex-shrink:0}
+body .brand small{font-size:11px;font-weight:400;letter-spacing:.25px;text-transform:none;color:#a1adb8;margin-top:8px;line-height:1.4}
+body .nav{font-weight:600;letter-spacing:.8px;font-size:11px}
+body .message p{font-size:15px;line-height:1.7}
+body pre,body code{font-family:Consolas,'Cascadia Code',monospace}
+body .topbar{flex-wrap:wrap;height:auto;min-height:82px;padding:16px 0}
+body .topbar nav{min-height:44px;height:auto;gap:18px;flex-wrap:wrap}
+#projectsView{min-height:50vh}
+body .core-panel #modeDescription,
+body .core-panel #speakerButton,
+body .core-panel #stopButton,
+body .core-panel .key-hint{display:none!important}
+/* The speaking core is the focal point; conversation remains full width below. */
+body .centre-column .core-panel{order:-2;display:flex;flex-direction:column;gap:8px;padding:20px;background:radial-gradient(ellipse at 50% 38%,#143446 0%,#171e25 68%)}
+body .centre-column .core-panel .core-visual{width:min(100%,520px);height:auto;aspect-ratio:760/660;grid-row:auto;margin:0 auto}
+body .centre-column .core-panel .core-visual canvas{position:static;width:100%;height:100%;display:block;object-fit:contain}
+body .core-panel .core-label{display:none}
+body .centre-column .core-panel .greeting{text-align:center;padding:0}
+body .centre-column .core-panel .greeting h1{font-size:23px}
+body .centre-column .core-panel .voice-controls{justify-content:center;margin-top:10px}
+@media(max-width:760px){body .centre-column .core-panel .core-visual{max-width:340px}}
+body .core-panel{min-height:0;height:auto;grid-template-rows:auto auto}
+body .core-panel .core-visual{margin:0;align-self:center}
+body .left-column .panel:has(.quick-actions){display:none}
+/* Professional command workspace: readable surfaces, quiet controls, wide chat. */
+:root{--bg:#101419;--panel:#171e25;--border:#303b46;--cyan:#79cbd4;--bright:#d8f1f3;--muted:#a1adb8;--text:#e4e9ee}
+body{background:var(--bg);line-height:1.55}
+.shell{max-width:1920px;padding:0 28px}
+.topbar{height:82px;gap:18px}.brand{letter-spacing:4px}.brand-mark{border-radius:10px;box-shadow:none}
+nav{gap:22px}.nav{letter-spacing:1.1px}.utility{padding:14px 0;color:var(--muted)}
+.panel,.core-panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;box-shadow:none}
+.panel{padding:20px}.panel-heading{gap:12px;align-items:center;margin-bottom:16px}.panel-heading h2{font:600 11px var(--sans);letter-spacing:1.6px;color:#b9c5d0}
+body .workspace{grid-template-columns:180px minmax(0,1fr) 230px;gap:18px;align-items:start}
+.centre-column{display:flex;flex-direction:column;gap:18px;min-width:0}
+body .conversation-panel{order:-1;min-height:0;border-color:#3c5964;box-shadow:0 12px 30px #0002;width:100%}
+body .conversation-panel .messages{min-height:280px;height:46vh;max-height:560px;padding:8px 6px 20px;scroll-behavior:auto;overflow-x:hidden}
+body .messages .message{max-width:94%;padding:16px 20px;background:#1c252e;border:1px solid #33404b;box-shadow:none;border-radius:12px;line-height:1.7;overflow-wrap:anywhere}
+body .messages .message.user{max-width:85%;background:#22353e;border-color:#3e5b65}
+.message p{font-size:15px}.message-author{font-size:10px!important;letter-spacing:1.2px!important;color:#95d0d6!important}
+body .conversation-panel .composer{margin:8px 0;min-height:62px;background:#11181f;border:1px solid #46616c;box-shadow:none;border-radius:10px}
+body .conversation-panel .composer textarea{font-size:15px;min-height:48px;max-height:160px;line-height:1.5;padding:14px 10px}
+body .conversation-panel .composer #sendButton{min-width:76px;margin:6px;background:#315b66;color:#f0fbfc;border:0}
+.composer-foot{gap:12px;flex-wrap:wrap;font-size:9px;color:#a1adb8}
+.conversation-actions{display:flex;gap:8px;min-width:0}.conversation-actions select{max-width:220px}
+.core-panel{padding:16px;display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px 18px;align-items:center}
+.core-top,.coordinate{display:none}.core-visual{width:110px;height:110px;min-height:0;grid-row:1 / 3}.core-visual canvas{width:110px;height:110px;object-fit:contain}.core-label{font-size:8px}.core-label small{display:none}
+.greeting{padding:0;text-align:left}.greeting h1{font-size:24px;margin:3px 0}.greeting p{margin:0}.greeting span{font-size:12px;color:#a1adb8}.voice-controls{padding:0;flex-wrap:wrap;justify-content:flex-start;gap:8px}
+.mission-log{max-height:270px}.left-column,.right-column{min-width:0}.left-column .panel,.right-column .panel{padding:16px}
+body button:hover{transform:none;box-shadow:none;background:#283c48;border-color:#73949e}button{border-radius:7px}button:disabled{cursor:default}
+input,select,textarea{background:#11181f;color:var(--text);border:1px solid #40515f;border-radius:7px;max-width:100%}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #a0e3ea;outline-offset:3px}
+.workspace-projects{padding:16px!important;margin:0 0 18px!important}.workspace-projects h2{font-size:11px;letter-spacing:1.5px;margin:0 0 10px}.workspace-projects button,.workspace-projects input,.workspace-projects select{padding:9px 11px;font-size:12px}.workspace-projects p{font-size:12px;color:var(--muted);margin:9px 0}.workspace-projects input{width:180px}.workspace-projects>div:last-child{max-height:210px;overflow:auto}
+details,.web-result,.saved-item,.approval{border:1px solid var(--border);border-radius:9px;background:#1b242c;padding:12px;margin:10px 0}summary{cursor:pointer;color:#bce1e5}.message pre{white-space:pre-wrap;overflow-wrap:anywhere}
+dialog{background:var(--panel);border:1px solid #495b69;border-radius:16px;color:var(--text)}
+@media(max-width:1150px){body .workspace{grid-template-columns:minmax(0,1fr) 220px}.left-column{grid-column:1 / -1}.left-column .panel{padding:12px}.topbar{height:auto;min-height:80px;flex-wrap:wrap;padding:14px 0}nav{height:45px;flex-wrap:wrap}}
+@media(max-width:760px){.shell{padding:0 12px}body .workspace{grid-template-columns:minmax(0,1fr)}.right-column{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}.top-actions{gap:10px}nav{gap:12px}.nav{font-size:10px}.panel{padding:14px}body .conversation-panel .messages{min-height:240px;height:44vh;max-height:440px}.panel-heading{flex-wrap:wrap}.conversation-actions select{max-width:180px}.core-panel{grid-template-columns:80px minmax(0,1fr)}.core-visual,.core-visual canvas{width:80px;height:80px}.greeting h1{font-size:20px}.key-hint{display:none}.workspace-projects input{width:100%}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+.navigation { font-size: 10px; }
+.panel-heading { font-size: 11px; }
+.message p[data-activity]::after{content:attr(data-activity);display:block;margin-top:10px;color:#67efff;font-size:11px;letter-spacing:.08em;text-transform:uppercase;animation:jarvisPulse 1.2s ease-in-out infinite}@keyframes jarvisPulse{50%{opacity:.35}}
+.primary,.outline,button{transition:background .18s ease,border-color .18s ease,box-shadow .18s ease,transform .18s ease}.primary:hover,.outline:hover,button:hover{box-shadow:0 0 16px #25d9ed33;transform:translateY(-1px)}button:disabled{cursor:wait;opacity:.55;transform:none}
+.left-column .quick-actions,.left-column .memory-preview,.media-panel{display:none!important}
+.workspace{grid-template-columns:180px minmax(0,1fr) 180px}
+.conversation-panel{width:100%}
+@media (max-width:1150px){.workspace{grid-template-columns:170px minmax(0,1fr) 170px}}
+.diagram-svg{height:min(78vh,760px);min-height:560px;background-color:#06131b;background-image:linear-gradient(#1594a51c 1px,transparent 1px),linear-gradient(90deg,#1594a51c 1px,transparent 1px),radial-gradient(circle,#083c50 0%,#06131b 68%);background-size:32px 32px,32px 32px,100% 100%;box-shadow:0 0 38px #0bd6e444,inset 0 0 50px #0bd6e411}
+.conversation-panel{min-height:640px;border-color:#176579;box-shadow:0 0 32px #00cfe51a}
+.conversation-panel .messages{min-height:470px;max-height:60vh;padding:22px 24px;scroll-behavior:smooth}
+.conversation-panel .composer{min-height:74px;margin:14px 20px 8px;border-radius:12px;background:#071923;box-shadow:inset 0 0 0 1px #1c7182,0 0 18px #00d9ec12}
+.conversation-panel .composer textarea{min-height:52px;padding:16px 12px;font-size:15px;line-height:1.45;resize:vertical}
+.conversation-panel .composer #sendButton{min-width:92px;border-radius:8px;margin:8px}
+.messages .message{max-width:86%;margin:14px 0;padding:16px 18px;border-radius:10px;border:1px solid #15495a;background:#081b26;box-shadow:0 8px 22px #0003}
+.messages .message.user{margin-left:auto;border-color:#1d8190;background:#0c2a36}
+.messages .message-author{color:#67efff;letter-spacing:.14em;font-size:10px}
+@media (max-width:900px){.conversation-panel .messages{min-height:380px;max-height:none}.conversation-panel{min-height:540px}.messages .message{max-width:94%}}
+
+/* Separate voice command screen and optional transcript workspace. */
+#communicationsView{max-width:1200px;margin:0 auto 24px}
+body #communicationsView .conversation-panel{min-height:0}
+body #communicationsView .messages{height:58vh;max-height:none;min-height:260px}
+#voiceSessionStatus{text-align:center;color:#a9d6df;font-size:13px;margin:8px 0;min-height:24px}
+body #commandView .core-panel{min-height:65vh;justify-content:center}
+@media(max-width:760px){body #communicationsView .messages{height:52vh;min-height:220px}body #commandView .core-panel{min-height:55vh}}
+/* Command is dedicated to the voice core; supporting tools have their own views. */
+body #commandView{display:block;max-width:1200px;margin:0 auto 24px}
+body #commandView.hidden{display:none}
+#commandView>.left-column,#commandView>.right-column{display:none}
+.independent-view{max-width:1100px;margin:0 auto 24px}
+#missionView .mission-log{height:60vh;max-height:none}
+#focusView .task-list{max-height:55vh;overflow:auto}
+body .topbar nav{flex-basis:100%;order:3;gap:8px 18px}
+body .top-actions{margin-left:auto}
+.utility{justify-content:space-between}
+/* Calm, readable local time and calendar strip. */
+.time-dashboard{display:flex;align-items:center;gap:40px;padding:20px 26px;margin:18px 0 22px;border:1px solid #2c414c;border-radius:14px;background:linear-gradient(110deg,#14242e,#171e24 70%);box-shadow:inset 3px 0 #56bbcd}
+.time-eyebrow{display:block;font-family:inherit;font-size:10px;font-weight:600;letter-spacing:1.6px;color:#9db6c2;text-transform:uppercase;margin-bottom:7px}
+#clock{font-family:inherit;font-size:36px;font-weight:500;letter-spacing:-1px;font-variant-numeric:tabular-nums;color:#edf8fc;line-height:1.1}
+#clockPeriod{font-size:12px;color:#7dd0de;margin-left:9px}
+.time-calendar{border-left:1px solid #32444e;padding-left:32px}
+#date{font-family:inherit;font-size:17px;letter-spacing:0;color:#dbe8ef}
+.time-location{margin-left:auto;min-width:0}
+#clockLocation{display:block;padding:0;border:0;background:none;color:#dbe8ef;font-family:inherit;font-size:16px;text-align:left;max-width:360px;overflow-wrap:anywhere;cursor:pointer}
+#clockLocation:hover{color:#7dd0de}
+#clockZone{display:block;color:#8fa8b5;font-size:11px;margin-top:6px;overflow-wrap:anywhere}
+@media(max-width:650px){.time-dashboard{gap:20px;flex-wrap:wrap;padding:18px}.time-calendar{padding-left:20px}.time-location{margin-left:0;width:100%;border-top:1px solid #32444e;padding-top:14px}#clock{font-size:30px}#date{font-size:15px}}
+/* The same live canvas follows the user; no duplicate audio or microphone. */
+#jarvisCompanion{position:sticky;top:8px;z-index:20;max-width:1200px;margin:0 auto 20px}
+body #jarvisCompanion .core-panel{display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:20px;padding:8px 22px;min-height:0;background:linear-gradient(110deg,#102b3a,#171e25);box-shadow:0 8px 24px #0005}
+body #jarvisCompanion .core-visual{width:160px;height:auto;aspect-ratio:760/660;flex:0 0 160px;margin:0}
+body #jarvisCompanion .core-visual canvas{position:static;display:block;width:100%;height:100%}
+#jarvisCompanion .greeting{display:none}
+#jarvisCompanion #voiceSessionStatus{flex:1;text-align:left;margin:0;font-size:12px}
+#jarvisCompanion .voice-controls{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;margin:0}
+@media(max-width:650px){body #jarvisCompanion .core-panel{gap:8px;padding:8px 12px;flex-wrap:wrap}body #jarvisCompanion .core-visual{width:100px;flex-basis:100px}#jarvisCompanion #voiceSessionStatus{font-size:10px}#jarvisCompanion .voice-controls{width:100%;justify-content:center}#jarvisCompanion{top:0}}
+
+/* Give the travelling hologram room formerly occupied by the clock. */
+.time-dashboard.hidden{display:none}
+body #jarvisCompanion .core-visual{width:280px;flex-basis:280px}
+#jarvisCompanion{margin-top:20px}
+@media(max-width:650px){body #jarvisCompanion .core-visual{width:180px;flex-basis:180px}}
+/* Full-width companion and consistent baby-blue section boundaries. */
+:root{--border:#79b9d2;--section-line:#8ac9e3;--soft-line:#8ac9e366}
+body #jarvisCompanion{max-width:none;width:100%;margin-left:0;margin-right:0}
+body .panel,body .core-panel,body .time-dashboard,body dialog{border-color:var(--section-line)}
+body .panel-heading{border-bottom:1px solid var(--soft-line);padding-bottom:12px}
+body .view-title{border-bottom:1px solid var(--soft-line);padding-bottom:18px}
+body .workspace-projects>h2{border-bottom:1px solid var(--soft-line);padding-bottom:12px}
+body .messages .message,body .messages .message.user,body .conversation-panel .composer{border-color:var(--section-line)}
+body input:not([type=checkbox]):not([type=radio]),body select,body textarea{border-color:var(--soft-line)}
+body .topbar,body footer,body .service,body .integration-row,body .answer-sources,body hr{border-color:var(--soft-line)}
+body button:not(.nav):not(.text-button):not(.attach):not(.close-dialog){border-color:var(--soft-line)}
+body :is(input,textarea,select,button,a):focus-visible{outline:2px solid #a7ddf4;outline-offset:3px}
+body .conversation-panel .composer textarea{border:0}
+body .stack-form>label+label{border-top:1px solid #8ac9e326;padding-top:12px}
+/* Expanded in the page, slim and fixed only once the panel scrolls away. */
+body #jarvisCompanion{position:relative;top:auto}
+html{scroll-padding-top:110px}
+body .core-panel.scroll-compact{position:fixed!important;top:8px;left:var(--dock-left);width:var(--dock-width);z-index:40;display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:flex-start!important;gap:16px!important;padding:6px 18px!important;min-height:0!important;height:auto!important;box-sizing:border-box;background:#142630!important;box-shadow:0 6px 22px #0006!important;animation:companion-dock-in .18s ease-out}
+body .core-panel.scroll-compact .core-visual{width:86px!important;flex:0 0 86px!important;height:auto!important;aspect-ratio:760/660;margin:0!important}
+body .core-panel.scroll-compact .core-visual canvas{width:100%!important;height:100%!important;position:static!important}
+body .core-panel.scroll-compact .greeting{display:none!important}
+body .core-panel.scroll-compact #voiceSessionStatus{flex:1;text-align:left;margin:0;font-size:11px}
+body .core-panel.scroll-compact .voice-controls{margin:0!important;justify-content:flex-end!important;width:auto;gap:6px}
+@keyframes companion-dock-in{from{opacity:.5;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:650px){body .core-panel.scroll-compact{gap:6px!important;padding:5px 8px!important;flex-wrap:nowrap!important}body .core-panel.scroll-compact .core-visual{width:64px!important;flex-basis:64px!important}body .core-panel.scroll-compact .voice-controls{flex-direction:column}body .core-panel.scroll-compact #voiceSessionStatus{font-size:9px;min-width:0;overflow-wrap:anywhere}}
+@media(prefers-reduced-motion:reduce){body .core-panel.scroll-compact{animation:none}}
+
+.voice-diagnostics {margin-top:20px;padding:24px;min-width:0;}
+.voice-diagnostics meter {display:block;width:100%;height:24px;accent-color:#8ac9e3;}
+.voice-diagnostics dl {display:grid;grid-template-columns:minmax(130px,1fr) minmax(0,3fr);gap:12px 20px;}
+.voice-diagnostics dt {color:#8ac9e3;}.voice-diagnostics dd {margin:0;overflow-wrap:anywhere;}
+.diagnostic-actions {display:flex;flex-wrap:wrap;gap:10px;}
+.voice-diagnostics li {padding:6px 0;overflow-wrap:anywhere;}
+@media(max-width:600px){.voice-diagnostics dl{grid-template-columns:1fr;gap:6px;}.voice-diagnostics dd{margin-bottom:12px;}}
+
+#screenVisionDialog{width:min(920px,94vw);max-height:90vh;overflow:auto;padding:24px;}
+#screenVisionDialog video,#screenVisionDialog img{display:block;max-width:100%;max-height:46vh;margin:16px auto;border:1px solid #8ac9e3;object-fit:contain;}
+#screenVisionDialog [hidden],#screenSharingBadge[hidden]{display:none;}
+#screenVisionDialog textarea{display:block;width:100%;box-sizing:border-box;margin:10px 0 16px;}
+.screen-actions{display:flex;gap:10px;flex-wrap:wrap;}
+#screenSharingBadge{position:fixed;bottom:16px;right:16px;z-index:100;background:#153745;border:2px solid #8ac9e3;}
+
+body.floating-jarvis{margin:0;padding:12px;background:#101b24;color:#bdeaff;font:14px system-ui;text-align:center;}
+.floating-jarvis #core{display:block;width:100%;height:260px;object-fit:contain;}
+.floating-jarvis button{background:#163544;color:#bdeaff;border:1px solid #8ac9e3;border-radius:6px;padding:8px;margin:4px;}
+
+/* Blueprint theme, September 2026. Presentation only; existing controls and
+   state remain authoritative. Remove this block to restore the previous skin. */
+:root{--bg:#020b14;--panel:#061725;--border:#174d69;--section-line:#247da2;--soft-line:#164661;--cyan:#3ee4ff;--bright:#c3f7ff;--muted:#90b6ca;--text:#e4f2fb;--sans:'Segoe UI',Arial,sans-serif}
+body{background-color:var(--bg);background-position:center bottom;background-size:cover;background-attachment:fixed;font-family:var(--sans);color:var(--text)}
+body .shell{max-width:1920px;padding:0 28px;min-height:100vh}
+body .topbar{background:#020e19e8;border-bottom:1px solid #197495;padding:18px 0 12px;gap:14px;min-height:90px}
+body .brand{font-family:var(--sans);font-size:30px;font-weight:600;letter-spacing:5px;color:#eefaff}
+body .brand small{font:10px var(--sans);letter-spacing:1.2px;color:#99cbe0}
+body .topbar nav{gap:6px 16px;min-height:36px;align-items:stretch}
+body .nav{font:600 10px var(--sans);letter-spacing:.6px;padding:10px 3px;border-radius:0;color:#b5d0df}
+body .nav.active{color:#3ee4ff;border-bottom-color:#3ee4ff;background:#052030}
+body .connection{font:10px var(--sans);letter-spacing:1px;color:#96c6da}
+body .panel,body .time-dashboard,body dialog,body .workspace-projects{background:#041421ee;border:1px solid #246b8b;border-radius:4px;box-shadow:inset 0 0 26px #087da009,0 6px 24px #0003}
+body .panel:before{display:none}
+body .panel-heading{padding-bottom:12px;margin-bottom:16px;border-bottom:1px solid #16435d;gap:8px}
+body .panel-heading h2,body .workspace-projects h2{font:600 11px var(--sans);letter-spacing:1.8px;color:#d0eafa}
+body .system-label,body .time-eyebrow{font:600 10px var(--sans);letter-spacing:1.3px;color:#47ddfc}
+body .service{font:12px var(--sans);line-height:1.5;margin:14px 0;gap:8px}
+body .service b{font:600 9px var(--sans);letter-spacing:.4px;overflow-wrap:anywhere;text-align:right}
+body .uptime{border-top:1px solid #19465d;padding-top:20px;margin-top:24px}
+body .uptime strong{font-family:var(--sans);font-size:28px;letter-spacing:3px;color:#77ddff;font-variant-numeric:tabular-nums}
+body .segmented{opacity:.4}
+body .microcopy{color:#8eb2c6;font-size:11px;line-height:1.6}
+body button{font-family:var(--sans);font-size:11px;border-color:#246986;border-radius:5px;min-height:34px;padding:8px 12px}
+body button:hover{background:#0c3043;border-color:#4cddfa;transform:none;box-shadow:none}
+body button:focus-visible,body a:focus-visible,body input:focus-visible,body select:focus-visible,body textarea:focus-visible{outline:2px solid #96edff;outline-offset:4px}
+body button:disabled{cursor:default}
+body input,body select,body textarea{background:#03121e;color:#e4f2fb;border:1px solid #24566c;font-family:var(--sans)}
+body .text-button{color:#4bdfff;font-size:10px;letter-spacing:.3px}
+body .primary,body .mic-button[aria-pressed=true]{background:#073c51;border:1px solid #30c7ec;color:#b8f4ff}
+body .core-panel,body .centre-column .core-panel{background:#03131ed9;border:1px solid #175572;border-radius:6px;box-shadow:inset 0 0 60px #058bab0b;padding:18px}
+body .centre-column .core-panel .core-visual{width:min(100%,650px);max-width:650px;aspect-ratio:760/660;filter:brightness(1.35) saturate(1.2)}
+body .centre-column .core-panel .greeting h1{font:400 24px var(--sans);letter-spacing:.3px;color:#edfaff}
+body .greeting p{color:#50e8ff;font-size:13px}
+body #voiceSessionStatus{font:11px var(--sans);letter-spacing:.7px;color:#98cde2}
+body .voice-controls{gap:10px}
+body .voice-controls button{letter-spacing:.7px;font-size:10px;min-height:38px}
+body .core-panel.scroll-compact{background:#041c2bf5!important;border-color:#25759a;box-shadow:0 8px 28px #0007!important}
+body #jarvisCompanion .core-panel{background:#041c2bf2;border-color:#247a9c}
+body .conversation-panel .composer{background:#02131f;border-color:#278daf;border-radius:22px}
+body .conversation-panel .composer #sendButton{background:#07506a;color:#baf5ff;border-radius:16px}
+body .messages .message{background:#071d2c;border-color:#21516a;border-radius:7px}
+body .messages .message.user{background:#082c3f;border-color:#2782a0}
+body .message p{font-family:var(--sans);font-size:14px}
+body details,body .web-result,body .saved-item,body .approval{background:#051b2b;border-color:#24536c;border-radius:5px}
+body .view-title h1{font-family:var(--sans);color:#e3f6ff}
+body .time-dashboard{box-shadow:none}
+body #clock{font-family:var(--sans);color:#e7f8ff}
+body #date{font-family:var(--sans);color:#c7e8f8}
+body #clockLocation{font-family:var(--sans);color:#a8d6ed}
+body footer{background:#020e18c9;border-top:1px solid #1a607a;margin-top:24px;color:#71b2d0}
+
+/* The reference's three-column dashboard uses the app's existing live sections.
+   Dedicated tabs still show each section at full size. No duplicate DOM IDs. */
+@media(min-width:1080px){
+ body .shell:has(#commandView:not(.hidden)){display:grid;grid-template-columns:minmax(240px,1fr) minmax(430px,1.8fr) minmax(245px,1fr);grid-template-rows:auto auto auto 1fr auto;gap:18px;align-items:start}
+ body .shell:has(#commandView:not(.hidden))>.topbar{grid-column:1/-1;margin-bottom:6px;width:100%}
+ body .shell:has(#commandView:not(.hidden))>.time-dashboard{grid-column:1;grid-row:2;display:flex;flex-wrap:wrap;gap:16px 22px;padding:20px;margin:0;width:100%}
+ body .shell:has(#commandView:not(.hidden)) .time-primary{width:100%}
+ body .shell:has(#commandView:not(.hidden)) #clock{font-size:38px}
+ body .shell:has(#commandView:not(.hidden)) .time-calendar{border:0;padding:0;min-width:0}
+ body .shell:has(#commandView:not(.hidden)) #date{font-size:17px}
+ body .shell:has(#commandView:not(.hidden)) .time-location{margin:0;min-width:0;width:100%;border-top:1px solid #17465d;padding-top:12px}
+ body .shell:has(#commandView:not(.hidden)) #clockLocation{font-size:13px}
+ body .shell:has(#commandView:not(.hidden)) #clockZone{font-size:10px}
+ body .shell:has(#commandView:not(.hidden))>#systemView.hidden{display:block!important;grid-column:1;grid-row:3;margin:0;min-width:0;width:100%}
+ body .shell:has(#commandView:not(.hidden))>#systemView>:not(:first-child){display:none}
+ body .shell:has(#commandView:not(.hidden))>#missionView.hidden{display:block!important;grid-column:3;grid-row:2/4;margin:0;min-width:0;width:100%}
+ body .shell:has(#commandView:not(.hidden)) #missionLog{height:390px;max-height:48vh;overflow:auto;font-size:11px}
+ body .shell:has(#commandView:not(.hidden))>#focusView.hidden{display:block!important;grid-column:3;grid-row:4;margin:0;min-width:0;width:100%}
+ body .shell:has(#commandView:not(.hidden)) #tasks{max-height:200px}
+ body .shell:has(#commandView:not(.hidden))>#commandView{display:contents;max-width:none;margin:0}
+ body .shell:has(#commandView:not(.hidden)) #commandView>.centre-column{grid-column:2;grid-row:2/5;min-width:0;align-self:stretch}
+ body .shell:has(#commandView:not(.hidden)) #commandView .core-panel:not(.scroll-compact){min-height:660px;height:100%;justify-content:center;padding:12px;background:#03131e91}
+ body .shell:has(#commandView:not(.hidden)) #commandView>.left-column{display:block;grid-column:1;grid-row:4}
+ body .shell:has(#commandView:not(.hidden)) #commandView .left-column>.panel:has(.quick-actions){display:block}
+ body .shell:has(#commandView:not(.hidden)) #commandView .quick-actions{display:grid!important;gap:8px}
+ body .shell:has(#commandView:not(.hidden)) .quick-actions button{display:flex;align-items:center;gap:10px;text-align:left;padding:10px 8px;border-color:#17445d;background:#041a29;font-size:12px}
+ body .shell:has(#commandView:not(.hidden)) .action-index{font:10px var(--mono);color:#49dcf8}
+ body .shell:has(#commandView:not(.hidden)) .arrow{margin-left:auto;color:#4ae0fa}
+ body .shell:has(#commandView:not(.hidden))>footer{grid-column:1/-1;grid-row:5;margin-top:0}
+ body .shell:has(#commandView:not(.hidden))>.microcopy{grid-column:1/-1;grid-row:6;margin:0;padding:8px 12px;background:#041421ee}
+}
+@media(min-width:1550px){body .shell:has(#commandView:not(.hidden)){grid-template-columns:minmax(310px,1fr) minmax(560px,1.85fr) minmax(320px,1fr)}body .topbar nav{gap:10px 22px}body .shell:has(#commandView:not(.hidden)) #commandView .core-panel:not(.scroll-compact){min-height:740px}}
+@media(max-width:1079px){body .shell{padding:0 18px}body #commandView{max-width:none}body #commandView .core-panel{min-height:55vh}body .centre-column .core-panel .core-visual{width:min(100%,520px)}body .time-dashboard{margin:18px 0}body .topbar nav{gap:5px 14px}}
+@media(max-width:650px){body{background-attachment:scroll;background-size:auto 100vh;background-repeat:no-repeat}body .shell{padding:0 12px}body .topbar{padding-top:16px}body .brand{font-size:25px}body .brand small{font-size:8px;letter-spacing:.5px}body .connection{font-size:8px}body .topbar nav{flex-wrap:nowrap;overflow-x:auto;width:100%;min-width:0;flex-basis:100%;padding-bottom:6px;gap:14px}body .nav{flex:none;font-size:10px}body .time-dashboard{padding:16px;gap:18px}body #clock{font-size:32px}body .centre-column .core-panel{padding:12px}body .centre-column .core-panel .core-visual{width:min(100%,360px)}body .centre-column .core-panel .greeting h1{font-size:22px}body .panel{padding:16px}body .conversation-actions{flex-wrap:wrap}body .conversation-panel .messages{padding:8px}body #jarvisCompanion .core-visual{width:130px;flex-basis:130px}}
+@media(min-width:1080px){
+ body .shell:has(#commandView:not(.hidden)){gap:16px;grid-template-rows:auto auto auto auto auto}
+ body .shell:has(#commandView:not(.hidden))>.time-dashboard{padding:16px;gap:10px 16px}
+ body .shell:has(#commandView:not(.hidden)) .time-primary{width:auto;flex:1}
+ body .shell:has(#commandView:not(.hidden)) .time-calendar{flex:1;min-width:120px}
+ body .shell:has(#commandView:not(.hidden)) #clock{font-size:32px}
+ body .shell:has(#commandView:not(.hidden)) .time-location{padding-top:10px}
+ body .shell:has(#commandView:not(.hidden)) .time-eyebrow{margin-bottom:5px}
+ body .shell:has(#commandView:not(.hidden)) #systemView .panel{padding:16px}
+ body .shell:has(#commandView:not(.hidden)) #systemView .panel-heading{margin-bottom:12px;padding-bottom:10px}
+ body .shell:has(#commandView:not(.hidden)) #systemView .system-label{margin:0 0 10px}
+ body .shell:has(#commandView:not(.hidden)) #systemView .service{margin:10px 0;line-height:1.3}
+ body .shell:has(#commandView:not(.hidden)) #systemView .uptime{padding-top:12px;margin-top:14px}
+ body .shell:has(#commandView:not(.hidden)) #systemView .uptime strong{margin-top:6px;font-size:26px}
+ body .shell:has(#commandView:not(.hidden)) #systemView .segmented{display:none}
+ body .shell:has(#commandView:not(.hidden)) #systemView .microcopy{margin:12px 0 0;font-size:10px}
+ body .shell:has(#commandView:not(.hidden)) #missionView{align-self:stretch}
+ body .shell:has(#commandView:not(.hidden)) #missionView>.panel{height:100%}
+ body .shell:has(#commandView:not(.hidden)) #missionLog{height:330px;max-height:42vh}
+ body .shell:has(#commandView:not(.hidden)) #commandView .core-panel:not(.scroll-compact){min-height:620px;justify-content:center}
+ body .shell:has(#commandView:not(.hidden)) .quick-actions button{min-height:36px;padding:8px}
+ body .shell:has(#commandView:not(.hidden)) #commandView .left-column>.panel{padding:16px}
+ body .shell:has(#commandView:not(.hidden)) #commandView .left-column .panel-heading{margin-bottom:12px}
+}
+@media(min-width:1550px){
+ body .topbar{display:grid;grid-template-columns:210px minmax(0,1fr) 150px;min-height:80px;padding:14px 0;gap:14px}
+ body .topbar nav{order:0;flex-basis:auto;gap:4px 10px;justify-content:center;align-content:center}
+ body .nav{font-size:9px;letter-spacing:.15px;padding:9px 2px}
+ body .top-actions{margin-left:0}
+ body .shell:has(#commandView:not(.hidden)) #commandView .core-panel:not(.scroll-compact){min-height:720px}
+ body .shell:has(#commandView:not(.hidden)) #commandView .core-visual{width:min(100%,680px)}
+}
+@media(prefers-reduced-motion:reduce){body *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}

@@ -1,0 +1,11 @@
+--- original/probe_timing.py
++++ candidate/probe_timing.py
+@@ -27,7 +27,7 @@
+    subprocess._winapi.CreateProcess=measured
+    self.process=subprocess.Popen([str(executable),*args],startupinfo=startupinfo,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,creationflags=0x08000000)
+   finally:subprocess._winapi.CreateProcess=original
+-  self.row['popenReturnedQpc']=ticks();self.row['pid']=self.process.pid
++  self.row['handleRetainedQpc']=ticks();self.row['popenReturnedQpc']=ticks();self.row['pid']=self.process.pid
+   try:self.row['initialKernelTimes']=process_times(self.process);self.row['identityCapturedQpc']=ticks()
+   except BaseException as ex:self.row['startupIdentityError']=repr(ex)
+   self.observer=threading.Thread(target=self.observe,name='probe-exit-observer',daemon=True);self.observer.start()

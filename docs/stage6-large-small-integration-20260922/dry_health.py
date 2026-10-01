@@ -1,0 +1,35 @@
+"""TEST journal adapter, retaining all independently verified observer handles."""
+import ctypes as c
+from evidence_support import K,times
+from journal import ticks
+from dry_contract import read
+from health_reader import HealthReader
+class Health:
+ def __init__(self,root):
+  self.root=root;self.handles=[];self.samples=[];self.reader=None;self.failed=False
+  try:
+   self.identities=read(root/'observer-identities.json')
+   if set(self.identities)!={'etw','detail','app'}:raise ValueError('All three observer identities required')
+   for role,x in self.identities.items():
+    h=K.OpenProcess(0x100000|0x1000,False,x['pid'])
+    if not h:raise c.WinError(c.get_last_error())
+    self.handles.append((role,h,x['created']))
+    if times(h)[0]!=x['created']:raise RuntimeError('Observer creation mismatch')
+   ready=read(root/'app-ready.json')
+   if ready['pid']!=self.identities['app']['pid'] or ready['created']!=self.identities['app']['created']:raise ValueError('Ready identity mismatch')
+   self.reader=HealthReader(root,ready);self.check()
+  except BaseException:self.close();raise
+ def check(self):
+  if self.failed:raise RuntimeError('Latched observer failure')
+  try:
+   for role,h,created in self.handles:
+    if K.WaitForSingleObject(h,0)!=258 or times(h)[0]!=created:raise RuntimeError('Observer exited or identity changed: '+role)
+   v=self.reader.poll()
+   if any(p.exists() for p in (self.root/'app-result.json',self.root/'etw-result.json',self.root/'detail'/'etw-result.json')):raise RuntimeError('Observer finalized during collection')
+   self.samples.append(dict(qpc=ticks(),age=v['age'],appPid=self.identities['app']['pid'],kernelPid=self.identities['etw']['pid'],detailPid=self.identities['detail']['pid']))
+   return self.samples[-1]
+  except BaseException:self.failed=True;raise
+ def close(self):
+  if self.reader:self.reader.close()
+  for _,h,_ in self.handles:K.CloseHandle(h)
+  self.handles=[]

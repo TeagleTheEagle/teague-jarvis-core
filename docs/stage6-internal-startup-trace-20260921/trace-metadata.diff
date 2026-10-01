@@ -1,0 +1,64 @@
+--- 
++++ 
+@@ -26,10 +26,11 @@
+ static std::string J(const std::string& s){std::string o="\"";for(unsigned char c:s){if(c=='"'||c=='\\'){o+='\\';o+=c;}else if(c<32){o+='?';}else o+=c;}return o+'"';}
+ static bool Write(const wchar_t* name,const std::string& s){std::wstring p=folder+L"\\"+name;HANDLE f=CreateFileW(p.c_str(),GENERIC_WRITE,FILE_SHARE_READ,nullptr,CREATE_NEW,FILE_ATTRIBUTE_NORMAL,nullptr);if(f==INVALID_HANDLE_VALUE)return false;DWORD n=0;BOOL ok=WriteFile(f,s.data(),static_cast<DWORD>(s.size()),&n,nullptr);BOOL flush=FlushFileBuffers(f);CloseHandle(f);return ok&&flush&&n==s.size();}
+ static bool Field(EVENT_RECORD* e,const wchar_t* name,std::vector<BYTE>& v){PROPERTY_DATA_DESCRIPTOR p{};p.PropertyName=reinterpret_cast<ULONGLONG>(name);p.ArrayIndex=ULONG_MAX;ULONG n=0;ULONG r=TdhGetPropertySize(e,0,nullptr,1,&p,&n);if(r||n>65536)return false;v.resize(n);return TdhGetProperty(e,0,nullptr,1,&p,n,v.data())==0;}
+-static ULONGLONG Number(EVENT_RECORD* e,const wchar_t* name,bool* found=nullptr){std::vector<BYTE> v;bool ok=Field(e,name,v)&&(v.size()==4||v.size()==8);if(found)*found=ok;if(!ok)return 0;ULONGLONG n=0;memcpy(&n,v.data(),v.size());return n;}
++static ULONGLONG Number(EVENT_RECORD* e,const wchar_t* name,bool* found=nullptr){std::vector<BYTE> v;bool ok=Field(e,name,v)&&(v.size()==1||v.size()==2||v.size()==4||v.size()==8);if(found)*found=ok;if(!ok)return 0;ULONGLONG n=0;memcpy(&n,v.data(),v.size());return n;}
+ static std::wstring Text(EVENT_RECORD* e,const wchar_t* name){std::vector<BYTE> v;if(!Field(e,name,v)||v.size()<2)return L"";const wchar_t* w=reinterpret_cast<const wchar_t*>(v.data());size_t n=v.size()/2;size_t end=0;while(end<n&&w[end])++end;return std::wstring(w,end);}
+ static std::string List(const std::vector<std::string>& names);
+-static std::vector<std::string> Schemas(EVENT_RECORD* e){ULONG n=0;std::vector<std::string> names;if(TdhGetEventInformation(e,0,nullptr,nullptr,&n)!=ERROR_INSUFFICIENT_BUFFER||n>262144)return names;std::vector<BYTE> v(n);auto p=reinterpret_cast<TRACE_EVENT_INFO*>(v.data());if(TdhGetEventInformation(e,0,nullptr,p,&n))return names;for(ULONG i=0;i<p->TopLevelPropertyCount;i++){ULONG off=p->EventPropertyInfoArray[i].NameOffset;if(off<n)names.push_back(U(reinterpret_cast<wchar_t*>(v.data()+off)));}return names;}
++static std::vector<std::string> RawSchemas(EVENT_RECORD* e){ULONG n=0;std::vector<std::string> names;if(TdhGetEventInformation(e,0,nullptr,nullptr,&n)!=ERROR_INSUFFICIENT_BUFFER||n>262144)return names;std::vector<BYTE> v(n);auto p=reinterpret_cast<TRACE_EVENT_INFO*>(v.data());if(TdhGetEventInformation(e,0,nullptr,p,&n))return names;for(ULONG i=0;i<p->TopLevelPropertyCount;i++){ULONG off=p->EventPropertyInfoArray[i].NameOffset;if(off<n)names.push_back(U(reinterpret_cast<wchar_t*>(v.data()+off)));}return names;}
++static std::vector<std::string> Schemas(EVENT_RECORD* e){static std::map<std::string,std::vector<std::string>> cache;std::string key(reinterpret_cast<const char*>(&e->EventHeader.ProviderId),sizeof(GUID));key.append(reinterpret_cast<const char*>(&e->EventHeader.EventDescriptor),sizeof(EVENT_DESCRIPTOR));auto it=cache.find(key);if(it!=cache.end())return it->second;return cache[key]=RawSchemas(e);}
+ struct Row{DWORD pid=0,parent=0;ULONGLONG created=0,sequence=0,parentSequence=0,exitFT=0;DWORD exitCode=0;bool exitCodeKnown=false;std::wstring image;LONGLONG start=0,notified=0,stop=0,stopNotified=0,retained=0,attemptBegin=0,signal=0;HANDLE handle=nullptr;DWORD openError=0,metadataError=0;std::string reason;bool closed=false;unsigned version=0,stopVersion=0;std::vector<std::string> schema,stopSchema;};
+ static std::map<std::pair<DWORD,ULONGLONG>,Row> rows;
+ static bool ParentKnown(DWORD pid,ULONGLONG childTime,ULONGLONG parentSequence){if(pid==rootPid)return childTime>=rootCreated;for(auto& a:rows){auto&r=a.second;if(r.pid==pid&&r.created<=childTime&&(!r.exitFT||childTime<=r.exitFT)&&(!parentSequence||r.sequence==parentSequence))return true;}return false;}
+@@ -45,17 +46,18 @@
+  }catch(...){++faults;}}
+ 
+ static const GUID FileProvider={0xedd08927,0x9cc4,0x4e65,{0xb9,0x70,0xc2,0x56,0x0f,0xb5,0xc2,0x89}};
++static const GUID ClassicReg={0xae53722e,0xc863,0x11d2,{0x86,0x59,0x00,0xc0,0x4f,0xa3,0x21,0xa1}};
+ static const GUID RegProvider={0x70eb4f03,0xc1de,0x4f73,{0xa0,0x51,0x33,0xd1,0x3d,0x54,0x13,0xbd}};
+ static const GUID ThreadProvider={0x3d6fa8d1,0xfe05,0x11d0,{0x9d,0xda,0x00,0xc0,0x4f,0xd7,0xba,0x7c}};
+ static std::vector<std::string> startup;
+ static unsigned startupOverflow=0;
+ static std::map<DWORD,std::pair<DWORD,ULONGLONG>> tids;
+ static std::map<ULONGLONG,std::pair<DWORD,ULONGLONG>> irps;
+-static Row* Target(DWORD pid,LONGLONG q){for(auto& a:rows){auto&r=a.second;if(r.pid==pid&&q>=r.start&&(!r.stop||q<=r.stop)&&(r.image.find(L"J6Probe.exe")!=std::wstring::npos||r.image.find(L"conhost.exe")!=std::wstring::npos))return &r;}return nullptr;}
++static Row* Target(DWORD pid,LONGLONG q){for(auto& a:rows){auto&r=a.second;if(r.pid==pid&&q>=r.start&&(!r.stop||q<=r.stop)&&(r.image.find(L"J6Probe.exe")!=std::wstring::npos||(r.image.find(L"conhost.exe")!=std::wstring::npos&&std::any_of(rows.begin(),rows.end(),[&](const auto& p){return p.second.pid==r.parent&&p.second.sequence==r.parentSequence&&p.second.image.find(L"J6Probe.exe")!=std::wstring::npos;}))))return &r;}return nullptr;}
+ static void WINAPI Event(EVENT_RECORD* e){
+  LifecycleEvent(e);
+  try {
+-  bool proc=IsEqualGUID(e->EventHeader.ProviderId,Provider),file=IsEqualGUID(e->EventHeader.ProviderId,FileProvider),reg=IsEqualGUID(e->EventHeader.ProviderId,RegProvider),sched=IsEqualGUID(e->EventHeader.ProviderId,ThreadProvider);
++  bool proc=IsEqualGUID(e->EventHeader.ProviderId,Provider),file=IsEqualGUID(e->EventHeader.ProviderId,FileProvider),reg=(IsEqualGUID(e->EventHeader.ProviderId,RegProvider)||IsEqualGUID(e->EventHeader.ProviderId,ClassicReg)),sched=IsEqualGUID(e->EventHeader.ProviderId,ThreadProvider);
+   if(!proc&&!file&&!reg&&!sched)return;
+   unsigned id=e->EventHeader.EventDescriptor.Id,op=e->EventHeader.EventDescriptor.Opcode;
+   if(proc&&(id<3||id>6))return;
+@@ -73,13 +75,13 @@
+   if(file&&!irp)irp=Number(e,L"Irp");
+   if(file&&irp&&id!=24)irps[irp]={target->pid,target->created};
+   if(startup.size()>=200000){++startupOverflow;return;}
+-  std::ostringstream o;o<<"{\"provider\":"<<J(proc?"process":file?"file":reg?"registry":"scheduler")<<",\"id\":"<<id<<",\"opcode\":"<<op<<",\"version\":"<<unsigned(e->EventHeader.EventDescriptor.Version)<<",\"qpc\":"<<q<<",\"callbackQpc\":"<<Q()<<",\"pid\":"<<target->pid<<",\"created\":\""<<target->created<<"\",\"headerPid\":"<<e->EventHeader.ProcessId<<",\"tid\":"<<tid<<",\"fields\":{";
++  std::ostringstream o;o<<"{\"provider\":"<<J(proc?"process":file?"file":reg?(IsEqualGUID(e->EventHeader.ProviderId,ClassicReg)?"registry_classic":"registry"):"scheduler")<<",\"id\":"<<id<<",\"opcode\":"<<op<<",\"version\":"<<unsigned(e->EventHeader.EventDescriptor.Version)<<",\"qpc\":"<<q<<",\"callbackQpc\":"<<Q()<<",\"pid\":"<<target->pid<<",\"created\":\""<<target->created<<"\",\"headerPid\":"<<e->EventHeader.ProcessId<<",\"tid\":"<<tid<<",\"fields\":{";
+   bool first=true;
+   // Explicit metadata allowlist: no command line, environment, registry value or file bytes.
+   const wchar_t* nums[]={L"ProcessID",L"ThreadID",L"StartAddr",L"Win32StartAddr",L"ImageBase",L"ImageSize",L"Irp",L"FileObject",L"FileKey",L"IssuingThreadId",L"IoSize",L"ByteOffset",L"NtStatus",L"Status",L"ElapsedTime",L"InitialTime",L"KeyObject",L"Index",L"NewThreadId",L"OldThreadId",L"TThreadId",L"OldThreadState",L"OldThreadWaitReason",L"OldThreadWaitMode"};
+-  for(auto n:nums){bool found=false;auto v=Number(e,n,&found);if(found){if(!first)o<<",";first=false;o<<J(U(n))<<":"<<v;}}
+-  const wchar_t* texts[]={L"ImageName",L"FileName",L"OpenPath",L"KeyName"};
+-  for(auto n:texts){auto v=Text(e,n);if(!v.empty()){if(!first)o<<",";first=false;o<<J(U(n))<<":"<<J(U(v));}}
++  auto schema=Schemas(e);for(auto n:nums){if(std::find(schema.begin(),schema.end(),U(n))==schema.end())continue;bool found=false;auto v=Number(e,n,&found);if(found){if(!first)o<<",";first=false;o<<J(U(n))<<":"<<v;}}
++  const wchar_t* texts[]={L"ImageName",L"FileName",L"OpenPath",L"KeyName",L"BaseName",L"RelativeName"};
++  for(auto n:texts){if(std::find(schema.begin(),schema.end(),U(n))==schema.end())continue;auto v=Text(e,n);if(!v.empty()){if(!first)o<<",";first=false;o<<J(U(n))<<":"<<J(U(v));}}
+   if(sched&&op==36&&e->UserDataLength>=8){DWORD ts[2];memcpy(ts,e->UserData,8);if(!first)o<<",";o<<"\"newTid\":"<<ts[0]<<",\"oldTid\":"<<ts[1];}
+   o<<"},\"schema\":"<<List(Schemas(e))<<"}";startup.push_back(o.str());if(file&&id==24)irps.erase(irp);
+  }catch(...){++faults;}
+@@ -92,7 +94,7 @@
+  HANDLE root=OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION|SYNCHRONIZE,FALSE,rootPid);FILETIME ra,rb,rc,rd;
+  if(!root||!GetProcessTimes(root,&ra,&rb,&rc,&rd)||FT(ra)!=rootCreated){if(root)CloseHandle(root);return 92;}
+  GUID guid;CoCreateGuid(&guid);wchar_t guidText[64];StringFromGUID2(guid,guidText,64);session=L"J6Startup-"+std::wstring(guidText);
+- std::vector<BYTE> buffer(sizeof(EVENT_TRACE_PROPERTIES)+1024);auto p=reinterpret_cast<EVENT_TRACE_PROPERTIES*>(buffer.data());p->Wnode.BufferSize=static_cast<ULONG>(buffer.size());p->Wnode.Flags=WNODE_FLAG_TRACED_GUID;p->Wnode.ClientContext=1;p->Wnode.Guid=guid;p->BufferSize=64;p->MinimumBuffers=4;p->MaximumBuffers=64;p->FlushTimer=1;p->LogFileMode=EVENT_TRACE_REAL_TIME_MODE|EVENT_TRACE_SYSTEM_LOGGER_MODE;p->EnableFlags=EVENT_TRACE_FLAG_CSWITCH|EVENT_TRACE_FLAG_DISPATCHER;p->LoggerNameOffset=sizeof(EVENT_TRACE_PROPERTIES);
++ std::vector<BYTE> buffer(sizeof(EVENT_TRACE_PROPERTIES)+1024);auto p=reinterpret_cast<EVENT_TRACE_PROPERTIES*>(buffer.data());p->Wnode.BufferSize=static_cast<ULONG>(buffer.size());p->Wnode.Flags=WNODE_FLAG_TRACED_GUID;p->Wnode.ClientContext=1;p->Wnode.Guid=guid;p->BufferSize=64;p->MinimumBuffers=4;p->MaximumBuffers=64;p->FlushTimer=1;p->LogFileMode=EVENT_TRACE_REAL_TIME_MODE|EVENT_TRACE_SYSTEM_LOGGER_MODE;p->EnableFlags=EVENT_TRACE_FLAG_CSWITCH|EVENT_TRACE_FLAG_DISPATCHER|EVENT_TRACE_FLAG_REGISTRY;p->LoggerNameOffset=sizeof(EVENT_TRACE_PROPERTIES);
+  TRACEHANDLE sessionHandle=0;ULONG start=StartTraceW(&sessionHandle,session.c_str(),p);if(start){Write(L"etw-failure.json","{\"stage\":\"StartTrace\",\"code\":"+std::to_string(start)+"}");CloseHandle(root);return 93;}
+  EVENT_TRACE_LOGFILEW log{};log.LoggerName=const_cast<wchar_t*>(session.c_str());log.ProcessTraceMode=PROCESS_TRACE_MODE_REAL_TIME|PROCESS_TRACE_MODE_EVENT_RECORD|PROCESS_TRACE_MODE_RAW_TIMESTAMP;log.EventRecordCallback=Event;
+  TRACEHANDLE consumer=OpenTraceW(&log);ULONG openError=consumer==INVALID_PROCESSTRACE_HANDLE?GetLastError():0;ULONG enable=openError?openError:EnableTraceEx2(sessionHandle,&Provider,EVENT_CONTROL_CODE_ENABLE_PROVIDER,TRACE_LEVEL_INFORMATION,0x70,0,0,nullptr);

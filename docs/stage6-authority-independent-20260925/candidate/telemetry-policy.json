@@ -1,0 +1,7 @@
+{
+  "schema": "stage6-telemetry-policy-v1",
+  "telemetrySchema": "stage6-writer-telemetry-v1",
+  "snapshotCapacity": 65536,
+  "slowHeartbeatWarnings": "NOT CONFIGURED",
+  "heartbeatFailureSeconds": 10
+}

@@ -1,0 +1,51 @@
+--- before/stage4_client.cjs
++++ current/stage4_client.cjs
+@@ -181,10 +181,18 @@
+  });
+ }
+ 
+-function validateTestRoot(root){
++function validateTestRoot(root,deployment=null){
+  const fs=require('node:fs'),path=require('node:path');
+  const base=path.resolve(__dirname,'tests/lifecycle_stage1/evidence');
+- requireThat(path.dirname(path.resolve(root))===base && /^TEST-STAGE4-[a-f0-9]{32}$/.test(path.basename(root)),'TEST_ROOT');
++ if(deployment!==null){
++  mainOnly();exact(deployment,['root','app','packageHash','installation','nativePath']);
++  requireThat(path.resolve(root)===deployment.root&&path.resolve(deployment.app)===__dirname,'DEPLOYMENT_ROOT');
++  requireThat(path.resolve(root,'../..')===path.resolve(__dirname,'../../..')&&path.basename(path.resolve(root,'../..'))===deployment.installation,'DEPLOYMENT_INSTALLATION');
++  requireThat(/^TEST-INSTALL-[a-f0-9]{32}$/.test(deployment.installation)&&/^[a-f0-9]{64}$/.test(deployment.packageHash),'DEPLOYMENT_IDENTITY');
++  requireThat(crypto.createHash('sha256').update(fs.readFileSync(path.resolve(__dirname,'../manifest.json'))).digest('hex')===deployment.packageHash,'DEPLOYMENT_PACKAGE');
++  requireThat(path.resolve(deployment.nativePath)===path.resolve(__dirname,'../native/peer_identity.node'),'DEPLOYMENT_NATIVE_PATH');
++ }else requireThat(path.dirname(path.resolve(root))===base,'TEST_ROOT');
++ requireThat(/^TEST-STAGE4-[a-f0-9]{32}$/.test(path.basename(root)),'TEST_ROOT');
+  for(let p=path.resolve(root);;p=path.dirname(p)){
+   requireThat(!fs.lstatSync(p).isSymbolicLink(),'TEST_REPARSE');if(path.dirname(p)===p)break;
+  }
+@@ -192,12 +200,14 @@
+  return path.resolve(root);
+ }
+ 
+-function launchTestClient(clientId){
++function launchTestClient(clientId,deployment=null){
+  mainOnly();requireThat(['teague','intelligence'].includes(clientId),'TEST_CLIENT');
+  const {app,BrowserWindow,ipcMain,protocol,session}=require('electron');
+  const fs=require('node:fs'),path=require('node:path');
+- const root=validateTestRoot(process.argv.find(a=>a.startsWith('--stage4-root='))?.slice(14)||'');
+- const profile=path.join(root,'STAGE4_TEST-profile-'+clientId+'-'+crypto.randomUUID());
++ const root=validateTestRoot(process.argv.find(a=>a.startsWith('--stage4-root='))?.slice(14)||'',deployment);
++ const profileBase=deployment===null?root:path.resolve(root,'../../client-state');
++ if(deployment!==null)requireThat(fs.lstatSync(profileBase).isDirectory()&&!fs.lstatSync(profileBase).isSymbolicLink(),'DEPLOYMENT_PROFILE');
++ const profile=path.join(profileBase,(deployment===null?'STAGE4_TEST-profile-':'')+clientId+'-'+crypto.randomUUID());
+  fs.mkdirSync(profile);app.setPath('userData',profile);app.setPath('sessionData',profile);
+  app.disableHardwareAcceleration();app.commandLine.appendSwitch('disable-gpu');
+  protocol.registerSchemesAsPrivileged([{scheme:'stage4-test',privileges:{standard:true,secure:true,supportFetchAPI:true}}]);
+@@ -255,7 +265,8 @@
+   process.stderr.write('STAGE4_TEST configuration received\n');
+   requireThat(cfg.clientId===clientId&&cfg.expectedIdentity?.mode==='TEST'&&cfg.expectedIdentity.data_id?.startsWith('TEST-'),'TEST_CONFIG');
+   requireThat(cfg.expectedIdentity.data_id===JSON.parse(fs.readFileSync(path.join(root,'STAGE4_TEST-data/STAGE4_TEST.json'),'utf8')).data_id,'DATA_PIN');
+-  const nativePath=path.resolve(__dirname,'../stage4-toolchain/peer-build/Release/peer_identity.node');
++  if(deployment!==null)requireThat(same(cfg.deployment,deployment)&&cfg.expectedIdentity.installation_id===deployment.installation&&cfg.expectedIdentity.runtime_build===deployment.packageHash,'DEPLOYMENT_CORE_IDENTITY');
++  const nativePath=deployment===null?path.resolve(__dirname,'../stage4-toolchain/peer-build/Release/peer_identity.node'):deployment.nativePath;
+   configuration={driver:cfg.driver===true};
+   worker=new threads.Worker(__filename,{workerData:{stage4Transport:true,config:{...cfg,nativePath}},env:{SYSTEMROOT:process.env.SYSTEMROOT||process.env.SystemRoot}});
+   worker.on('message',message=>transportQueue.receive(message));

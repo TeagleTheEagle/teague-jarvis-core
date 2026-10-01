@@ -1,0 +1,11 @@
+--- before/tests/lifecycle_stage4/test_coordinator_readiness.py
++++ after/tests/lifecycle_stage4/test_coordinator_readiness.py
+@@ -18,7 +18,7 @@
+ class CoordinatorReadinessTests(unittest.TestCase):
+     def setUp(self):
+         self.c=RestartCampaign();self.root=self.c.r.exclusion.BASE/('TEST-STAGE4-HARNESS-'+uuid.uuid4().hex)
+-        self.root.mkdir();(self.root/'TEST_ONLY').write_text('SYNTHETIC HARNESS TEST ONLY')
++        self.root.mkdir();(self.root/'TEST_ONLY').write_text('NO PRODUCTION SERVICES')
+         self.c.path=self.root/'fixture-records.json';self.real_items=[]
+         self.proc=Mock(pid=self.c.peer['pid'],returncode=None)
+         self.proc.poll.side_effect=lambda:self.proc.returncode

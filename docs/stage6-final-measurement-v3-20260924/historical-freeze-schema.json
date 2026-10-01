@@ -1,0 +1,12 @@
+{
+  "keys": [
+    "utc",
+    "candidateHashes",
+    "mediumEvidence",
+    "archive",
+    "archiveMembersVerified",
+    "protectedAccess",
+    "productionWrites"
+  ],
+  "statement": "Historical 21 AMBIGUOUS / 1 UNMATCHED unchanged; causes UNCONFIRMED"
+}

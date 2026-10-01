@@ -1,0 +1,135 @@
+--- before/stage4_client.cjs
++++ after/stage4_client.cjs
+@@ -104,6 +104,63 @@
+ }
+ module.exports.TransportQueue=TransportQueue;
+ 
++// TEST client-local mechanics only. Core grants authority; this class can only
++// shorten it. No hardware, provider, automatic reacquisition or replay.
++class MediaWatchdog {
++ constructor(call,{epoch,clock=()=>performance.now(),onStop=()=>{},onStart=()=>{}}){
++  this.call=call;this.epoch=epoch;this.clock=clock;this.onStop=onStop;this.onStart=onStart;
++  this.active=new Map();this.serial={capture:0,playback:0};this.pending=new Set();
++ }
++ async start(purpose,requestId=null){
++  requireThat(['capture','playback'].includes(purpose),'MEDIA_PURPOSE');
++  requireThat(!this.active.has(purpose)&&!this.pending.has(purpose),'MEDIA_BUSY');
++  const generation=++this.serial[purpose],sent=this.clock();this.pending.add(purpose);
++  try{
++   const grant=await this.call('media',{purpose,request_id:requestId,lease_id:null});
++   const deadline=this.deadline(grant,sent);
++   requireThat(generation===this.serial[purpose]&&this.clock()<deadline,'MEDIA_STALE');
++   this.active.set(purpose,{id:grant.id,requestId,generation,deadline,renewAt:sent+3000,renewing:false});
++   this.onStart(purpose);return this.snapshot();
++  }finally{if(generation===this.serial[purpose])this.pending.delete(purpose);}
++ }
++ deadline(grant,sent){
++  requireThat(grant?.epoch===this.epoch&&typeof grant.id==='string'&&/^[a-f0-9]{32}$/.test(grant.id)&&
++   Number.isInteger(grant.valid_for_ms)&&grant.valid_for_ms>0&&grant.valid_for_ms<=10000,'MEDIA_GRANT');
++  return sent+grant.valid_for_ms;
++ }
++ stop(purpose,reason='LOCAL_STOP'){
++  requireThat(['capture','playback'].includes(purpose),'MEDIA_PURPOSE');
++  const lease=this.active.get(purpose);++this.serial[purpose];this.pending.delete(purpose);this.active.delete(purpose);
++  this.onStop(purpose,reason);
++  // Stop local output first; Core release is best effort and never grants work.
++  if(lease)return this.call('stop-'+purpose,{lease_id:lease.id}).catch(()=>({result:'LOCAL_STOPPED_RELEASE_UNCONFIRMED'}));
++  return Promise.resolve({result:'LOCAL_STOPPED'});
++ }
++ stopAll(reason){for(const purpose of ['capture','playback'])this.stop(purpose,reason);}
++ guard(purpose,generation,callback){
++  const lease=this.active.get(purpose);
++  if(!lease||lease.generation!==generation||this.clock()>=lease.deadline)return false;
++  callback();return true;
++ }
++ tick(){
++  for(const [purpose,lease] of this.active){
++   const now=this.clock();
++   if(now>=lease.deadline){this.stop(purpose,'LEASE_EXPIRED');continue;}
++   if(now<lease.renewAt||lease.renewing)continue;
++   lease.renewing=true;
++   this.call('media',{purpose,request_id:lease.requestId,lease_id:lease.id}).then(grant=>{
++    if(this.active.get(purpose)!==lease||this.serial[purpose]!==lease.generation)return;
++    if(this.clock()>=lease.deadline){this.stop(purpose,'LEASE_EXPIRED');return;}
++    requireThat(grant.id===lease.id,'MEDIA_CHANGED');
++    const deadline=this.deadline(grant,now);requireThat(this.clock()<deadline,'MEDIA_STALE');
++    lease.deadline=deadline;lease.renewAt=now+3000;lease.renewing=false;
++   }).catch(()=>{if(this.active.get(purpose)===lease)this.stop(purpose,'RENEWAL_DENIED');});
++  }
++ }
++ snapshot(){return {mode:'MODELED_NO_HARDWARE',active:[...this.active].map(([purpose,x])=>({purpose,generation:x.generation,deadline:x.deadline})),pending:[...this.pending]};}
++}
++module.exports.MediaWatchdog=MediaWatchdog;
++
+ // Only an explicitly launched TEST entry point can enter this branch. Native IO
+ // runs on a worker; a blocked pipe cannot block the Electron UI/stop controls.
+ const threads=require('node:worker_threads');
+@@ -146,9 +203,10 @@
+  protocol.registerSchemesAsPrivileged([{scheme:'stage4-test',privileges:{standard:true,secure:true,supportFetchAPI:true}}]);
+  const page='stage4-test://app/'+(clientId==='teague'?'index.html':'intelligence.html');
+  const lines=typeof process.send==='function'?null:require('node:readline').createInterface({input:process.stdin});
+- let worker,win,attached=false,closing=false,configuration,identity=null,heartbeat;
++ let worker,win,attached=false,closing=false,configuration,identity=null,heartbeat,mediaTimer,media;
++ let mediaOffset=0,mediaPartition=false;const mediaTrace=[];
+  let renderedResponse=null;
+- const transportQueue=new TransportQueue(message=>worker.postMessage(message),{onFailure:()=>{attached=false;}});
++ const transportQueue=new TransportQueue(message=>worker.postMessage(message),{onFailure:()=>{attached=false;media?.stopAll('TRANSPORT_LOST');}});
+  const emit=value=>process.stdout.write('STAGE4 '+JSON.stringify(value,(_k,v)=>typeof v==='bigint'?String(v):v)+'\n');
+  function call(op,args={}){
+   if(closing&&op!=='detach')return Promise.reject(Error('CLIENT_CLOSING'));
+@@ -156,7 +214,7 @@
+  }
+  async function close(){
+   if(closing)return;closing=true;
+-  clearInterval(heartbeat);
++  clearInterval(heartbeat);clearInterval(mediaTimer);media?.stopAll('CLIENT_CLOSED');
+   transportQueue.cancelQueued();
+   process.stderr.write('STAGE4_TEST client close; attached='+attached+'\n');
+   try{if(attached)await call('detach');}catch{emit({event:'detach-unconfirmed',expiry_required:true});}
+@@ -181,7 +239,9 @@
+  ipcMain.handle('stage4:ordinary',async(event,op,args)=>{
+   requireThat(win&&!win.isDestroyed() && event.sender===win.webContents && event.senderFrame===win.webContents.mainFrame && event.senderFrame.url===page,'IPC_SENDER');
+   if(op==='connection')return {mode:'STAGE4_TEST',attached,identity,client:clientId,media:'UNAVAILABLE: no hardware capture; silent Core fixture only'};
+-  requireThat(attached&&!closing,'NOT_ATTACHED');return call(op,argsFor(op,args));
++  requireThat(attached&&!closing,'NOT_ATTACHED');argsFor(op,args);
++  if(op==='stop-capture'||op==='stop-playback')return media.stop(op.slice(5),'LOCAL_CONTROL');
++  return call(op,args);
+  });
+  const allowed=new Map([
+   ['/index.html','static/index.html'],['/intelligence.html','intelligence/index.html'],
+@@ -202,7 +262,12 @@
+   worker.on('error',()=>transportQueue.fail('BRIDGE_FAILED'));
+   worker.on('exit',()=>transportQueue.fail('BRIDGE_EXITED'));
+   const result=await call('attach',{scopes:['attach','read','request','media']});identity=result.identity;attached=true;
+-  heartbeat=setInterval(()=>{if(attached&&!closing)call('renew').catch(()=>{attached=false;});},30000);
++  media=new MediaWatchdog((op,args)=>mediaPartition?Promise.reject(Error('MODELED_PARTITION')):call(op,args),{
++   epoch:identity.startup_epoch,clock:()=>performance.now()+mediaOffset,
++   onStart:purpose=>mediaTrace.push({event:'modeled-start',purpose}),
++   onStop:(purpose,reason)=>mediaTrace.push({event:'modeled-stop',purpose,reason})});
++  mediaTimer=setInterval(()=>media.tick(),100);
++  heartbeat=setInterval(()=>{if(attached&&!closing)call('renew').catch(()=>{attached=false;media.stopAll('SESSION_LOST');});},30000);
+   await app.whenReady();const ses=session.fromPartition('stage4-test-'+crypto.randomUUID());
+   ses.setPermissionRequestHandler((_wc,_p,callback)=>callback(false));ses.setPermissionCheckHandler(()=>false);
+   ses.webRequest.onBeforeRequest((details,callback)=>callback({cancel:!details.url.startsWith('stage4-test://app/')}));
+@@ -230,6 +295,21 @@
+  // process IDs, paths, native functions, credentials or lifecycle operations.
+  async function drive(command){
+   requireThat(configuration?.driver&&win&&!win.isDestroyed(),'DRIVER_UNAVAILABLE');
++  if(command.action==='modeled-media'){
++   requireThat(['start','stop','snapshot','advance','partition','callback'].includes(command.control),'MEDIA_DRIVER_CONTROL');
++   let accepted=null,error=null;
++   try{
++    if(command.control==='start')await media.start(command.purpose,command.request_id||null);
++    if(command.control==='stop')media.stop(command.purpose);
++    if(command.control==='partition'){mediaPartition=command.enabled===true;}
++    if(command.control==='advance'){
++     requireThat(Number.isInteger(command.ms)&&command.ms>=0&&command.ms<=11000,'MEDIA_DRIVER_TIME');
++     mediaOffset+=command.ms;media.tick();
++    }
++    if(command.control==='callback')accepted=media.guard(command.purpose,command.generation,()=>mediaTrace.push({event:'modeled-callback',purpose:command.purpose}));
++   }catch(e){error=e.message;}
++   emit({event:'modeled-media',state:media.snapshot(),trace:mediaTrace.slice(-40),accepted,error});return;
++  }
+   if(command.action==='close'){await close();return;}
+   if(command.action==='snapshot'){
+    const result=await win.webContents.executeJavaScript("({ready:document.body.dataset.stage4Ready,connection:document.body.dataset.stage4Connection,request:document.body.dataset.stage4Request||null,done:document.body.dataset.stage4Done||null,status:document.querySelector('[data-stage4-status]')?.textContent,node:typeof require,bridge:Object.keys(window.jarvisStage4||{}),size:[innerWidth,innerHeight]})");emit({event:'snapshot',id:command.id,result});return;

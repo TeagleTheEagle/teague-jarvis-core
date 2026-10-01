@@ -1,0 +1,160 @@
+--- before/tests/lifecycle_stage4/fixtures.py
++++ after/tests/lifecycle_stage4/fixtures.py
+@@ -909,6 +909,8 @@
+     repo=Path(__file__).resolve().parents[2];sys.path.insert(0,str(repo))
+     import threading
+     import stage4_runtime as r
++    if configuration.get('TEST_observe_shutdown_denial') is True:
++        observe_shutdown_denial(r,root)
+     def observe(stage,identity):
+         if stage=='claimed' and configuration.get('TEST_crash_stage')=='claimed':
+             r.exclusion.event(root,'expected_fixture_crash',stage=stage,identity=r.transport.identity(os.getpid()))
+@@ -928,6 +930,39 @@
+                     time.sleep(.02)
+             threading.Thread(target=crash_watch,daemon=True).start()
+     r.serve(root,configuration,start_observer=observe)
++
++
++def observe_shutdown_denial(r,root):
++    """TEST-fixture observer only: delegate unchanged authentication and policy.
++
++    Record no tokens, proofs or enrollment material. A handshake failure never
++    reaches Authority.operation and therefore cannot produce a policy receipt.
++    """
++    original_serve=r.authentication.serve_one
++    def serve_observed(pipe,authority,key,behavior):
++        peer=pipe.peer(server=True)
++        original_operation=authority.operation
++        def operation_observed(client,request,selected):
++            try:return original_operation(client,request,selected)
++            except r.Denied as exc:
++                if (client in ('teague','intelligence') and type(request) is dict and
++                    request.get('op')=='shutdown' and type(request.get('args')) is dict):
++                    operation=request['args'].get('operation');token=request.get('token')
++                    if (type(operation) is str and len(operation)==32 and all(c in '0123456789abcdef' for c in operation)
++                        and type(token) is str):
++                        with authority.context.owners.lock:
++                            session=authority.context.owners.sessions.get(hashlib.sha256(token.encode('ascii')).hexdigest())
++                            scopes=sorted(session.scopes) if session else None
++                        r.exclusion.event(root,'ordinary_shutdown_policy',operation=operation,
++                            authenticated_client=client,peer=peer,core_identity=authority.identity,
++                            protocol=selected,session_client=session.client if session else None,scopes=scopes,
++                            reason=str(exc),policy_reached=any(f.name=='management_capability' for f in traceback.extract_tb(exc.__traceback__)),
++                            state=authority.context.owners.state)
++                raise
++        authority.operation=operation_observed
++        try:return original_serve(pipe,authority,key,behavior)
++        finally:authority.operation=original_operation
++    r.authentication.serve_one=serve_observed
+ 
+ 
+ def restart_coordinator_worker(root,configuration):
+@@ -1259,6 +1294,23 @@
+         self.send(client,'snapshot');return self.receive(client,'snapshot')['result']
+     def shared(self,client):
+         self.send(client,'shared');return self.receive(client,'shared')['result']
++    def shutdown_denial(self,client,core,identity):
++        operation=uuid.uuid4().hex
++        self.send(client,'shutdown-denial',operation=operation)
++        reply=self.receive(client,'shutdown-denial')
++        self.check('ordinary Electron transport rejected shutdown',reply=={'event':'shutdown-denial','operation':operation,'rejected':True})
++        receipts=[x for x in self.events(client['root'],'ordinary_shutdown_policy') if x.get('operation')==operation]
++        self.check('exactly one authenticated shutdown policy receipt',len(receipts)==1,operation=operation)
++        receipt=receipts[0];owner=client['ready']['client']
++        self.check('shutdown reached authority through actual enrolled Electron',
++            receipt['peer']==client['identity'] and receipt['peer']['exe_digest']==core['enrollments'][owner]['exe_digest'] and
++            receipt['authenticated_client']==receipt['session_client']==owner and receipt['core_identity']==identity,receipt=receipt)
++        self.check('shutdown denied for missing lifecycle authority',receipt['policy_reached'] and receipt['reason']=='SCOPE' and
++            set(receipt['scopes'])==self.r.Ownership.ORDINARY and receipt['state']=='RUNNING')
++        self.check('ordinary denial leaves Core and client operational',self.shared(client)['data_id']==identity['data_id'] and
++            self.r.transport.identity(identity['pid'])=={k:identity[k] for k in ('pid','created','exe_digest')} and
++            not (client['root']/'stop').exists())
++        return receipt
+     def model(self,client,control,**args):
+         self.send(client,'modeled-media',control=control,**args);return self.receive(client,'modeled-media')
+     def start_client(self,root,core,identity,owner):
+@@ -1382,7 +1434,8 @@
+     campaign=ClientCampaign();campaign.path=BASE/('human-lifecycle-'+uuid.uuid4().hex+'.json')
+     core=None;identity=None;root=None
+     try:
+-        root,data=campaign.namespace();core=campaign.electron_config(data);coordinator,identity=campaign.start(root,core)
++        root,data=campaign.namespace();core=campaign.electron_config(data);core['TEST_observe_shutdown_denial']=True
++        coordinator,identity=campaign.start(root,core)
+         campaign.close(coordinator)
+         token=campaign.attach(core,identity,'controller')
+         a=campaign.start_client(root,core,identity,'teague');b=campaign.start_client(root,core,identity,'intelligence')
+@@ -1396,9 +1449,8 @@
+             value=input('Type '+command+' (or anything else to stop this session): ').strip()
+             campaign.check('human explicit '+command,value==command,operator_input=True,timestamp=time.time())
+         step('DENIAL','Check an ordinary TEST client has no Core shutdown authority.')
+-        ordinary=campaign.attach(core,identity,'teague')
+-        result=campaign.core_call(core,identity,'teague','shutdown',{'operation':uuid.uuid4().hex},ordinary)
+-        campaign.check('human ordinary shutdown denial observed',result.get('result')=='DENIED');print('Ordinary shutdown:',result['result'])
++        campaign.shutdown_denial(a,core,identity)
++        campaign.check('human ordinary shutdown denial observed',True);print('Ordinary shutdown: DENIED (authenticated Electron; Core policy SCOPE)')
+         step('CRASH','Crash only this disposable Intelligence TEST renderer. Core and Teague must continue.')
+         campaign.close_client(b,crash=True)
+         status=campaign.core_call(core,identity,'controller','lifecycle-status',token=token)
+@@ -1432,7 +1484,62 @@
+     if any(not x['passed'] for x in campaign.records):raise RuntimeError('Human acceptance incomplete; evidence preserved')
+     print('HUMAN TEST LIFECYCLE PASS; all TEST clients and Core exited.')
+ 
++
++def human_denial_probe():
++    """Automated actual-Electron validation; never supplies human confirmations."""
++    campaign=ClientCampaign();campaign.path=BASE/('human-denial-probe-'+uuid.uuid4().hex+'.json')
++    root=core=identity=None
++    try:
++        root,data=campaign.namespace();core=campaign.electron_config(data);core['TEST_observe_shutdown_denial']=True
++        coordinator,identity=campaign.start(root,core);campaign.close(coordinator)
++        controller=campaign.attach(core,identity,'controller')
++        a=campaign.start_client(root,core,identity,'teague');b=campaign.start_client(root,core,identity,'intelligence')
++        # Negative control: the old Python/Electron mismatch stays rejected and
++        # cannot be mistaken for an authenticated shutdown policy result.
++        invalid_operation=uuid.uuid4().hex
++        try:campaign.core_call(core,identity,'teague','shutdown',{'operation':invalid_operation})
++        except campaign.r.authentication.Denied:handshake_rejected=True
++        else:handshake_rejected=False
++        campaign.check('Python cannot impersonate Electron enrollment',handshake_rejected)
++        campaign.check('handshake rejection produces no shutdown policy receipt',
++            not any(x.get('operation')==invalid_operation for x in campaign.events(root,'ordinary_shutdown_policy')))
++        for client in (a,b):
++            campaign.shutdown_denial(client,core,identity)
++            campaign.send(client,'boundaries');boundaries=campaign.receive(client,'boundaries')['result']
++            campaign.check('renderer gains no lifecycle or production bridge',boundaries['shutdownExposed'] is False and boundaries['productionBridge'] is False)
++        status=campaign.core_call(core,identity,'controller','lifecycle-status',token=controller)
++        campaign.check('separate owner controller remains authorized',status['state']=='RUNNING')
++        campaign.close_client(b,crash=True)
++        campaign.check('controller and Teague survive TEST renderer crash',campaign.shared(a)['data_id']==data and
++            campaign.core_call(core,identity,'controller','lifecycle-status',token=controller)['state']=='RUNNING')
++        result=campaign.core_call(core,identity,'controller','emergency-stop',{'operation':uuid.uuid4().hex},controller)
++        campaign.check('separate owner emergency authority remains intact',result['state']=='SUSPENDED')
++        campaign.check('owner emergency retains exact Core identity',campaign.r.transport.identity(identity['pid'])==
++            {k:identity[k] for k in ('pid','created','exe_digest')})
++        result=campaign.core_call(core,identity,'controller','shutdown',{'operation':uuid.uuid4().hex},controller)
++        campaign.check('separate owner shutdown authority remains intact',result['state'] in ('DRAINING','FINALIZING'))
++        campaign.wait_dead(root,identity);campaign.close_client(a)
++    except BaseException as exc:
++        campaign.records.append({'case':'automated human-denial probe incomplete','passed':False,'error':type(exc).__name__,'traceback':traceback.format_exc()})
++    finally:
++        for client in campaign.clients:
++            if client['process'].poll() is None:
++                try:client['process'].stdin.close();client['process'].wait(10)
++                except Exception as exc:campaign.records.append({'case':'probe client cleanup incomplete','passed':False,'error':type(exc).__name__})
++        if identity and campaign.r.exclusion.process_identity(identity['pid'])=={'pid':identity['pid'],'created':identity['created']}:
++            try:campaign.stop(root,core,identity)
++            except Exception as exc:campaign.records.append({'case':'probe Core cleanup incomplete','passed':False,'error':type(exc).__name__})
++        for item in campaign.coordinators:
++            if item['process'].poll() is None:
++                try:campaign.close(item)
++                except Exception as exc:campaign.records.append({'case':'probe coordinator cleanup incomplete','passed':False,'error':type(exc).__name__})
++        campaign.records.append({'case':'automated probe is not human acceptance','passed':True,'human_actions_supplied':False})
++        campaign.save();print('EVIDENCE',campaign.path)
++    if any(not x['passed'] for x in campaign.records):raise RuntimeError('Human denial probe failed; evidence preserved')
++    print('Automated human-denial checks',len(campaign.records),'PASS')
++
+ if __name__=='__main__':
++    if '--human-denial-probe' in sys.argv:human_denial_probe();raise SystemExit(0)
+     if '--human-lifecycle' in sys.argv:human_lifecycle_acceptance();raise SystemExit(0)
+     if '--client-state-media' in sys.argv:ClientCampaign().run_clients();raise SystemExit(0)
+     if '--restart-smoke' in sys.argv:RestartCampaign().run('smoke')

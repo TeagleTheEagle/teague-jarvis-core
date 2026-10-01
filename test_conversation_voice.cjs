@@ -1,0 +1,24 @@
+const assert=require('node:assert/strict');
+const Voice=require('./static/voice.js');
+(async()=>{
+ let idle=0,commands=0;
+ const voice=new Voice({wake:()=>{},status:()=>{},idle:()=>{idle++;voice.resume();},command:async()=>{commands++;voice.pause();},error:e=>{throw e;}});
+ voice.active=true;voice.arm();
+ for(let n=0;n<80;n++)voice.frame(new Int16Array(5120),0);
+ assert.equal(idle,1);assert.equal(voice.session,true);assert.equal(voice.armed,true);assert.ok(voice.frames.length<=4);
+ voice.frame(new Int16Array(5120).fill(2000),0);
+ for(let n=0;n<3;n++)voice.frame(new Int16Array(5120),0);
+ assert.equal(commands,0,'A short pause must not submit');
+ await voice.finish();assert.equal(commands,1);assert.equal(voice.armed,false);
+ voice.resume();assert.equal(voice.armed,true,'Reply completion reopens listening');
+ voice.endConversation();voice.resume();assert.equal(voice.armed,false);assert.equal(voice.session,false);
+ assert.equal(Voice.isEndPhrase('Thank you, Jarvis.'),true);
+ assert.equal(Voice.isEndPhrase('Thank you, Travis.'),true);
+ assert.equal(Voice.isEndPhrase('All right. Thank you, Jeremy.'),true);
+ assert.equal(Voice.isEndPhrase('Thank you, Travis, now open my notes.'),false);
+ assert.equal(Voice.isEndPhrase('Explain the glasses. Thank you.'),false);
+ assert.equal(Voice.isEndPhrase('Can you say thank you Jarvis to me?'),false);
+ assert.equal(Voice.isEndPhrase('Thank you Jarvis but one more thing'),false);
+ voice.stop();
+ console.log('Conversation mode: persistent session, single nudge, pause tolerance, resume and exact end phrase passed.');
+})().catch(e=>{console.error(e);process.exitCode=1;});

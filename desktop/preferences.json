@@ -1,0 +1,6 @@
+{
+  "requestedPrimaryDisplayScreenshots": true,
+  "emergencyStopShortcut": "CommandOrControl+Alt+Shift+X",
+  "microphoneAllowed": true,
+  "micOnLaunch": true
+}

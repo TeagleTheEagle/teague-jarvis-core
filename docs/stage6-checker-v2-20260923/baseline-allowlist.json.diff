@@ -1,0 +1,10 @@
+--- D:\JARVIS-STAGE6-LIVE\978b5ce769244ec9a580fb0846f9bfdc\code\baseline-allowlist.json
++++ D:\JARVIS-STAGE6-LIVE\2d922197cf7d4bb098d8da6e070cbff2\code\baseline-allowlist.json
+@@ -1,6 +1,6 @@
+ {
+   "syntheticRoots": [
+-    "D:\\JARVIS-STAGE6-LIVE\\693f0cd17ff4419aaf404604a23edc5f\\code\\small-synthetic"
++    "D:\\JARVIS-STAGE6-LIVE\\2d922197cf7d4bb098d8da6e070cbff2\\code\\small-synthetic"
+   ],
+   "approvedProtectedRoots": [],
+   "realProtectedAccess": false

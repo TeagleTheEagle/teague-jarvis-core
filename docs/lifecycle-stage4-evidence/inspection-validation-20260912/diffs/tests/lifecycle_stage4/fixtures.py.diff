@@ -1,0 +1,77 @@
+--- before/tests/lifecycle_stage4/fixtures.py
++++ after/tests/lifecycle_stage4/fixtures.py
+@@ -254,8 +254,21 @@
+ def bind_inspection_fixture(context):
+     """Synthetic panels, actual singleton worker/archive. No capture or provider."""
+     from interface_inspection import new_evidence
++    import workspaces
+     h = context.__class__.__module__
+     h = sys.modules[h].exclusion
++    # A fresh synthetic Store has no improvement project. Use the existing API
++    # and bind the existing TEST archive instance to that TEST project; do not
++    # manufacture a production project ID or change Archive/Store semantics.
++    with context.app.store.connect() as db:
++        if db.execute('SELECT count(*) FROM workspaces').fetchone()[0] != 0:
++            raise ValueError('Inspection fixture requires fresh synthetic storage')
++    project = workspaces.change(context.app.store, {'action':'create','name':'STAGE4_TEST inspection archive'})['id']
++    context.app.inspection_archive.project = project
++    with context.app.store.connect() as db:
++        if db.execute('SELECT name FROM workspaces WHERE id=?',(project,)).fetchone()[0] != 'STAGE4_TEST inspection archive':
++            raise ValueError('TEST archive project verification failed')
++    h.event(context.root, 'inspection_fixture_ready', project_id=project)
+     def runner(request, cancel):
+         h.event(context.root, 'inspection_panel_started')
+         if not cancel.wait(5):
+@@ -264,15 +277,21 @@
+         result['limitations'] = ['STAGE4_TEST synthetic panel; no screen/media/provider access']
+         return result
+     def finish(job):
+-        h.event(context.root, 'inspection_archive_started', status=job['status'], panels=len(job['results']))
+-        until = time.monotonic()+5
+-        while not (context.root/'inspection-release').exists():
+-            if time.monotonic() >= until:
+-                raise TimeoutError('TEST archive release was not received')
+-            time.sleep(.01)
+-        result = context.app.inspection_archive.save(job)
+-        h.event(context.root, 'inspection_archive_finished', status=result['status'], job_id=job['id'])
+-        return result
++        operation = 'TEST archive release wait'
++        try:
++            h.event(context.root, 'inspection_archive_started', status=job['status'], panels=len(job['results']))
++            until = time.monotonic()+5
++            while not (context.root/'inspection-release').exists():
++                if time.monotonic() >= until:
++                    raise TimeoutError('TEST archive release was not received')
++                time.sleep(.01)
++            operation = 'Archive.save synthetic inspection'
++            result = context.app.inspection_archive.save(job)
++            h.event(context.root, 'inspection_archive_finished', status=result['status'], job_id=job['id'])
++            return result
++        except Exception as exc:
++            h.event(context.root, 'inspection_archive_failed', **fault(exc,operation,context.data/'inspection-archive'))
++            raise  # Preserve UNKNOWN/fail-closed outcome; never retry or settle.
+     context.inspection_runner = runner
+     context.inspection_finish = finish
+ 
+@@ -406,6 +425,7 @@
+             record('owner emergency suspends but does not shut down Core',state['state']=='SUSPENDED' and core.poll() is None)
+             record('suspended Core refuses new work',call('teague','request',{'text':'what time is it'}).get('result')=='DENIED')
+         if final_case.startswith('inspection-'):
++            record('synthetic archive prerequisite verified before request',len(list(root.glob('*-inspection_fixture_ready.json')))==1)
+             started=call('teague','inspection-start',{'request':{'panel':'all'}})
+             inspection=started['request_id']
+             record('inspection is explicitly synthetic without capture',started['capture']=='UNAVAILABLE_SYNTHETIC_ONLY')
+@@ -456,6 +476,13 @@
+             # Use the actual advertised isolated Store root, not source data.
+             target=Path(ready['data_root'])/'inspection-archive'/(archived['job_id']+'.md')
+             record('actual archive callback completed and file preserved',archived['status']=='archived' and target.is_file())
++            import sqlite3
++            # Independent read-only verification after Core exit, using the same
++            # canonical TEST Store and the real archive/document/project tables.
++            with sqlite3.connect((Path(ready['data_root'])/'jarvis.sqlite3').as_uri()+'?mode=ro',uri=True) as db:
++                record('one archive record and linked document in canonical TEST state',db.execute(
++                    'SELECT count(*) FROM inspection_records i JOIN documents d ON d.id=i.document JOIN workspace_links l ON l.project=i.project AND l.ref=d.id WHERE i.id=?',
++                    (archived['job_id'],)).fetchone()[0]==1)
+             record('cancelled inspection journal terminal after cleanup',any(r['operation']==inspection and r['phase']=='FAILED' for r in rows))
+             record('no second panel or duplicate archive',len(list(root.glob('*-inspection_panel_started.json')))==1 and len(list(root.glob('*-inspection_archive_finished.json')))==1)
+         if final_case=='deadline':record('failed original shutdown remains failed in journal',any(r['operation']==first_stop and r['phase']=='FAILED' for r in rows))

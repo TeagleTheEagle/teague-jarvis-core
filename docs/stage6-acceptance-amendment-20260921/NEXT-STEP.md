@@ -1,0 +1,17 @@
+# Next proposed step — durable-segment implementation and focused qualification
+
+Proposal only. Not executed by the contract-amendment pass. No medium/large validation is authorized here.
+
+1. Freeze before hashes and copy only the validation-infrastructure candidate into a new bounded D: workspace. Preserve every earlier candidate and failure.
+2. Implement the reviewed single-writer / bounded-finalizer design, with explicit RECEIVED, SERIALIZED, WRITTEN, SEGMENT_CLOSED, DURABLY_COMMITTED, HASH_VERIFIED and MANIFEST_COMMITTED states. Distinguish managed buffering from OS/cache writes and durable completion.
+3. Transfer exclusive ownership of the same original open segment handle to the finalizer. SEGMENT_CLOSED is a logical seal; no subsequent append or shared access. Finalizer performs the required durable flush and actual-byte readback/hash/sequence validation before closing. Do not infer durable completion from handle closure or an incremental digest alone.
+4. Bound queued plus in-service bytes, segments and handles. Preserve the existing ingestion limits and all deadlines. Measure finite candidate segment/batch sizes and durable service rate; do not hide a sustained capacity deficit by enlarging queues. Any needed limit or deadline change requires review first.
+5. Make failures sticky: rejected admission, partial write, failed handoff, finalizer/worker crash, missing/corrupt segment, flush/hash failure, simulated disk-full and incomplete manifest must prevent an acceptance seal. Preserve diagnostic prefixes without upgrading them to successful runs.
+6. Run focused sacrificial writer/reader tests only: exclusive handle ownership; no late append; contiguous record order; independent readback; correct state counters; fault injection; finite backlog and closure. Measure writer and durable-finalizer throughput separately. Preserve the EventIdentifier correction and exact queue-removal semantics.
+7. Independently prove the actual kernel stream satisfies the new contract: provider/capture identity, genuine START/STOP, complete launch/descendant inventory, capture-sequence integrity, durable ordered segments, no ETW loss, handle/native corroboration, and honest supporting CIM correlation. Use bounded fresh probes and PID-reuse evidence; do not substitute old results or model fixtures for required actual process proof.
+8. Only after both components pass, integrate into a fresh TEST checker/collector and perform focused integration against small sacrificial data. Do not merely remove legacy CIM rejection lines. The run manifest and checker must name `STAGE6-TEST-KERNEL-INSTANCE-20260921-v1` and preserve raw ambiguous/unmatched events.
+9. Verify cleanup, zero matching diagnostic processes/traces, source preservation, durable finalization and archive hashes. Stop with results and the proposed medium procedure for owner review. Do not execute medium/large or protected capture.
+
+Likely validation-only artifacts: `AuthoritativeEvents.cs`, its reader/manifest verifier, `cleanup_checker.py`, `process_instances.py`, the TEST monitor's kernel/CIM capture adapters, `baseline_finalize.py`, and focused tests. Inspect each current boundary before selecting exact edits; production JARVIS modules are excluded.
+
+Rollback: retain unchanged old candidates; abandon the new unaccepted candidate and keep all failed evidence. Do not rewrite the versioned contract or historical results. Any requested contract reversal needs a new explicit version.

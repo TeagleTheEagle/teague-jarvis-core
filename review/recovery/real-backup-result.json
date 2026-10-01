@@ -1,0 +1,58 @@
+{
+  "backup": {
+    "status": "backup_verified",
+    "id": "03f021f6a4ba4a96995b1318ba18f32c",
+    "files": 161,
+    "bytes": 2093277,
+    "database_counts": {
+      "items": 6,
+      "messages": 725,
+      "reminders": 0,
+      "settings": 12,
+      "audit": 411,
+      "feedback": 8,
+      "documents": 1,
+      "task_meta": 0,
+      "research": 11,
+      "workspaces": 1,
+      "workspace_links": 1,
+      "turn_evidence": 11,
+      "inspection_records": 0,
+      "inspection_findings": 0,
+      "inspection_finding_sources": 0,
+      "inspection_finding_events": 0
+    },
+    "exclusions": [
+      "API credentials (.env); keep/reconfigure separately",
+      "Python/Node runtimes and installed dependencies; reinstall from requirements/lockfile",
+      "Downloaded speech/wake model caches; recreate with setup scripts",
+      "Temporary captures, logs and review/test artifacts outside saved data",
+      "Windows shortcuts and Electron/browser cache; recreate on recovery"
+    ]
+  },
+  "rehearsal": {
+    "status": "restore_rehearsal_passed",
+    "id": "03f021f6a4ba4a96995b1318ba18f32c",
+    "checked_at": 1788932314.0100923,
+    "files": 161,
+    "database_counts": {
+      "items": 6,
+      "messages": 725,
+      "reminders": 0,
+      "settings": 12,
+      "audit": 411,
+      "feedback": 8,
+      "documents": 1,
+      "task_meta": 0,
+      "research": 11,
+      "workspaces": 1,
+      "workspace_links": 1,
+      "turn_evidence": 11,
+      "inspection_records": 0,
+      "inspection_findings": 0,
+      "inspection_finding_sources": 0,
+      "inspection_finding_events": 0
+    },
+    "scope": "Extracted and hash-checked every saved file in a disposable folder; SQLite integrity and table counts match. Live app untouched. Restored code was not executed; dependencies, credentials and hardware not tested."
+  }
+}

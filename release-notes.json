@@ -1,0 +1,86 @@
+[
+  {
+    "date": "2026-09-09",
+    "title": "Optional Gemini conversation provider",
+    "summary": "Adds Gemini 2.5 Flash through Google's compatibility endpoint. Existing context, tools, evidence guards and voice settings are retained. Local masked setup tests a generic reply before saving the provider selection. No automatic provider fallback. Initial adapter waits for a complete response; streaming optimisation remains separate.",
+    "validation": "110 offline Python tests passed, including five Gemini adapter checks. Local setup imports passed. Live account access, tool use, answer quality, voice and latency have not yet been tested. Creating a key does not prove free-tier eligibility."
+  },
+  {
+    "date": "2026-09-09",
+    "title": "Persistent state-coloured hologram and voice latency profiling",
+    "summary": "Adaptive hologram rail across workspaces; violet thinking, amber tool execution, teal transcription acceptance, red errors, breathing and subtle pointer parallax. Listening pill visually hidden with accessible status retained. In-memory development voice timing report and configurable endpoint waiting, default 1.28 seconds instead of 2.56. Existing provider, memory, personality and evidence guards retained.",
+    "validation": "105 Python tests passed and all 13 pages checked at five viewport sizes with no page errors or horizontal overflow. Deterministic PCM endpoint test: 2560 ms before, 1280 ms after. This is endpoint waiting only, not measured total voice latency. End-to-end live BEFORE/AFTER remains unmeasured; no early unchecked LLM speech or speculative STT calls introduced."
+  },
+  {
+    "date": "2026-09-09",
+    "title": "Audio-reactive holographic voice core",
+    "summary": "Shared wire-sphere renderer for the main, compact and floating holograms. Actual playback samples drive the central waveform with RMS smoothing, frequency-band ring and particle response, and energy-rise pulses. Listening uses measured microphone level; thinking, processing, interruption and error transitions are distinct. Reduced motion and hidden-canvas drawing limits are respected. Existing audio providers and controls are retained.",
+    "validation": "105 Python tests and 13 desktop tests passed. Real Web Audio oscillator tests confirm loud/quiet response and smooth silence decay, with output muted. All 13 app pages rendered without JavaScript errors. Floating companion renderer loaded and processed sample fixtures. Configured-provider speech audibility and physical-device 60 FPS have not been measured. Browser speech synthesis has no accessible waveform and is not represented with invented audio."
+  },
+  {
+    "date": "2026-09-09",
+    "title": "Teague Industries visual system",
+    "summary": "Shared navy surface, typography and spacing tokens across all 13 sections; compact persistent voice shell; contextual communications rail; real record counts; project cards and linked-record filters; memory search; task and mission-log filters; document display modes and inspector; session web searches; structured diagram canvas; grouped settings; reduced-motion preference; release details and Ctrl+K command palette. Existing controls and action handlers are retained.",
+    "validation": "105 existing Python tests passed. Isolated browser checks cover all 13 pages at 1920x1080, 2560x1440, 3840x2160, 1280x800 and 720x640; no page-level horizontal overflow or JavaScript errors. Settings category navigation, original element IDs, palette keyboard task opening, memory search and task filters passed. Native verification and scope limits are recorded in review/visual-overhaul/VALIDATION.md. Live providers, native audio and every external action were not tested."
+  },
+  {
+    "date": "2026-09-09",
+    "title": "Conversational briefings with expandable evidence",
+    "summary": "Briefing replies and voice replay use natural sentences and up to three headlines. Raw links, repeated timestamps and technical source records are kept in expandable on-screen details. Existing voice provider remains unchanged. Missing data and older headlines are still labelled.",
+    "validation": "42 Python checks passed. Browser coverage checks conversational reply text and expandable evidence. Native voice audibility not tested. Expanded details are delivered for the current response; older chat history retains the conversational text only."
+  },
+  {
+    "date": "2026-09-09",
+    "title": "Integrated desktop header and bold JARVIS heading",
+    "summary": "Windows uses a hidden native title bar with matching dark window-control overlay. The application header provides a draggable region with clickable navigation and reserved space for native minimise, maximise and close controls. JARVIS heading uses bold weight 800.",
+    "validation": "Desktop JavaScript syntax checks passed. Electron documented hidden-title-bar and native overlay APIs used. Requires desktop restart; native dragging and caption controls have not yet been runtime-tested."
+  },
+  {
+    "date": "2026-09-09",
+    "title": "Fresh briefing evidence and bounded action receipts",
+    "summary": "Daily briefings read outstanding tasks, reminders and the actual project registry. Each section reports check time, empty/failure/stale states and coverage. Common unsupported action-completion phrases are replaced with actual current-request receipts. Evidence notes include failure and check times. Simple briefings bypass chat-model inference.",
+    "validation": "42 offline Python checks and one isolated Chrome UI test passed; Python and JavaScript syntax checks passed. Chrome used real backend-generated fixture events with external providers mocked. Live Electron loading, news services and native speech were not tested. Completion-claim checks are bounded patterns, not universal fact verification."
+  },
+  {
+    "date": "2026-09-09",
+    "title": "Desktop backup access corrected",
+    "summary": "Completed backups are copied into a new sibling file before publication, inheriting the backup folder's existing permissions. Moving a ZIP out of an owner-only temporary folder had preserved Codex-only access. No ACLs or Windows security settings are changed. Verification uses temporary storage beside the archive and errors identify the rehearsal stage.",
+    "validation": "14 recovery/HTTP checks passed. The old archive's ACL excluded the desktop user; the replacement inherited user access. Replacement backup 50fe5f453d084b32aec90bad88b4edd0 (3:56:25 PM, 164 files) passed restore rehearsal through the running Electron desktop UI. File hashes, SQLite integrity and table counts matched; restored code and hardware were not executed/tested."
+  },
+  {
+    "date": "2026-09-09",
+    "title": "Recovery failure diagnostics",
+    "summary": "Recovery errors now show the failed operation and exception code without exposing private exception text. This improves diagnosis of the reported desktop restore failure; it does not establish its cause or fix it.",
+    "validation": "12 recovery and HTTP checks passed. The existing real backup passed a fresh command-line rehearsal and an authenticated HTTP rehearsal. The user's desktop-only failure was not reproduced and needs a retry after loading this update."
+  },
+  {
+    "date": "2026-09-09",
+    "title": "Verified local backup and separate-folder recovery",
+    "summary": "Settings can create a backup of the complete saved SQLite database, saved data folders and application source; verify every archived file; rehearse restoration; or recover into a new folder without overwriting the working app. API credentials, dependencies and downloaded model caches are excluded. Backups remain local and unencrypted. Update-history records now tolerate identical clock ticks.",
+    "validation": "38 offline Python checks passed, including backup, committed WAL data, corruption rejection, path checks, overwrite protection, authentication and update-history clock collisions. One isolated Chrome recovery-controls test and syntax checks passed. Recovered code execution, native devices and live cloud services were not tested. Real-backup rehearsal receipts are stored alongside backups."
+  },
+  {
+    "date": "2026-09-09",
+    "title": "Unified update history and service evidence checks",
+    "summary": "Change History combines JARVIS proposals, curated release notes, and automatic local source snapshots. Main script fingerprints show whether loaded code matches disk. Service-status questions use actual session check records; a bounded guard replaces service-success claims with those records. Replies display tool-evidence scope.",
+    "validation": "47 offline Python tests, one isolated Chrome UI test, timer fast-path regression and JavaScript syntax checks passed. Model/service test-success claims covered by bounded deterministic checks. Native audio and live external services were not tested; this is not universal factual verification."
+  },
+  {
+    "date": "2026-09-09",
+    "title": "Timer replies retain the configured JARVIS voice",
+    "summary": "Direct timer lookup avoids the chat model. Timer speech uses the configured provider and says when checked to account for synthesis delay.",
+    "validation": "Timer-routing and speech-cancellation tests passed. User confirmed the earlier device-voice version gave correct time; the restored cloud voice was not independently heard by Codex."
+  },
+  {
+    "date": "2026-09-09",
+    "title": "Hologram and stop-command wording fixes",
+    "summary": "Added enable hologram, show a hologram, and repeated stop phrases to narrow command routing.",
+    "validation": "Automated command and cancellation checks passed. User reported hologram working; screenshot showed Stop talking acknowledged, but audio stopping was not independently measured."
+  },
+  {
+    "date": "2026-09-09",
+    "title": "Assistant capabilities package",
+    "summary": "Installed 11 files adding inspection archive and improvement tracking, acknowledged controls, timer and memory management, and response timing records.",
+    "validation": "Installation receipt verified all 11 reviewed files at installation. Subsequent edits change those hashes. Review and test evidence: review/capabilities-update. Not a certification of every feature."
+  }
+]

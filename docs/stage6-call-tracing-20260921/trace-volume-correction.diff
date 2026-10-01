@@ -1,0 +1,25 @@
+--- preserved-first-diagnostic/call_trace.py
++++ followup-diagnostic/call_trace.py
+@@ -6,6 +6,9 @@
+ def wrap(name,fn):
+  def measured(*args,**kwargs):
+   global OVERFLOW
++  # Enumerated-process API repetition is covered by whole-scan/discovery spans.
++  # Keep exact launch, sampler and independent observer calls; never enlarge cap.
++  if getattr(LOCAL,'value','background')=='background' and name.startswith(('probe_timing.','evidence_support.')):return fn(*args,**kwargs)
+   last=c.get_last_error();begin=ticks();tid=threading.get_native_id();error=None;result=None
+   c.set_last_error(last)
+   try:result=fn(*args,**kwargs);return result
+@@ -29,6 +32,12 @@
+  old=getattr(obj,name);RESTORE.append((obj,name,old));setattr(obj,name,wrap(prefix+'.'+name,old))
+ def install():
+  import probe_timing as p,bounded_sampler as b,evidence_support as e
++ original_observe=p.Probe.observe
++ def observed(self):
++  label('probe-independent-observer:'+str(self.process.pid))
++  return wrap('probe.independent_observer_total',original_observe)(self)
++ p.Probe.observe=observed
++ patch(e.TreeTracker,'scan','tree');patch(e.TreeTracker,'add','tree')
+  for name in ('CreateProcess','CreatePipe','DuplicateHandle','GetStdHandle','CloseHandle','GetFileType'):patch(subprocess._winapi,name,'winapi')
+  for name in ('_get_handles','_get_devnull','_make_inheritable','_execute_child'):patch(subprocess.Popen,name,'Popen')
+  patch(subprocess,'list2cmdline','subprocess')

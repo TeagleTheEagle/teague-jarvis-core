@@ -1,0 +1,26 @@
+--- before/deployment_test/bootstrap.py
++++ final/deployment_test/bootstrap.py
+@@ -28,19 +28,15 @@
+     role=sys.argv[1];binding=Binding(sys.argv[2],maintenance=role=='--control')
+     need(binding.app==APP and Path(sys.executable).resolve()==RELEASE/'python/python.exe','PACKAGE_RUNTIME_IDENTITY')
+     binding.verify_package(hold=True)
+-    # Restrict this process's code reads to the explicit release. System DLLs
+-    # remain OS dependencies; data access is further restricted by Stage 4.
+-    def no_external_code(event,args):
+-        if event=='open' and isinstance(args[0],str):
+-            target=Path(args[0]).resolve()
+-            if target.suffix.lower() in ('.py','.pyc','.pyd'):
+-                need(target.is_relative_to(RELEASE),'SOURCE_TREE_EXECUTION_DENIED')
+-    sys.addaudithook(no_external_code)
++    from deployment_test.update_io import install
+     import stage4_runtime as r
++    if role=="--control":
++        from deployment_test import upgrade  # verified fixed control code, before execution freeze
+     r.configure_deployment(binding)
+     raw=sys.stdin.readline(262145)
+     need(0<len(raw)<=262144,'BOOTSTRAP_INPUT_LIMIT')
+     request=json.loads(raw)
++    install(RELEASE, update_control=role=="--control" and request.get("body",{}).get("action") in ("stage-update","stage-rollback","enroll-update","commit-update","abort-update"))
+     try:
+         if role=='--control':
+             action=request.get('body',{}).get('action')

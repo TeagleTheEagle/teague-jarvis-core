@@ -1,0 +1,11 @@
+--- 
++++ 
+@@ -50,6 +50,8 @@
+   bridge.install()
+   collector.Managed=Managed;collector.Probe=Probe;secondary_sampling.query=query
+   marks.add('COLLECTOR_START',case=case)
++  from baseline_contract import advance
++  advance(root,'PREPARED','OBSERVERS_READY')
+   result=collector.main(root)
+   status='RETURNED' if result==0 else 'FAILED';marks.add('COLLECTOR_RETURN',exitCode=result)
+   return result

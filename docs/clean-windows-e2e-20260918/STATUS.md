@@ -1,0 +1,13 @@
+# STATUS: PARTIAL — STOP FOR REVIEW
+
+Phase A completed; eight hardening source hashes match. A full independent disposable clone was successfully created from CLEAN-WIN11-BASELINE and started. Only its five-file prerequisite bundle was shared, explicitly read-only. No setup, dependency install, provider call, credential transfer, JARVIS launch or guest tests occurred.
+
+Snapshot-preservation finding: post-operation original .vbox SHA256 differs. Its .vbox-prev SHA256 exactly matches the recorded pre-operation original. The diff adds localhost-reachable="true" to three NAT elements (including saved snapshot configuration) and removes transient guest properties. The snapshot name/UUID list remains identical. Original VM was not booted or restored by our commands. These are metadata changes observed after VirtualBox clone/registration/start operations; no claim of unchanged snapshot configuration or changed guest disk content is made. No before/after disk-content hashes were taken. No automatic restoration or config correction was attempted.
+
+This is a genuine review boundary under the instruction to not otherwise alter protected snapshots. Validation stops before owner guest commands. The disposable VM remains running for review; original configuration and .vbox-prev remain in place. Do not delete or restore them without a reviewed action. Protected snapshot metadata cannot be described as byte-for-byte untouched.
+
+Exact clone: JARVIS-E2E-DISPOSABLE-20260918 / 65b44206-338e-4674-a64e-e69ff13fe75b. Original: JARVIS-CLEAN-WIN11 / 5dc3824d-8abc-476c-bc9e-b8170b6337d8. New clone clipboard/dragdrop disabled, explicit readonly prerequisite share only. Automatic review rejected the first missing-readonly command before execution; the corrected command used the installed CLI's documented --readonly flag.
+
+Guest initial OS/prerequisite versions, execution policy, installation, STT/voice, regressions, functional outcomes and repeatability: NOT RUN / UNVERIFIED. No guest policy failure is claimed. Existing host policy limitation remains historical evidence, not a guest result. Manual official Python 3.12/Node24/VC++ prereqs are required by current docs; pip transitive dependencies and models remain incompletely locked. End-to-end suitability for another clean machine is not established.
+
+Production runtime behavior unchanged. No source correction, credential read/copy, production data or VM snapshot restore. Evidence: PHASE-A.md, source-verification.json, preflight-bundle-hashes.json, snapshots-before/after.txt, vm-config-before.json, clone-verification.json, original-config-difference.txt, STOP-RESULT.json. The initial OWNER-FIRST-CHECK instructions are pending and must not run until this preservation finding is reviewed.

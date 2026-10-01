@@ -1,0 +1,641 @@
+--- D:\JARVIS-STAGE6-LIVE\fb0bf86657a64aff85a1799db37e94c7\code\authority_trace_v3.cpp
++++ D:\JARVIS-STAGE6-LIVE\d45028a56e344926a311c04ba01f6a80\code\authority_trace_v3.cpp
+@@ -32,10 +32,10 @@
+ static ULONGLONG Number(EVENT_RECORD* e,const wchar_t* name,bool* found=nullptr){std::vector<BYTE> v;bool ok=Field(e,name,v)&&(v.size()==4||v.size()==8);if(found)*found=ok;if(!ok)return 0;ULONGLONG n=0;memcpy(&n,v.data(),v.size());return n;}
+ static std::wstring Text(EVENT_RECORD* e,const wchar_t* name){std::vector<BYTE> v;if(!Field(e,name,v)||v.size()<2)return L"";const wchar_t* w=reinterpret_cast<const wchar_t*>(v.data());size_t n=v.size()/2;size_t end=0;while(end<n&&w[end])++end;return std::wstring(w,end);}
+ static std::vector<std::string> Schemas(EVENT_RECORD* e){j6t::Scope timing(j6t::Metadata);ULONG n=0;std::vector<std::string> names;if(TdhGetEventInformation(e,0,nullptr,nullptr,&n)!=ERROR_INSUFFICIENT_BUFFER||n>262144)return names;std::vector<BYTE> v(n);auto p=reinterpret_cast<TRACE_EVENT_INFO*>(v.data());if(TdhGetEventInformation(e,0,nullptr,p,&n))return names;for(ULONG i=0;i<p->TopLevelPropertyCount;i++){ULONG off=p->EventPropertyInfoArray[i].NameOffset;if(off<n)names.push_back(U(reinterpret_cast<wchar_t*>(v.data()+off)));}return names;}
+-struct Row{DWORD pid=0,parent=0;ULONGLONG created=0,sequence=0,parentSequence=0,exitFT=0;DWORD exitCode=0;bool exitCodeKnown=false;std::wstring image,handleImage;ULONGLONG handleCreated=0;DWORD imageError=0;LONGLONG imageBegin=0,imageEnd=0;LONGLONG start=0,notified=0,stop=0,stopNotified=0,retained=0,attemptBegin=0,signal=0;HANDLE handle=nullptr;DWORD openError=0,metadataError=0;std::string reason;bool closed=false;unsigned version=0,stopVersion=0;std::vector<std::string> schema,stopSchema;};
++struct Row{DWORD pid=0,parent=0;ULONGLONG created=0,sequence=0,parentSequence=0,exitFT=0;DWORD exitCode=0;bool exitCodeKnown=false;std::wstring image,handleImage;ULONGLONG handleCreated=0;DWORD imageError=0;DWORD handlePid=0,imageStateBefore=WAIT_FAILED,imageStateAfter=WAIT_FAILED;LONGLONG creationVerified=0;LONGLONG imageBegin=0,imageEnd=0;LONGLONG start=0,notified=0,stop=0,stopNotified=0,retained=0,attemptBegin=0,signal=0;HANDLE handle=nullptr;DWORD openError=0,metadataError=0;std::string reason;bool closed=false;unsigned version=0,stopVersion=0;std::vector<std::string> schema,stopSchema;};
+ static std::map<std::pair<DWORD,ULONGLONG>,Row> rows;
+ static bool ParentKnown(DWORD pid,ULONGLONG childTime,ULONGLONG parentSequence){if(pid==rootPid)return childTime>=rootCreated;for(auto& a:rows){auto&r=a.second;if(r.pid==pid&&r.created<=childTime&&(!r.exitFT||childTime<=r.exitFT)&&(!parentSequence||r.sequence==parentSequence))return true;}return false;}
+-static void Acquire(Row& r){j6d::Span diagnosticProcessImage(j6d::ProcessImage);r.attemptBegin=Q();r.handle=OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION|SYNCHRONIZE,FALSE,r.pid);DWORD openError=r.handle?0:GetLastError();r.retained=Q();if(!r.handle){r.openError=openError;r.reason="OPEN_PROCESS_FAILED";return;}FILETIME a,b,c,d;if(!GetProcessTimes(r.handle,&a,&b,&c,&d)){r.metadataError=GetLastError();r.reason="KERNEL_IDENTITY_QUERY_FAILED";return;}if(FT(a)!=r.created){r.reason="PID_REUSED_KERNEL_CREATION_MISMATCH";CloseHandle(r.handle);r.handle=nullptr;return;}r.handleCreated=FT(a);r.imageBegin=Q();wchar_t image[32768];DWORD count=32768;if(QueryFullProcessImageNameW(r.handle,0,image,&count))r.handleImage.assign(image,count);else r.imageError=GetLastError();r.imageEnd=Q();r.reason="RETAINED_MATCHING_KERNEL_CREATION";}
++static void Acquire(Row& r){j6d::Span diagnosticProcessImage(j6d::ProcessImage);r.attemptBegin=Q();r.handle=OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION|SYNCHRONIZE,FALSE,r.pid);DWORD openError=r.handle?0:GetLastError();r.retained=Q();if(!r.handle){r.openError=openError;r.reason="OPEN_PROCESS_FAILED";return;}FILETIME a,b,c,d;if(!GetProcessTimes(r.handle,&a,&b,&c,&d)){r.metadataError=GetLastError();r.reason="KERNEL_IDENTITY_QUERY_FAILED";return;}if(FT(a)!=r.created){r.reason="PID_REUSED_KERNEL_CREATION_MISMATCH";CloseHandle(r.handle);r.handle=nullptr;return;}r.handleCreated=FT(a);r.handlePid=GetProcessId(r.handle);r.creationVerified=Q();if(r.handlePid!=r.pid){r.metadataError=ERROR_INVALID_PARAMETER;r.reason="HANDLE_PID_MISMATCH";return;}r.imageStateBefore=WaitForSingleObject(r.handle,0);r.imageBegin=Q();wchar_t image[32768];DWORD count=32768;if(QueryFullProcessImageNameW(r.handle,0,image,&count))r.handleImage.assign(image,count);else r.imageError=GetLastError();r.imageEnd=Q();r.imageStateAfter=WaitForSingleObject(r.handle,0);r.reason="RETAINED_MATCHING_KERNEL_CREATION";}
+ 
+ static std::unique_ptr<DurableSink> lifecycleSink;
+ static unsigned long long lifecycleCaptured=0;
+@@ -55,6 +55,7 @@
+  }catch(...){++faults;}}
+ static void Sample(){j6t::Lock l(guard);for(auto& a:rows){auto&r=a.second;if(r.handle&&!r.signal){DWORD s=WaitForSingleObject(r.handle,0);if(s==WAIT_OBJECT_0){r.signal=Q();FILETIME a,b,c,d;DWORD exit=0;if(GetProcessTimes(r.handle,&a,&b,&c,&d)&&GetExitCodeProcess(r.handle,&exit)){if(FT(a)!=r.created)++faults;if(r.exitFT&&r.exitFT!=FT(b))++faults;if(r.exitCodeKnown&&r.exitCode!=exit)++faults;r.exitFT=FT(b);r.exitCode=exit;r.exitCodeKnown=true;}else{r.metadataError=GetLastError();++faults;}}else if(s!=WAIT_TIMEOUT){++faults;}}}}
+ #include "terminal_receipt_v3.hpp"
++#include "helper_handoff_v1.hpp"
+ static std::string List(const std::vector<std::string>& names){std::string s="[";bool first=true;for(auto&n:names){if(!first)s+=",";first=false;s+=J(n);}return s+"]";}
+ int wmain(int argc,wchar_t**argv){
+  if(argc!=4)return 90;folder=argv[1];rootPid=wcstoul(argv[2],nullptr,10);rootCreated=_wcstoui64(argv[3],nullptr,10);
+@@ -70,7 +71,7 @@
+  if(enable){ControlTraceW(sessionHandle,session.c_str(),p,EVENT_TRACE_CONTROL_STOP);if(!openError)CloseTrace(consumer);Write(L"etw-failure.json","{\"stage\":\"OpenTrace/Enable\",\"code\":"+std::to_string(enable)+"}");CloseHandle(root);return 94;}
+  j6d::bind(folder,session,"authority",*p);j6t::telemetry.query(sessionHandle,session.c_str(),"afterEnable");std::atomic<ULONG> consumed{ULONG_MAX};std::thread thread([&]{auto b=j6t::now();j6t::telemetry.phase("ProcessTraceEntry",b,b);consumed=ProcessTrace(&consumer,1,nullptr,nullptr);j6t::telemetry.phase("ProcessTraceReturn",b,j6t::now(),consumed);});
+  j6d::diagnostic.start(sessionHandle,thread.native_handle());LARGE_INTEGER freq;QueryPerformanceFrequency(&freq);bool ready=Write(L"etw-ready.json","{\"pid\":"+std::to_string(GetCurrentProcessId())+",\"rootPid\":"+std::to_string(rootPid)+",\"rootCreated\":\""+std::to_string(rootCreated)+"\",\"session\":"+J(U(session))+",\"frequency\":"+std::to_string(freq.QuadPart)+",\"qpc\":"+std::to_string(Q())+"}");
+- j6t::telemetry.mark("ReadyPublished",ready?0:1);j6t::telemetry.query(sessionHandle,session.c_str(),"ready");LONGLONG begin=Q();bool requested=false;bool receiptPublished=false;bool tailPublished=false;while(ready&&(Q()-begin)/static_cast<double>(freq.QuadPart)<180){j6t::telemetry.poll(sessionHandle,session.c_str(),freq.QuadPart);Sample();if(!receiptPublished){try{
++ j6t::telemetry.mark("ReadyPublished",ready?0:1);j6t::telemetry.query(sessionHandle,session.c_str(),"ready");LONGLONG begin=Q();bool requested=false;bool handoffPublished=false;bool receiptPublished=false;bool tailPublished=false;while(ready&&(Q()-begin)/static_cast<double>(freq.QuadPart)<180){j6t::telemetry.poll(sessionHandle,session.c_str(),freq.QuadPart);Sample();if(!handoffPublished){try{handoffPublished=handoff_v1::HandoffReceipt();}catch(const std::exception&e){++faults;Write(L"terminal-failure-v3.json",std::string("{\"error\":")+J(e.what())+"}");break;}}if(!receiptPublished){try{
+  if(GetFileAttributesW((folder+L"\\phase-a-v3.json").c_str())!=INVALID_FILE_ATTRIBUTES){
+   ULONG queried=ControlTraceW(sessionHandle,session.c_str(),p,EVENT_TRACE_CONTROL_QUERY);
+   if(queried||p->EventsLost||p->RealTimeBuffersLost||p->LogBuffersLost)throw std::runtime_error("terminal trace loss/query");
+@@ -82,6 +83,6 @@
+  j6t::telemetry.mark("StopRequestedOrLoopEnded",requested?0:1);j6t::telemetry.query(sessionHandle,session.c_str(),"beforeFlush");ULONG flush=j6t::telemetry.call("FlushTrace",[&]{return ControlTraceW(sessionHandle,session.c_str(),p,EVENT_TRACE_CONTROL_FLUSH);});Sleep(1100);Sample();j6t::telemetry.query(sessionHandle,session.c_str(),"beforeStop");ULONG stop=j6t::telemetry.call("StopTrace",[&]{return ControlTraceW(sessionHandle,session.c_str(),p,EVENT_TRACE_CONTROL_STOP);});thread.join();j6d::diagnostic.stop();CloseTrace(consumer);Sample();CloseHandle(root);
+  lifecycleSink->finish();if(lifecycleSink->fault())++faults;
+  std::ostringstream out;out<<"{\"requestedStop\":"<<(requested?"true":"false")<<",\"session\":"<<J(U(session))<<",\"flushResult\":"<<flush<<",\"stopResult\":"<<stop<<",\"consumerResult\":"<<consumed<<",\"eventsLost\":"<<p->EventsLost<<",\"realtimeBuffersLost\":"<<p->RealTimeBuffersLost<<",\"buffersLost\":"<<p->LogBuffersLost<<",\"faults\":"<<faults<<",\"discardedUnrelated\":"<<discarded<<",\"rows\":[";bool first=true;
+- for(auto&a:rows){auto&r=a.second;if(!first)out<<",";first=false;bool closed=true;if(r.handle){closed=CloseHandle(r.handle)!=0;r.closed=closed;}out<<"{\"pid\":"<<r.pid<<",\"parentPid\":"<<r.parent<<",\"created\":\""<<r.created<<"\",\"sequence\":\""<<r.sequence<<"\",\"parentSequence\":\""<<r.parentSequence<<"\",\"image\":"<<J(U(r.image))<<",\"handleImage\":"<<J(U(r.handleImage))<<",\"handleCreated\":\""<<r.handleCreated<<"\",\"imageError\":"<<r.imageError<<",\"imageBeginQpc\":"<<r.imageBegin<<",\"imageEndQpc\":"<<r.imageEnd<<",\"startQpc\":"<<r.start<<",\"startCallbackQpc\":"<<r.notified<<",\"handleAttemptBeginQpc\":"<<r.attemptBegin<<",\"handleAttemptQpc\":"<<r.retained<<",\"handleRetained\":"<<(r.handle?"true":"false")<<",\"handleIdentity\":\""<<reinterpret_cast<ULONG_PTR>(r.handle)<<"\",\"reason\":"<<J(r.reason)<<",\"openError\":"<<r.openError<<",\"metadataError\":"<<r.metadataError<<",\"stopQpc\":"<<r.stop<<",\"stopCallbackQpc\":"<<r.stopNotified<<",\"signalObservedQpc\":"<<r.signal<<",\"exitFiletime\":\""<<r.exitFT<<"\",\"exitCode\":"<<r.exitCode<<",\"exitCodeKnown\":"<<(r.exitCodeKnown?"true":"false")<<",\"handleClosed\":"<<(closed?"true":"false")<<",\"startVersion\":"<<r.version<<",\"stopVersion\":"<<r.stopVersion<<",\"startSchema\":"<<List(r.schema)<<",\"stopSchema\":"<<List(r.stopSchema)<<"}";}
++ for(auto&a:rows){auto&r=a.second;if(!first)out<<",";first=false;bool closed=true;if(r.handle){closed=CloseHandle(r.handle)!=0;r.closed=closed;}out<<"{\"pid\":"<<r.pid<<",\"parentPid\":"<<r.parent<<",\"created\":\""<<r.created<<"\",\"sequence\":\""<<r.sequence<<"\",\"parentSequence\":\""<<r.parentSequence<<"\",\"image\":"<<J(U(r.image))<<",\"handleImage\":"<<J(U(r.handleImage))<<",\"handleCreated\":\""<<r.handleCreated<<"\",\"imageError\":"<<r.imageError<<",\"handlePid\":"<<r.handlePid<<",\"creationVerifiedQpc\":"<<r.creationVerified<<",\"imageBeginQpc\":"<<r.imageBegin<<",\"imageEndQpc\":"<<r.imageEnd<<",\"imageStateBefore\":"<<r.imageStateBefore<<",\"imageStateAfter\":"<<r.imageStateAfter<<",\"startQpc\":"<<r.start<<",\"startCallbackQpc\":"<<r.notified<<",\"handleAttemptBeginQpc\":"<<r.attemptBegin<<",\"handleAttemptQpc\":"<<r.retained<<",\"handleRetained\":"<<(r.handle?"true":"false")<<",\"handleIdentity\":\""<<reinterpret_cast<ULONG_PTR>(r.handle)<<"\",\"reason\":"<<J(r.reason)<<",\"openError\":"<<r.openError<<",\"metadataError\":"<<r.metadataError<<",\"stopQpc\":"<<r.stop<<",\"stopCallbackQpc\":"<<r.stopNotified<<",\"signalObservedQpc\":"<<r.signal<<",\"exitFiletime\":\""<<r.exitFT<<"\",\"exitCode\":"<<r.exitCode<<",\"exitCodeKnown\":"<<(r.exitCodeKnown?"true":"false")<<",\"handleClosed\":"<<(closed?"true":"false")<<",\"startVersion\":"<<r.version<<",\"stopVersion\":"<<r.stopVersion<<",\"startSchema\":"<<List(r.schema)<<",\"stopSchema\":"<<List(r.stopSchema)<<"}";}
+  out<<"]}";Write(L"loss-diagnostic-v2.json",j6d::diagnostic.json());if(!Write(L"loss-telemetry.json",j6t::telemetry.json())||j6t::telemetry.errors.load())++faults;bool wrote=Write(L"etw-result.json",out.str());return !wrote||!requested||stop||faults||p->EventsLost||p->RealTimeBuffersLost?95:0;
+ }
+--- D:\JARVIS-STAGE6-LIVE\fb0bf86657a64aff85a1799db37e94c7\code\baseline-allowlist.json
++++ D:\JARVIS-STAGE6-LIVE\d45028a56e344926a311c04ba01f6a80\code\baseline-allowlist.json
+@@ -1,6 +1,6 @@
+ {
+   "syntheticRoots": [
+-    "D:\\JARVIS-STAGE6-LIVE\\fb0bf86657a64aff85a1799db37e94c7\\code\\small-synthetic"
++    "D:\\JARVIS-STAGE6-LIVE\\d45028a56e344926a311c04ba01f6a80\\code\\small-synthetic"
+   ],
+   "approvedProtectedRoots": [],
+   "realProtectedAccess": false
+--- D:\JARVIS-STAGE6-LIVE\fb0bf86657a64aff85a1799db37e94c7\code\evidence_support_v3.py
++++ D:\JARVIS-STAGE6-LIVE\d45028a56e344926a311c04ba01f6a80\code\evidence_support_v3.py
+@@ -19,6 +19,21 @@
+  def eligible(self,r):
+   return bool(self.anchor and r['parentPid']==self.anchor['pid'] and r['role'].startswith('descendant:') and r.get('imageCapture',{}).get('valid') is True and norm(r['image'])==r'c:\windows\system32\conhost.exe')
+  def finish(self,root,seconds=20):
++  try:return self._finish_handoff(root,seconds)
++  except BaseException as exc:
++   # Failure closure is explicitly REJECTED, never a successful handoff.
++   try:
++    if not (pathlib.Path(root)/"rejected-v3.json").exists():write_once(pathlib.Path(root)/"rejected-v3.json",dict(state="REJECTED",error="helper-handoff/local-cleanup: "+str(exc),qpc=ticks()))
++   finally:
++    self.stop.set()
++    # _finish_handoff already uses the one absolute budget for joining.
++    if not self.thread.is_alive():
++     for key,h in self.handles.items():
++      if not self.rows[key].get("closed"):
++       self.rows[key]["failureCloseQpc"]=ticks();self.rows[key]["closed"]=bool(K.CloseHandle(h))
++     if self.anchorHandle:K.CloseHandle(self.anchorHandle);self.anchorHandle=None
++   raise
++ def _finish_handoff(self,root,seconds=20):
+   need(seconds==20,'FIXED_CLEANUP_BUDGET');root=pathlib.Path(root)
+   entry=ticks();end=entry+20*frequency()
+   write_once(root/'cleanup-origin-v3.json',dict(cleanupEntryQpc=entry,deadlineQpc=end,frequency=frequency()))
+@@ -28,6 +43,16 @@
+    time.sleep(.02)
+   self.stop.set();self.thread.join(max(0,min(2,(end-ticks())/frequency())))
+   need(not self.thread.is_alive(),'TRACKER_JOIN')
++  from helper_handoff_v1 import perform
++  observer=json.loads((root/'observer-identities.json').read_text())['etw']
++  observer_handle=K.OpenProcess(0x101000,False,observer['pid'])
++  need(observer_handle,'HANDOFF_OBSERVER_OPEN')
++  try:
++   need(times(observer_handle)[0]==observer['created'],'HANDOFF_OBSERVER_CREATION')
++   def observer_alive():need(K.WaitForSingleObject(observer_handle,0)==258,'HANDOFF_OBSERVER_EXITED')
++   observed=perform(root,self,entry,end,health=observer_alive)
++   observer_alive();need(ticks()<end,'HANDOFF_LOCAL_RELEASE_LATE')
++  finally:need(K.CloseHandle(observer_handle),'HANDOFF_OBSERVER_HANDLE_CLOSE')
+   with self.lock:
+    for key,h in self.handles.items():
+     r=self.rows[key]
+@@ -36,8 +61,10 @@
+     if r['stateAtClose']==0 and r['signalObservedQpc'] is None:
+      ts=times(h);code=previous.w.DWORD();need(K.GetExitCodeProcess(h,previous.c.byref(code)) and ts[0]==r['created'],'LATE_LOCAL_SIGNAL_IDENTITY')
+      r.update(signalObservedQpc=ticks(),exitFiletime=ts[1],exitCode=code.value)
++    need(ticks()<end,'LOCAL_CLOSE_DEADLINE')
+     r['localCloseQpc']=ticks()
+-    r['closed']=bool(K.CloseHandle(h));need(r['closed'],'LOCAL_CLOSE')
++    if self.eligible(r):need(observed['observedQpc']<r['localCloseQpc'],'HANDOFF_RELEASE_ORDER')
++    r['closed']=bool(K.CloseHandle(h));r['localCloseReturnedQpc']=ticks();need(r['closed'] and r['localCloseReturnedQpc']<end,'LOCAL_CLOSE')
+    rows=self.snapshot()
+   need(rows and not self.errors and ticks()<end,'LOCAL_FAILURE_OR_DEADLINE')
+   state=int(K.WaitForSingleObject(self.anchorHandle,0));self.anchor['stateAtClose']=state
+@@ -65,7 +92,7 @@
+   if r['eligibleConsoleHelper']:
+    helpers.append(dict(pid=r['pid'],created=r['created'],image=r['capture']['image'],role='OS_CONSOLE_HELPER',parent=collector,localClosed=r['closed'],localCloseQpc=r['localCloseQpc'],stateAtClose=r['stateAtClose']))
+  # Flush every collector-owned evidence file, not live external observer files.
+- local=['tree-image-support.json','tree-handles.json','stress-result.json','collector-health-samples.json','probe-timings.json','retained-handle-verification.json','native-bridge-cleanup.json',marks[0].name]
++ local=['helper-handoff-obligations-v1.json','helper-handoff-observed-v1.json','tree-image-support.json','tree-handles.json','stress-result.json','collector-health-samples.json','probe-timings.json','retained-handle-verification.json','native-bridge-cleanup.json',marks[0].name]
+  local += [p.name for p in root.glob('native-*.json') if p.name not in local]
+  local += [p.name for p in root.glob('early-image-*.json')]
+  local += [p.name for pattern in ('hash-*.json','hash-*.bin','hash-*.bin.json','integration-hash-worker-*.json','integration-sampler-*.json','sampler-results.json','metadata-verified.json','state.json','workload-stop') for p in root.glob(pattern) if p.name not in local]
+--- D:\JARVIS-STAGE6-LIVE\fb0bf86657a64aff85a1799db37e94c7\code\failure_preserve_v4.py
++++ D:\JARVIS-STAGE6-LIVE\d45028a56e344926a311c04ba01f6a80\code\failure_preserve_v4.py
+@@ -33,6 +33,9 @@
+ )
+ ACCEPTANCE_OUTPUTS = {'v3-archive-receipt.json'}
+ STAGES = {
++    'helperHandoffObligations':'helper-handoff-obligations-v1.json',
++    'helperHandoffAcquired':'helper-handoff-acquired-v1.json',
++    'helperHandoffObserved':'helper-handoff-observed-v1.json',
+     'observerStartup': 'observer-identities.json',
+     'collector': 'stress-result.json', 'phaseA': 'phase-a-v3.json',
+     'terminalReceipt': 'terminal-v3.json', 'helperEvidence': 'tree-handles.json',
+--- D:\JARVIS-STAGE6-LIVE\fb0bf86657a64aff85a1799db37e94c7\code\helper_handoff_v1.hpp
++++ D:\JARVIS-STAGE6-LIVE\d45028a56e344926a311c04ba01f6a80\code\helper_handoff_v1.hpp
+@@ -0,0 +1,64 @@
++#pragma once
++// TEST pre-release receipt; no command dispatch, process transfer or termination.
++namespace handoff_v1 {
++using namespace terminal_v3;
++static std::string Image(const std::wstring&w){auto s=lower(U(w));wchar_t dev[32768];if(QueryDosDeviceW(L"C:",dev,32768)){auto d=lower(U(dev));if(s.rfind(d+"\\",0)==0)s="c:"+s.substr(d.size());}return s;}
++static void SafeRoot(){
++ std::wstring p=folder;for(;;){DWORD a=GetFileAttributesW(p.c_str());Require(a!=INVALID_FILE_ATTRIBUTES&&!(a&FILE_ATTRIBUTE_REPARSE_POINT),"handoff reparse/root");auto k=p.find_last_of(L"\\/");if(k==std::wstring::npos||k<3)break;p.resize(k);}
++}
++static bool HandoffReceipt(){
++ const auto path=folder+L"\\helper-handoff-obligations-v1.json";
++ if(GetFileAttributesW(path.c_str())==INVALID_FILE_ATTRIBUTES)return false;
++ SafeRoot();auto raw=Read(path);auto o=Parser(raw).parse();auto b=o.at("binding");
++ Require(o.at("schema").str()=="stage6-helper-handoff-v1"&&o.at("kind").str()=="HELPER_OBLIGATIONS","handoff schema");
++ Require(o.at("coordinationOnly").yes()&&!o.at("cleanupPass").yes()&&!o.at("acceptance").yes(),"handoff premature acceptance");
++ auto run=U(folder.substr(folder.find_last_of(L"\\/")+1));auto candidate=folder.substr(0,folder.find_last_of(L"\\/"));
++ LARGE_INTEGER frequency;QueryPerformanceFrequency(&frequency);auto f=static_cast<unsigned long long>(frequency.QuadPart);
++ auto start=o.at("cleanupEntryQpc").number(),end=o.at("deadlineQpc").number();
++ Require(start&&end==start+20*f&&static_cast<unsigned long long>(Q())>=start&&static_cast<unsigned long long>(Q())<end,"handoff deadline");
++ Require(b.at("run").str()==run&&b.at("kernelSession").str()==U(session)&&b.at("frequency").number()==f,"handoff run/session");
++ auto originRaw=Read(folder+L"\\cleanup-origin-v3.json");auto origin=Parser(originRaw).parse();
++ Require(Sha(originRaw)==b.at("cleanupOriginSHA256").str()&&origin.at("cleanupEntryQpc").number()==start&&origin.at("deadlineQpc").number()==end&&origin.at("frequency").number()==f,"handoff origin");
++ auto declarationRaw=Read(folder+L"\\small-declaration-v3.json");auto declaration=Parser(declarationRaw).parse();
++ auto workspaceRaw=Read(folder+L"\\workspace-binding-v4.json");auto workspace=Parser(workspaceRaw).parse();
++ Require(Sha(declarationRaw)==b.at("declarationSHA256").str()&&Sha(workspaceRaw)==b.at("workspaceBindingSHA256").str(),"handoff binding hashes");
++ Require(declaration.at("run").str()==run&&declaration.at("sourceManifestSHA256").str()==b.at("sourceManifestSHA256").str()&&lower(declaration.at("code").str())==lower(U(candidate)),"handoff declaration");
++ Require(workspace.at("run").str()==run&&lower(workspace.at("candidateRoot").str())==lower(U(candidate))&&lower(workspace.at("evidenceRoot").str())==lower(U(folder))&&workspace.at("candidateManifestSHA256").str()==b.at("sourceManifestSHA256").str()&&workspace.at("smallDeclarationSHA256").str()==Sha(declarationRaw),"handoff workspace");
++ Require(Sha(Read(candidate+L"\\small-source-v3.json"))==b.at("sourceManifestSHA256").str(),"handoff source manifest");
++ auto obsRaw=Read(folder+L"\\observer-identities.json");auto obs=Parser(obsRaw).parse().at("etw");
++ Require(Sha(obsRaw)==b.at("observerSHA256").str()&&obs.dump()==o.at("authorityObserver").dump(),"handoff observer binding");
++ FILETIME ca,cb,cc,cd;Require(GetProcessTimes(GetCurrentProcess(),&ca,&cb,&cc,&cd)!=0,"handoff own creation");
++ wchar_t own[32768];DWORD ownN=32768;Require(QueryFullProcessImageNameW(GetCurrentProcess(),0,own,&ownN)!=0,"handoff own image");
++ Require(obs.at("pid").number()==GetCurrentProcessId()&&obs.at("created").str()==std::to_string(FT(ca))&&lower(obs.at("image").str())==lower(U(std::wstring(own,ownN))),"handoff wrong observer");
++ auto collector=o.at("collector"),hs=o.at("helpers");Require(hs.type=='a'&&!hs.arr.empty()&&hs.arr.size()<=8192,"handoff helper bound");
++ Require(Sha(hs.dump())==o.at("obligationSetId").str(),"handoff set hash");
++ std::vector<Row> copy;Row parent;std::set<std::pair<DWORD,ULONGLONG>> instances;std::set<std::string> obligations,sequences;
++ {std::lock_guard<std::mutex>lock(guard);Require(faults==0,"handoff observer fault");
++ auto it=rows.find({DWORD(collector.at("pid").number()),std::stoull(collector.at("created").str())});if(it==rows.end())return false;parent=it->second;
++ Require(parent.sequence&&parent.handle&&parent.handleCreated==parent.created&&parent.handlePid==parent.pid&&parent.imageError==0&&parent.metadataError==0&&Image(parent.handleImage)==lower(collector.at("image").str()),"handoff collector identity");
++ for(auto&h:hs.arr){auto pid=h.at("pid").number();auto created=std::stoull(h.at("created").str());Require(pid&&pid<=MAXDWORD&&created,"handoff identity");auto key=std::make_pair(DWORD(pid),created);auto id=h.at("obligationId").str();
++ Require(instances.insert(key).second&&obligations.insert(id).second&&id==std::to_string(pid)+"-"+std::to_string(created),"handoff duplicate");
++ Require(h.at("localRetained").yes()&&h.at("publicationState").str()=="SEALED_CLAIM"&&h.at("parent").dump()==collector.dump()&&lower(h.at("image").str())=="c:\\windows\\system32\\conhost.exe","handoff local claims");
++ auto pos=rows.find(key);if(pos==rows.end())return false;auto&r=pos->second;
++ Require(r.handle&&r.handlePid==r.pid&&r.handleCreated==r.created&&r.imageError==0&&r.metadataError==0&&r.sequence&&sequences.insert(std::to_string(r.sequence)).second,"handoff missing independent handle");
++ Require(r.imageStateBefore==WAIT_TIMEOUT&&r.imageStateAfter==WAIT_TIMEOUT,"handoff image not captured live");
++ Require(r.parent==parent.pid&&r.parentSequence==parent.sequence&&r.sequence!=parent.sequence,"handoff parent instance");
++ Require(h.at("expectedSequence").type=='n'||h.at("expectedSequence").str()==std::to_string(r.sequence),"handoff sequence");
++ Require(Image(r.image)==lower(h.at("image").str())&&Image(r.handleImage)==lower(h.at("image").str()),"handoff image");
++ Require(r.start<=r.attemptBegin&&r.attemptBegin<=r.retained&&r.retained<=r.creationVerified&&r.creationVerified<=r.imageBegin&&r.imageBegin<=r.imageEnd&&(!r.stop||r.imageEnd<r.stop),"handoff live acquisition timing");
++ DWORD state=WaitForSingleObject(r.handle,0);Require(state==WAIT_OBJECT_0||state==WAIT_TIMEOUT,"handoff handle state");
++ FILETIME a,c,d,e;Require(GetProcessId(r.handle)==r.pid&&GetProcessTimes(r.handle,&a,&c,&d,&e)&&FT(a)==r.created,"handoff retained identity");
++ copy.push_back(r);
++ }} // No receipt I/O occurs with the event-map lock held.
++ auto verified=Q();Require(static_cast<unsigned long long>(verified)<end,"handoff verification late");
++ std::ostringstream s;s<<"{\"schema\":\"stage6-helper-handoff-v1\",\"kind\":\"HANDOFF_ACQUIRED\",\"receiptSequence\":1,\"binding\":"<<b.dump()<<",\"obligationsSHA256\":"<<J(Sha(raw))<<",\"cleanupEntryQpc\":"<<start<<",\"deadlineQpc\":"<<end<<",\"collector\":"<<collector.dump()<<",\"authorityObserver\":"<<obs.dump()<<",\"preparedQpc\":"<<Q()<<",\"coordinationOnly\":true,\"cleanupPass\":false,\"acceptance\":false,\"helpers\":[";
++ for(size_t i=0;i<copy.size();i++){auto&r=copy[i];if(i)s<<",";
++ s<<"{\"obligationId\":"<<hs.arr[i].at("obligationId").dump()<<",\"pid\":"<<r.pid<<",\"created\":"<<J(std::to_string(r.created))<<",\"sequence\":"<<J(std::to_string(r.sequence))<<",\"kernelSession\":"<<J(U(session))<<",\"parent\":{\"pid\":"<<parent.pid<<",\"created\":"<<J(std::to_string(parent.created))<<",\"sequence\":"<<J(std::to_string(parent.sequence))<<",\"image\":"<<J(U(parent.handleImage))<<"},\"kernelImage\":"<<J(U(r.image))<<",\"handleImage\":"<<J(U(r.handleImage))<<",\"method\":\"OpenProcess\",\"accessMask\":1052672,\"handlePid\":"<<r.handlePid<<",\"handleCreated\":"<<J(std::to_string(r.handleCreated))<<",\"handleIdentity\":"<<J(std::to_string(reinterpret_cast<ULONG_PTR>(r.handle)))<<",\"retained\":true,\"acquisitionBeginQpc\":"<<r.attemptBegin<<",\"acquisitionReturnQpc\":"<<r.retained<<",\"creationVerifiedQpc\":"<<r.creationVerified<<",\"imageBeginQpc\":"<<r.imageBegin<<",\"imageEndQpc\":"<<r.imageEnd<<",\"verificationQpc\":"<<verified<<"}";
++ }s<<"]}";
++ Require(static_cast<unsigned long long>(Q())<end,"handoff publication expired");
++ Require(Write(L"helper-handoff-acquired-v1.json.pending",s.str()),"handoff write");
++ Require(static_cast<unsigned long long>(Q())<end,"handoff flush late");
++ Require(MoveFileExW((folder+L"\\helper-handoff-acquired-v1.json.pending").c_str(),(folder+L"\\helper-handoff-acquired-v1.json").c_str(),MOVEFILE_WRITE_THROUGH)!=0,"handoff publication");
++ Require(static_cast<unsigned long long>(Q())<end,"handoff publish late");return true;
++}
++}
+--- D:\JARVIS-STAGE6-LIVE\fb0bf86657a64aff85a1799db37e94c7\code\helper_handoff_v1.py
++++ D:\JARVIS-STAGE6-LIVE\d45028a56e344926a311c04ba01f6a80\code\helper_handoff_v1.py
+@@ -0,0 +1,115 @@
++"""TEST-only pre-release coordination. No launch, duplication or acceptance authority."""
++import json,os,pathlib,time,hashlib,re
++from coordination_v3 import need,identity,norm,write_once,digest,load,canonical
++from journal import ticks,frequency
++SCHEMA='stage6-helper-handoff-v1'
++NAMES=tuple('helper-handoff-'+x+'-v1.json' for x in ('obligations','acquired','observed'))
++def integer(n):need(type(n) is int and n>0,'HANDOFF_INTEGER');return n
++def exact(v,keys):need(type(v) is dict and set(v)==set(keys.split()),'HANDOFF_FIELDS')
++def safe(root,name):
++ from workspace_binding_v4 import safe as contained,CODE
++ root=pathlib.Path(root);contained(root,CODE)
++ need(root.parent==CODE and re.fullmatch('protected-[0-9a-f]{32}',root.name),'HANDOFF_ROOT')
++ need(name in NAMES,'HANDOFF_FIXED_PATH');p=contained(root/name,root)
++ if p.exists():need(p.stat().st_nlink==1,'HANDOFF_HARDLINK')
++ return p
++def publish(root,name,v):
++ p=safe(root,name);safe_pending=p.with_name(p.name+'.pending')
++ from workspace_binding_v4 import safe as contained
++ contained(safe_pending,pathlib.Path(root));need(not p.exists() and not safe_pending.exists(),'HANDOFF_ALREADY_PUBLISHED')
++ write_once(p,v)
++def ontime(o,now):
++ f=integer(o['binding']['frequency']);start=integer(o['cleanupEntryQpc']);end=integer(o['deadlineQpc'])
++ need(end==start+20*f and type(now) is int and start<=now<end,'HANDOFF_ABSOLUTE_DEADLINE')
++def validate_obligations(o):
++ exact(o,'schema kind binding obligationSetId cleanupEntryQpc deadlineQpc collector authorityObserver helpers preparedQpc coordinationOnly cleanupPass acceptance')
++ need(o['schema']==SCHEMA and o['kind']=='HELPER_OBLIGATIONS','HANDOFF_SCHEMA')
++ need(o['coordinationOnly'] is True and o['cleanupPass'] is False and o['acceptance'] is False,'HANDOFF_NOT_ACCEPTANCE')
++ b=o['binding'];exact(b,'run declarationSHA256 sourceManifestSHA256 kernelSession frequency observerSHA256 workspaceBindingSHA256 cleanupOriginSHA256')
++ for n in ('declarationSHA256','sourceManifestSHA256','observerSHA256','workspaceBindingSHA256','cleanupOriginSHA256'):
++  need(type(b[n]) is str and len(b[n])==64 and all(x in '0123456789abcdef' for x in b[n]),'HANDOFF_DIGEST')
++ need(type(b['run']) is str and type(b['kernelSession']) is str and b['kernelSession'],'HANDOFF_SESSION')
++ identity(o['collector']);norm(o['collector']['image']);identity(o['authorityObserver']);norm(o['authorityObserver']['image'])
++ hs=o['helpers'];need(type(hs) is list and 0<len(hs)<=8192,'HANDOFF_HELPERS');ids=set();keys=set()
++ for h in hs:
++  exact(h,'obligationId pid created expectedSequence parent image localHandleIdentity localRetained localRetainedQpc localVerifiedQpc publicationState')
++  k=identity(h);need(k not in keys and h['obligationId'] not in ids,'HANDOFF_DUPLICATE');keys.add(k);ids.add(h['obligationId'])
++  need(h['obligationId']==str(k[0])+'-'+k[1],'HANDOFF_OBLIGATION_ID')
++  need(h['expectedSequence'] is None or (type(h['expectedSequence']) is str and h['expectedSequence'].isdecimal() and int(h['expectedSequence'])>0),'HANDOFF_SEQUENCE')
++  need(h['parent']==o['collector'] and norm(h['image'])==r'c:\windows\system32\conhost.exe','HANDOFF_PARENT_IMAGE')
++  need(h['localRetained'] is True and h['publicationState']=='SEALED_CLAIM','HANDOFF_LOCAL_HANDLE')
++  need(type(h['localHandleIdentity']) is str and h['localHandleIdentity'].isdecimal() and int(h['localHandleIdentity'])>0,'HANDOFF_LOCAL_HANDLE')
++  need(integer(h['localRetainedQpc'])<=integer(h['localVerifiedQpc'])<=o['preparedQpc'],'HANDOFF_LOCAL_TIMING')
++ need(o['obligationSetId']==hashlib.sha256(canonical(hs)).hexdigest(),'HANDOFF_SET_HASH');ontime(o,o['preparedQpc'])
++ return o
++def validate_receipt(o,a,obligation_sha,now):
++ validate_obligations(o);ontime(o,now)
++ exact(a,'schema kind receiptSequence binding obligationsSHA256 cleanupEntryQpc deadlineQpc collector authorityObserver helpers preparedQpc coordinationOnly cleanupPass acceptance')
++ need(a['schema']==SCHEMA and a['kind']=='HANDOFF_ACQUIRED' and type(a['receiptSequence']) is int and a['receiptSequence']==1,'HANDOFF_RECEIPT_SCHEMA')
++ need(a['binding']==o['binding'] and a['obligationsSHA256']==obligation_sha,'HANDOFF_STALE_RECEIPT')
++ for k in ('cleanupEntryQpc','deadlineQpc','collector','authorityObserver'):need(a[k]==o[k],'HANDOFF_BINDING_'+k)
++ need(a['coordinationOnly'] is True and a['cleanupPass'] is False and a['acceptance'] is False,'HANDOFF_NOT_ACCEPTANCE')
++ ontime(o,a['preparedQpc']);need(a['preparedQpc']<=now,'HANDOFF_FUTURE_RECEIPT')
++ need(type(a['helpers']) is list and len(a['helpers'])==len(o['helpers']),'HANDOFF_COUNT')
++ wanted={h['obligationId']:h for h in o['helpers']};seen=set();seq=set()
++ for r in a['helpers']:
++  exact(r,'obligationId pid created sequence kernelSession parent kernelImage handleImage method accessMask handlePid handleCreated handleIdentity retained acquisitionBeginQpc acquisitionReturnQpc creationVerifiedQpc imageBeginQpc imageEndQpc verificationQpc')
++  key=r['obligationId'];need(key in wanted and key not in seen,'HANDOFF_DUPLICATE_RECEIPT');seen.add(key);h=wanted[key]
++  need(identity(r)==identity(h) and r['handlePid']==r['pid'] and type(r['handlePid']) is int and r['handleCreated']==r['created'],'HANDOFF_CREATION')
++  need(r['parent']['pid']==o['collector']['pid'] and r['parent']['created']==o['collector']['created'] and norm(r['parent']['image'])==norm(o['collector']['image']),'HANDOFF_PARENT')
++  for s in (r['sequence'],r['parent']['sequence']):need(type(s) is str and s.isdecimal() and int(s)>0,'HANDOFF_SEQUENCE')
++  need(r['sequence'] not in seq and r['sequence']!=r['parent']['sequence'],'HANDOFF_SEQUENCE');seq.add(r['sequence'])
++  need(h['expectedSequence'] in (None,r['sequence']) and r['kernelSession']==o['binding']['kernelSession'],'HANDOFF_SEQUENCE_SESSION')
++  need(norm(r['handleImage'])==norm(h['image']) and type(r['kernelImage']) is str and bool(r['kernelImage']),'HANDOFF_IMAGE')
++  need(r['method']=='OpenProcess' and type(r['accessMask']) is int and r['accessMask']==0x101000 and r['retained'] is True,'HANDOFF_RETENTION')
++  need(type(r['handleIdentity']) is str and r['handleIdentity'].isdecimal() and int(r['handleIdentity'])>0,'HANDOFF_HANDLE')
++  points=[integer(r[k]) for k in ('acquisitionBeginQpc','acquisitionReturnQpc','creationVerifiedQpc','imageBeginQpc','imageEndQpc','verificationQpc')]
++  need(points==sorted(points) and points[-1]<=a['preparedQpc'],'HANDOFF_VERIFICATION_TIMING')
++ return a
++def perform(root,tracker,entry,end,clock=ticks,pause=time.sleep,health=None):
++ """Only called after tracker join, while all local handles remain owned."""
++ root=pathlib.Path(root)
++ for n in NAMES:need(not safe(root,n).exists() and not safe(root,n).with_name(n+'.pending').exists(),'HANDOFF_STALE_ARTIFACT')
++ from tracker_adapter_v3 import binding
++ b=dict(binding(root,tracker.anchor['pid'],tracker.anchor['created']));b.pop('producer')
++ b.update(workspaceBindingSHA256=digest(root/'workspace-binding-v4.json'),cleanupOriginSHA256=digest(root/'cleanup-origin-v3.json'))
++ c=dict(pid=tracker.anchor['pid'],created=tracker.anchor['created'],image=tracker.anchor['capture']['image'])
++ obs=load(root/'observer-identities.json')['etw'];hs=[]
++ for r in tracker.snapshot():
++  if not tracker.eligible(r):continue
++  need(not r['closed'] and (r['pid'],r['created']) in tracker.handles,'HANDOFF_LOCAL_RELEASED')
++  hs.append(dict(obligationId=str(r['pid'])+'-'+r['created'],pid=r['pid'],created=r['created'],expectedSequence=None,parent=c,image=r['image'],localHandleIdentity=r['handleIdentity'],localRetained=True,localRetainedQpc=r['handleRetainedQpc'],localVerifiedQpc=r['imageCapture']['stateAfterQpc'],publicationState='SEALED_CLAIM'))
++ o=dict(schema=SCHEMA,kind='HELPER_OBLIGATIONS',binding=b,obligationSetId=hashlib.sha256(canonical(hs)).hexdigest(),cleanupEntryQpc=entry,deadlineQpc=end,collector=c,authorityObserver=obs,helpers=hs,preparedQpc=clock(),coordinationOnly=True,cleanupPass=False,acceptance=False)
++ validate_obligations(o);publish(root,NAMES[0],o);ontime(o,clock());oh=digest(root/NAMES[0])
++ while True:
++  ontime(o,clock())
++  for n in ('primary-failure.json','rejected-v3.json','terminal-failure-v3.json','etw-failure.json'):
++   need(not (root/n).exists(),'HANDOFF_PRESERVED_FAILURE')
++  if health:health()
++  p=safe(root,NAMES[1])
++  if p.exists():
++   a=load(p);now=clock();validate_receipt(o,a,oh,now);rawhash=digest(p)
++   v=dict(schema=SCHEMA,kind='HANDOFF_OBSERVED',binding=b,obligationsSHA256=oh,acquiredSHA256=rawhash,collector=c,cleanupEntryQpc=entry,deadlineQpc=end,observedQpc=now,helpers=[dict(obligationId=h['obligationId'],pid=h['pid'],created=h['created']) for h in hs],localReleaseEvidence='tree-handles.json:localCloseQpc/localCloseReturnedQpc/closed',coordinationOnly=True,cleanupPass=False,acceptance=False)
++   publish(root,NAMES[2],v);ontime(o,clock());return v
++  pause(min(.01,max(0,(end-clock())/b['frequency'])))
++def verify_final(root):
++ """Additional coordination verification; never replaces existing terminal checker."""
++ root=pathlib.Path(root);o=load(safe(root,NAMES[0]));a=load(safe(root,NAMES[1]));v=load(safe(root,NAMES[2]));p=load(root/'phase-a-v3.json')
++ need(v['schema']==SCHEMA and v['kind']=='HANDOFF_OBSERVED','HANDOFF_OBSERVED_SCHEMA')
++ validate_receipt(o,a,digest(root/NAMES[0]),v['observedQpc'])
++ need(v['binding']==o['binding'] and v['acquiredSHA256']==digest(root/NAMES[1]) and v['obligationsSHA256']==digest(root/NAMES[0]),'HANDOFF_OBSERVED_BINDING')
++ need(v['collector']==o['collector'] and v['cleanupEntryQpc']==o['cleanupEntryQpc'] and v['deadlineQpc']==o['deadlineQpc'],'HANDOFF_OBSERVED_ORIGIN')
++ need(v['coordinationOnly'] is True and v['cleanupPass'] is False and v['acceptance'] is False,'HANDOFF_NOT_ACCEPTANCE')
++ need(v['helpers']==[dict(obligationId=h['obligationId'],pid=h['pid'],created=h['created']) for h in o['helpers']],'HANDOFF_OBSERVED_SET')
++ b=dict(p['binding']);b.pop('schema');b.update(workspaceBindingSHA256=digest(root/'workspace-binding-v4.json'),cleanupOriginSHA256=digest(root/'cleanup-origin-v3.json'))
++ need(b==o['binding'] and p['collector']==o['collector'] and p['authorityObserver']==o['authorityObserver'] and p['cleanupEntryQpc']==o['cleanupEntryQpc'] and p['deadlineQpc']==o['deadlineQpc'],'HANDOFF_FINAL_BINDING')
++ etw=load(root/'etw-result.json');need(etw['session']==b['kernelSession'] and etw['faults']==etw['eventsLost']==etw['buffersLost']==etw['realtimeBuffersLost']==0,'HANDOFF_LATER_AUTHORITY_FAILURE')
++ rows={(r['pid'],r['created']):r for r in etw['rows']};tree={(r['pid'],r['created']):r for r in load(root/'tree-handles.json')['rows']}
++ for r in a['helpers']:
++  key=identity(r);x=rows[key];t=tree[key]
++  for akey,xkey in [('sequence','sequence'),('handlePid','handlePid'),('handleCreated','handleCreated'),('handleIdentity','handleIdentity'),('acquisitionBeginQpc','handleAttemptBeginQpc'),('acquisitionReturnQpc','handleAttemptQpc'),('creationVerifiedQpc','creationVerifiedQpc'),('imageBeginQpc','imageBeginQpc'),('imageEndQpc','imageEndQpc')]:need(r[akey]==x[xkey],'HANDOFF_AUTHORITY_CONTRADICTION_'+akey)
++  need(r['kernelImage']==x['image'] and norm(r['handleImage'])==norm(x['handleImage']) and r['parent']['pid']==x['parentPid'] and r['parent']['sequence']==x['parentSequence'],'HANDOFF_FINAL_IMAGE_PARENT')
++  parent=rows[identity(o['collector'])];need(parent['sequence']==r['parent']['sequence'],'HANDOFF_FINAL_PARENT_INSTANCE')
++  need(x['handleRetained'] and x['handleClosed'] and x['imageError']==x['metadataError']==0 and x['imageStateBefore']==x['imageStateAfter']==258 and 0<x['signalObservedQpc']<o['deadlineQpc'] and x['imageEndQpc']<x['stopQpc'],'HANDOFF_FINAL_HANDLE')
++  need(t['closed'] is True and v['observedQpc']<t['localCloseQpc']<=t['localCloseReturnedQpc']<o['deadlineQpc'],'HANDOFF_RELEASE_ORDER')
++ return dict(status='HANDOFF_COORDINATION_VERIFIED_NOT_ACCEPTANCE',obligations=len(a['helpers']))
+--- D:\JARVIS-STAGE6-LIVE\fb0bf86657a64aff85a1799db37e94c7\code\native_handoff_fixture.cpp
++++ D:\JARVIS-STAGE6-LIVE\d45028a56e344926a311c04ba01f6a80\code\native_handoff_fixture.cpp
+@@ -0,0 +1,66 @@
++// OFFLINE constructed identities/API seams. Never starts tracing or a collector.
++#define WIN32_LEAN_AND_MEAN
++#define NOMINMAX
++#include <windows.h>
++#include <map>
++static std::map<ULONG_PTR,std::pair<DWORD,ULONGLONG>> fake;
++static DWORD FixturePid(HANDLE h){auto i=fake.find((ULONG_PTR)h);return i==fake.end()?GetProcessId(h):i->second.first;}
++static BOOL FixtureTimes(HANDLE h,LPFILETIME a,LPFILETIME b,LPFILETIME c,LPFILETIME d){auto i=fake.find((ULONG_PTR)h);if(i==fake.end())return GetProcessTimes(h,a,b,c,d);a->dwLowDateTime=DWORD(i->second.second);a->dwHighDateTime=DWORD(i->second.second>>32);*b=*c=*d={};return TRUE;}
++static DWORD FixtureWait(HANDLE h,DWORD t){return fake.count((ULONG_PTR)h)?WAIT_TIMEOUT:WaitForSingleObject(h,t);}
++#define GetProcessId FixturePid
++#define GetProcessTimes FixtureTimes
++#define WaitForSingleObject FixtureWait
++#define wmain UNUSED_AUTHORITY_ENTRY
++#include "authority_trace_v3.cpp"
++#undef wmain
++#undef GetProcessId
++#undef GetProcessTimes
++#undef WaitForSingleObject
++#include <iostream>
++int wmain(int argc,wchar_t**argv){
++ if(argc!=3)return 81;folder=argv[1];std::string mode=U(argv[2]);session=L"OFFLINE-HANDOFF";
++ try{
++ auto o=terminal_v3::Parser(terminal_v3::Read(folder+L"\\input.json")).parse();auto&b=o.obj["binding"];
++ auto json=[](std::string s){return terminal_v3::Parser(s).parse();};auto num=[&](ULONGLONG x){return json(std::to_string(x));};auto str=[&](std::string s){return json(J(s));};
++ auto now=Q();LARGE_INTEGER f;QueryPerformanceFrequency(&f);auto start=now-1000,end=start+20*f.QuadPart;
++ if(mode=="deadline")end=start;
++ o.obj["cleanupEntryQpc"]=num(start);o.obj["deadlineQpc"]=num(end);o.obj["preparedQpc"]=num(now);
++ b.obj["frequency"]=num(f.QuadPart);b.obj["kernelSession"]=str(U(session));
++ auto origin="{\"cleanupEntryQpc\":"+std::to_string(start)+",\"deadlineQpc\":"+std::to_string(end)+",\"frequency\":"+std::to_string(f.QuadPart)+"}";Write(L"cleanup-origin-v3.json",origin);b.obj["cleanupOriginSHA256"]=str(terminal_v3::Sha(origin));
++ FILETIME a,bb,c,d;GetProcessTimes(GetCurrentProcess(),&a,&bb,&c,&d);wchar_t image[32768];DWORD n=32768;QueryFullProcessImageNameW(GetCurrentProcess(),0,image,&n);
++ auto obs="{\"pid\":"+std::to_string(GetCurrentProcessId())+",\"created\":"+J(std::to_string(FT(a)))+",\"image\":"+J(U(std::wstring(image,n)))+"}";
++ auto obsRaw="{\"etw\":"+obs+"}";Write(L"observer-identities.json",obsRaw);o.obj["authorityObserver"]=json(obs);b.obj["observerSHA256"]=str(terminal_v3::Sha(obsRaw));
++ Row parent;parent.pid=101;parent.created=1000;parent.sequence=400;parent.handle=(HANDLE)123;parent.handlePid=101;parent.handleCreated=1000;parent.handleImage=L"D:\\python.exe";parent.start=now-100;parent.retained=now-90;parent.creationVerified=now-85;parent.imageBegin=now-80;parent.imageEnd=now-70;
++ rows[{101,1000}]=parent;fake[123]={101,1000};
++ Row helper=parent;helper.pid=102;helper.created=1001;helper.sequence=401;helper.parent=101;helper.parentSequence=400;helper.handle=(HANDLE)124;helper.handlePid=102;helper.handleCreated=1001;helper.image=helper.handleImage=L"C:\\Windows\\System32\\conhost.exe";helper.attemptBegin=now-95;
++ fake[124]={102,1001};helper.imageStateBefore=helper.imageStateAfter=WAIT_TIMEOUT;
++ if(mode=="no-handle")helper.handle=nullptr;
++ if(mode=="creation")helper.handleCreated=999;
++ if(mode=="image")helper.handleImage=L"D:\\wrong.exe";
++ if(mode=="kernel-image")helper.image=L"D:\\wrong.exe";
++ if(mode=="parent")helper.parentSequence=399;
++ if(mode=="pid-reuse")fake[124]={102,999};
++ if(mode=="post-exit-acquire")helper.stop=helper.attemptBegin-1;
++ if(mode=="exit-after-acquire")helper.stop=now-60;
++ if(mode=="sequence")helper.sequence=0;
++ if(mode=="image-error")helper.imageError=5;
++ if(mode=="already-signaled")helper.imageStateBefore=WAIT_OBJECT_0;
++ if(mode=="exit-during-image")helper.imageStateAfter=WAIT_OBJECT_0;
++ if(mode=="fault")faults=1;
++ if(mode!="missing-row")rows[{102,1001}]=helper;
++ auto&h=o.obj["helpers"].arr[0];h.obj["localRetainedQpc"]=num(now-120);h.obj["localVerifiedQpc"]=num(now-110);
++ if(mode=="expected-sequence")h.obj["expectedSequence"]=str("999");
++ if(mode=="duplicate")o.obj["helpers"].arr.push_back(h);
++ if(mode=="wrong-run")b.obj["run"]=str("old-run");
++ if(mode=="wrong-observer")o.obj["authorityObserver"].obj["created"]=str("2");
++ if(mode=="wrong-workspace")b.obj["workspaceBindingSHA256"]=str(std::string(64,'0'));
++ o.obj["obligationSetId"]=str(terminal_v3::Sha(o.at("helpers").dump()));
++ Write(L"helper-handoff-obligations-v1.json",o.dump());
++ bool passed=handoff_v1::HandoffReceipt();
++ if(mode=="missing-row"){if(passed)return 88;rows[{102,1001}]=helper;passed=handoff_v1::HandoffReceipt();}
++ if(mode=="duplicate-publish"){if(!passed)return 89;handoff_v1::HandoffReceipt();return 90;}
++ bool expected=mode=="normal"||mode=="missing-row"||mode=="exit-after-acquire";
++ if(passed!=expected)return 91;
++ std::cout<<"PASS "<<mode<<"\n";return 0;
++ }catch(const std::exception&e){bool expected=mode!="normal"&&mode!="missing-row"&&mode!="exit-after-acquire";std::cout<<(expected?"PASS rejected ":"FAIL ")<<mode<<" "<<e.what()<<"\n";return expected?0:92;}
++}
+--- D:\JARVIS-STAGE6-LIVE\fb0bf86657a64aff85a1799db37e94c7\code\preservation-policy-v4.json
++++ D:\JARVIS-STAGE6-LIVE\d45028a56e344926a311c04ba01f6a80\code\preservation-policy-v4.json
+@@ -1,6 +1,6 @@
+ {
+-  "candidate": "D:\\JARVIS-STAGE6-LIVE\\fb0bf86657a64aff85a1799db37e94c7\\code",
+-  "preservationRoot": "D:\\JARVIS-STAGE6-LIVE\\fb0bf86657a64aff85a1799db37e94c7\\preservation-v4",
++  "candidate": "D:\\JARVIS-STAGE6-LIVE\\d45028a56e344926a311c04ba01f6a80\\code",
++  "preservationRoot": "D:\\JARVIS-STAGE6-LIVE\\d45028a56e344926a311c04ba01f6a80\\preservation-v4",
+   "artifactPatterns": [
+     "allow\\-app\\-prompt",
+     "allow\\-detail\\-prompt",
+@@ -82,7 +82,10 @@
+     "detail/(?:etw-ready\\.json|etw-result\\.json|etw-stop|startup-events\\.json|stage-timing\\.json|loss-telemetry\\.json|trace-[0-9]{5}\\.jsonl)",
+     "workspace-binding-v4\\.json",
+     "loss-diagnostic-v2\\.json",
+-    "detail/loss-diagnostic-v2\\.json"
++    "detail/loss-diagnostic-v2\\.json",
++    "helper-handoff-obligations-v1\\.json(?:\\.pending)?",
++    "helper-handoff-acquired-v1\\.json(?:\\.pending)?",
++    "helper-handoff-observed-v1\\.json(?:\\.pending)?"
+   ],
+   "schema": "stage6-preservation-policy-v4"
+ }--- D:\JARVIS-STAGE6-LIVE\fb0bf86657a64aff85a1799db37e94c7\code\small_finalize_v4.py
++++ D:\JARVIS-STAGE6-LIVE\d45028a56e344926a311c04ba01f6a80\code\small_finalize_v4.py
+@@ -9,6 +9,7 @@
+ OUTPUTS={'v3-input-manifest.json','v3-check-result.json','v3-seal.json','v3-evidence.zip','v3-archive-receipt.json'}
+ TOP=set('driver-stdout-v3.bin driver-stderr-v3.bin cleanup-origin-v3.json phase-a-v3.json terminal-v3.json terminal-observed-v3.json workload-census-v3.json observer-tail-request-v3.json observer-tail-v3.json observer-exits-v3.json external-controller-v3.json external-exits-v3.json final-census-v3.json coordination-states-v3.json'.split()) | set('allow-app-prompt allow-detail-prompt app-authority.json app-events.jsonl app-health.jsonl app-heartbeats.json app-ready.json app-receipts.json app-result.json app-stop app-tap.json collector-health-samples.json contract.json etw-ready.json etw-result.json etw-stop hash-health-samples.json hash-pass-1.json hash-pass-2.json hash-worker-cleanup.json hash-worker-stderr.bin hash-worker-stderr.bin.json hash-worker-stdout.bin hash-worker-stdout.bin.json integration-launcher.json kernel-authority-manifest.json kernel-authority-result.json kernel-authority-seal.json kernel-authority-telemetry.json launcher-identity.json launcher-result.json loss-telemetry.json metadata-verified.json native-bridge-cleanup.json observer-identities.json probe-timings.json release-handles retained-handle-verification.json sampler-results.json small-declaration-v3.json stage-timing.json state.json stress-result.json tree-handles.json tree-image-support.json work.stderr work.stdout workload-stop primary-failure.json hash-failure.json secondary-failures.jsonl warnings.jsonl'.split())
+ PAT=r'(?:early-image|native)-[0-9]+-[0-9]+\.json|integration-(?:collector|hash-worker|sampler)-[0-9]+\.json|kernel-authority-[0-9]+\.jsonl|app-authority-[0-9]+\.jsonl'
++TOP |= {'helper-handoff-obligations-v1.json','helper-handoff-acquired-v1.json','helper-handoff-observed-v1.json'}
+ TOP |= {'workspace-binding-v4.json','loss-diagnostic-v2.json'}
+ DETAIL={'loss-diagnostic-v2.json','etw-ready.json','etw-result.json','etw-stop','startup-events.json','stage-timing.json','loss-telemetry.json'}
+ def need(v,m):
+@@ -51,6 +52,8 @@
+  root=check_path(Path(root));need(not any((root/n).exists() for n in OUTPUTS),'FINALIZATION_ALREADY_STARTED')
+  from completed_v3 import verify_complete
+  verify_complete(root)
++ from helper_handoff_v1 import verify_final
++ handoff=verify_final(root)
+  verify_workspace(root);diagnostics=inspect_diagnostics(root)
+  frozen();before=inventory(root);result=check(root)
+  normal=result['status']=='SMALL_NORMAL_PASS_PENDING_ARCHIVE'
+@@ -62,7 +65,7 @@
+   with (root/row['path']).open('r+b',buffering=0) as f:os.fsync(f.fileno())
+  need(inventory(root)==before,'CHANGED_DURING_FLUSH');frozen()
+  verify_workspace(root);need(inspect_diagnostics(root)==diagnostics,'DIAGNOSTIC_CHANGED')
+- write(root/'v3-input-manifest.json',dict(run=root.name,files=before,workspaceBindingSHA256=sha(root/'workspace-binding-v4.json'),diagnostics=diagnostics))
++ write(root/'v3-input-manifest.json',dict(run=root.name,files=before,workspaceBindingSHA256=sha(root/'workspace-binding-v4.json'),diagnostics=diagnostics,handoff=handoff))
+  write(root/'v3-check-result.json',dict(state='CHECKER_FINALIZATION_ALLOWED',result=result,inputManifestSHA256=sha(root/'v3-input-manifest.json')))
+  write(root/'v3-seal.json',dict(run=root.name,contract='stage6-small-tracker-coordination-v3',inputManifestSHA256=sha(root/'v3-input-manifest.json'),resultSHA256=sha(root/'v3-check-result.json')))
+  members=before+[dict(path=n,bytes=(root/n).stat().st_size,sha256=sha(root/n)) for n in ('v3-input-manifest.json','v3-check-result.json','v3-seal.json')]
+--- D:\JARVIS-STAGE6-LIVE\fb0bf86657a64aff85a1799db37e94c7\code\test_binding_v4.py
++++ D:\JARVIS-STAGE6-LIVE\d45028a56e344926a311c04ba01f6a80\code\test_binding_v4.py
+@@ -73,7 +73,7 @@
+   r=self.fixture();b.write(r/'loss-diagnostic-extra.json',{});self.bad(lambda:fin.inventory(r),'UNEXPECTED_ARTIFACT')
+  def test_21_pass_missing_sidecar(self):
+   r=self.fixture();(r/'detail/loss-diagnostic-v2.json').rename(r/'detail/absent.fixture')
+-  with m.patch('completed_v3.verify_complete',return_value={}),m.patch.object(fin,'verify_workspace',return_value=self.binding):self.bad(lambda:fin.finalize(r),'MISSING_SIDECAR')
++  with m.patch('completed_v3.verify_complete',return_value={}),m.patch('helper_handoff_v1.verify_final',return_value={'offlineFixture':True}),m.patch.object(fin,'verify_workspace',return_value=self.binding):self.bad(lambda:fin.finalize(r),'MISSING_SIDECAR')
+   self.assertFalse((r/'v3-seal.json').exists())
+  def preserve_fixture(self,r):
+   policy=fp.cli_policy(r.name)
+@@ -117,7 +117,7 @@
+   r=self.fixture();b.write(r/'launcher-identity.json',dict(pid=1,created='1'))
+   # Unit integration only: lifecycle predicates are controlled fixture dependencies,
+   # never evidence that a real collector/observer completed.
+-  with m.patch('completed_v3.verify_complete',return_value={}),m.patch('small_check_v3.check',return_value=dict(status='SMALL_NORMAL_PASS_PENDING_ARCHIVE')),m.patch.object(fin,'verify_workspace',return_value=self.binding),m.patch.object(fin,'no_live_identities'):
++  with m.patch('completed_v3.verify_complete',return_value={}),m.patch('helper_handoff_v1.verify_final',return_value={'offlineFixture':True}),m.patch('small_check_v3.check',return_value=dict(status='SMALL_NORMAL_PASS_PENDING_ARCHIVE')),m.patch.object(fin,'verify_workspace',return_value=self.binding),m.patch.object(fin,'no_live_identities'):
+    value=fin.finalize(r)
+   self.assertEqual(value['state'],'ACCEPTED')
+   with zipfile.ZipFile(r/'v3-evidence.zip') as z:
+--- D:\JARVIS-STAGE6-LIVE\fb0bf86657a64aff85a1799db37e94c7\code\test_handoff_v1.py
++++ D:\JARVIS-STAGE6-LIVE\d45028a56e344926a311c04ba01f6a80\code\test_handoff_v1.py
+@@ -0,0 +1,170 @@
++"""Offline handoff tests: API seams/constructed evidence, no observers or ETW."""
++import unittest,unittest.mock as m,json,pathlib,uuid,copy,hashlib,itertools,threading,subprocess
++import helper_handoff_v1 as h
++from coordination_v3 import canonical,digest,write_once
++from workspace import CODE
++def fixture(root=None):
++ root=root or CODE/('protected-'+uuid.uuid4().hex)
++ c=dict(pid=101,created='1000',image=r'D:\python.exe');obs=dict(pid=201,created='900',image=r'D:\observer.exe')
++ b=dict(run=root.name,declarationSHA256='a'*64,sourceManifestSHA256='b'*64,kernelSession='OFFLINE-HANDOFF',frequency=100,observerSHA256='c'*64,workspaceBindingSHA256='d'*64,cleanupOriginSHA256='e'*64)
++ helper=dict(obligationId='102-1001',pid=102,created='1001',expectedSequence=None,parent=c,image=r'C:\Windows\System32\conhost.exe',localHandleIdentity='33',localRetained=True,localRetainedQpc=50,localVerifiedQpc=60,publicationState='SEALED_CLAIM')
++ o=dict(schema=h.SCHEMA,kind='HELPER_OBLIGATIONS',binding=b,obligationSetId=hashlib.sha256(canonical([helper])).hexdigest(),cleanupEntryQpc=100,deadlineQpc=2100,collector=c,authorityObserver=obs,helpers=[helper],preparedQpc=101,coordinationOnly=True,cleanupPass=False,acceptance=False)
++ r=dict(obligationId='102-1001',pid=102,created='1001',sequence='401',kernelSession=b['kernelSession'],parent=dict(c,sequence='400'),kernelImage=r'\Device\HarddiskVolume6\Windows\System32\conhost.exe',handleImage=helper['image'],method='OpenProcess',accessMask=0x101000,handlePid=102,handleCreated='1001',handleIdentity='44',retained=True,acquisitionBeginQpc=70,acquisitionReturnQpc=71,creationVerifiedQpc=72,imageBeginQpc=73,imageEndQpc=74,verificationQpc=102)
++ a=dict(schema=h.SCHEMA,kind='HANDOFF_ACQUIRED',receiptSequence=1,binding=copy.deepcopy(b),obligationsSHA256=hashlib.sha256(canonical(o)).hexdigest(),cleanupEntryQpc=100,deadlineQpc=2100,collector=c,authorityObserver=obs,helpers=[r],preparedQpc=103,coordinationOnly=True,cleanupPass=False,acceptance=False)
++ return root,o,a
++class Receipt(unittest.TestCase):
++ def test_normal_independent_acquisition(self):
++  _,o,a=fixture();self.assertIs(h.validate_receipt(o,a,a['obligationsSHA256'],104),a)
++ def test_multiple_exact_helpers(self):
++  _,o,a=fixture();x=copy.deepcopy(o['helpers'][0]);x.update(pid=103,created='1002',obligationId='103-1002');o['helpers'].append(x);o['obligationSetId']=hashlib.sha256(canonical(o['helpers'])).hexdigest()
++  r=copy.deepcopy(a['helpers'][0]);r.update(pid=103,created='1002',obligationId='103-1002',sequence='402',handlePid=103,handleCreated='1002');a['helpers'].append(r);a['obligationsSHA256']=hashlib.sha256(canonical(o)).hexdigest();h.validate_receipt(o,a,a['obligationsSHA256'],104)
++ def test_no_stop_or_exit_requirement(self):
++  _,o,a=fixture();h.validate_receipt(o,a,a['obligationsSHA256'],104);self.assertNotIn('stopQpc',a['helpers'][0]);self.assertNotIn('exitCode',a['collector'])
++ def test_duplicate_obligation(self):
++  _,o,a=fixture();o['helpers'].append(copy.deepcopy(o['helpers'][0]));o['obligationSetId']=hashlib.sha256(canonical(o['helpers'])).hexdigest()
++  with self.assertRaises(ValueError):h.validate_obligations(o)
++ def test_duplicate_instance_different_obligation(self):
++  _,o,a=fixture();r=copy.deepcopy(o['helpers'][0]);r['obligationId']='different';o['helpers'].append(r)
++  with self.assertRaises(ValueError):h.validate_obligations(o)
++ def test_unretained_local_claim(self):
++  _,o,a=fixture();o['helpers'][0]['localRetained']=False
++  with self.assertRaises(ValueError):h.validate_obligations(o)
++ def test_duplicate_json_keys(self):
++  root,_,_=fixture();root.mkdir();p=root/h.NAMES[1];p.write_text('{"schema":1,"schema":2}')
++  with self.assertRaises(ValueError):h.load(p)
++ def test_malformed_and_partial_json(self):
++  for raw in ('{','null','{"x":'):
++   with self.subTest(raw=raw):
++    root,_,_=fixture();root.mkdir();p=root/h.NAMES[1];p.write_text(raw)
++    with self.assertRaises((ValueError,TypeError)):h.validate_receipt(fixture()[1],h.load(p),'0'*64,104)
++ def test_partial_publication_not_final(self):
++  root,o,a=fixture();root.mkdir();(root/(h.NAMES[1]+'.pending')).write_text('{');self.assertFalse(h.safe(root,h.NAMES[1]).exists())
++ def test_duplicate_exclusive_publication(self):
++  root,o,_=fixture();root.mkdir();h.publish(root,h.NAMES[0],o);before=(root/h.NAMES[0]).read_bytes()
++  with self.assertRaises(ValueError):h.publish(root,h.NAMES[0],o)
++  self.assertEqual(before,(root/h.NAMES[0]).read_bytes())
++ def test_traversal_and_external_root(self):
++  root,_,_=fixture();root.mkdir()
++  for r,n in ((root,'../escape'),(CODE.parent,h.NAMES[0]),(CODE/'protected-x'/'..'/'protected-y',h.NAMES[0])):
++   with self.assertRaises(ValueError):h.safe(r,n)
++ def test_reparse_rejection(self):
++  root,_,_=fixture();root.mkdir();real=root.lstat()
++  with m.patch.object(pathlib.Path,'lstat',return_value=type('S',(),{'st_file_attributes':real.st_file_attributes|0x400})()),self.assertRaises(ValueError):h.safe(root,h.NAMES[0])
++def rejection(name,path,value):
++ def test(self):
++  _,o,a=fixture();x=a
++  for k in path[:-1]:x=x[k]
++  x[path[-1]]=value
++  with self.assertRaises((ValueError,KeyError,TypeError)):h.validate_receipt(o,a,hashlib.sha256(canonical(o)).hexdigest(),104)
++ setattr(Receipt,'test_reject_'+name,test)
++for name,path,value in [
++ ('schema',['schema'],'old'),('run',['binding','run'],'old'),('candidate',['binding','sourceManifestSHA256'],'0'*64),('workspace',['binding','workspaceBindingSHA256'],'0'*64),('declaration',['binding','declarationSHA256'],'0'*64),('session',['binding','kernelSession'],'old'),('observer',['authorityObserver'],dict(pid=222,created='8',image=r'D:\wrong.exe')),('obligation_hash',['obligationsSHA256'],'0'*64),('origin',['cleanupEntryQpc'],101),('deadline',['deadlineQpc'],2101),('expired',['preparedQpc'],2100),('future',['preparedQpc'],105),('retained_false',['helpers',0,'retained'],False),('creation',['helpers',0,'handleCreated'],'1002'),('pid_reuse',['helpers',0,'created'],'1002'),('handle_pid',['helpers',0,'handlePid'],999),('image',['helpers',0,'handleImage'],r'D:\other.exe'),('parent',['helpers',0,'parent'],dict(pid=1,created='1000',sequence='400',image=r'D:\python.exe')),('kernel_sequence',['helpers',0,'sequence'],'0'),('wrong_kernel_session',['helpers',0,'kernelSession'],'old'),('missing_helper',['helpers'],[]),('duplicate_helper',['helpers'],[fixture()[2]['helpers'][0]]*2),('late_verification',['helpers',0,'verificationQpc'],2100),('bad_creation_timing',['helpers',0,'creationVerifiedQpc'],75),('transfer',['helpers',0,'method'],'DuplicateHandle'),('access',['helpers',0,'accessMask'],0x1fffff),('acceptance',['acceptance'],True),('empty_image',['helpers',0,'kernelImage'],''),('handle_missing',['helpers',0,'handleIdentity'],'0')]:rejection(name,path,value)
++class Wait(unittest.TestCase):
++ def setup_wait(self):
++  root,o,a=fixture();root.mkdir();write_once(root/'cleanup-origin-v3.json',dict(cleanupEntryQpc=100,deadlineQpc=2100,frequency=100));write_once(root/'workspace-binding-v4.json',{});write_once(root/'observer-identities.json',dict(etw=o['authorityObserver']))
++  r=dict(pid=102,created='1001',image=o['helpers'][0]['image'],closed=False,handleIdentity='33',handleRetainedQpc=50,imageCapture=dict(stateAfterQpc=60))
++  t=m.Mock();t.anchor=dict(o['collector'],capture=dict(image=o['collector']['image']));t.handles={(102,'1001'):33};t.snapshot.return_value=[r];t.eligible.return_value=True
++  b=dict(o['binding']);b.pop('workspaceBindingSHA256');b.pop('cleanupOriginSHA256');b['producer']=o['collector'];return root,o,a,t,b
++ def deliver(self,root,a):
++  o=h.load(root/h.NAMES[0]);a=copy.deepcopy(a);a.update(binding=o['binding'],obligationsSHA256=digest(root/h.NAMES[0]),preparedQpc=110);a['helpers'][0]['verificationQpc']=109;h.publish(root,h.NAMES[1],a)
++ def test_obligation_first_then_independent_receipt(self):
++  root,o,a,t,b=self.setup_wait();clock=itertools.count(105)
++  with m.patch('tracker_adapter_v3.binding',return_value=b):
++   result=h.perform(root,t,100,2100,clock=lambda:next(clock),pause=lambda _:self.deliver(root,a))
++  self.assertEqual(result['kind'],'HANDOFF_OBSERVED');self.assertFalse(t.snapshot()[0]['closed']);self.assertTrue((root/h.NAMES[2]).exists())
++ def test_never_observed_deadline_no_reset(self):
++  root,o,a,t,b=self.setup_wait();clock=iter([101,102,103,2099,2100,2101])
++  with m.patch('tracker_adapter_v3.binding',return_value=b),self.assertRaises(ValueError):h.perform(root,t,100,2100,clock=lambda:next(clock),pause=lambda _:None)
++  self.assertFalse((root/h.NAMES[2]).exists());self.assertFalse(t.snapshot()[0]['closed'])
++ def test_late_write_rejected(self):
++  root,o,a,t,b=self.setup_wait();clock=iter([101,2101])
++  with m.patch('tracker_adapter_v3.binding',return_value=b),self.assertRaises(ValueError):h.perform(root,t,100,2100,clock=lambda:next(clock))
++ def test_observer_crash_rejected(self):
++  root,o,a,t,b=self.setup_wait()
++  def dead():raise ValueError('observer dead')
++  with m.patch('tracker_adapter_v3.binding',return_value=b),self.assertRaises(ValueError):h.perform(root,t,100,2100,clock=lambda:105,health=dead)
++ def test_collector_exception_no_observed_record(self):
++  root,o,a,t,b=self.setup_wait()
++  with m.patch('tracker_adapter_v3.binding',return_value=b),m.patch.object(h,'publish',side_effect=OSError('write failure')),self.assertRaises(OSError):h.perform(root,t,100,2100,clock=lambda:105)
++  self.assertFalse((root/h.NAMES[2]).exists())
++ def test_stale_prior_artifact_fails(self):
++  root,o,a,t,b=self.setup_wait();h.publish(root,h.NAMES[1],a)
++  with self.assertRaises(ValueError):h.perform(root,t,100,2100,clock=lambda:105)
++class FinalEvidence(unittest.TestCase):
++ def setup_final(self):
++  root,o,a=fixture();root.mkdir();write_once(root/'workspace-binding-v4.json',{});write_once(root/'cleanup-origin-v3.json',dict(cleanupEntryQpc=100,deadlineQpc=2100,frequency=100))
++  o['binding'].update(workspaceBindingSHA256=digest(root/'workspace-binding-v4.json'),cleanupOriginSHA256=digest(root/'cleanup-origin-v3.json'));a['binding']=copy.deepcopy(o['binding'])
++  h.publish(root,h.NAMES[0],o);a['obligationsSHA256']=digest(root/h.NAMES[0]);h.publish(root,h.NAMES[1],a)
++  v=dict(schema=h.SCHEMA,kind='HANDOFF_OBSERVED',binding=o['binding'],obligationsSHA256=digest(root/h.NAMES[0]),acquiredSHA256=digest(root/h.NAMES[1]),collector=o['collector'],cleanupEntryQpc=100,deadlineQpc=2100,observedQpc=104,helpers=[dict(obligationId='102-1001',pid=102,created='1001')],coordinationOnly=True,cleanupPass=False,acceptance=False)
++  h.publish(root,h.NAMES[2],v)
++  b=copy.deepcopy(o['binding']);b.pop('workspaceBindingSHA256');b.pop('cleanupOriginSHA256');b['schema']='stage6-terminal-v3'
++  write_once(root/'phase-a-v3.json',dict(binding=b,collector=o['collector'],authorityObserver=o['authorityObserver'],cleanupEntryQpc=100,deadlineQpc=2100))
++  r=a['helpers'][0];x=dict(pid=102,created='1001',sequence='401',parentPid=101,parentSequence='400',image=r['kernelImage'],handleImage=r['handleImage'],handleRetained=True,handleClosed=True,handlePid=102,handleCreated='1001',handleIdentity='44',handleAttemptBeginQpc=70,handleAttemptQpc=71,creationVerifiedQpc=72,imageBeginQpc=73,imageEndQpc=74,imageError=0,metadataError=0,signalObservedQpc=110,stopQpc=109)
++  x.update(imageStateBefore=258,imageStateAfter=258)
++  k=dict(session=b['kernelSession'],faults=0,eventsLost=0,buffersLost=0,realtimeBuffersLost=0,rows=[dict(pid=101,created='1000',sequence='400'),x]);write_once(root/'etw-result.json',k)
++  tree=dict(rows=[dict(pid=102,created='1001',closed=True,localCloseQpc=105,localCloseReturnedQpc=106)]);write_once(root/'tree-handles.json',tree);return root,k,tree
++ def change(self,root,name,value):
++  # Only mutable constructed test evidence, never historical/acceptance artifacts.
++  (root/name).write_text(json.dumps(value))
++ def test_final_independent_reconciliation(self):
++  root,_,_=self.setup_final();self.assertEqual(h.verify_final(root)['obligations'],1)
++ def test_later_authority_failure_rejects(self):
++  root,k,_=self.setup_final();k['faults']=1;self.change(root,'etw-result.json',k)
++  with self.assertRaises(ValueError):h.verify_final(root)
++ def test_kernel_handle_contradiction(self):
++  root,k,_=self.setup_final();k['rows'][1]['creationVerifiedQpc']=999;self.change(root,'etw-result.json',k)
++  with self.assertRaises(ValueError):h.verify_final(root)
++ def test_receipt_after_local_release(self):
++  root,_,t=self.setup_final();t['rows'][0]['localCloseQpc']=103;self.change(root,'tree-handles.json',t)
++  with self.assertRaises(ValueError):h.verify_final(root)
++ def test_close_returns_after_deadline(self):
++  root,_,t=self.setup_final();t['rows'][0]['localCloseReturnedQpc']=2100;self.change(root,'tree-handles.json',t)
++  with self.assertRaises(ValueError):h.verify_final(root)
++ def test_claim_cannot_replace_missing_authority(self):
++  root,k,_=self.setup_final();k['rows'].pop();self.change(root,'etw-result.json',k)
++  with self.assertRaises((ValueError,KeyError)):h.verify_final(root)
++ def test_later_reused_pid_cannot_replace_original(self):
++  root,k,_=self.setup_final();k['rows'][1]['created']='1002';self.change(root,'etw-result.json',k)
++  with self.assertRaises((ValueError,KeyError)):h.verify_final(root)
++ def test_helper_exited_before_acquisition_rejected(self):
++  root,k,_=self.setup_final();k['rows'][1]['stopQpc']=69;self.change(root,'etw-result.json',k)
++  with self.assertRaises(ValueError):h.verify_final(root)
++class Release(unittest.TestCase):
++ def setup_tracker(self):
++  import evidence_support_v3 as tr
++  t=tr.TreeTracker.__new__(tr.TreeTracker);t.anchor=dict(pid=101,created='1000',capture=dict(image=r'D:\python.exe'));t.anchorHandle=1;t.rows={};t.handles={};t.errors=[];t.lock=threading.RLock();t.stop=threading.Event();t.thread=m.Mock();t.thread.is_alive.return_value=False;t.scans=1;t.maxScan=0;t.capacity=8192;t.scan=lambda:None
++  r=dict(pid=102,created='1001',parentPid=101,role='descendant:conhost.exe',image=r'C:\Windows\System32\conhost.exe',imageCapture=dict(valid=True,image=r'C:\Windows\System32\conhost.exe'),closed=False,exitFiletime=None,exitCode=None,signalObservedQpc=None)
++  t.rows[(102,'1001')]=r;t.handles[(102,'1001')]=2;root=CODE/('protected-'+uuid.uuid4().hex);root.mkdir();write_once(root/'observer-identities.json',dict(etw=dict(pid=201,created='900')));return tr,t,r,root
++ def run_tracker(self,fail=False):
++  tr,t,r,root=self.setup_tracker();clock=itertools.count(100);seen=[]
++  def ack(*args,**kwargs):
++   self.assertFalse(r['closed']);self.assertTrue(t.stop.is_set());t.thread.join.assert_called_once();seen.append('ack')
++   if fail:raise ValueError('injected receipt failure')
++   return dict(observedQpc=101)
++  def close(x):
++   if x==2:
++    if fail:self.assertTrue((root/'rejected-v3.json').exists())
++    else:self.assertIn('ack',seen)
++    seen.append('close')
++   return True
++  with m.patch.object(tr,'ticks',side_effect=lambda:next(clock)),m.patch.object(tr,'frequency',return_value=100),m.patch.object(tr.K,'OpenProcess',return_value=3),m.patch.object(tr,'times',return_value=('900',None)),m.patch.object(tr.K,'WaitForSingleObject',return_value=258),m.patch.object(tr.K,'CloseHandle',side_effect=close),m.patch.object(h,'perform',side_effect=ack),m.patch('tracker_adapter_v3.binding',return_value={}):
++   if fail:
++    with self.assertRaises(ValueError):t.finish(root,20)
++   else:
++    out=t.finish(root,20);self.assertEqual(out['deadlineQpc']-out['cleanupEntryQpc'],2000);self.assertGreaterEqual(r['localCloseReturnedQpc'],r['localCloseQpc'])
++  self.assertEqual(seen,['ack','close'])
++ def test_actual_tracker_ack_precedes_close(self):self.run_tracker()
++ def test_actual_tracker_failure_cleanup_is_rejected(self):self.run_tracker(True)
++class Native(unittest.TestCase):
++ def test_actual_cpp_producer(self):
++  for mode in ('normal','missing-row','exit-after-acquire','no-handle','creation','image','kernel-image','parent','pid-reuse','post-exit-acquire','sequence','image-error','already-signaled','exit-during-image','fault','expected-sequence','duplicate','wrong-run','wrong-observer','wrong-workspace','deadline','duplicate-publish'):
++   with self.subTest(mode=mode):
++    root,o,a=fixture();root.mkdir();b=o['binding'];b['sourceManifestSHA256']=digest(CODE/'small-source-v3.json')
++    declaration=dict(run=root.name,code=str(CODE),sourceManifestSHA256=b['sourceManifestSHA256']);write_once(root/'small-declaration-v3.json',declaration);b['declarationSHA256']=digest(root/'small-declaration-v3.json')
++    workspace=dict(run=root.name,candidateRoot=str(CODE),evidenceRoot=str(root),candidateManifestSHA256=b['sourceManifestSHA256'],smallDeclarationSHA256=b['declarationSHA256']);write_once(root/'workspace-binding-v4.json',workspace);b['workspaceBindingSHA256']=digest(root/'workspace-binding-v4.json');write_once(root/'input.json',o)
++    p=subprocess.run([str(CODE/'J6HandoffFixture.exe'),str(root),mode],capture_output=True,text=True,timeout=10)
++    write_once(root/'offline-native-result.json',dict(mode=mode,returncode=p.returncode,stdout=p.stdout,stderr=p.stderr,constructed=True))
++    self.assertEqual(p.returncode,0,p.stdout+p.stderr)
++    if mode in ('normal','missing-row','exit-after-acquire'):
++     actual_o=h.load(root/h.NAMES[0]);actual_a=h.load(root/h.NAMES[1]);h.validate_receipt(actual_o,actual_a,digest(root/h.NAMES[0]),h.ticks())
++if __name__=='__main__':unittest.main(verbosity=2)
+--- D:\JARVIS-STAGE6-LIVE\fb0bf86657a64aff85a1799db37e94c7\code\test_successor_v3.py
++++ D:\JARVIS-STAGE6-LIVE\d45028a56e344926a311c04ba01f6a80\code\test_successor_v3.py
+@@ -51,13 +51,13 @@
+   t.rows[(11,'1001')]=r;t.handles[(11,'1001')]=2;t.scan=lambda:None
+   return t,r
+  def test_pending_closes_local_handle_without_exit_claim(self):
+-  t,r=self.build();root=ROOT/uuid.uuid4().hex;root.mkdir();clock=itertools.count(1000)
+-  with patch.object(tracker,'ticks',side_effect=lambda:next(clock)),patch.object(tracker,'frequency',return_value=100),patch.object(tracker.K,'WaitForSingleObject',return_value=258),patch.object(tracker.K,'CloseHandle',return_value=True),patch('tracker_adapter_v3.binding',return_value={'synthetic':True}):v=t.finish(root,20)
++  t,r=self.build();root=ROOT/uuid.uuid4().hex;root.mkdir();(root/'observer-identities.json').write_text(json.dumps({'etw':{'pid':99,'created':'900'}}));clock=itertools.count(1000)
++  with patch.object(tracker,'ticks',side_effect=lambda:next(clock)),patch.object(tracker,'frequency',return_value=100),patch.object(tracker.K,'OpenProcess',return_value=3),patch.object(tracker,'times',return_value=('900',None)),patch('helper_handoff_v1.perform',return_value={'observedQpc':999}),patch.object(tracker.K,'WaitForSingleObject',return_value=258),patch.object(tracker.K,'CloseHandle',return_value=True),patch('tracker_adapter_v3.binding',return_value={'synthetic':True}):v=t.finish(root,20)
+   self.assertTrue(v['localFinalized']);self.assertTrue(v['allHandlesClosed']);self.assertFalse(v['allExited']);self.assertIsNone(v['rows'][0]['exitFiletime'])
+   self.assertEqual(v['deadlineQpc']-v['cleanupEntryQpc'],2000)
+  def test_handle_close_failure_is_not_pending_success(self):
+-  t,r=self.build();root=ROOT/uuid.uuid4().hex;root.mkdir();clock=itertools.count(1000)
+-  with patch.object(tracker,'ticks',side_effect=lambda:next(clock)),patch.object(tracker,'frequency',return_value=100),patch.object(tracker.K,'WaitForSingleObject',return_value=258),patch.object(tracker.K,'CloseHandle',return_value=False),self.assertRaises(Rejected):t.finish(root,20)
++  t,r=self.build();root=ROOT/uuid.uuid4().hex;root.mkdir();(root/'observer-identities.json').write_text(json.dumps({'etw':{'pid':99,'created':'900'}}));clock=itertools.count(1000)
++  with patch.object(tracker,'ticks',side_effect=lambda:next(clock)),patch.object(tracker,'frequency',return_value=100),patch.object(tracker.K,'OpenProcess',return_value=3),patch.object(tracker,'times',return_value=('900',None)),patch('helper_handoff_v1.perform',return_value={'observedQpc':999}),patch.object(tracker.K,'WaitForSingleObject',return_value=258),patch.object(tracker.K,'CloseHandle',return_value=False),self.assertRaises(Rejected):t.finish(root,20)
+  def test_other_class_is_not_eligible(self):
+   t,r=self.build();r['role']='lifecycle-probe';self.assertFalse(t.eligible(r))
+ if __name__=='__main__':unittest.main(verbosity=2)

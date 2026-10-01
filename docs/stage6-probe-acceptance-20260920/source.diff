@@ -1,0 +1,355 @@
+--- before/accept_run.py
++++ candidate/accept_run.py
+@@ -1,5 +1,6 @@
+ import json,sys,pathlib,collections,traceback
+ from workspace import run_dir
++from probe_policy import validate_lifecycle
+ from finalize import finalize,accepted,durable_write
+ R=run_dir(sys.argv[1])
+ def read(n):return json.loads((R/n).read_text(encoding='utf-8-sig'))
+@@ -17,6 +18,7 @@
+  f=read('finalization-state.json')
+  if f['state']!='SEALED' or f['failure'] or f['active'] or not f['allHandlesConfirmed'] or f['expected']!=len(p) or f['starts']!=len(p) or f['stops']!=len(p):raise RuntimeError('Finalization barrier not proved')
+  if read('monitor-result.json').get('finalization')!='SEALED':raise RuntimeError('Missing finalization receipt')
++ validate_lifecycle(read('probe-timings.json'),[json.loads(x) for x in (R/'events.jsonl').read_text().splitlines()],h)
+  result=finalize(R)
+  if not accepted(R,0):raise RuntimeError('Final durable receipt invalid')
+  durable_write(R/'acceptance.json',dict(status='SACRIFICIAL_RUN_ACCEPTED',expectedStarts=len(p),callbackStarts=len(p),enqueuedStarts=len(p),persistedStarts=len(p),expectedStops=len(p),callbackStops=len(p),enqueuedStops=len(p),persistedStops=len(p),externalCollisions=a['externalCollisions'],internalCollisions=a['internalCollisions'],heartbeatInterval=a['maxHeartbeatInterval'],heartbeatAge=a['maxHeartbeatAge'],manifest_sha256=result['manifest_sha256'],protectedAccess=False))
+--- before/collect.py
++++ candidate/collect.py
+@@ -1,6 +1,6 @@
+ """Bounded diagnostic collection; health failures remain latched, never accepted."""
+ import ctypes as c,ctypes.wintypes as w,datetime,json,pathlib,subprocess,sys,time,traceback,hashlib,os
+-from journal import Reader,PublisherWatch,ticks
++from journal import Reader,PublisherWatch,ticks,frequency
+ from workspace import CODE as R,run_dir,activate_temp
+ from probe_timing import Probe
+ run=sys.argv[1];out=run_dir(run);activate_temp(out)
+@@ -31,28 +31,37 @@
+ resource=None
+ if config['telemetry']=='full':resource=subprocess.Popen([pwsh,'-NoProfile','-File',str(R/'resources.ps1'),'-Run',run],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,creationflags=0x08000000)
+ samples=[];probes=[];handles=[];measured=[];child=None;status='LIVE_MONITOR_HEALTHY';error=None;phase={'mode':mode,'start_qpc':ticks(),'start_utc':utc(),'duration_requested':duration}
++def health():
++ if (out/'monitor-failure.json').exists():raise RuntimeError('Monitor failure')
++ before=ticks()
++ try:v=reader.poll()
++ except BaseException:
++  save('rejected-poll.json',dict(before=before,after=ticks(),last=reader.last,traceback=traceback.format_exc()));raise
++ if v['age']>=10:raise RuntimeError('Heartbeat must remain below ten seconds')
++ if not reader.last.get('subscriberHealthy') or reader.last.get('queueFailure'):raise RuntimeError('Subscriber/queue unhealthy')
++ samples.append(dict(v,qpc=before,pollEnd=ticks(),phase=mode))
++def warning(v):
++ with (out/'slow-probe-warnings.jsonl').open('a',encoding='utf-8') as f:
++  f.write(json.dumps(v)+'\n');f.flush()
+ try:
+  if mode!='idle':
+   child=subprocess.Popen(([sys._base_executable,'-B',str(R/'dry_worker.py'),run] if mode=='dry' else [sys._base_executable,'-B',str(R/'workload.py'),run,mode,str(duration)]),stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,creationflags=0x08000000)
+   phase['worker_identity']={'pid':child.pid,'created':times(child)[0]}
+- save('phases.json',[phase]);began=time.monotonic();last=-1
++ save('phases.json',[phase]);began=time.monotonic();campaign_deadline=ticks()/frequency()+duration+15;last=-1
+  while (child is not None and child.poll() is None) or (mode=='idle' and time.monotonic()-began<duration):
+-  if (out/'monitor-failure.json').exists():raise RuntimeError('Monitor failure')
+-  before=ticks()
+-  try:v=reader.poll()
+-  except BaseException:
+-   save('rejected-poll.json',dict(before=before,after=ticks(),last=reader.last,traceback=traceback.format_exc()));raise
+-  samples.append(dict(v,qpc=before,pollEnd=ticks(),phase=mode))
++  health()
+   if time.monotonic()-began-last>=1:
+    cluster=config.get('cluster',1) if not measured else 1
+    if type(cluster) is not int or not 1<=cluster<=8:raise RuntimeError('Bounded cluster fixture required')
+    batch=[]
+    for _ in range(cluster):
++    health()
++    if ticks()/frequency()+13.6>=campaign_deadline:break
+     item=Probe(R/'J6Probe.exe');measured.append(item);handles.append(item.process);batch.append(item)
+    for measured_probe in batch:
+     p=measured_probe.process;t=measured_probe.row['launchRequestedQpc']
+     created=times(p)[0]
+-    code=measured_probe.wait_original();ts=times(p)
++    code=measured_probe.wait_approved(health,warning,campaign_deadline);ts=times(p)
+     if any(x['pid']==p.pid for x in probes) or created!=ts[0] or k.WaitForSingleObject(int(p._handle),0)!=0:raise RuntimeError('Probe identity/exit failure')
+     probes.append(dict(pid=p.pid,created=created,kernel_exit_filetime=ts[1],exit=code,start_qpc=t,end_qpc=ticks(),phase=mode,retained_handle=True,handle_signalled=True))
+     save('probes.json',probes);measured_probe.row['recordPersistedQpc']=ticks();last=time.monotonic()-began
+@@ -63,7 +72,7 @@
+   _,err=child.communicate(timeout=1);phase['worker_exit']=child.returncode
+   if child.returncode:raise RuntimeError('Workload failed '+err.decode(errors='replace'))
+   child=None
+- reader.poll();phase.update(status='COMPLETE',end_qpc=ticks())
++ health();phase.update(status='COMPLETE',end_qpc=ticks())
+ except BaseException:
+  status='FAILED_CLOSED';error=traceback.format_exc();save('collector-failure.json',dict(error=error,qpc=ticks()))
+ finally:
+@@ -87,6 +96,7 @@
+  except BaseException:
+   status='FAILED_CLOSED';error=traceback.format_exc();save('collector-failure.json',dict(error=error,qpc=ticks()))
+   verified=[]
++  save('probe-timings.json',[m.row for m in measured])
+  save('collector-finished.json',dict(run=identity['run'],status=status,error=error,qpc=ticks(),utc=utc(),acceptance=False,
+   allHandlesExited=bool(verified) and len(verified)==len(handles),identities=[dict(pid=x['pid'],created=x['times'][0],exited=x['times'][1],exit=x['exit']) for x in verified]))
+  reader.close()
+--- before/launch.ps1
++++ candidate/launch.ps1
+@@ -4,7 +4,7 @@
+ $Run=$Label+'-'+[guid]::NewGuid().ToString('N');$root=Join-Path $PSScriptRoot $Run
+ New-Item -ItemType Directory -Path $root -ErrorAction Stop|Out-Null
+ New-Item -ItemType Directory -Path (Join-Path $root 'temp') -ErrorAction Stop|Out-Null;Set-LiveTemp $root
+-@{run=$Run;mode=$Mode;journalVolume='D';eventVolume='D';controlVolume='D';telemetry='full';duration=$Duration;cluster=$Cluster;threshold=10;acceptance=$false;purpose='bounded finalization sacrificial validation'}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $root 'case.json')
++@{run=$Run;mode=$Mode;journalVolume='D';eventVolume='D';controlVolume='D';telemetry='full';duration=$Duration;cluster=$Cluster;threshold=10;acceptance=$false;purpose='owner-approved revised probe model';probeWarning=5.0;probeHardDeadline=13.6}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $root 'case.json')
+ @(Get-ChildItem -LiteralPath $PSScriptRoot -File|Where-Object Extension -in '.ps1','.py','.cs','.exe'|ForEach-Object {@{path=$_.FullName;sha256=(Get-FileHash -LiteralPath $_.FullName).Hash}})|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $root 'source-hashes.json')
+ $pwsh='C:\Users\jonny\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\powershell\pwsh.exe';$hash=(Get-FileHash -LiteralPath $pwsh).Hash
+ $p=Start-Process -FilePath $pwsh -ArgumentList @('-NoProfile','-File',('"'+(Join-Path $PSScriptRoot 'monitor.ps1')+'"'),'-Run',$Run) -WorkingDirectory $PSScriptRoot -Verb RunAs -WindowStyle Hidden -PassThru
+--- before/monitor.ps1
++++ candidate/monitor.ps1
+@@ -78,9 +78,9 @@
+  $identity=@{run=$nonce;pid=$PID;created=$created;frequency=[Diagnostics.Stopwatch]::Frequency}
+  Save 'monitor-config.json' @{identity=$identity;priority=[string]$self.PriorityClass;threads=@($self.Threads|Select-Object Id,BasePriority,CurrentPriority);stopwatchHighResolution=[Diagnostics.Stopwatch]::IsHighResolution;traceMode='bounded memory, written at exit';staleThreshold=10;rotation='not used';osFlush='Live Flush(false); final Flush(true) after collection freezes; all evidence fsync/archive required separately';scriptHash=(Get-FileHash -LiteralPath $PSCommandPath).Hash}
+  while($clock.Elapsed.TotalSeconds -lt 600){
+-  Mark 'loop.begin';Mark 'health.begin';if([EventTap]::Errors -or [EventTap]::Overflow -or [LoopTiming]::Overflow){throw 'Diagnostic hook error/overflow'};Mark 'health.end';Drain
++  Mark 'loop.begin';Mark 'health.begin';if(@(Get-EventSubscriber|Where-Object SourceIdentifier -in $ids).Count -ne 2){throw 'Event subscriber lost'};if($exact.Failed){throw 'Event queue failed'};if([EventTap]::Errors -or [EventTap]::Overflow -or [LoopTiming]::Overflow){throw 'Diagnostic hook error/overflow'};Mark 'health.end';Drain
+   $seq++;Mark 'record.begin';$q=[Diagnostics.Stopwatch]::GetTimestamp()
+-  $record=@{run=$nonce;pid=$PID;created=$created;frequency=[Diagnostics.Stopwatch]::Frequency;seq=$seq;pump=$seq;ticks=$q;utc=[DateTime]::UtcNow.ToString('o');state='ACTIVE';violations=$violations;events=$count}
++  $record=@{run=$nonce;pid=$PID;created=$created;frequency=[Diagnostics.Stopwatch]::Frequency;seq=$seq;pump=$seq;ticks=$q;utc=[DateTime]::UtcNow.ToString('o');state='ACTIVE';violations=$violations;events=$count;subscriberHealthy=$true;queueFailure=$exact.Failed}
+   $bytes=[Text.Encoding]::UTF8.GetBytes((($record|ConvertTo-Json -Compress)+"`n"));Mark 'record.end'
+   Mark 'journal.size.begin';if($bytes.Length -gt 4096 -or $stream.Length+$bytes.Length -gt 1048576){throw 'Journal capacity reached'};Mark 'journal.size.end'
+   Mark 'journal.write.begin';$stream.Write($bytes,0,$bytes.Length);Mark 'journal.write.end'
+--- before/probe_analysis.py
++++ candidate/probe_analysis.py
+@@ -17,6 +17,6 @@
+  if p['finalHandleState']!=0 or counts[p['pid'],'start']!=1 or counts[p['pid'],'stop']!=1:raise RuntimeError('Retained-handle lifecycle evidence mismatch')
+  measurements.append(item)
+ a=read('analysis.json');e=read('event-analysis.json');fsnames=('event.exists','event.stat','event.File.AppendAllText','journal.size','journal.write','journal.flush','finish.query')
+-result=dict(run=R.name,acceptance=False,mode=read('case.json')['mode'],count=len(rows),timeoutCount=sum(x['timedOut'] for x in measurements),exitsZero=all(x['actualExitCode']==0 for x in measurements),lifetime=dist([x['kernelLifetime'] for x in measurements]),creation=dist([x['createProcessSeconds'] for x in measurements]),popen=dist([x['popenSeconds'] for x in measurements]),wait=dist([x['mainWaitSeconds'] for x in measurements]),observationEstimate=dist([x['observerLatencyEstimate'] for x in measurements]),heartbeatInterval=a['maxHeartbeatInterval'],heartbeatAge=a['maxHeartbeatAge'],longestDrain=e['maxDrain']['seconds'],longestFilesystem=max((a['stageMaxima'][n] for n in fsnames),key=lambda x:x['seconds']),starts=e['starts'],stops=e['stops'],internalCollisions=a['internalCollisions'],externalCollisions=a['externalCollisions'],measurements=measurements,note='Native work/first-instruction/exit-initiation unobserved. Exit observation estimate uses UTC/QPC bridges, not exact kernel signal time. No timeout is converted to success; no acceptance is attempted.')
++result=dict(run=R.name,acceptance=False,mode=read('case.json')['mode'],count=len(rows),timeoutCount=sum(x['timedOut'] for x in measurements),slowWarningCount=sum(bool(x.get('slowWarnings')) for x in rows),exitsZero=all(x['actualExitCode']==0 for x in measurements),lifetime=dist([x['kernelLifetime'] for x in measurements]),creation=dist([x['createProcessSeconds'] for x in measurements]),popen=dist([x['popenSeconds'] for x in measurements]),wait=dist([x['mainWaitSeconds'] for x in measurements]),observationEstimate=dist([x['observerLatencyEstimate'] for x in measurements]),heartbeatInterval=a['maxHeartbeatInterval'],heartbeatAge=a['maxHeartbeatAge'],longestDrain=e['maxDrain']['seconds'],longestFilesystem=max((a['stageMaxima'][n] for n in fsnames),key=lambda x:x['seconds']),starts=e['starts'],stops=e['stops'],internalCollisions=a['internalCollisions'],externalCollisions=a['externalCollisions'],measurements=measurements,note='Native work/first-instruction/exit-initiation unobserved. Exit observation estimate uses UTC/QPC bridges, not exact kernel signal time. New owner-approved model: 5 s warning, 13.6 s hard deadline; no historical result changed.')
+ with (R/'probe-analysis.json').open('x') as out:json.dump(result,out,indent=2)
+ print(json.dumps({k:v for k,v in result.items() if k not in ('measurements','longestFilesystem')}))
+--- before/probe_policy.py
++++ candidate/probe_policy.py
+@@ -0,0 +1,55 @@
++"""Owner-approved 2026-09-20 sacrificial policy. No production authority."""
++WARNING_SECONDS=5.0
++HARD_SECONDS=13.6
++SLICE_SECONDS=.05
++class ProbeFailure(RuntimeError):pass
++class HardDeadline(ProbeFailure):pass
++
++def wait_tracked(*,clock,origin,campaign_deadline,wait,identity,health,warning,exit_elapsed):
++ """Relative handle waits never reset absolute monotonic acceptance deadlines.
++ State 0 = signaled; 258 = running; any other value fails closed.
++ All callbacks are the actual integration operations, injected in boundary tests.
++ """
++ deadline=min(origin+HARD_SECONDS,campaign_deadline)
++ warned=False;checks=0
++ def warn(elapsed,reason):
++  nonlocal warned
++  if not warned:
++   warning(dict(kind='SLOW_PROBE_WARNING',observedElapsed=elapsed,threshold=WARNING_SECONDS,reason=reason));warned=True
++ while True:
++  health();identity();checks+=1;now=clock()
++  if now>=deadline:raise HardDeadline('PROBE_HARD_DEADLINE: fixed launch/campaign deadline reached')
++  state=wait(0)
++  if state not in (0,258):raise ProbeFailure('Retained process handle failed')
++  if state==0:
++   health();identity();now=clock()
++   if now>=deadline:raise HardDeadline('PROBE_HARD_DEADLINE: exit confirmation too late')
++   elapsed=exit_elapsed()
++   if elapsed is None or elapsed<0 or elapsed>=HARD_SECONDS:raise HardDeadline('PROBE_HARD_DEADLINE: invalid/late exit evidence')
++   if elapsed>WARNING_SECONDS:warn(now-origin,'kernel-exit estimate exceeds five seconds')
++   # Warning persistence/identity collection cannot push a completion beyond the deadline.
++   if clock()>=deadline:raise HardDeadline('PROBE_HARD_DEADLINE: completion evidence late')
++   return dict(status='ELIGIBLE_PENDING_LIFECYCLE',warning=warned,confirmedElapsed=now-origin,exitElapsedEstimate=elapsed,healthChecks=checks,hardSeconds=HARD_SECONDS,warningSeconds=WARNING_SECONDS)
++  if now-origin>=WARNING_SECONDS:warn(now-origin,'retained handle still running at threshold check')
++  now=clock()
++  if now>=deadline:raise HardDeadline('PROBE_HARD_DEADLINE: health/warning operation exceeded deadline')
++  seconds=min(SLICE_SECONDS,deadline-now)
++  if now<origin+WARNING_SECONDS:seconds=min(seconds,origin+WARNING_SECONDS-now)
++  state=wait(max(1,int(seconds*1000)))
++  if state not in (0,258):raise ProbeFailure('Retained process handle failed while waiting')
++
++def validate_lifecycle(rows,events,handles):
++ """Warning eligibility never substitutes for actual retained exits/START/STOP."""
++ if not rows or len(rows)!=len(handles):raise ProbeFailure('Missing probe/retained identity')
++ if len({x['pid'] for x in rows})!=len(rows):raise ProbeFailure('Duplicate PID')
++ if len(events)!=2*len(rows):raise ProbeFailure('Lifecycle count mismatch')
++ by={x['pid']:x for x in handles}
++ if len(by)!=len(handles):raise ProbeFailure('Ambiguous retained handles')
++ for row in rows:
++  p=row.get('policy',{});h=by.get(row['pid']);ts=row.get('finalKernelTimes')
++  if p.get('status')!='ELIGIBLE_PENDING_LIFECYCLE' or row.get('hardDeadlineFailure') or row.get('timedOut'):raise ProbeFailure('Probe failed policy')
++  if p.get('hardSeconds')!=HARD_SECONDS or p.get('warningSeconds')!=WARNING_SECONDS or not 0<=p.get('confirmedElapsed',HARD_SECONDS)<HARD_SECONDS or not 0<=p.get('exitElapsedEstimate',HARD_SECONDS)<HARD_SECONDS:raise ProbeFailure('Unapproved/late deadline evidence')
++  if not h or not ts or ts[0]!=h['times'][0] or ts[1]!=h['times'][1] or int(ts[1])<=int(ts[0]) or h['exit']!=0 or row.get('actualExitCode')!=0 or row.get('finalHandleState')!=0:raise ProbeFailure('Identity/cleanup/orphan failure')
++  if p['exitElapsedEstimate']>WARNING_SECONDS and not p.get('warning'):raise ProbeFailure('Missing slow warning')
++  for kind in ('start','stop'):
++   if sum(e['pid']==row['pid'] and e['kind']==kind for e in events)!=1:raise ProbeFailure('Missing/duplicate lifecycle record')
+--- before/probe_timing.py
++++ candidate/probe_timing.py
+@@ -1,6 +1,7 @@
+-"""Observation only: original five-second wait remains authoritative."""
++"""Revised sacrificial wait: 5 s warning, fixed 13.6 s launch deadline."""
+ import ctypes as c,ctypes.wintypes as w,subprocess,threading,os,time
+ from journal import ticks,frequency
++from probe_policy import wait_tracked,HardDeadline
+ K=c.WinDLL('kernel32',use_last_error=True)
+ K.WaitForSingleObject.argtypes=[w.HANDLE,w.DWORD];K.WaitForSingleObject.restype=w.DWORD
+ K.GetProcessTimes.argtypes=[w.HANDLE]+[c.POINTER(w.FILETIME)]*4;K.GetProcessTimes.restype=w.BOOL
+@@ -26,19 +27,37 @@
+    self.process=subprocess.Popen([str(executable)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,creationflags=0x08000000)
+   finally:subprocess._winapi.CreateProcess=original
+   self.row['popenReturnedQpc']=ticks();self.row['pid']=self.process.pid
+-  self.row['initialKernelTimes']=process_times(self.process);self.row['identityCapturedQpc']=ticks()
++  try:self.row['initialKernelTimes']=process_times(self.process);self.row['identityCapturedQpc']=ticks()
++  except BaseException as ex:self.row['startupIdentityError']=repr(ex)
+   self.observer=threading.Thread(target=self.observe,name='probe-exit-observer',daemon=True);self.observer.start()
+  def observe(self):
+   self.row['observerWaitEnteredQpc']=ticks()
+   self.row['observerResult']=int(K.WaitForSingleObject(int(self.process._handle),15000))
+   self.row['observerReturnedQpc']=ticks()
+- def wait_original(self):
+-  self.row['mainWaitEnteredQpc']=ticks()
++ def wait_approved(self,health,warning,campaign_deadline):
++  self.row['mainWaitEnteredQpc']=ticks();self.row['slowWarnings']=[]
++  origin=self.row['launchRequestedQpc']/self.row['frequency']
++  def identity():
++   if self.row.get('startupIdentityError'):raise RuntimeError('Initial process identity unavailable')
++   if process_times(self.process)[0]!=self.row['initialKernelTimes'][0]:raise RuntimeError('Probe creation identity mismatch')
++  def emit(v):
++   v.update(pid=self.process.pid,created=self.row['initialKernelTimes'][0],qpc=ticks())
++   self.row['slowWarnings'].append(v);warning(v)
++  def exit_elapsed():
++   ts=process_times(self.process);b=bridge();f=self.row['frequency']
++   q=(b['qpcBefore']+b['qpcAfter'])/2+(int(ts[1])-int(b['filetime']))*f/1e7
++   self.row['exitConfirmationBridge']=b
++   return (q-self.row['launchRequestedQpc'])/f
+   try:
+-   code=self.process.wait(timeout=5);self.row['mainWaitReturnedQpc']=ticks();self.row['timedOut']=False;return code
+-  except subprocess.TimeoutExpired:
+-   self.row['timeoutCaughtQpc']=ticks();self.row['timedOut']=True
+-   self.row['immediateHandleCheckQpc']=ticks();self.row['immediateHandleState']=int(K.WaitForSingleObject(int(self.process._handle),0));self.row['immediateHandleCheckEndQpc']=ticks()
++   self.row['policy']=wait_tracked(clock=lambda:ticks()/self.row['frequency'],origin=origin,campaign_deadline=campaign_deadline,wait=lambda ms:int(K.WaitForSingleObject(int(self.process._handle),ms)),identity=identity,health=health,warning=emit,exit_elapsed=exit_elapsed)
++   code=self.process.poll()
++   if code is None:raise RuntimeError('Signaled retained handle did not provide exit code')
++   self.row['mainWaitReturnedQpc']=ticks();self.row['timedOut']=False;self.row['hardDeadlineFailure']=False
++   return code
++  except BaseException as ex:
++   self.row['failureCaughtQpc']=ticks();self.row['hardDeadlineFailure']=isinstance(ex,HardDeadline);self.row['timedOut']=isinstance(ex,HardDeadline)
++   self.row['policyFailure']=repr(ex);self.row['immediateHandleState']=int(K.WaitForSingleObject(int(self.process._handle),0))
++   if isinstance(ex,HardDeadline):self.row['timeoutCaughtQpc']=ticks()
+    raise
+  def finish_observation(self):
+   self.observer.join(timeout=16)
+--- before/run_probe_policy.py
++++ candidate/run_probe_policy.py
+@@ -0,0 +1,7 @@
++import json,unittest,uuid,time,sys
++from workspace import CODE,new_run,activate_temp
++r=new_run('probe-policy-'+uuid.uuid4().hex);activate_temp(r)
++with (r/'tests.txt').open('x') as f:
++ start=time.monotonic();result=unittest.TextTestRunner(stream=f,verbosity=2).run(unittest.defaultTestLoader.loadTestsFromName('test_probe_policy'))
++v=dict(executed=result.testsRun,passed=result.testsRun-len(result.failures)-len(result.errors)-len(result.skipped),failures=len(result.failures),errors=len(result.errors),skips=len(result.skipped),seconds=time.monotonic()-start,status='PASS' if result.wasSuccessful() else 'FAIL')
++(r/'result.json').write_text(json.dumps(v,indent=2));print(json.dumps(dict(path=str(r),**v)));sys.exit(not result.wasSuccessful())
+--- before/test_probe_policy.py
++++ candidate/test_probe_policy.py
+@@ -0,0 +1,103 @@
++import unittest,json,shutil,copy
++from probe_policy import wait_tracked,validate_lifecycle,ProbeFailure,HardDeadline
++from test_finalization import fixture
++from finalize import finalize,accepted
++
++class ClockProbe:
++ def __init__(self,exit_at,initial=0):self.now=initial;self.exit_at=exit_at;self.warnings=[];self.checks=[];self.failure=None
++ def health(self):
++  self.checks.append(self.now)
++  if self.failure in ('heartbeat','subscriber','queue') and self.now>=2:raise RuntimeError(self.failure)
++ def identity(self):
++  if self.failure=='identity' and self.now>=2:raise RuntimeError('identity')
++ def wait(self,ms):
++  if self.failure=='handle' and self.now>=2:return 0xffffffff
++  if ms:self.now=min(self.now+ms/1000,self.exit_at) if self.exit_at>self.now else self.now
++  return 0 if self.now>=self.exit_at else 258
++ def run(self,campaign=175):return wait_tracked(clock=lambda:self.now,origin=0,campaign_deadline=campaign,wait=self.wait,identity=self.identity,health=self.health,warning=self.warnings.append,exit_elapsed=lambda:self.exit_at)
++
++def completed(seconds=6):
++ c=ClockProbe(seconds);policy=c.run()
++ row=dict(pid=1,policy=policy,finalKernelTimes=['100','200','0','0'],actualExitCode=0,finalHandleState=0,timedOut=False,hardDeadlineFailure=False)
++ events=[dict(pid=1,kind=k) for k in ('start','stop')];handles=[dict(pid=1,times=['100','200','0','0'],exit=0)]
++ return [row],events,handles
++
++class ProbePolicyTests(unittest.TestCase):
++ def test_exit_4_9_normal(self):
++  c=ClockProbe(4.9);r=c.run();self.assertFalse(r['warning']);self.assertFalse(c.warnings)
++ def test_exit_just_over_five_warns(self):
++  c=ClockProbe(5.0001);r=c.run();self.assertTrue(r['warning']);self.assertEqual(len(c.warnings),1)
++ def test_exit_six_warns_and_health_continues(self):
++  c=ClockProbe(6);r=c.run();self.assertTrue(r['warning']);self.assertTrue(any(x>5 for x in c.checks));self.assertLessEqual(max(b-a for a,b in zip(c.checks,c.checks[1:])),.051)
++ def test_exit_below_deadline(self):
++  self.assertEqual(ClockProbe(13.599).run()['status'],'ELIGIBLE_PENDING_LIFECYCLE')
++ def test_exact_deadline_fails(self):
++  with self.assertRaises(HardDeadline):ClockProbe(13.6).run()
++ def test_exceeded_deadline_fails(self):
++  with self.assertRaises(HardDeadline):ClockProbe(14).run()
++ def test_never_exits_fails_bounded(self):
++  c=ClockProbe(float('inf'))
++  with self.assertRaises(HardDeadline):c.run()
++  self.assertLess(c.now,13.602)
++ def test_creation_delay_included(self):
++  with self.assertRaises(HardDeadline):ClockProbe(4.9,initial=13.7).run()
++ def test_campaign_deadline_not_extended(self):
++  with self.assertRaises(HardDeadline):ClockProbe(6).run(campaign=5.5)
++ def test_heartbeat_fails_before_exit(self):
++  c=ClockProbe(6);c.failure='heartbeat'
++  with self.assertRaisesRegex(RuntimeError,'heartbeat'):c.run()
++ def test_subscriber_failure(self):
++  c=ClockProbe(6);c.failure='subscriber'
++  with self.assertRaisesRegex(RuntimeError,'subscriber'):c.run()
++ def test_queue_failure(self):
++  c=ClockProbe(6);c.failure='queue'
++  with self.assertRaisesRegex(RuntimeError,'queue'):c.run()
++ def test_identity_loss(self):
++  c=ClockProbe(6);c.failure='identity'
++  with self.assertRaisesRegex(RuntimeError,'identity'):c.run()
++ def test_handle_failure(self):
++  c=ClockProbe(6);c.failure='handle'
++  with self.assertRaisesRegex(ProbeFailure,'handle'):c.run()
++ def test_warning_write_failure(self):
++  c=ClockProbe(6)
++  def fail(v):raise OSError('warning persistence')
++  with self.assertRaises(OSError):wait_tracked(clock=lambda:c.now,origin=0,campaign_deadline=175,wait=c.wait,identity=c.identity,health=c.health,warning=fail,exit_elapsed=lambda:6)
++ def test_warning_keeps_full_reconciliation(self):validate_lifecycle(*completed())
++ def test_missing_start(self):
++  rows,events,handles=completed()
++  with self.assertRaises(ProbeFailure):validate_lifecycle(rows,events[1:],handles)
++ def test_missing_stop(self):
++  rows,events,handles=completed()
++  with self.assertRaises(ProbeFailure):validate_lifecycle(rows,events[:1],handles)
++ def test_orphan(self):
++  rows,events,handles=completed();rows[0]['finalHandleState']=258
++  with self.assertRaises(ProbeFailure):validate_lifecycle(rows,events,handles)
++ def test_cleanup_failure(self):
++  rows,events,handles=completed();handles[0]['exit']=17
++  with self.assertRaises(ProbeFailure):validate_lifecycle(rows,events,handles)
++ def test_identity_changed(self):
++  rows,events,handles=completed();handles[0]['times'][0]='101'
++  with self.assertRaises(ProbeFailure):validate_lifecycle(rows,events,handles)
++ def test_duplicate_pid(self):
++  rows,events,handles=completed()
++  with self.assertRaises(ProbeFailure):validate_lifecycle(rows*2,events*2,handles*2)
++ def test_warning_does_not_override_finalization_failure(self):
++  validate_lifecycle(*completed());root=fixture()
++  (root/'monitor-exit.json').write_text(json.dumps(dict(exit_code=1,identity=json.loads((root/'ready.json').read_text()))))
++  with self.assertRaises(RuntimeError):finalize(root)
++  self.assertFalse(accepted(root,1))
++ def test_warning_does_not_override_durable_flush_failure(self):
++  validate_lifecycle(*completed());root=fixture()
++  def fail(p):raise OSError('durable flush')
++  with self.assertRaises(OSError):finalize(root,sync=fail)
++  self.assertFalse(accepted(root,1))
++ def test_warning_does_not_override_archive_hash_failure(self):
++  validate_lifecycle(*completed());root=fixture()
++  def corrupt(a,b):shutil.copyfile(a,b);b.write_bytes(b'corrupt')
++  with self.assertRaises(RuntimeError):finalize(root,copy=corrupt)
++  self.assertFalse(accepted(root,1))
++ def test_warning_does_not_override_archive_copy_failure(self):
++  validate_lifecycle(*completed());root=fixture()
++  def fail(a,b):raise OSError('archive denied')
++  with self.assertRaises(OSError):finalize(root,copy=fail)
++  self.assertFalse(accepted(root,1))

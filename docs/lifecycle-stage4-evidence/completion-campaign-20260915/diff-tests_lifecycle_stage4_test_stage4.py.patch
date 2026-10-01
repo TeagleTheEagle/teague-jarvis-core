@@ -1,0 +1,68 @@
+--- before/tests/lifecycle_stage4/test_stage4.py
++++ after/tests/lifecycle_stage4/test_stage4.py
+@@ -1048,7 +1048,65 @@
+     raise SystemExit(bool(failed))
+ 
+ 
++
++def restart_transaction_tests():
++    """Focused negatives for the reviewed TEST durable start records; no App."""
++    import unittest,secrets
++    from unittest.mock import patch
++    sys.path.insert(0,str(REPO))
++    import stage4_runtime as r
++    class Tests(unittest.TestCase):
++        def setUp(self):
++            self.root=r.exclusion.BASE/('TEST-STAGE4-'+uuid.uuid4().hex);self.root.mkdir()
++            (self.root/'TEST_ONLY').write_text('NO PRODUCTION SERVICES');self.data='TEST-'+uuid.uuid4().hex;r.provision(self.root,self.data)
++            self.operation=uuid.uuid4().hex;self.nonce=secrets.token_hex(32)
++            self.base={'data_id':self.data,'enrollments':{},'fixture':True}
++            self.config={**self.base,'start_transaction':self.operation,'launch_nonce':self.nonce}
++            self.intent={'namespace':self.root.name,'data_id':self.data,'stop':None,'prior':None,'operation':self.operation,
++                'launch_expires':time.time()+15,'launch_digest':hashlib.sha256(self.nonce.encode()).hexdigest(),'configuration_digest':r._start_digest(self.base)}
++            r._start_write(self.root,self.operation,'intent',self.intent)
++        def test_claim_once(self):
++            r._claim_test_start(self.root,self.config)
++            self.assertEqual(r._start_read(self.root,self.operation,'claimed')['peer'],r.transport.identity(os.getpid()))
++            with self.assertRaises(FileExistsError):r._claim_test_start(self.root,self.config)
++        def test_publication_failure_never_becomes_claim(self):
++            with patch.object(r,'_start_write',side_effect=PermissionError(13,'INJECTED TEST WRITE FAILURE')):
++                with self.assertRaises(PermissionError):r._claim_test_start(self.root,self.config)
++            self.assertFalse((r._start_path(self.root,self.operation)/'claimed.json').exists())
++            with self.assertRaises(r.Denied):r._start_history(self.root,self.data)
++        def test_wrong_data_or_launch_secret_denied(self):
++            for change in ({'data_id':'TEST-wrong'},{'launch_nonce':'0'*64}):
++                with self.assertRaises(r.Denied):r._claim_test_start(self.root,{**self.config,**change})
++            self.assertFalse((r._start_path(self.root,self.operation)/'claimed.json').exists())
++        def test_changed_configuration_denied(self):
++            with self.assertRaises(r.Denied):r._claim_test_start(self.root,{**self.config,'fixture':False})
++        def test_new_stop_state_invalidates_prior_intent(self):
++            (self.root/'stop').write_text('new TEST stop')
++            with self.assertRaises(r.Denied):r._claim_test_start(self.root,self.config)
++        def test_expired_launch_denied(self):
++            with patch.object(r.time,'time',return_value=self.intent['launch_expires']+1):
++                with self.assertRaises(r.Denied):r._claim_test_start(self.root,self.config)
++        def test_partial_record_fails_closed(self):
++            # Trusted fault injection against disposable TEST bytes only.
++            (r._start_path(self.root,self.operation)/'intent.json').write_text('{')
++            with self.assertRaises(json.JSONDecodeError):r._claim_test_start(self.root,self.config)
++            with self.assertRaises(json.JSONDecodeError):r._start_history(self.root,self.data)
++        def test_paths_cannot_escape_namespace(self):
++            for operation in ('../escape','x'*32,'a'*33):
++                with self.assertRaises(r.Denied):r._start_path(self.root,operation)
++            with self.assertRaises(r.Denied):r._start_read(self.root,self.operation,'../secret')
++        def test_unverified_intent_blocks_another_start(self):
++            r._claim_test_start(self.root,self.config)
++            with self.assertRaises(r.Denied):r._start_history(self.root,self.data)
++        def test_wrong_verified_peer_rejected(self):
++            r._claim_test_start(self.root,self.config)
++            r._start_write(self.root,self.operation,'verified',{'operation':self.operation,'identity':{'pid':0,'created':0,'exe_digest':'0'*64}})
++            with self.assertRaises(r.Denied):r._start_history(self.root,self.data)
++    result=unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromTestCase(Tests))
++    raise SystemExit(not result.wasSuccessful())
++
+ if __name__=='__main__':
++    if '--restart-transaction-tests' in sys.argv:restart_transaction_tests()
+     if '--response-commit-tests' in sys.argv:response_commit_tests()
+     if '--controller-recovery-tests' in sys.argv:controller_recovery_tests();raise SystemExit(0)
+     if '--repair-loop-audit' in sys.argv:repair_loop_audit();raise SystemExit(0)

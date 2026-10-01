@@ -1,0 +1,119 @@
+--- before/tests/lifecycle_stage4/fixtures.py
++++ after/tests/lifecycle_stage4/fixtures.py
+@@ -251,6 +251,32 @@
+     print('bootstrap checks',len(report),'PASS')
+ 
+ 
++def bind_inspection_fixture(context):
++    """Synthetic panels, actual singleton worker/archive. No capture or provider."""
++    from interface_inspection import new_evidence
++    h = context.__class__.__module__
++    h = sys.modules[h].exclusion
++    def runner(request, cancel):
++        h.event(context.root, 'inspection_panel_started')
++        if not cancel.wait(5):
++            raise TimeoutError('TEST inspection cancellation was not received')
++        result = new_evidence(request)
++        result['limitations'] = ['STAGE4_TEST synthetic panel; no screen/media/provider access']
++        return result
++    def finish(job):
++        h.event(context.root, 'inspection_archive_started', status=job['status'], panels=len(job['results']))
++        until = time.monotonic()+5
++        while not (context.root/'inspection-release').exists():
++            if time.monotonic() >= until:
++                raise TimeoutError('TEST archive release was not received')
++            time.sleep(.01)
++        result = context.app.inspection_archive.save(job)
++        h.event(context.root, 'inspection_archive_finished', status=result['status'], job_id=job['id'])
++        return result
++    context.inspection_runner = runner
++    context.inspection_finish = finish
++
++
+ def real_app_probe(final_case='normal'):
+     import secrets
+     repo=Path(__file__).resolve().parents[2];sys.path.insert(0,str(repo))
+@@ -265,6 +291,8 @@
+                        'scopes':sorted(runtime.Ownership.ORDINARY|(runtime.Ownership.MANAGEMENT if client=='controller' else set()))}
+               for client in ('teague','intelligence','controller')}
+     config={'data_id':data_id,'server_key':key.hex(),'endpoint':name,'enrollments':enrolled}
++    if final_case.startswith('inspection-'):
++        config['inspection_fixture'] = True
+     env={k.upper():v for k,v in os.environ.items() if k.upper() in ('SYSTEMROOT','WINDIR','TEMP','TMP')}
+     report=[];tokens={};ready=None;core=None;measurements={}
+     def record(case,ok):
+@@ -377,13 +405,59 @@
+             state=call('controller','emergency-stop',{'operation':uuid.uuid4().hex})
+             record('owner emergency suspends but does not shut down Core',state['state']=='SUSPENDED' and core.poll() is None)
+             record('suspended Core refuses new work',call('teague','request',{'text':'what time is it'}).get('result')=='DENIED')
+-        call('controller','shutdown',{'operation':uuid.uuid4().hex})
++        if final_case.startswith('inspection-'):
++            started=call('teague','inspection-start',{'request':{'panel':'all'}})
++            inspection=started['request_id']
++            record('inspection is explicitly synthetic without capture',started['capture']=='UNAVAILABLE_SYNTHETIC_ONLY')
++            until=time.monotonic()+3
++            while not list(root.glob('*-inspection_panel_started.json')):
++                if time.monotonic()>until:raise TimeoutError('Inspection started')
++                time.sleep(.01)
++            record('foreign inspection result denied',call('intelligence','inspection-status',{'request_id':inspection}).get('result')=='DENIED')
++            record('foreign inspection cancel denied',call('intelligence','cancel',{'request_id':inspection}).get('result')=='DENIED')
++            if final_case=='inspection-detach':
++                call('teague','detach')
++                tokens['teague']=call('teague','attach',{'scopes':enrolled['teague']['scopes']})['token']
++                record('reattachment cannot inherit inspection authority',call('teague','inspection-status',{'request_id':inspection}).get('result')=='DENIED')
++            elif final_case=='inspection-emergency':
++                call('controller','emergency-stop',{'operation':uuid.uuid4().hex})
++                record('emergency retains Core while cancelling inspection',core.poll() is None)
++            else:
++                call('teague','cancel',{'request_id':inspection})
++            until=time.monotonic()+3
++            while not list(root.glob('*-inspection_archive_started.json')):
++                if time.monotonic()>until:raise TimeoutError('Archive started')
++                time.sleep(.01)
++            archive_start=h.read(next(root.glob('*-inspection_archive_started.json')))
++            record('cancelled inspection still reaches archive with one panel',archive_start['status']=='cancelled' and archive_start['panels']==1)
++            if final_case!='inspection-detach':
++                job=call('teague','inspection-status',{'request_id':inspection})
++                record('archive phase visible but worker not complete',not job['done'] and job['job']['phase']=='archiving')
++            record('archive callback counted as active work',call('controller','lifecycle-status')['active_work']==1)
++            call('controller','shutdown',{'operation':uuid.uuid4().hex})
++            record('new inspection denied during drain',call('intelligence','inspection-start',{'request':{'panel':'all'}}).get('result')=='DENIED')
++            record('Core remains alive while archive is held',core.poll() is None and call('controller','lifecycle-status')['active_work']==1)
++            held=False
++            try:
++                with h.Lock(root,'core.lock'):pass
++            except h.Busy:held=True
++            record('archive drain retains lifetime lock',held)
++            (root/'inspection-release').touch()
++        else:
++            call('controller','shutdown',{'operation':uuid.uuid4().hex})
+         core.wait(8);record('authorized drained process exits',core.returncode==0)
+         with h.Lock(root,'core.lock'):record('lifetime lock available only after exit',True)
+         rows=[]
+         for journal in root.glob('STAGE4_TEST-journal-*'):
+             rows.extend(runtime.Journal(journal,{'mode':'STAGE4_TEST','data_id':data_id}).inspect())
+         record('graceful drain journal contains only terminal records',bool(rows))
++        if final_case.startswith('inspection-'):
++            archived=h.read(next(root.glob('*-inspection_archive_finished.json')))
++            # Use the actual advertised isolated Store root, not source data.
++            target=Path(ready['data_root'])/'inspection-archive'/(archived['job_id']+'.md')
++            record('actual archive callback completed and file preserved',archived['status']=='archived' and target.is_file())
++            record('cancelled inspection journal terminal after cleanup',any(r['operation']==inspection and r['phase']=='FAILED' for r in rows))
++            record('no second panel or duplicate archive',len(list(root.glob('*-inspection_panel_started.json')))==1 and len(list(root.glob('*-inspection_archive_finished.json')))==1)
+         if final_case=='deadline':record('failed original shutdown remains failed in journal',any(r['operation']==first_stop and r['phase']=='FAILED' for r in rows))
+     except Exception as exc:
+         report.append({'case':'probe failure','passed':False,'error':type(exc).__name__,'detail':str(exc)[:20000]})
+@@ -579,9 +653,12 @@
+     elif '--real-app-deadline' in sys.argv:real_app_probe('deadline')
+     elif '--real-app-emergency' in sys.argv:real_app_probe('emergency')
+     elif '--real-app-failure-cleanup' in sys.argv:real_app_probe('failure-cleanup')
++    elif '--real-app-inspection-cleanup' in sys.argv:real_app_probe('inspection-cleanup')
++    elif '--real-app-inspection-detach' in sys.argv:real_app_probe('inspection-detach')
++    elif '--real-app-inspection-emergency' in sys.argv:real_app_probe('inspection-emergency')
+     elif '--electron-app-probe' in sys.argv:electron_app_probe()
+     elif '--app-worker' in sys.argv:
+         repo=Path(__file__).resolve().parents[2];sys.path.insert(0,str(repo))
+         import stage4_runtime
+-        stage4_runtime.serve(Path(sys.argv[2]),json.loads(sys.stdin.readline()))
++        stage4_runtime.serve(Path(sys.argv[2]),json.loads(sys.stdin.readline()),inspection_setup=bind_inspection_fixture)
+     else:run()

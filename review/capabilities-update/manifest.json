@@ -1,0 +1,60 @@
+{
+  "status": "prepared_not_installed",
+  "files": [
+    {
+      "path": "assistant_capabilities.py",
+      "before_sha256": null,
+      "candidate_sha256": "f635f3cd440a641eedf7c89bc76922e0ee07ed411f760b8289996b2c14286c26"
+    },
+    {
+      "path": "actions.py",
+      "before_sha256": "88147144edd4dc03cda95a6884dbf1812c2b5f36574929bcaebf069dbdc67863",
+      "candidate_sha256": "110d2e5838c21426b12f41f67ac2eca07308e5d6aa5d9bf00a052e645af744ae"
+    },
+    {
+      "path": "server.py",
+      "before_sha256": "3dc857f25cd48fdd1bad84ab6c748ecacd72d5a09b92e5dd1df775a7fc3619f8",
+      "candidate_sha256": "fd39a12763560b79e7731d5aca0bfd913f2f886fa3f6a83c34a3a3f704c83430"
+    },
+    {
+      "path": "inspection_jobs.py",
+      "before_sha256": "d2ea9e232278f008bf57c6de1a4fba1274910f391239fe1d014b5070a16c971e",
+      "candidate_sha256": "87042d7e302fe2ce9ec2646a7cca43233f4ca916a22890856ae678454891ce80"
+    },
+    {
+      "path": "inspection_runtime.py",
+      "before_sha256": "65f5936555741819d1c3c31b4f721368e7c1bad994ea58d9874a7223ff088223",
+      "candidate_sha256": "92dea1d815904f18c04f0cd57792696bdec2be335ec6bd2fcb21cc2c32e85065"
+    },
+    {
+      "path": "static/app.js",
+      "before_sha256": "f314850d4dac7d9f594eb969748d0acdb65057e871155757a434133cc7fdcdfa",
+      "candidate_sha256": "506b07be86c0f75289093be0edcef83e30f8bf132503616ed7b8d610b0b56b5c"
+    },
+    {
+      "path": "static/assistant-controls.js",
+      "before_sha256": null,
+      "candidate_sha256": "9f427452cf6dbfcfaf830abd8fbac270f9e97385f88148e2c5b3e3fd0c5621ed"
+    },
+    {
+      "path": "static/index.html",
+      "before_sha256": "8763e26b348e7d53b8b6ebb2ba3a97d7741613b14c47089f7eca71f4a7cd7673",
+      "candidate_sha256": "21cfff96ed04ef6eb5687e9e01e839ebf1c852902527163731ec499d5bd08a1f"
+    },
+    {
+      "path": "static/inspection-client.js",
+      "before_sha256": "804d6cbc80d332a169680a03aafc461d89f537d5929a4bf6608221c4982bb9b2",
+      "candidate_sha256": "871e8a1e06cb04640431e94d96bf5a2d103c5d9bce4805812ef53a1341e9815e"
+    },
+    {
+      "path": "desktop/main.cjs",
+      "before_sha256": "07906345084e9c1345a828553a8e5cf0165f2190cc345194bfad1f1d01ec229d",
+      "candidate_sha256": "586ae6e19715ce260434e10b19debdad2960eb918b5ba29677bb5065531c87a3"
+    },
+    {
+      "path": "desktop/preload.cjs",
+      "before_sha256": "110a8691bdd225a7a8a946fe9278562aa1761160d13911a5bf3d3d10d689cd85",
+      "candidate_sha256": "a9d99e9d80186d2d85a2754589ce52d4787a9d5cf70244a13a1119c9e16729e6"
+    }
+  ]
+}

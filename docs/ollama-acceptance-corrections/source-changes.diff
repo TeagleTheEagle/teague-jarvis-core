@@ -1,0 +1,162 @@
+--- before/stage4_ollama_transport.py
++++ after/stage4_ollama_transport.py
+@@ -93,10 +93,10 @@
+             raise Failure('TEXT_ONLY_REQUIRED')
+         if sum(len(m['content']) for m in messages)>12000:raise Failure('INPUT_TOO_LARGE')
+         start=time.monotonic()
+-        value=self.request('/api/chat',{'model':MODEL,'messages':messages,'stream':False,'think':False,
++        value=self.request('/api/chat',{'model':MODEL,'messages':messages,'stream':False,'think':True,
+             'keep_alive':30,'options':{'num_predict':256,'num_ctx':4096,'temperature':0}},cancel,deadline)
+         message=value.get('message')
+-        if value.get('model')!=MODEL or value.get('done') is not True or value.get('done_reason')!='stop' or not isinstance(message,dict) or message.get('tool_calls') or message.get('thinking'):
++        if value.get('model')!=MODEL or value.get('done') is not True or value.get('done_reason')!='stop' or not isinstance(message,dict) or message.get('tool_calls') or not isinstance(message.get('thinking',''),str) or not isinstance(message.get('content'),str) or not message['content'].strip():
+             detail={'model_matches':value.get('model')==MODEL,'done':value.get('done') is True,
+                     'done_reason':str(value.get('done_reason'))[:40],
+                     'message_object':isinstance(message,dict),
+@@ -111,7 +111,9 @@
+         if metrics.get('eval_duration',0)>0:
+             metrics['tokens_per_second']=metrics.get('eval_count',0)*1e9/metrics['eval_duration']
+         self.measurements.append(metrics)
+-        return {'model':value['model'],'content':message.get('content'),'complete':True,'metrics':metrics}
++        # Ollama separates thinking from final content for the validated variant.
++        # Forward content unchanged; never concatenate, strip or persist thinking.
++        return {'model':value['model'],'content':message['content'],'complete':True,'metrics':metrics}
+ 
+ 
+ def real_router():
+--- before/stage4_client.cjs
++++ after/stage4_client.cjs
+@@ -147,6 +147,7 @@
+  const page='stage4-test://app/'+(clientId==='teague'?'index.html':'intelligence.html');
+  const lines=typeof process.send==='function'?null:require('node:readline').createInterface({input:process.stdin});
+  let worker,win,attached=false,closing=false,configuration,identity=null,heartbeat;
++ let renderedResponse=null;
+  const transportQueue=new TransportQueue(message=>worker.postMessage(message),{onFailure:()=>{attached=false;}});
+  const emit=value=>process.stdout.write('STAGE4 '+JSON.stringify(value,(_k,v)=>typeof v==='bigint'?String(v):v)+'\n');
+  function call(op,args={}){
+@@ -251,10 +252,13 @@
+    const provenance=await call('last-response-provider');
+    const text=status?.events?.find(e=>e.event==='assistant.completed')?.data?.text;
+    if(text){
+-    const visible='STAGE4_TEST — simulated OpenAI 429; real local response\n'+text+'\n'+provenance.answer+'\nPhysical voice unavailable.';
+-    await win.webContents.executeJavaScript("(()=>{let panel=document.getElementById('test-fallback-result');if(!panel){panel=document.createElement('pre');panel.id='test-fallback-result';document.body.prepend(panel);}panel.textContent="+JSON.stringify(visible)+";})()");
++    // Use the existing authenticated TEST client's response container, not a
++    // duplicate body-level overlay. Text originates only from the Core result.
++    renderedResponse={text,responseId:admitted.response_id};
++    await win.webContents.executeJavaScript("(()=>{const output=document.querySelector('#messages,.execution .empty');if(!output)throw Error('RESPONSE_CONTAINER_MISSING');output.textContent="+JSON.stringify(text)+";output.dataset.responseId="+JSON.stringify(admitted.response_id)+";})()");
+    }
+-   emit({event:'text-fallback',admitted,status,provenance});return;
++   const rendered=text?await responseFrame():null;
++   emit({event:'text-fallback',admitted,status,provenance,rendered});return;
+   }
+   if(command.action==='renew'){emit({event:'renewed',id:command.id,result:await call('renew')});return;}
+   if(command.action==='foreign-cancel'){
+@@ -269,9 +273,10 @@
+   if(command.action==='capture'){
+    const file=path.join(root,clientId+'-'+crypto.randomUUID()+'.png');
+    try{
++    const rendered=renderedResponse?await responseFrame():null;
+     const frame=await win.webContents.capturePage();
+     requireThat(!frame.isEmpty(),'EMPTY_CAPTURE');
+-    fs.writeFileSync(file,frame.toPNG());emit({event:'capture',id:command.id,file});
++    fs.writeFileSync(file,frame.toPNG());emit({event:'capture',id:command.id,file,rendered});
+    }catch(error){
+     // Preserve a failed visual gate without disguising it as auth failure or
+     // preventing independent lifecycle diagnostics. No capture retry/fallback.
+@@ -283,6 +288,12 @@
+   if(command.action==='crash-renderer'){win.webContents.forcefullyCrashRenderer();return;}
+   throw Error('DRIVER_ACTION_DENIED');
+  }
++ async function responseFrame(){
++  // A bounded readiness condition, not a fixed sleep. Two animation frames put
++  // a paint opportunity between the committed DOM update and capture request.
++  const expected=renderedResponse;
++  return win.webContents.executeJavaScript("new Promise((resolve,reject)=>{const timeout=setTimeout(()=>reject(Error('RESPONSE_FRAME_TIMEOUT')),3000);requestAnimationFrame(first=>requestAnimationFrame(second=>{try{const e=document.querySelector('#messages,.execution .empty');const expected="+JSON.stringify(expected)+";if(!e||e.textContent!==expected.text||e.dataset.responseId!==expected.responseId)throw Error('RESPONSE_NOT_COMMITTED');const r=e.getBoundingClientRect(),s=getComputedStyle(e);if(s.display==='none'||s.visibility!=='visible'||Number(s.opacity)===0||r.width<=0||r.height<=0||r.top<0||r.left<0||r.bottom>innerHeight||r.right>innerWidth)throw Error('RESPONSE_NOT_VISIBLE');if(!(second>first))throw Error('FRAME_NOT_ADVANCED');clearTimeout(timeout);resolve({container:e.id||'.execution .empty',text:e.textContent,responseId:e.dataset.responseId,firstFrame:first,secondFrame:second,rect:{x:r.x,y:r.y,width:r.width,height:r.height},artificialContainerPresent:!!document.getElementById('test-fallback-result')});}catch(e){clearTimeout(timeout);reject(e);}}));})");
++ }
+  let configured=false;let lineQueue=Promise.resolve();
+  const input=value=>{lineQueue=lineQueue.then(async()=>{if(!configured){configured=true;await start(value);}else await drive(value);}).catch(error=>{process.stderr.write('STAGE4_TEST '+String(error.stack).slice(0,2000)+'\n');emit({event:'denied',reason:'TEST_CLIENT_OPERATION_FAILED'});});};
+  if(lines){lines.on('line',line=>input(JSON.parse(line)));lines.on('close',()=>close());}
+--- before/tests/test_stage4_ollama_transport.py
++++ after/tests/test_stage4_ollama_transport.py
+@@ -58,7 +58,22 @@
+   envelope={'model':m.MODEL,'done':True,'done_reason':'stop','message':{'content':'hello'},'eval_count':2,'eval_duration':1000000000}
+   with patch.object(self.t,'request',return_value=envelope) as req:
+    result=self.t.generate([{'role':'user','content':'hello'}],m.MODEL,self.cancel,time.monotonic()+1)
+-   payload=req.call_args.args[1];self.assertNotIn('tools',payload);self.assertFalse(payload['stream']);self.assertEqual(result['metrics']['tokens_per_second'],2)
++   payload=req.call_args.args[1];self.assertNotIn('tools',payload);self.assertFalse(payload['stream']);self.assertTrue(payload['think']);self.assertEqual(result['metrics']['tokens_per_second'],2)
++ def test_structured_thinking_never_forwarded(self):
++  envelope={'model':m.MODEL,'done':True,'done_reason':'stop','message':{'content':'4','thinking':'PRIVATE_TEST_REASONING'}}
++  with patch.object(self.t,'request',return_value=envelope):
++   result=self.t.generate([{'role':'user','content':'2+2'}],m.MODEL,self.cancel,time.monotonic()+1)
++   self.assertEqual(result['content'],'4');self.assertNotIn('PRIVATE_TEST_REASONING',json.dumps(result));self.assertNotIn('thinking',result)
++ def test_ordinary_final_content_preserved_exactly(self):
++  text='  Literal documentation: <think> and </think> are example tags.\nKeep punctuation & spacing.  '
++  envelope={'model':m.MODEL,'done':True,'done_reason':'stop','message':{'content':text,'thinking':'private'}}
++  with patch.object(self.t,'request',return_value=envelope):
++   result=self.t.generate([{'role':'user','content':'document tags'}],m.MODEL,self.cancel,time.monotonic()+1)
++   self.assertEqual(result['content'],text)
++ def test_thinking_only_or_malformed_not_success(self):
++  for message in ({'content':'','thinking':'private'},{'thinking':'private'},{'content':'4','thinking':{}},{'content':'4','thinking':'private','tool_calls':[{}]}):
++   with patch.object(self.t,'request',return_value={'model':m.MODEL,'done':True,'done_reason':'stop','message':message}):
++    with self.assertRaisesRegex(m.Failure,'INVALID_OR_INCOMPLETE'):self.t.generate([{'role':'user','content':'x'}],m.MODEL,self.cancel,time.monotonic()+1)
+  def test_wrong_incomplete_tool_response(self):
+   for envelope in [{'model':'other'}, {'model':m.MODEL,'done':True,'done_reason':'length','message':{'content':'x'}},{'model':m.MODEL,'done':True,'done_reason':'stop','message':{'tool_calls':[{}]}}]:
+    with patch.object(self.t,'request',return_value=envelope):
+--- before/tests/build_real_ollama_probe.py
++++ after/tests/build_real_ollama_probe.py
+@@ -3,7 +3,7 @@
+ p=Path(__file__).parent
+ s=(p/'lifecycle_stage4/electron_challenge_diagnostic.py').read_text()
+ s=s.replace('"""Diagnosis only; derived from existing authenticated Electron probe. No lifecycle correction."""','"""Real bounded local fallback validation; one disposable authenticated TEST Core."""')
+-s=s.replace('parents[2]/"docs/lifecycle-stage4-evidence"','parents[1]/"docs/real-ollama-test"').replace('repo=Path(__file__).resolve().parents[2]','repo=Path(__file__).resolve().parents[1]')
++s=s.replace('parents[2]/"docs/lifecycle-stage4-evidence"','parents[1]/"docs/ollama-acceptance-corrections"').replace('repo=Path(__file__).resolve().parents[2]','repo=Path(__file__).resolve().parents[1]')
+ s=s.replace("'enrollments':enrolled}","'enrollments':enrolled,'real_local_ollama':True}")
+ start=s.index('        def diagnose(label):')
+ end=s.index("        with h.Lock(root,'core.lock'):record",start)
+@@ -17,6 +17,9 @@
+         report.append({'case':'real response evidence','passed':True,'elapsed_seconds':time.monotonic()-begin,'result':result})
+         events=result['status']['events'];provenance=result['provenance']['provenance']
+         record('same request completes once',sum(e['event']=='assistant.completed' for e in events)==1)
++        answer=next(e['data']['text'] for e in events if e['event']=='assistant.completed')
++        record('clean complete answer; no reasoning displayed',answer.strip()=='4')
++        record('real authenticated DOM container contains exact answer',result['rendered']['container']=='messages' and result['rendered']['text']==answer and result['rendered']['responseId']==result['admitted']['response_id'] and not result['rendered']['artificialContainerPresent'])
+         record('no tool execution',not any(e['event'].startswith('tool.') for e in events))
+         record('actual model and provider persisted',provenance['actual_final_provider']=='Ollama' and provenance['actual_final_model']=='qwen3:4b' and provenance['final_status']=='COMPLETED')
+         record('simulated primary and actual local attempt distinct',provenance['attempts'][0]['simulated'] is True and provenance['attempts'][0]['network_request'] is False and provenance['attempts'][1]['simulated'] is False and provenance['attempts'][1]['network_request'] is True)
+@@ -24,6 +27,7 @@
+         record('deterministic last provider query', 'Ollama' in result['provenance']['answer'] and 'qwen3:4b' in result['provenance']['answer'] and not result['provenance']['answer'].startswith('TEST simulation:'))
+         send(a,'capture');capture=receive(a,'capture');screenshots.append(capture)
+         record('TEST Electron screenshot captured',not capture.get('failed'))
++        record('capture readiness matches current response after advancing frames',capture['rendered']['text']==answer and capture['rendered']['responseId']==result['admitted']['response_id'] and capture['rendered']['secondFrame']>capture['rendered']['firstFrame'])
+         send(a,'text-fallback',text=prompt,operation=operation)
+         duplicate=receive(a,'text-fallback')
+         record('duplicate operation does not generate again',duplicate['admitted']['duplicate'] and duplicate['admitted']['response_id']==result['admitted']['response_id'])
+--- before/tests/real_ollama_validation.py
++++ after/tests/real_ollama_validation.py
+@@ -1,7 +1,7 @@
+ """Real bounded local fallback validation; one disposable authenticated TEST Core."""
+ import os, sys, json, time, uuid, traceback, subprocess
+ from pathlib import Path
+-BASE=Path(__file__).resolve().parents[1]/"docs/real-ollama-test"
++BASE=Path(__file__).resolve().parents[1]/"docs/ollama-acceptance-corrections"
+ def run():
+     """Actual Electron entry pages + real synthetic App; never production launchers."""
+     import secrets, queue, threading, hashlib
+@@ -94,6 +94,9 @@
+         report.append({'case':'real response evidence','passed':True,'elapsed_seconds':time.monotonic()-begin,'result':result})
+         events=result['status']['events'];provenance=result['provenance']['provenance']
+         record('same request completes once',sum(e['event']=='assistant.completed' for e in events)==1)
++        answer=next(e['data']['text'] for e in events if e['event']=='assistant.completed')
++        record('clean complete answer; no reasoning displayed',answer.strip()=='4')
++        record('real authenticated DOM container contains exact answer',result['rendered']['container']=='messages' and result['rendered']['text']==answer and result['rendered']['responseId']==result['admitted']['response_id'] and not result['rendered']['artificialContainerPresent'])
+         record('no tool execution',not any(e['event'].startswith('tool.') for e in events))
+         record('actual model and provider persisted',provenance['actual_final_provider']=='Ollama' and provenance['actual_final_model']=='qwen3:4b' and provenance['final_status']=='COMPLETED')
+         record('simulated primary and actual local attempt distinct',provenance['attempts'][0]['simulated'] is True and provenance['attempts'][0]['network_request'] is False and provenance['attempts'][1]['simulated'] is False and provenance['attempts'][1]['network_request'] is True)
+@@ -101,6 +104,7 @@
+         record('deterministic last provider query', 'Ollama' in result['provenance']['answer'] and 'qwen3:4b' in result['provenance']['answer'] and not result['provenance']['answer'].startswith('TEST simulation:'))
+         send(a,'capture');capture=receive(a,'capture');screenshots.append(capture)
+         record('TEST Electron screenshot captured',not capture.get('failed'))
++        record('capture readiness matches current response after advancing frames',capture['rendered']['text']==answer and capture['rendered']['responseId']==result['admitted']['response_id'] and capture['rendered']['secondFrame']>capture['rendered']['firstFrame'])
+         send(a,'text-fallback',text=prompt,operation=operation)
+         duplicate=receive(a,'text-fallback')
+         record('duplicate operation does not generate again',duplicate['admitted']['duplicate'] and duplicate['admitted']['response_id']==result['admitted']['response_id'])

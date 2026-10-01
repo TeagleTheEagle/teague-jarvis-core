@@ -1,0 +1,140 @@
+--- C:\Users\jonny\Documents\Codex\2026-09-07\cr\outputs\jarvis\docs\stage6-eventidentity-fix-20260920\source-before\collect.py
++++ C:\Users\jonny\Documents\Codex\2026-09-07\cr\outputs\jarvis\docs\stage6-eventidentity-fix-20260920\collect.py
+@@ -2,7 +2,7 @@
+ import ctypes as c,ctypes.wintypes as w,datetime,json,pathlib,subprocess,sys,time,traceback
+ from journal import Reader,PublisherWatch,ticks
+ R=pathlib.Path(__file__).resolve().parent
+-run=sys.argv[1];assert run in ('smoke','repeat1','repeat2')
++run=sys.argv[1];assert run in ('smoke','loads','dry1','dry2')
+ out=R/run;assert out.is_dir()
+ def save(n,v):(out/n).write_text(json.dumps(v,indent=2),encoding='utf-8')
+ def utc():return datetime.datetime.now(datetime.timezone.utc).isoformat()
+@@ -20,13 +20,14 @@
+  return [str((x.dwHighDateTime<<32)|x.dwLowDateTime) for x in v]
+ pwsh=r'C:\Users\jonny\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\powershell\pwsh.exe'
+ resource=subprocess.Popen([pwsh,'-NoProfile','-File',str(R/'resources.ps1'),'-Run',run],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,creationflags=0x08000000)
+-plan=[('idle',4)] if run=='smoke' else [('idle',20),('disk',100),('sustained',40),('cpu',20),('Dhash',40)]
+-probes=[];handles=[];samples=[];phases=[];child=None;status='DIAGNOSTIC_COMPLETED';error=None
++plan=[('idle',4)] if run=='smoke' else ([('idle',30),('disk',100),('sustained',150),('cpu',40),('Dhash',90)] if run=='loads' else [('hash-before',60),('sustained',120),('hash-after',60)])
++probes=[];handles=[];samples=[];phases=[];child=None;status='LIVE_MONITOR_HEALTHY';error=None
+ try:
+  for mode,duration in plan:
+   phase={'mode':mode,'start_qpc':ticks(),'start_utc':utc(),'duration_requested':duration};phases.append(phase);save('phases.json',phases)
+   if mode!='idle':
+-   child=subprocess.Popen([sys._base_executable,'-B',str(R/'workload.py'),run,mode,str(duration)],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,creationflags=0x08000000)
++   command=[sys._base_executable,'-B',str(R/'hash_sources.py'),run,mode.split('-')[1]] if mode.startswith('hash-') else [sys._base_executable,'-B',str(R/'workload.py'),run,mode,str(duration)]
++   child=subprocess.Popen(command,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,creationflags=0x08000000)
+    phase['worker_identity']={'pid':child.pid,'created':process_times(child)[0]}
+   began=time.monotonic();last=-1
+   while (child is not None and child.poll() is None) or (mode=='idle' and time.monotonic()-began<duration):
+@@ -75,4 +76,13 @@
+  save('retained-handle-verification.json',verified)
+  if code.value or status=='FAILED_CLOSED':raise RuntimeError('Diagnostic run failed; preserved evidence')
+ finally:watch.close()
+-print(json.dumps({'run':run,'status':status,'probes':len(probes),'acceptance':False}),flush=True)
++from reconcile_run import reconcile
++result=reconcile(run);save('reconciliation.json',result)
++if result['status']!='PASS':raise RuntimeError('Pipeline reconciliation failed; stop campaign')
++from finalize import finalize,accepted,durable_write,sha
++if run!='smoke':
++ p=subprocess.run([sys._base_executable,'-B',str(R/'finalize.py'),run],capture_output=True,timeout=60)
++ save('finalizer-process.json',{'exit_code':p.returncode,'stdout':p.stdout.decode(errors='replace'),'stderr':p.stderr.decode(errors='replace')})
++ if not accepted(out,p.returncode):raise RuntimeError('Durable finalization/archive failed')
++ durable_write(out/'acceptance.json',{'status':'SACRIFICIAL_RUN_ACCEPTED','manifest_sha256':sha(out/'evidence-manifest.json')})
++print(json.dumps({'run':run,'status':status,'probes':len(probes),'acceptance':run!='smoke'}),flush=True)
+--- C:\Users\jonny\Documents\Codex\2026-09-07\cr\outputs\jarvis\docs\stage6-eventidentity-fix-20260920\source-before\finalize.py
++++ C:\Users\jonny\Documents\Codex\2026-09-07\cr\outputs\jarvis\docs\stage6-eventidentity-fix-20260920\finalize.py
+@@ -25,8 +25,11 @@
+  root=pathlib.Path(root).resolve()
+  if root.parent!=R.resolve():raise RuntimeError('Synthetic run root required')
+  if (root/'EVIDENCE-DURABLY-FINALIZED.json').exists() or (root/'archive').exists():raise RuntimeError('Do not overwrite finalization evidence')
+- for n in ('collector-failure.json','monitor-failure.json','resource-failure.txt'):
++ for n in ('collector-failure.json','monitor-failure.json','resource-failure.txt','queue-failure.json'):
+   if (root/n).exists():raise RuntimeError('Preserved failure blocks acceptance: '+n)
++ if (root/'queue-state.json').exists():
++  q=read(root/'queue-state.json')
++  if q['failed'] or q['remaining'] or not q['enqueued']==q['selected']==q['persisted']==q['removed']:raise RuntimeError('Queue reconciliation failed')
+  identity=read(root/'ready.json');live=read(root/'collector-finished.json');monitor=read(root/'monitor-result.json');exited=read(root/'monitor-exit.json')
+  if live['status']!='LIVE_MONITOR_HEALTHY' or monitor['status']!='LIVE_COLLECTION_CLOSED' or not monitor['journalDurableFlush']:raise RuntimeError('Collection/final flush did not succeed')
+  if exited['exit_code']!=0 or exited['identity']!=identity or monitor['run']!=identity['run']:raise RuntimeError('Monitor exit identity invalid')
+--- C:\Users\jonny\Documents\Codex\2026-09-07\cr\outputs\jarvis\docs\stage6-eventidentity-fix-20260920\source-before\launch.ps1
++++ C:\Users\jonny\Documents\Codex\2026-09-07\cr\outputs\jarvis\docs\stage6-eventidentity-fix-20260920\launch.ps1
+@@ -1,5 +1,6 @@
+-param([ValidateSet('smoke','repeat1','repeat2')][string]$Run)
++param([ValidateSet('loads','dry1','dry2')][string]$Run)
+ $ErrorActionPreference='Stop';$root=Join-Path $PSScriptRoot $Run
++if($Run -eq 'dry2' -and -not(Test-Path -LiteralPath (Join-Path $PSScriptRoot 'dry1\acceptance.json'))){throw 'Dry1 acceptance required'}
+ if(Test-Path -LiteralPath $root){throw 'Existing run cannot be overwritten'}
+ if(@(Get-Process|Where-Object ProcessName -match '^(VBox|VirtualBox)').Count){throw 'VirtualBox must remain closed'}
+ New-Item -ItemType Directory -Path $root | Out-Null
+--- C:\Users\jonny\Documents\Codex\2026-09-07\cr\outputs\jarvis\docs\stage6-eventidentity-fix-20260920\source-before\monitor.ps1
++++ C:\Users\jonny\Documents\Codex\2026-09-07\cr\outputs\jarvis\docs\stage6-eventidentity-fix-20260920\monitor.ps1
+@@ -1,6 +1,7 @@
+ param([ValidatePattern('^[a-z0-9-]+$')][string]$Run)
+ $ErrorActionPreference='Stop';$root=Join-Path $PSScriptRoot $Run
+ Add-Type -Path (Join-Path $PSScriptRoot 'EventTap.cs')
++Add-Type -Path (Join-Path $PSScriptRoot 'event_queue.cs')
+ $pipeline=[Collections.Generic.List[object]]::new();$secondary=[Collections.Generic.List[object]]::new()
+ function Stamp($stage,$ev,$n) {
+  if($pipeline.Count -ge 20000){throw 'Pipeline trace capacity reached'}
+@@ -10,6 +11,7 @@
+ if(-not(Test-Path -LiteralPath $root)){throw 'Prepared diagnostic directory required'}
+ $trace=[Collections.Generic.List[object]]::new();$stream=$null;$seq=0;$count=0;$violations=0
+ $s='J6TimingStart-'+[guid]::NewGuid().ToString('N');$t='J6TimingStop-'+[guid]::NewGuid().ToString('N');$ids=@($s,$t)
++$exact=[ExactEventQueue]::new($ExecutionContext.Events.ReceivedEvents,[string[]]$ids)
+ $nonce=[guid]::NewGuid().ToString('N');$clock=[Diagnostics.Stopwatch]::StartNew()
+ $created=(Get-Process -Id $PID).StartTime.ToUniversalTime().ToFileTimeUtc().ToString()
+ function Mark([string]$stage,$detail=$null){
+@@ -19,19 +21,18 @@
+ function Save($name,$value){[IO.File]::WriteAllText((Join-Path $root $name),($value|ConvertTo-Json -Depth 8))}
+ function Drain {
+  Mark 'drain.begin';$nBefore=$count
+- foreach($id in $ids){
+-  Mark 'queue.query.begin' $id;$batch=@(Get-Event -SourceIdentifier $id -ErrorAction SilentlyContinue);Mark 'queue.query.end' @{id=$id;depth=$batch.Count}
+-  foreach($ev in $batch){
++ while($null -ne ($entry=$exact.Select())){
++   $ev=$entry.Event;$id=$ev.SourceIdentifier
+    Mark 'event.begin';$n=$ev.SourceEventArgs.NewEvent;if($null -eq $n){throw 'Invalid CIM indication'}
+    $kind='stop';if($id -eq $s){$kind='start'};Stamp 'drain' $ev $n
+    if([string]$n.ProcessName -match '^(VBox|VirtualBox)'){$script:violations++}
+-   $row=@{kind=$kind;name=[string]$n.ProcessName;pid=[int]$n.ProcessID;nativeTime=[string]$n.TIME_CREATED;receivedQpc=[Diagnostics.Stopwatch]::GetTimestamp();utc=[DateTime]::UtcNow.ToString('o');queuedUtc=$ev.TimeGenerated.ToUniversalTime().ToString('o')}
++   $row=@{queueSequence=$entry.QueueSequence;eventIdentifier=$ev.EventIdentifier;kind=$kind;name=[string]$n.ProcessName;pid=[int]$n.ProcessID;nativeTime=[string]$n.TIME_CREATED;receivedQpc=[Diagnostics.Stopwatch]::GetTimestamp();utc=[DateTime]::UtcNow.ToString('o');queuedUtc=$ev.TimeGenerated.ToUniversalTime().ToString('o')}
+    Stamp 'serialize.begin' $ev $n;Mark 'event.serialize.begin';$serialized=($row|ConvertTo-Json -Compress)+"`n";Mark 'event.serialize.end';Stamp 'serialized' $ev $n
+-   $eventPath=Join-Path $root 'events.jsonl';Mark 'event.size.begin'
++   $eventPath=Join-Path $root 'events.jsonl'
+    if((Test-Path -LiteralPath $eventPath) -and (Get-Item -LiteralPath $eventPath).Length -gt 1044480){throw 'Event capacity reached'}
+-   Mark 'event.size.end';Mark 'event.append.begin';Stamp 'write.begin' $ev $n;[IO.File]::AppendAllText($eventPath,$serialized);Stamp 'persisted' $ev $n;Mark 'event.append.end'
+-   $script:count++;Mark 'event.remove.begin';Remove-Event -EventIdentifier $ev.EventIdentifier;Stamp 'removed' $ev $n;Mark 'event.remove.end';Mark 'event.end'
+-  }
++   Mark 'event.append.begin';Stamp 'write.begin' $ev $n
++   $exact.PersistAndRemove($entry,$eventPath,$serialized)
++   Stamp 'persisted' $ev $n;Stamp 'removed' $ev $n;Mark 'event.append.end';$script:count++;Mark 'event.end'
+  }
+  Mark 'queue.backlog.begin';$backlog=0;foreach($id in $ids){$backlog+=@(Get-Event -SourceIdentifier $id -ErrorAction SilentlyContinue).Count};Mark 'queue.backlog.end' $backlog
+  Mark 'drain.end' @{drained=$count-$nBefore;backlog=$backlog}
+@@ -75,7 +76,7 @@
+  Mark 'grace.begin';Start-Sleep -Seconds 2;Mark 'grace.end';Drain
+  Mark 'final.enumeration.begin';$final=@(Get-CimInstance Win32_Process|Where-Object{$_.Name -match '^(VBox|VirtualBox)'});Mark 'final.enumeration.end' $final.Count
+  if($final.Count){throw 'VirtualBox active at end'}
+- Mark 'collection.freeze';Mark 'durable.flush.begin';$stream.Flush($true);Mark 'durable.flush.end'
++ $exact.Reconcile();Mark 'collection.freeze';Mark 'durable.flush.begin';$stream.Flush($true);Mark 'durable.flush.end'
+  Mark 'journal.close.begin';$stream.Dispose();$stream=$null;Mark 'journal.close.end'
+  Save 'monitor-result.json' @{status='LIVE_COLLECTION_CLOSED';run=$nonce;sequences=$seq;events=$count;violations=$violations;journalDurableFlush=$true;acceptance=$false}
+ }catch{Save 'monitor-failure.json' @{error=$_.Exception.Message;stack=$_.ScriptStackTrace;utc=[DateTime]::UtcNow.ToString('o')};exit 1}
+@@ -88,11 +89,15 @@
+   Unregister-Event -SourceIdentifier $id -ErrorAction SilentlyContinue
+   $discard=@(Get-Event -SourceIdentifier $id -ErrorAction SilentlyContinue)
+   foreach($ev in $discard){if($ev.SourceEventArgs.NewEvent){Stamp 'teardown.discard' $ev $ev.SourceEventArgs.NewEvent}}
+-  $discard | Remove-Event -ErrorAction SilentlyContinue
++  # Preserve residue; never delete pending evidence at teardown.
+  }
+  Mark 'unsubscribe.end'
+  foreach($watcher in $secondary){$watcher.Stop();$watcher.Dispose()}
+  [EventTap]::Detach()
++ Save 'queue-state.json' $exact.Stats()
++ Save 'queue-entries.json' @($exact.Snapshot()|ForEach-Object {@{queueSequence=$_.QueueSequence;eventId=$_.Event.EventIdentifier;source=$_.Event.SourceIdentifier;enqueueQpc=$_.EnqueueQpc;persisted=$_.Persisted;removed=$_.Removed}})
++ try {$exact.Reconcile()} catch {Save 'queue-failure.json' @{error=$_.Exception.Message};$global:LASTEXITCODE=1}
++ $exact.Dispose()
+  Save 'tap.json' @([EventTap]::Snapshot());Save 'pipeline.json' @($pipeline.ToArray())
+  Save 'tap-state.json' @{errors=[EventTap]::Errors;overflow=[EventTap]::Overflow;queue_capacity='existing PowerShell collection; no diagnostic change';diagnostic_capacity=20000;native_drop_counter='not exposed by these temporary subscribers'}
+  Save 'loop-trace.json' @($trace.ToArray())

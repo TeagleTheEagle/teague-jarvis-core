@@ -1,0 +1,1541 @@
+--- /dev/null
++++ D:\JARVIS-STAGE6-LIVE\7f204e14c90a497a8476be0e9927e074\code\authority_trace_v3.cpp
+@@ -0,0 +1,87 @@
++// Bounded, real-time ETW diagnostic consumer. No driver, ETL, command-line capture,
++// security changes, termination, or unrelated process evidence output.
++#define WIN32_LEAN_AND_MEAN
++#include "trace_telemetry.hpp"
++#define NOMINMAX
++#include "durable_sink.hpp"
++#include <windows.h>
++#include <evntrace.h>
++#include <evntcons.h>
++#include <tdh.h>
++#include <objbase.h>
++#include <climits>
++#include <string>
++#include <vector>
++#include <map>
++#include <mutex>
++#include <thread>
++#include <sstream>
++#include <fstream>
++#include <atomic>
++#include <algorithm>
++
++static const GUID Provider={0x22fb2cd6,0x0e7b,0x422b,{0xa0,0xc7,0x2f,0xad,0x1f,0xd0,0xe7,0x16}};
++static std::wstring folder,session;static DWORD rootPid;static ULONGLONG rootCreated;
++static std::mutex guard;static std::atomic<unsigned> faults{0};static unsigned discarded=0;
++static LONGLONG Q(){LARGE_INTEGER x;QueryPerformanceCounter(&x);return x.QuadPart;}
++static ULONGLONG FT(FILETIME x){return (static_cast<ULONGLONG>(x.dwHighDateTime)<<32)|x.dwLowDateTime;}
++static std::string U(const std::wstring& w){if(w.empty())return "";int n=WideCharToMultiByte(CP_UTF8,0,w.data(),static_cast<int>(w.size()),nullptr,0,nullptr,nullptr);std::string s(n,0);WideCharToMultiByte(CP_UTF8,0,w.data(),static_cast<int>(w.size()),s.data(),n,nullptr,nullptr);return s;}
++static std::string J(const std::string& s){std::string o="\"";for(unsigned char c:s){if(c=='"'||c=='\\'){o+='\\';o+=c;}else if(c<32){o+='?';}else o+=c;}return o+'"';}
++static bool Write(const wchar_t* name,const std::string& s){std::wstring p=folder+L"\\"+name;HANDLE f=CreateFileW(p.c_str(),GENERIC_WRITE,FILE_SHARE_READ,nullptr,CREATE_NEW,FILE_ATTRIBUTE_NORMAL,nullptr);if(f==INVALID_HANDLE_VALUE)return false;DWORD n=0;BOOL ok=WriteFile(f,s.data(),static_cast<DWORD>(s.size()),&n,nullptr);BOOL flush=FlushFileBuffers(f);CloseHandle(f);return ok&&flush&&n==s.size();}
++static bool Field(EVENT_RECORD* e,const wchar_t* name,std::vector<BYTE>& v){j6t::Scope timing(j6t::Metadata);PROPERTY_DATA_DESCRIPTOR p{};p.PropertyName=reinterpret_cast<ULONGLONG>(name);p.ArrayIndex=ULONG_MAX;ULONG n=0;ULONG r=TdhGetPropertySize(e,0,nullptr,1,&p,&n);if(r||n>65536)return false;v.resize(n);return TdhGetProperty(e,0,nullptr,1,&p,n,v.data())==0;}
++static ULONGLONG Number(EVENT_RECORD* e,const wchar_t* name,bool* found=nullptr){std::vector<BYTE> v;bool ok=Field(e,name,v)&&(v.size()==4||v.size()==8);if(found)*found=ok;if(!ok)return 0;ULONGLONG n=0;memcpy(&n,v.data(),v.size());return n;}
++static std::wstring Text(EVENT_RECORD* e,const wchar_t* name){std::vector<BYTE> v;if(!Field(e,name,v)||v.size()<2)return L"";const wchar_t* w=reinterpret_cast<const wchar_t*>(v.data());size_t n=v.size()/2;size_t end=0;while(end<n&&w[end])++end;return std::wstring(w,end);}
++static std::vector<std::string> Schemas(EVENT_RECORD* e){j6t::Scope timing(j6t::Metadata);ULONG n=0;std::vector<std::string> names;if(TdhGetEventInformation(e,0,nullptr,nullptr,&n)!=ERROR_INSUFFICIENT_BUFFER||n>262144)return names;std::vector<BYTE> v(n);auto p=reinterpret_cast<TRACE_EVENT_INFO*>(v.data());if(TdhGetEventInformation(e,0,nullptr,p,&n))return names;for(ULONG i=0;i<p->TopLevelPropertyCount;i++){ULONG off=p->EventPropertyInfoArray[i].NameOffset;if(off<n)names.push_back(U(reinterpret_cast<wchar_t*>(v.data()+off)));}return names;}
++struct Row{DWORD pid=0,parent=0;ULONGLONG created=0,sequence=0,parentSequence=0,exitFT=0;DWORD exitCode=0;bool exitCodeKnown=false;std::wstring image,handleImage;ULONGLONG handleCreated=0;DWORD imageError=0;LONGLONG imageBegin=0,imageEnd=0;LONGLONG start=0,notified=0,stop=0,stopNotified=0,retained=0,attemptBegin=0,signal=0;HANDLE handle=nullptr;DWORD openError=0,metadataError=0;std::string reason;bool closed=false;unsigned version=0,stopVersion=0;std::vector<std::string> schema,stopSchema;};
++static std::map<std::pair<DWORD,ULONGLONG>,Row> rows;
++static bool ParentKnown(DWORD pid,ULONGLONG childTime,ULONGLONG parentSequence){if(pid==rootPid)return childTime>=rootCreated;for(auto& a:rows){auto&r=a.second;if(r.pid==pid&&r.created<=childTime&&(!r.exitFT||childTime<=r.exitFT)&&(!parentSequence||r.sequence==parentSequence))return true;}return false;}
++static void Acquire(Row& r){r.attemptBegin=Q();r.handle=OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION|SYNCHRONIZE,FALSE,r.pid);DWORD openError=r.handle?0:GetLastError();r.retained=Q();if(!r.handle){r.openError=openError;r.reason="OPEN_PROCESS_FAILED";return;}FILETIME a,b,c,d;if(!GetProcessTimes(r.handle,&a,&b,&c,&d)){r.metadataError=GetLastError();r.reason="KERNEL_IDENTITY_QUERY_FAILED";return;}if(FT(a)!=r.created){r.reason="PID_REUSED_KERNEL_CREATION_MISMATCH";CloseHandle(r.handle);r.handle=nullptr;return;}r.handleCreated=FT(a);r.imageBegin=Q();wchar_t image[32768];DWORD count=32768;if(QueryFullProcessImageNameW(r.handle,0,image,&count))r.handleImage.assign(image,count);else r.imageError=GetLastError();r.imageEnd=Q();r.reason="RETAINED_MATCHING_KERNEL_CREATION";}
++
++static std::unique_ptr<DurableSink> lifecycleSink;
++static unsigned long long lifecycleCaptured=0;
++static void Capture(const Row&r,bool start){
++ std::ostringstream o;o<<"{\"source\":\"Microsoft-Windows-Kernel-Process\",\"scope\":"<<J(U(session))<<",\"kind\":"<<J(start?"start":"stop")<<",\"pid\":"<<r.pid<<",\"created\":\""<<r.created<<"\",\"sequence\":\""<<r.sequence<<"\",\"parentPid\":"<<r.parent<<",\"parentSequence\":\""<<r.parentSequence<<"\",\"image\":"<<J(U(r.image))<<",\"eventQpc\":"<<(start?r.start:r.stop)<<",\"callbackQpc\":"<<(start?r.notified:r.stopNotified)<<",\"exitFiletime\":\""<<(start?0:r.exitFT)<<"\",\"exitCode\":"<<r.exitCode<<",\"version\":"<<(start?r.version:r.stopVersion)<<"}";
++ if(!j6t::measure(j6t::Admission,[&]{return lifecycleSink->add(o.str());}))++faults;else ++lifecycleCaptured;
++}
++
++static void WINAPI Event(EVENT_RECORD* e){j6t::CallbackScope timing;try{
++ if(!IsEqualGUID(e->EventHeader.ProviderId,Provider))return;unsigned id=e->EventHeader.EventDescriptor.Id;if(id!=1&&id!=2)return;
++ bool hasPid=false,hasTime=false;DWORD pid=static_cast<DWORD>(Number(e,L"ProcessID",&hasPid));ULONGLONG created=Number(e,L"CreateTime",&hasTime);
++ j6t::Lock l(guard);
++ if(id==1){DWORD parent=static_cast<DWORD>(Number(e,L"ParentProcessID"));if(!ParentKnown(parent,created,Number(e,L"ParentProcessSequenceNumber"))){++discarded;return;}
++  if(!hasPid||!hasTime||!created||rows.size()>=8192){++faults;return;}auto key=std::make_pair(pid,created);if(rows.count(key)){++faults;return;}
++  Row r;r.pid=pid;r.parent=parent;r.created=created;r.start=e->EventHeader.TimeStamp.QuadPart;r.notified=Q();r.version=e->EventHeader.EventDescriptor.Version;r.image=Text(e,L"ImageName");r.sequence=Number(e,L"ProcessSequenceNumber");r.parentSequence=Number(e,L"ParentProcessSequenceNumber");r.schema=Schemas(e);timing.selected=true;Capture(r,true);Acquire(r);rows.emplace(key,std::move(r));
++ }else{auto it=rows.find(std::make_pair(pid,created));if(it==rows.end()){++discarded;return;}auto&r=it->second;if(r.stop){++faults;return;}if(r.sequence!=Number(e,L"ProcessSequenceNumber"))++faults;r.stop=e->EventHeader.TimeStamp.QuadPart;r.stopNotified=Q();r.stopVersion=e->EventHeader.EventDescriptor.Version;auto exitTime=Number(e,L"ExitTime");bool known=false;auto code=static_cast<DWORD>(Number(e,L"ExitCode",&known));if(r.exitFT&&exitTime!=r.exitFT)++faults;if(r.exitCodeKnown&&(!known||r.exitCode!=code))++faults;r.exitFT=exitTime;r.exitCode=code;r.exitCodeKnown=known;r.stopSchema=Schemas(e);timing.selected=true;Capture(r,false);}
++ }catch(...){++faults;}}
++static void Sample(){j6t::Lock l(guard);for(auto& a:rows){auto&r=a.second;if(r.handle&&!r.signal){DWORD s=WaitForSingleObject(r.handle,0);if(s==WAIT_OBJECT_0){r.signal=Q();FILETIME a,b,c,d;DWORD exit=0;if(GetProcessTimes(r.handle,&a,&b,&c,&d)&&GetExitCodeProcess(r.handle,&exit)){if(FT(a)!=r.created)++faults;if(r.exitFT&&r.exitFT!=FT(b))++faults;if(r.exitCodeKnown&&r.exitCode!=exit)++faults;r.exitFT=FT(b);r.exitCode=exit;r.exitCodeKnown=true;}else{r.metadataError=GetLastError();++faults;}}else if(s!=WAIT_TIMEOUT){++faults;}}}}
++#include "terminal_receipt_v3.hpp"
++static std::string List(const std::vector<std::string>& names){std::string s="[";bool first=true;for(auto&n:names){if(!first)s+=",";first=false;s+=J(n);}return s+"]";}
++int wmain(int argc,wchar_t**argv){
++ if(argc!=4)return 90;folder=argv[1];rootPid=wcstoul(argv[2],nullptr,10);rootCreated=_wcstoui64(argv[3],nullptr,10);
++ if(folder.rfind(L"D:\\JARVIS-STAGE6-LIVE\\",0)!=0||folder.find(L"..")!=std::wstring::npos)return 91;
++ HANDLE root=OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION|SYNCHRONIZE,FALSE,rootPid);FILETIME ra,rb,rc,rd;
++ if(!root||!GetProcessTimes(root,&ra,&rb,&rc,&rd)||FT(ra)!=rootCreated){if(root)CloseHandle(root);return 92;}
++ GUID guid;CoCreateGuid(&guid);wchar_t guidText[64];StringFromGUID2(guid,guidText,64);session=L"J6Kernel-"+std::wstring(guidText);
++ lifecycleSink=std::make_unique<DurableSink>(folder,"kernel-authority",8192);
++ std::vector<BYTE> buffer(sizeof(EVENT_TRACE_PROPERTIES)+1024);auto p=reinterpret_cast<EVENT_TRACE_PROPERTIES*>(buffer.data());p->Wnode.BufferSize=static_cast<ULONG>(buffer.size());p->Wnode.Flags=WNODE_FLAG_TRACED_GUID;p->Wnode.ClientContext=1;p->Wnode.Guid=guid;p->BufferSize=64;p->MinimumBuffers=4;p->MaximumBuffers=64;p->FlushTimer=1;p->LogFileMode=EVENT_TRACE_REAL_TIME_MODE;p->LoggerNameOffset=sizeof(EVENT_TRACE_PROPERTIES);
++ TRACEHANDLE sessionHandle=0;ULONG start=j6t::telemetry.call("StartTrace",[&]{return StartTraceW(&sessionHandle,session.c_str(),p);});if(start){Write(L"etw-failure.json","{\"stage\":\"StartTrace\",\"code\":"+std::to_string(start)+"}");CloseHandle(root);return 93;}
++ EVENT_TRACE_LOGFILEW log{};log.LoggerName=const_cast<wchar_t*>(session.c_str());log.ProcessTraceMode=PROCESS_TRACE_MODE_REAL_TIME|PROCESS_TRACE_MODE_EVENT_RECORD|PROCESS_TRACE_MODE_RAW_TIMESTAMP;log.EventRecordCallback=Event;
++ j6t::telemetry.query(sessionHandle,session.c_str(),"afterStartTrace");auto openBegin=j6t::now();TRACEHANDLE consumer=OpenTraceW(&log);ULONG openError=consumer==INVALID_PROCESSTRACE_HANDLE?GetLastError():0;j6t::telemetry.phase("OpenTrace",openBegin,j6t::now(),openError);ULONG enable=openError?openError:j6t::telemetry.call("EnableProviderProcess",[&]{return EnableTraceEx2(sessionHandle,&Provider,EVENT_CONTROL_CODE_ENABLE_PROVIDER,TRACE_LEVEL_INFORMATION,0x10,0,0,nullptr);});
++ if(enable){ControlTraceW(sessionHandle,session.c_str(),p,EVENT_TRACE_CONTROL_STOP);if(!openError)CloseTrace(consumer);Write(L"etw-failure.json","{\"stage\":\"OpenTrace/Enable\",\"code\":"+std::to_string(enable)+"}");CloseHandle(root);return 94;}
++ j6t::telemetry.query(sessionHandle,session.c_str(),"afterEnable");std::atomic<ULONG> consumed{ULONG_MAX};std::thread thread([&]{auto b=j6t::now();j6t::telemetry.phase("ProcessTraceEntry",b,b);consumed=ProcessTrace(&consumer,1,nullptr,nullptr);j6t::telemetry.phase("ProcessTraceReturn",b,j6t::now(),consumed);});
++ LARGE_INTEGER freq;QueryPerformanceFrequency(&freq);bool ready=Write(L"etw-ready.json","{\"pid\":"+std::to_string(GetCurrentProcessId())+",\"rootPid\":"+std::to_string(rootPid)+",\"rootCreated\":\""+std::to_string(rootCreated)+"\",\"session\":"+J(U(session))+",\"frequency\":"+std::to_string(freq.QuadPart)+",\"qpc\":"+std::to_string(Q())+"}");
++ j6t::telemetry.mark("ReadyPublished",ready?0:1);j6t::telemetry.query(sessionHandle,session.c_str(),"ready");LONGLONG begin=Q();bool requested=false;bool receiptPublished=false;bool tailPublished=false;while(ready&&(Q()-begin)/static_cast<double>(freq.QuadPart)<180){j6t::telemetry.poll(sessionHandle,session.c_str(),freq.QuadPart);Sample();if(!receiptPublished){try{
++ if(GetFileAttributesW((folder+L"\\phase-a-v3.json").c_str())!=INVALID_FILE_ATTRIBUTES){
++  ULONG queried=ControlTraceW(sessionHandle,session.c_str(),p,EVENT_TRACE_CONTROL_QUERY);
++  if(queried||p->EventsLost||p->RealTimeBuffersLost||p->LogBuffersLost)throw std::runtime_error("terminal trace loss/query");
++  receiptPublished=terminal_v3::WorkloadReceipt();
++ }
++ }catch(const std::exception&e){++faults;Write(L"terminal-failure-v3.json",std::string("{\"error\":")+J(e.what())+"}");break;}}
++ if(receiptPublished&&!tailPublished){try{tailPublished=terminal_v3::TailReceipt();}catch(const std::exception&e){++faults;Write(L"tail-failure-v3.json",std::string("{\"error\":")+J(e.what())+"}");break;}}
++ if(GetFileAttributesW((folder+L"\\etw-stop").c_str())!=INVALID_FILE_ATTRIBUTES){requested=true;break;}if(consumed!=ULONG_MAX)break;Sleep(10);}
++ j6t::telemetry.mark("StopRequestedOrLoopEnded",requested?0:1);j6t::telemetry.query(sessionHandle,session.c_str(),"beforeFlush");ULONG flush=j6t::telemetry.call("FlushTrace",[&]{return ControlTraceW(sessionHandle,session.c_str(),p,EVENT_TRACE_CONTROL_FLUSH);});Sleep(1100);Sample();j6t::telemetry.query(sessionHandle,session.c_str(),"beforeStop");ULONG stop=j6t::telemetry.call("StopTrace",[&]{return ControlTraceW(sessionHandle,session.c_str(),p,EVENT_TRACE_CONTROL_STOP);});thread.join();CloseTrace(consumer);Sample();CloseHandle(root);
++ lifecycleSink->finish();if(lifecycleSink->fault())++faults;
++ std::ostringstream out;out<<"{\"requestedStop\":"<<(requested?"true":"false")<<",\"session\":"<<J(U(session))<<",\"flushResult\":"<<flush<<",\"stopResult\":"<<stop<<",\"consumerResult\":"<<consumed<<",\"eventsLost\":"<<p->EventsLost<<",\"realtimeBuffersLost\":"<<p->RealTimeBuffersLost<<",\"buffersLost\":"<<p->LogBuffersLost<<",\"faults\":"<<faults<<",\"discardedUnrelated\":"<<discarded<<",\"rows\":[";bool first=true;
++ for(auto&a:rows){auto&r=a.second;if(!first)out<<",";first=false;bool closed=true;if(r.handle){closed=CloseHandle(r.handle)!=0;r.closed=closed;}out<<"{\"pid\":"<<r.pid<<",\"parentPid\":"<<r.parent<<",\"created\":\""<<r.created<<"\",\"sequence\":\""<<r.sequence<<"\",\"parentSequence\":\""<<r.parentSequence<<"\",\"image\":"<<J(U(r.image))<<",\"handleImage\":"<<J(U(r.handleImage))<<",\"handleCreated\":\""<<r.handleCreated<<"\",\"imageError\":"<<r.imageError<<",\"imageBeginQpc\":"<<r.imageBegin<<",\"imageEndQpc\":"<<r.imageEnd<<",\"startQpc\":"<<r.start<<",\"startCallbackQpc\":"<<r.notified<<",\"handleAttemptBeginQpc\":"<<r.attemptBegin<<",\"handleAttemptQpc\":"<<r.retained<<",\"handleRetained\":"<<(r.handle?"true":"false")<<",\"handleIdentity\":\""<<reinterpret_cast<ULONG_PTR>(r.handle)<<"\",\"reason\":"<<J(r.reason)<<",\"openError\":"<<r.openError<<",\"metadataError\":"<<r.metadataError<<",\"stopQpc\":"<<r.stop<<",\"stopCallbackQpc\":"<<r.stopNotified<<",\"signalObservedQpc\":"<<r.signal<<",\"exitFiletime\":\""<<r.exitFT<<"\",\"exitCode\":"<<r.exitCode<<",\"exitCodeKnown\":"<<(r.exitCodeKnown?"true":"false")<<",\"handleClosed\":"<<(closed?"true":"false")<<",\"startVersion\":"<<r.version<<",\"stopVersion\":"<<r.stopVersion<<",\"startSchema\":"<<List(r.schema)<<",\"stopSchema\":"<<List(r.stopSchema)<<"}";}
++ out<<"]}";if(!Write(L"loss-telemetry.json",j6t::telemetry.json())||j6t::telemetry.errors.load())++faults;bool wrote=Write(L"etw-result.json",out.str());return !wrote||!requested||stop||faults||p->EventsLost||p->RealTimeBuffersLost?95:0;
++}
+--- D:\JARVIS-STAGE6-LIVE\2d922197cf7d4bb098d8da6e070cbff2\code\baseline-allowlist.json
++++ D:\JARVIS-STAGE6-LIVE\7f204e14c90a497a8476be0e9927e074\code\baseline-allowlist.json
+@@ -1,6 +1,6 @@
+ {
+   "syntheticRoots": [
+-    "D:\\JARVIS-STAGE6-LIVE\\2d922197cf7d4bb098d8da6e070cbff2\\code\\small-synthetic"
++    "D:\\JARVIS-STAGE6-LIVE\\7f204e14c90a497a8476be0e9927e074\\code\\small-synthetic"
+   ],
+   "approvedProtectedRoots": [],
+   "realProtectedAccess": false
+--- /dev/null
++++ D:\JARVIS-STAGE6-LIVE\7f204e14c90a497a8476be0e9927e074\code\completed_v3.py
+@@ -0,0 +1,52 @@
++"""Completed-evidence verification only; never controls a live observer."""
++from coordination_v3 import *
++def verify_terminal(root,kernel=None):
++ root=pathlib.Path(root);p=load(root/'phase-a-v3.json');r=load(root/'terminal-v3.json')
++ c=p['collector'];n=load(root/f"native-{c['pid']}-{c['created']}.json")
++ observed=load(root/'terminal-observed-v3.json')
++ rows=terminal(p,r,digest(root/'phase-a-v3.json'),observed['observedQpc'],n)
++ need(observed['receiptSHA256']==digest(root/'terminal-v3.json'),'RECEIPT_CHANGED')
++ for name,sha in p['localEvidence'].items():
++  need(pathlib.Path(name).name==name and digest(root/name)==sha,'LOCAL_EVIDENCE_CHANGED')
++ if kernel is None:kernel=load(root/'etw-result.json')
++ need(kernel['session']==p['binding']['kernelSession'],'FINAL_KERNEL_SESSION')
++ for key in ('faults','eventsLost','realtimeBuffersLost','buffersLost','flushResult','stopResult','consumerResult'):
++  need(kernel[key]==0,'FINAL_KERNEL_'+key)
++ km={identity(x):x for x in kernel['rows']};need(len(km)==len(kernel['rows']),'FINAL_KERNEL_DUPLICATE')
++ for key,r in rows.items():
++  need(key in km,'FINAL_KERNEL_MISSING');k=km[key]
++  for f in ('sequence','parentPid','parentSequence','handleCreated','handleImage','startQpc','stopQpc','signalObservedQpc','exitFiletime','exitCode'):
++   need(k[f]==r[f],'FINAL_KERNEL_CONTRADICTION_'+f)
++  need(k['handleClosed'] is True,'FINAL_HANDLE_OPEN')
++ return p
++def verify_complete(root):
++ root=pathlib.Path(root)
++ for n in ('rejected-v3.json','primary-failure.json','launcher-failure.json'):
++  need(not (root/n).exists(),'PRESERVED_FAILURE_'+n)
++ p=verify_terminal(root)
++ census(p,load(root/'workload-census-v3.json'))
++ closure(p,load(root/'external-exits-v3.json'))
++ census(p,load(root/'final-census-v3.json'),True)
++ tail=load(root/'observer-tail-v3.json')
++ need(tail['binding']==p['binding'] and tail['phaseASHA256']==digest(root/'phase-a-v3.json') and tail['sequence']==2 and tail['kind']=='observer-tail','TAIL_BINDING')
++ before(p,tail['capturedQpc'])
++ k=load(root/'etw-result.json');tm={identity(r):r for r in tail['rows']};km={identity(r):r for r in k['rows']}
++ need(set(tm)==set(km),'TAIL_INCOMPLETE')
++ for key,r in tm.items():
++  for f in ('sequence','stopQpc','signalObservedQpc'):need(r[f]==km[key][f],'TAIL_CONTRADICTION')
++ verify_timeline(root,p)
++ return p
++
++def verify_timeline(root,p):
++ marks=load(root/'integration-launcher.json');by={}
++ for row in marks:
++  if row['event'] in by:raise Rejected('DUPLICATE_STATE_MARKER')
++  by[row['event']]=row
++ required=('RUN_ACTIVE','COLLECTOR_LOCAL_FINALIZING','LOCAL_EVIDENCE_FINALIZED_PENDING_EXTERNAL_EXIT','COLLECTOR_EXITED','TERMINAL_EVIDENCE_PENDING','TERMINAL_EVIDENCE_COMPLETE','PRE_SHUTDOWN_WORKLOAD_CENSUS_COMPLETE','OBSERVER_SHUTDOWN_ALLOWED','FINAL_SHUTDOWN')
++ need(all(n in by for n in required),'STATE_MARKER_MISSING')
++ points=[by[n]['qpc'] for n in required];need(points==sorted(points),'STATE_MARKER_ORDER')
++ pre=load(root/'workload-census-v3.json');ex=load(root/'external-exits-v3.json');final=load(root/'final-census-v3.json')
++ need(p['completedQpc']<=by['COLLECTOR_EXITED']['qpc'],'LOCAL_PHASE_ORDER')
++ need(pre['completedQpc']<=by['OBSERVER_SHUTDOWN_ALLOWED']['qpc']<=ex['observers']['application']['exitQpc'],'EARLY_SHUTDOWN')
++ need(ex['observers']['authority']['exitQpc']<=by['FINAL_SHUTDOWN']['qpc']<=ex['launcherExitQpc']<=final['startedQpc']<=final['completedQpc']<p['deadlineQpc'],'FINAL_CENSUS_ORDER')
++ return True
+--- /dev/null
++++ D:\JARVIS-STAGE6-LIVE\7f204e14c90a497a8476be0e9927e074\code\coordination_v3.py
+@@ -0,0 +1,128 @@
++"""Stage 6 TEST-only two-phase evidence predicates. No process launch authority."""
++import hashlib,json,os,pathlib
++SCHEMA='stage6-terminal-v3'
++STATES=('PREPARED','RUN_ACTIVE','COLLECTOR_LOCAL_FINALIZING',
++ 'LOCAL_EVIDENCE_FINALIZED_PENDING_EXTERNAL_EXIT','COLLECTOR_EXITED',
++ 'TERMINAL_EVIDENCE_PENDING','TERMINAL_EVIDENCE_COMPLETE',
++ 'PRE_SHUTDOWN_WORKLOAD_CENSUS_COMPLETE','OBSERVER_SHUTDOWN_ALLOWED',
++ 'OBSERVERS_AND_LAUNCHER_EXITED','FINAL_CENSUS_PENDING','FINAL_CENSUS_COMPLETE',
++ 'CHECKER_FINALIZATION_ALLOWED','ACCEPTED')
++OWNERS=('controller','launcher','collector','collector','launcher','launcher',
++ 'launcher','launcher','launcher','controller','controller','controller','checker','finalizer')
++class Rejected(ValueError):pass
++def need(ok,reason):
++ if not ok:raise Rejected(reason)
++def integer(v):
++ need(type(v) is int and v>0,'INTEGER');return v
++def identity(r):
++ integer(r['pid']);need(type(r['created']) is str and r['created'].isdecimal() and int(r['created'])>0,'CREATION');return r['pid'],r['created']
++def norm(s):
++ p=pathlib.PureWindowsPath(s);need(p.is_absolute() and '..' not in p.parts and '\x00' not in s,'IMAGE');return str(p).casefold()
++def digest_bytes(b):return hashlib.sha256(b).hexdigest()
++def digest(p):return digest_bytes(pathlib.Path(p).read_bytes())
++def canonical(v):return json.dumps(v,sort_keys=True,separators=(',',':'),ensure_ascii=True).encode()
++def load(p):
++ def pairs(xs):
++  out={}
++  for k,v in xs:need(k not in out,'DUPLICATE_KEY');out[k]=v
++  return out
++ b=pathlib.Path(p).read_bytes();need(0<len(b)<=1048576,'RECORD_SIZE');return json.loads(b,object_pairs_hook=pairs)
++def write_once(p,v):
++ """Fixed caller-selected run artifact: complete bytes, exclusive final publication."""
++ p=pathlib.Path(p);tmp=p.with_name(p.name+'.pending')
++ with tmp.open('xb') as f:f.write(canonical(v));f.flush();os.fsync(f.fileno())
++ # Windows rename fails if destination exists. No overwrite/replace fallback.
++ tmp.rename(p)
++def bound(p):
++ b=p['binding'];need(b['schema']==SCHEMA,'SCHEMA')
++ for key in ('run','declarationSHA256','sourceManifestSHA256','kernelSession','observerSHA256'):
++  need(isinstance(b[key],str) and bool(b[key]),'BINDING_'+key)
++ for key in ('declarationSHA256','sourceManifestSHA256','observerSHA256'):
++  need(len(b[key])==64 and all(c in '0123456789abcdef' for c in b[key]),'DIGEST')
++ f=integer(b['frequency']);start=integer(p['cleanupEntryQpc'])
++ need(p['deadlineQpc']==start+20*f,'DEADLINE_RESET')
++ return b,start,p['deadlineQpc']
++def before(p,now):
++ _,start,end=bound(p);need(type(now) is int and start<=now<end,'ABSOLUTE_DEADLINE');return end-now
++def phase_a(p):
++ b,start,end=bound(p);need(p['state']==STATES[3],'PHASE_A_STATE')
++ for flag in ('admissionsStopped','localDurable','trackerStopped','localHandlesClosed'):
++  need(p[flag] is True,'PHASE_A_'+flag)
++ need(p['cleanupPass'] is False and p['acceptance'] is False,'PREMATURE_PASS')
++ c=p['collector'];identity(c);norm(c['image']);identity(p['authorityObserver'])
++ rows=p['helpers'];need(type(rows) is list and len(rows)<=8192,'HELPER_BOUND')
++ keys=set()
++ for r in rows:
++  key=identity(r);need(key not in keys,'DUPLICATE_HELPER');keys.add(key)
++  need(r['role']=='OS_CONSOLE_HELPER' and identity(r['parent'])==identity(c),'HELPER_CLASS_PARENT')
++  need(norm(r['image'])==r'c:\windows\system32\conhost.exe','HELPER_IMAGE')
++  need(r['localClosed'] is True,'LOCAL_HANDLE_OPEN');before(p,r['localCloseQpc']);need(r['localCloseQpc']<=p['completedQpc'],'LOCAL_CLOSE_AFTER_PHASE')
++  need(r['stateAtClose'] in (0,258),'LOCAL_HANDLE_STATE')
++ before(p,p['completedQpc']);return p
++def native(n,row,p):
++ need(identity(n)==identity(row),'NATIVE_IDENTITY')
++ need(n['finalWait']==0 and n['fault'] is False and n['deadlineExceeded'] is False,'NATIVE_FAILED')
++ need(n['exitCode']==row['exitCode'] and n['exitFiletime']==row['exitFiletime'],'NATIVE_CONTRADICTION')
++ need(row['startQpc']<=n['entryQpc']<row['stopQpc'],'NATIVE_ENTRY')
++def terminal(p,r,phase_sha,observed_qpc,native_collector):
++ phase_a(p);before(p,observed_qpc)
++ need(r['schema']==SCHEMA and r['kind']=='workload-terminal' and r['sequence']==1,'RECEIPT_SCHEMA_SEQUENCE')
++ need(r['binding']==p['binding'] and r['phaseASHA256']==phase_sha,'STALE_RECEIPT')
++ need(r['cleanupEntryQpc']==p['cleanupEntryQpc'] and r['deadlineQpc']==p['deadlineQpc'],'RECEIPT_DEADLINE')
++ need(identity(r['observer'])==identity(p['authorityObserver']) and norm(r['observer']['image'])==norm(p['authorityObserver']['image']),'OBSERVER_IDENTITY')
++ need(r['faults']==0 and r['eventsLost']==r['buffersLost']==0,'TRACE_LOSS')
++ need(r['coordinationOnly'] is True and r['acceptance'] is False,'RECEIPT_NOT_ACCEPTANCE')
++ before(p,r['capturedQpc']);need(r['capturedQpc']<=observed_qpc,'FUTURE_RECEIPT')
++ expected={identity(p['collector']):p['collector'],**{identity(x):x for x in p['helpers']}}
++ rows={identity(x):x for x in r['rows']};need(len(rows)==len(r['rows']) and set(rows)==set(expected),'MISSING_OR_REUSED_INSTANCE')
++ sequences=set()
++ for k,want in expected.items():
++  x=rows[k];need(x['sequence'] not in sequences and int(x['sequence'])>0,'SEQUENCE');sequences.add(x['sequence'])
++  need(norm(x['handleImage'])==norm(want['image']) and x['handleCreated']==k[1],'IMAGE_CREATION')
++  need(x['handleRetained'] is True and x['imageError']==0 and x['metadataError']==0,'HANDLE_REQUIRED')
++  need(x['startQpc']<=x['handleAttemptQpc']<=x['signalObservedQpc']<=r['capturedQpc'],'HANDLE_CONTINUITY')
++  need(x['imageBeginQpc']<=x['imageEndQpc']<x['stopQpc'],'LIVE_IMAGE')
++  need(x['stopQpc']>x['startQpc'] and x['stopQpc']<=x['stopCallbackQpc']<=r['capturedQpc'] and x['stopQpc']<=x['signalObservedQpc'],'KERNEL_STOP')
++  need(0<x['signalObservedQpc']<p['deadlineQpc'] and 0<x['stopQpc']<p['deadlineQpc'],'TERMINAL_LATE')
++  need(x['kernelExitFiletime']==x['exitFiletime'] and x['kernelExitCode']==x['exitCode'],'HANDLE_KERNEL_CONTRADICTION')
++  if k!=identity(p['collector']):
++   parent=rows[identity(p['collector'])]
++   need(x['parentPid']==parent['pid'] and x['parentSequence']==parent['sequence'],'PARENT_CONTRADICTION')
++   need(x['handleAttemptQpc']<want['localCloseQpc'] and x['imageBeginQpc']<want['localCloseQpc'],'HANDOFF_LATE')
++  else:
++   need(p['completedQpc']<=x['stopQpc'] and x['exitCode']==0,'COLLECTOR_CRASH_OR_EARLY_EXIT');native(native_collector,x,p)
++ return rows
++def census(p,c,final=False):
++ before(p,c['completedQpc']);need(c['binding']==p['binding'],'CENSUS_BINDING')
++ need(c['available'] is True and c['unknown']==[],'CENSUS_UNAVAILABLE')
++ need(c['workloadRemaining']==[],'WORKLOAD_REMAINS')
++ if final:
++  need(c['matchingProcesses']==[] and c['traceSessions']==[],'FINAL_CENSUS_REMAINS')
++  need(c['launcherExitVerified'] is True and c['observerExitsVerified'] is True,'EXIT_UNPROVEN')
++ else:
++  need(c['kind']=='workload-only','WRONG_CENSUS')
++  need(c['matchingProcesses']==c['expectedManagement'],'UNEXPECTED_PROCESS')
++ return True
++def closure(p,doc):
++ before(p,doc['completedQpc']);need(doc['binding']==p['binding'],'CLOSURE_BINDING')
++ need(doc['launcherExitVerified'] is True and doc['launcherExitCode']==0,'LAUNCHER_EXIT')
++ need(set(doc['observers'])=={'application','detail','authority'},'MISSING_OBSERVER')
++ last=0
++ for role in ('application','detail','authority'):
++  x=doc['observers'][role]
++  need(x['exitVerified'] is True and x['exitCode']==0 and x['drained'] is True,'OBSERVER_'+role)
++  need(last<=x['exitQpc']<p['deadlineQpc'],'SHUTDOWN_ORDER');last=x['exitQpc']
++ need(doc['durableComplete'] is True and doc['authoritativeContradictions']==[],'FINAL_STREAM')
++ need(doc['allRequiredHandlesClosed'] is True,'HANDLE_CLOSURE')
++ return True
++class Machine:
++ def __init__(self,binding):self.state='PREPARED';self.binding=binding;self.records=[]
++ def reject(self,reason):self.state='REJECTED';self.records.append(dict(state='REJECTED',reason=reason));raise Rejected(reason)
++ def advance(self,state,owner,evidence,p=None,now=None):
++  try:
++   need(self.state!='REJECTED','PERMANENT_REJECTION')
++   i=STATES.index(self.state)+1;need(i<len(STATES) and STATES[i]==state,'STATE_ORDER')
++   need(owner==OWNERS[i] and evidence.get('binding')==self.binding,'STATE_OWNER_BINDING')
++   if p is not None and state not in ('CHECKER_FINALIZATION_ALLOWED','ACCEPTED'):before(p,now)
++   self.state=state;self.records.append(dict(state=state,owner=owner,evidence=evidence,qpc=now))
++  except (ValueError,KeyError,TypeError) as exc:self.reject(str(exc))
+--- /dev/null
++++ D:\JARVIS-STAGE6-LIVE\7f204e14c90a497a8476be0e9927e074\code\evidence_support_v3.py
+@@ -0,0 +1,92 @@
++"""Versioned TEST tracker: only exact collector-associated console helpers may pend."""
++import pathlib,time,json,os
++import evidence_support as previous
++from evidence_support import K,times,image,Managed,Ledger
++from journal import ticks,frequency
++from coordination_v3 import write_once,need,norm,digest,SCHEMA,before
++
++class TreeTracker(previous.TreeTracker):
++ def __init__(self,collector_anchor=False,run_root=None):
++  super().__init__(collector_anchor=collector_anchor,run_root=None)
++  if run_root is not None:
++   try:
++    from tracker_adapter_v3 import binding
++    self.runBinding=binding(run_root,self.anchor['pid'],self.anchor['created'])
++   except BaseException:
++    self.stop.set();self.thread.join(2)
++    if self.anchorHandle and not self.thread.is_alive():K.CloseHandle(self.anchorHandle);self.anchorHandle=None
++    raise
++ def eligible(self,r):
++  return bool(self.anchor and r['parentPid']==self.anchor['pid'] and r['role'].startswith('descendant:') and r.get('imageCapture',{}).get('valid') is True and norm(r['image'])==r'c:\windows\system32\conhost.exe')
++ def finish(self,root,seconds=20):
++  need(seconds==20,'FIXED_CLEANUP_BUDGET');root=pathlib.Path(root)
++  entry=ticks();end=entry+20*frequency()
++  write_once(root/'cleanup-origin-v3.json',dict(cleanupEntryQpc=entry,deadlineQpc=end,frequency=frequency()))
++  while ticks()<end:
++   self.scan()
++   if all(r['signalObservedQpc'] is not None or self.eligible(r) for r in self.snapshot()):break
++   time.sleep(.02)
++  self.stop.set();self.thread.join(max(0,min(2,(end-ticks())/frequency())))
++  need(not self.thread.is_alive(),'TRACKER_JOIN')
++  with self.lock:
++   for key,h in self.handles.items():
++    r=self.rows[key]
++    if r['signalObservedQpc'] is None:need(self.eligible(r),'NON_HELPER_PENDING')
++    r['stateAtClose']=int(K.WaitForSingleObject(h,0))
++    if r['stateAtClose']==0 and r['signalObservedQpc'] is None:
++     ts=times(h);code=previous.w.DWORD();need(K.GetExitCodeProcess(h,previous.c.byref(code)) and ts[0]==r['created'],'LATE_LOCAL_SIGNAL_IDENTITY')
++     r.update(signalObservedQpc=ticks(),exitFiletime=ts[1],exitCode=code.value)
++    r['localCloseQpc']=ticks()
++    r['closed']=bool(K.CloseHandle(h));need(r['closed'],'LOCAL_CLOSE')
++   rows=self.snapshot()
++  need(rows and not self.errors and ticks()<end,'LOCAL_FAILURE_OR_DEADLINE')
++  state=int(K.WaitForSingleObject(self.anchorHandle,0));self.anchor['stateAtClose']=state
++  self.anchor['closeQpc']=ticks();self.anchor['closed']=bool(K.CloseHandle(self.anchorHandle));self.anchorHandle=None
++  need(state==258 and self.anchor['closed'],'ANCHOR_CLOSE')
++  descendants=[dict(pid=r['pid'],created=r['created'],parentPid=r['parentPid'],capture=r['imageCapture'],closed=r['closed'],exitFiletime=r['exitFiletime'],exitCode=r['exitCode'],localCloseQpc=r['localCloseQpc'],stateAtClose=r['stateAtClose'],eligibleConsoleHelper=self.eligible(r)) for r in rows]
++  from tracker_adapter_v3 import binding
++  self.runBinding=binding(root,self.anchor['pid'],self.anchor['created'])
++  doc=dict(binding=self.runBinding,schema='stage6-independent-tree-support-v3',supportingOnly=True,kernelQualification='NOT_PERFORMED',anchor=self.anchor,descendants=descendants,capacity=self.capacity,errors=self.errors,valid=True)
++  write_once(root/'tree-image-support.json',doc)
++  result=dict(rows=rows,errors=[],threadStopped=True,allExited=all(r['signalObservedQpc'] is not None for r in rows),allHandlesClosed=True,supportingEvidenceValid=True,localFinalized=True,cleanupEntryQpc=entry,deadlineQpc=end,qpc=ticks(),scanCount=self.scans,maxScanSeconds=self.maxScan)
++  write_once(root/'tree-handles.json',result);return result
++
++def publish_phase_a(root):
++ """Called only after wrapper FINAL_SHUTDOWN and bridge cleanup are written."""
++ root=pathlib.Path(root);load=lambda n:json.loads((root/n).read_text())
++ need(not (root/'primary-failure.json').exists(),'PRESERVED_FAILURE')
++ tree=load('tree-image-support.json');proof=load('tree-handles.json');obs=load('observer-identities.json')
++ bridge=load('native-bridge-cleanup.json');need(bridge['allThreadsExited'] and not bridge['errors'],'BRIDGE_CLOSURE')
++ marks=list(root.glob('integration-collector-*.json'));need(len(marks)==1,'COLLECTOR_MARKERS')
++ m=json.loads(marks[0].read_text());need(m[-1]['event']=='FINAL_SHUTDOWN' and m[-1]['status']=='RETURNED','COLLECTOR_FAILURE')
++ anchor=tree['anchor'];collector=dict(pid=anchor['pid'],created=anchor['created'],image=anchor['capture']['image'])
++ helpers=[]
++ for r in tree['descendants']:
++  if r['eligibleConsoleHelper']:
++   helpers.append(dict(pid=r['pid'],created=r['created'],image=r['capture']['image'],role='OS_CONSOLE_HELPER',parent=collector,localClosed=r['closed'],localCloseQpc=r['localCloseQpc'],stateAtClose=r['stateAtClose']))
++ # Flush every collector-owned evidence file, not live external observer files.
++ local=['tree-image-support.json','tree-handles.json','stress-result.json','collector-health-samples.json','probe-timings.json','retained-handle-verification.json','native-bridge-cleanup.json',marks[0].name]
++ local += [p.name for p in root.glob('native-*.json') if p.name not in local]
++ local += [p.name for p in root.glob('early-image-*.json')]
++ local += [p.name for pattern in ('hash-*.json','hash-*.bin','hash-*.bin.json','integration-hash-worker-*.json','integration-sampler-*.json','sampler-results.json','metadata-verified.json','state.json','workload-stop') for p in root.glob(pattern) if p.name not in local]
++ local=list(dict.fromkeys(local))
++ for name in local:
++  with (root/name).open('r+b',buffering=0) as f:os.fsync(f.fileno())
++ b=dict(tree['binding']);b.pop('producer');b['schema']=SCHEMA
++ phase=dict(binding=b,state='LOCAL_EVIDENCE_FINALIZED_PENDING_EXTERNAL_EXIT',collector=collector,authorityObserver=obs['etw'],helpers=helpers,cleanupEntryQpc=proof['cleanupEntryQpc'],deadlineQpc=proof['deadlineQpc'],admissionsStopped=True,localDurable=True,trackerStopped=True,localHandlesClosed=True,cleanupPass=False,acceptance=False,localEvidence={n:digest(root/n) for n in local},completedQpc=ticks())
++ from coordination_v3 import phase_a
++ phase_a(phase);write_once(root/'phase-a-v3.json',phase)
++
++def close_bridge_v3(root,bridge):
++ """Same native bridge closure, intersect its existing 2s join with cleanup budget."""
++ import _winapi
++ _winapi.CreateProcess=bridge.original;bridge.sampler.K.CreateProcessW=bridge.originalSampler
++ origin=pathlib.Path(root)/'cleanup-origin-v3.json'
++ end=time.monotonic()+2
++ if origin.exists():
++  v=json.loads(origin.read_text());need(v['frequency']==frequency() and v['deadlineQpc']==v['cleanupEntryQpc']+20*frequency(),'BRIDGE_DEADLINE')
++  end=min(end,time.monotonic()+max(0,(v['deadlineQpc']-ticks())/frequency()))
++ for t in bridge.threads:t.join(max(0,end-time.monotonic()))
++ result=dict(threadCount=len(bridge.threads),allThreadsExited=all(not t.is_alive() for t in bridge.threads),createdPids=bridge.created,errors=bridge.errors)
++ write_once(pathlib.Path(root)/'native-bridge-cleanup.json',result)
++ need(result['allThreadsExited'] and not result['errors'],'NATIVE_BRIDGE_CLEANUP')
+--- /dev/null
++++ D:\JARVIS-STAGE6-LIVE\7f204e14c90a497a8476be0e9927e074\code\external_driver_v3.py
+@@ -0,0 +1,64 @@
++"""Fixed one-run TEST driver. Never invokes the finalizer or retries a run."""
++import subprocess,sys,pathlib,time,os,ctypes,json
++from workspace import CODE,run_dir,activate_temp
++from journal import ticks,frequency
++from coordination_v3 import *
++from small_binding_v3 import validate
++from evidence_support import K,times,image
++PWSH=r'C:\Users\jonny\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\powershell\pwsh.exe'
++
++def final_census(root,p,launcher,observations):
++ # Same host-context read-only census policy; no UAC and no protected-file reads.
++ script=r'''$ErrorActionPreference='Stop';$all=@(Get-CimInstance Win32_Process);$found=@($all|Where-Object{$_.ProcessId -ne $PID -and $_.ProcessId -ne CONTROLLER_PID -and ($_.Name -match '^(VBox|VirtualBox|J6)' -or ($_.Name -match '^(python|pwsh|powershell)' -and $_.CommandLine -like '*D:\JARVIS-STAGE6-LIVE*'))}|Select-Object ProcessId,CreationDate,ExecutablePath);$tr=@(& logman query -ets 2>&1|ForEach-Object{"$_"});if($LASTEXITCODE -ne 0){throw 'TRACE_CENSUS_UNAVAILABLE'};@{processes=$found;traces=@($tr|Where-Object{$_ -match '(?i)J6|JARVIS|Stage6'})}|ConvertTo-Json -Depth 5 -Compress'''.replace('CONTROLLER_PID',str(os.getpid()))
++ started=ticks();left=before(p,started)/p['binding']['frequency']
++ result=subprocess.run([PWSH,'-NoProfile','-Command',script],capture_output=True,text=True,timeout=min(10,left),creationflags=0x08000000)
++ need(result.returncode==0,'FINAL_CENSUS_UNAVAILABLE');raw=json.loads(result.stdout)
++ v=dict(kind='final-cleanup',binding=p['binding'],available=True,unknown=[],workloadRemaining=[],matchingProcesses=raw['processes'],traceSessions=raw['traces'],launcherExitVerified=launcher,observerExitsVerified=observations,startedQpc=started,completedQpc=ticks())
++ census(p,v,True);write_once(root/'final-census-v3.json',v);return v
++
++def main(run,approved=False):
++ need(approved is True,'SEPARATE_OWNER_LIVE_APPROVAL_REQUIRED')
++ root=run_dir(run);activate_temp(root);validate(root,load(root/'small-declaration-v3.json'))
++ need(not any((root/n).exists() for n in ('launcher-identity.json','phase-a-v3.json','rejected-v3.json')),'RUN_ALREADY_USED')
++ me=K.GetCurrentProcess();write_once(root/'external-controller-v3.json',dict(pid=os.getpid(),created=times(me)[0],image=image(me),qpc=ticks()))
++ proc=None;p=None
++ try:
++  with (root/'driver-stdout-v3.bin').open('xb') as out,(root/'driver-stderr-v3.bin').open('xb') as err:
++   proc=subprocess.Popen([PWSH,'-NoProfile','-File',str(CODE/'small_launch_v3.ps1'),'-Run',run],cwd=CODE,stdout=out,stderr=err,creationflags=0x08000000,close_fds=True)
++   launcher=dict(pid=proc.pid,created=times(int(proc._handle))[0],image=image(int(proc._handle)))
++   gates=set()
++   while proc.poll() is None:
++    for ready,gate in (('etw-ready.json','allow-detail-prompt'),('detail/etw-ready.json','allow-app-prompt')):
++     if gate not in gates and (root/ready).is_file():write_once(root/gate,dict(run=run,existingSequentialPrompt=True));gates.add(gate)
++    if (root/'phase-a-v3.json').exists():p=load(root/'phase-a-v3.json');before(p,ticks())
++    elif (root/'cleanup-origin-v3.json').exists():
++     origin=load(root/'cleanup-origin-v3.json');need(origin['frequency']==frequency() and origin['deadlineQpc']==origin['cleanupEntryQpc']+20*frequency() and ticks()<origin['deadlineQpc'],'ABSOLUTE_DEADLINE')
++    time.sleep(min(.01,max(0,(p['deadlineQpc']-ticks())/frequency())) if p is not None else .01)
++   exit_qpc=ticks();need(proc.returncode==0,'LAUNCHER_FAILED')
++   need(int(K.WaitForSingleObject(int(proc._handle),0))==0 and times(int(proc._handle))[0]==launcher['created'],'LAUNCHER_INSTANCE_EXIT')
++   need(p is not None,'MISSING_PHASE_A');before(p,exit_qpc)
++   observed=load(root/'launcher-identity.json');need(identity(observed)==identity(launcher) and norm(observed['image'])==norm(launcher['image']),'LAUNCHER_IDENTITY')
++   obs=load(root/'observer-exits-v3.json');need(obs['error'] is None,'OBSERVER_FAILURE')
++   identities=load(root/'observer-identities.json')
++   for role,name in (('application','app'),('detail','detail'),('authority','etw')):
++    need(identity(obs['observers'][role])==identity(identities[name]),'OBSERVER_REUSE')
++   app=load(root/'app-result.json');detail=load(root/'detail'/'etw-result.json');kernel=load(root/'etw-result.json')
++   obs['observers']['application']['drained']=bool(app['success'] and app['durableFinalization'] and app['queue']['remaining']==0)
++   for role,row in (('detail',detail),('authority',kernel)):
++    obs['observers'][role]['drained']=bool(row['requestedStop'] and all(row[f]==0 for f in ('faults','eventsLost','realtimeBuffersLost','buffersLost','flushResult','stopResult','consumerResult')))
++   v=dict(binding=p['binding'],launcher=launcher,launcherExitQpc=exit_qpc,launcherExitVerified=True,launcherExitCode=proc.returncode,observers=obs['observers'],durableComplete=all(x['drained'] for x in obs['observers'].values()),authoritativeContradictions=[],allRequiredHandlesClosed=all(x['handleClosed'] for x in kernel['rows']),completedQpc=ticks())
++   closure(p,v);write_once(root/'external-exits-v3.json',v)
++   final_census(root,p,True,True)
++   from completed_v3 import verify_complete
++   verify_complete(root)
++   states=[dict(state=s,owner=OWNERS[i],binding=p['binding']) for i,s in enumerate(STATES[:12])]
++   write_once(root/'coordination-states-v3.json',dict(kind='evidence-reconciled-state-sequence',states=states,evidence={n:digest(root/n) for n in ('phase-a-v3.json','terminal-v3.json','workload-census-v3.json','integration-launcher.json','external-exits-v3.json','final-census-v3.json')}))
++   print('COMPLETED_EVIDENCE_PENDING_CHECKER_AND_ARCHIVE')
++ except BaseException as exc:
++  if not (root/'rejected-v3.json').exists():write_once(root/'rejected-v3.json',dict(state='REJECTED',reason=type(exc).__name__+': '+str(exc),qpc=ticks()))
++  raise
++ finally:
++  if proc is not None and hasattr(proc,'_handle'):proc._handle.Close()
++if __name__=='__main__':
++ need(len(sys.argv)==3 and sys.argv[2]=='--owner-approved-one-small-run','EXPLICIT_ONE_RUN_APPROVAL_REQUIRED')
++ main(sys.argv[1],True)
+--- /dev/null
++++ D:\JARVIS-STAGE6-LIVE\7f204e14c90a497a8476be0e9927e074\code\large_collect_v3.py
+@@ -0,0 +1,65 @@
++"""Real producer adapter for the unchanged dual-evidence cleanup contract."""
++import os,sys,time,traceback
++from workspace import CODE,run_dir,activate_temp
++from baseline_contract import load,save,advance,state
++from dry_health import Health
++from evidence_support_v3 import TreeTracker,Managed,Ledger
++from probe_timing import Probe,K,process_times
++from journal import ticks,frequency
++from secondary_sampling import SecondarySampler
++def main(root):
++ contract=load(root);ledger=Ledger(root);tree=TreeTracker(collector_anchor=True,run_root=root);health=None;worker=None;sampler=None;probes=[];handles=[];launched=[];results=[]
++ def secondary(stage,fn):
++  try:return fn()
++  except BaseException:ledger.fail(stage)
++ def warning(v):
++  with (root/'warnings.jsonl').open('a') as f:
++   import json
++   f.write(json.dumps(v)+'\n');f.flush()
++ try:
++  health=Health(root);advance(root,'OBSERVERS_READY','WORKLOAD_RUNNING');deadline=ticks()/frequency()+contract['thresholds']['campaign']
++  sampler=SecondarySampler(root,tree,launched,ledger)
++  worker=Managed([sys._base_executable,'-B',str(CODE/'baseline_hash_worker.py'),root.name],root,'hash-worker',tree);launched.append(worker.identity)
++  while worker.p.poll() is None or len(probes)<2:
++   health.check()
++   if ledger.primary:raise RuntimeError('Required diagnostic evidence failed')
++   if ticks()/frequency()+13.6>=deadline:raise RuntimeError('Fixed campaign admission deadline')
++   probe=Probe(CODE/'J6Probe.exe');probes.append(probe);tree.register(probe.process,'lifecycle-probe')
++   launched.append(dict(pid=probe.process.pid,created=process_times(probe.process)[0],role='lifecycle-probe',parentPid=os.getpid()))
++   if probe.wait_approved(health.check,warning,deadline)!=0:raise RuntimeError('Nonzero probe exit')
++   probe.finish_observation()
++   if probe.row['independentObserverFailed']:raise RuntimeError('Independent 15-second observation failed')
++   ts=process_times(probe.process);handles.append(dict(pid=probe.process.pid,times=ts,exit=probe.process.returncode,handleState=int(K.WaitForSingleObject(int(probe.process._handle),0))))
++   time.sleep(.3) # Existing producer pacing; never a deadline adjustment.
++  done=worker.finish(15);results.append(done)
++  if done['handleState']!=0 or done['exit']!=0 or any(not done.get(n,{}).get('eof') or done[n].get('error') for n in ('stdout','stderr')):raise RuntimeError('Hash worker exit/output failed; preserve hash-failure and captured stderr')
++  health.check()
++  if state(root)['phase']!='METADATA_VERIFIED':raise RuntimeError('Hash workflow incomplete')
++ except BaseException:ledger.fail('integrated-collection')
++ finally:
++  secondary('workload-stop',lambda:(root/'workload-stop').touch())
++  if worker and not worker.finished:
++   done=secondary('worker-cleanup',lambda:worker.finish(15))
++   if done:
++    results.append(done)
++    if done['handleState']!=0 or done['exit']!=0:ledger.fail('worker-cleanup','Worker not cleanly exited')
++  for probe in probes:
++   def close_probe(probe=probe):
++    p=probe.process;signal=int(K.WaitForSingleObject(int(p._handle),30000)) # Post-failure evidence only.
++    if not probe.row.get('reconciledQpc'):probe.finish_observation()
++    if probe.row.get('independentObserverFailed'):raise RuntimeError('Independent observer failure remains a failure')
++    if signal!=0:raise RuntimeError('Probe remains alive; do not terminate implicitly')
++    if not any(x['pid']==p.pid for x in handles):handles.append(dict(pid=p.pid,times=process_times(p),exit=p.poll(),handleState=signal))
++    p._handle.Close()
++   secondary('probe-cleanup',close_probe)
++  if sampler:secondary('sampler-close',sampler.close)
++  proof=secondary('tree-cleanup',lambda:tree.finish(root,20))
++  if not proof or not proof.get('supportingEvidenceValid',False) or not proof['localFinalized'] or not proof['allHandlesClosed'] or not proof['threadStopped']:ledger.fail('tree-cleanup','Incomplete retained tree')
++  if health:health.close();secondary('health-samples',lambda:save(root/'collector-health-samples.json',health.samples))
++  secondary('probe-timings',lambda:save(root/'probe-timings.json',[x.row for x in probes]))
++  secondary('probe-handles',lambda:save(root/'retained-handle-verification.json',handles))
++  if not ledger.primary:secondary('workload-closure',lambda:advance(root,'METADATA_VERIFIED','WORKLOAD_CLOSED'))
++  save(root/'stress-result.json',dict(ledger.result(),scenario=contract['scenario'],producer='large_collect.py',collectorPid=os.getpid(),launched=launched,results=results))
++ return 1 if ledger.primary else 0
++if __name__=='__main__':
++ root=run_dir(sys.argv[1]);activate_temp(root);sys.exit(main(root))
+--- /dev/null
++++ D:\JARVIS-STAGE6-LIVE\7f204e14c90a497a8476be0e9927e074\code\native_receipt_fixture.cpp
+@@ -0,0 +1,35 @@
++// OFFLINE FIXTURE ONLY. Uses constructed row evidence, never starts ETW/observers.
++#include <iostream>
++#define wmain UNUSED_TRACER_ENTRYPOINT
++#include "authority_trace_v3.cpp"
++#undef wmain
++int wmain(int argc,wchar_t**argv){
++ if(argc!=2)return 80;
++ try{
++  folder=argv[1];if(folder.rfind(L"D:\\JARVIS-STAGE6-LIVE\\7f204e14c90a497a8476be0e9927e074\\code\\offline-native-",0)!=0)return 81;
++  session=L"OFFLINE-CONSTRUCTED-EVIDENCE";LARGE_INTEGER f;QueryPerformanceFrequency(&f);auto now=Q();
++  FILETIME a,b,c,d;GetProcessTimes(GetCurrentProcess(),&a,&b,&c,&d);
++  std::string run=U(folder.substr(folder.find_last_of(L'\\')+1));std::string hash(64,'a');
++  std::string declaration="{\"heartbeat\":10.0,\"probe\":13.6,\"run\":"+J(run)+",\"sourceManifestSHA256\":"+J(hash)+"}";
++  if(!Write(L"small-declaration-v3.json",declaration)||!Write(L"observer-identities.json","{}"))return 82;
++  std::string binding="{\"schema\":\"stage6-terminal-v3\",\"run\":"+J(run)+",\"declarationSHA256\":"+J(terminal_v3::Sha(declaration))+",\"sourceManifestSHA256\":"+J(hash)+",\"kernelSession\":"+J(U(session))+",\"observerSHA256\":"+J(terminal_v3::Sha("{}"))+",\"frequency\":"+std::to_string(f.QuadPart)+"}";
++  Row collector;collector.pid=101;collector.created=1000;collector.sequence=400;collector.parent=50;collector.parentSequence=399;collector.handle=reinterpret_cast<HANDLE>(1);collector.handleCreated=1000;collector.handleImage=L"D:\\python.exe";collector.start=now-100;collector.retained=now-90;collector.imageBegin=now-85;collector.imageEnd=now-80;collector.stop=now-20;collector.stopNotified=now-19;collector.signal=now-18;collector.exitFT=2000;collector.exitCode=0;collector.exitCodeKnown=true;
++  Row helper=collector;helper.pid=102;helper.created=1001;helper.handleCreated=1001;helper.sequence=401;helper.parent=101;helper.parentSequence=400;helper.handleImage=L"C:\\Windows\\System32\\conhost.exe";helper.stop=now-10;helper.stopNotified=now-9;helper.signal=now-8;
++  rows.emplace(std::make_pair(collector.pid,collector.created),collector);rows.emplace(std::make_pair(helper.pid,helper.created),helper);
++  std::string ci="{\"pid\":101,\"created\":\"1000\",\"image\":\"D:\\\\python.exe\"}";
++  std::string helperJson="{\"pid\":102,\"created\":\"1001\",\"image\":\"C:\\\\Windows\\\\System32\\\\conhost.exe\",\"role\":\"OS_CONSOLE_HELPER\",\"parent\":"+ci+",\"localClosed\":true,\"localCloseQpc\":"+std::to_string(now-50)+"}";
++  std::string phase="{\"binding\":"+binding+",\"cleanupEntryQpc\":"+std::to_string(now-60)+",\"deadlineQpc\":"+std::to_string(now-60+20*f.QuadPart)+",\"authorityObserver\":{\"pid\":"+std::to_string(GetCurrentProcessId())+",\"created\":"+J(std::to_string(FT(a)))+"},\"state\":\"LOCAL_EVIDENCE_FINALIZED_PENDING_EXTERNAL_EXIT\",\"localDurable\":true,\"localHandlesClosed\":true,\"trackerStopped\":true,\"admissionsStopped\":true,\"collector\":"+ci+",\"helpers\":["+helperJson+"]}";
++  if(!Write(L"phase-a-v3.json",phase))return 83;
++  unsigned checks=0;
++  auto bad=[&](const std::string&s){try{terminal_v3::Parser(s).parse();throw std::runtime_error("invalid JSON accepted");}catch(const std::exception&e){if(std::string(e.what())=="invalid JSON accepted")throw;checks++;}};
++  bad("{");bad("{\"a\":1,\"a\":2}");bad("{\"a\":01}");bad("true trailing");
++  auto key=std::make_pair(helper.pid,helper.created);rows[key].stop=0;
++  if(terminal_v3::WorkloadReceipt())return 84;checks++;rows[key]=helper;
++  rows[key].handleCreated=9999;bool rejected=false;try{terminal_v3::WorkloadReceipt();}catch(...){rejected=true;}if(!rejected)return 85;checks++;rows[key]=helper;
++  rows[key].parentSequence=9999;rejected=false;try{terminal_v3::WorkloadReceipt();}catch(...){rejected=true;}if(!rejected)return 86;checks++;rows[key]=helper;
++  if(!terminal_v3::WorkloadReceipt())return 87;checks++;
++  auto receipt=terminal_v3::Read(folder+L"\\terminal-v3.json");auto parsed=terminal_v3::Parser(receipt).parse();if(parsed.at("rows").arr.size()!=2)return 88;checks++;
++  rejected=false;try{terminal_v3::WorkloadReceipt();}catch(...){rejected=true;}if(!rejected||terminal_v3::Read(folder+L"\\terminal-v3.json")!=receipt)return 89;checks++;
++  std::cout<<"OFFLINE_NATIVE_RECEIPT_CHECKS "<<checks<<" PASS; constructed rows, no ETW or live qualification\n";return 0;
++ }catch(const std::exception&e){std::cerr<<e.what()<<"\n";return 90;}
++}
+--- /dev/null
++++ D:\JARVIS-STAGE6-LIVE\7f204e14c90a497a8476be0e9927e074\code\small_binding_v3.py
+@@ -0,0 +1,27 @@
++"""Separate small integration contract; cannot authorize medium/large/protected data."""
++import json,hashlib,pathlib,sys,uuid
++from workspace import CODE,check_path,run_dir
++from baseline_contract import prepare,load,save,inventory
++SCHEMA='stage6-small-coordination-v3'
++def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
++def frozen():
++ rows=json.loads((CODE/'small-source-v3.json').read_text())
++ for r in rows:
++  p=check_path(CODE/r['name'])
++  if not p.is_file() or p.stat().st_size!=r['bytes'] or sha(p)!=r['sha256']:raise ValueError('SOURCE_DRIFT')
++ return sha(CODE/'small-source-v3.json')
++def validate(root,v):
++ expected=dict(schema=SCHEMA,run=root.name,code=str(CODE),source=str(CODE/'small-synthetic'),sourceManifestSHA256=frozen(),case=v.get('case'),inventorySHA256=sha(root/'contract.json'),files=12,bytes=786432,heartbeat=10.0,probe=13.6,observer=15.0,campaign=90.0,kernelCapture=180.0,cleanup=20.0,coordination='stage6-terminal-v3',channels=['kernel-authority','detailed-startup','supporting-CIM'],classes=['collector','hash-worker','secondary-sampler','lifecycle-probe','OS_CONSOLE_HELPER','APPLICATION_OBSERVER','DETAIL_OBSERVER'])
++ check_path(root)
++ if v!=expected or v['case'] not in ('normal','hash-start-failure'):raise ValueError('SMALL_DECLARATION_MISMATCH')
++ contract=load(root)
++ if not contract['synthetic'] or contract['source']!=expected['source'] or len(contract['inventory'])!=12 or sum(x['bytes'] for x in contract['inventory'].values())!=786432:raise ValueError('SMALL_SYNTHETIC_ONLY')
++ return v
++def make(case):
++ digest=frozen();root=prepare(str(CODE/'small-synthetic'));(root/'detail').mkdir()
++ v=dict(schema=SCHEMA,run=root.name,code=str(CODE),source=str(CODE/'small-synthetic'),sourceManifestSHA256=digest,case=case,inventorySHA256=sha(root/'contract.json'),files=12,bytes=786432,heartbeat=10.0,probe=13.6,observer=15.0,campaign=90.0,kernelCapture=180.0,cleanup=20.0,coordination='stage6-terminal-v3',channels=['kernel-authority','detailed-startup','supporting-CIM'],classes=['collector','hash-worker','secondary-sampler','lifecycle-probe','OS_CONSOLE_HELPER','APPLICATION_OBSERVER','DETAIL_OBSERVER'])
++ validate(root,v);save(root/'small-declaration-v3.json',v);return root
++if __name__=='__main__':
++ if sys.argv[1]=='prepare':print(make(sys.argv[2]))
++ elif sys.argv[1]=='verify':
++  root=run_dir(sys.argv[2]);validate(root,json.loads((root/'small-declaration-v3.json').read_text()));print('BINDING_PASS')
+--- /dev/null
++++ D:\JARVIS-STAGE6-LIVE\7f204e14c90a497a8476be0e9927e074\code\small_check_v3.py
+@@ -0,0 +1,102 @@
++"""Strict small integration qualifier. No large/protected acceptance claim."""
++import sys,json,ctypes,pathlib,hashlib,collections
++from workspace import CODE,run_dir
++sys.path.insert(0,str(CODE/'medium-checker'))
++import qualification as q,telemetry,application_authority
++from small_coverage_v2 import coverage,identity,normalize
++from small_binding_v3 import validate
++from trace_segments import verify as trace_verify
++from process_instances import InstanceTable
++from journal import Reader,frequency
++
++def check(root):
++ from completed_v3 import verify_complete
++ phase=verify_complete(root)
++ load=lambda n:q.load(root/n)
++ d=validate(root,load('small-declaration-v3.json'));normal=d['case']=='normal'
++ launch=load('launcher-result.json')
++ q.require(launch['error'] is None and all(launch[x] is True for x in ('applicationExited','detailExited','kernelExited')) and all(launch[x]==0 for x in ('applicationExit','detailExit','kernelExit')),'OBSERVER_CLEANUP')
++ q.require((launch['workExit']==0) if normal else (launch['workExit']==1),'COLLECTOR_STATUS')
++ kernel=load('etw-result.json');detail=load('detail/etw-result.json')
++ for field in ('faults','eventsLost','realtimeBuffersLost','buffersLost','flushResult','stopResult','consumerResult'):q.require(detail[field]==0,'DETAIL_'+field)
++ q.require(detail['requestedStop'],'DETAIL_NOT_CLOSED')
++ detailed=trace_verify(root/'detail');q.require(detailed['records']>0,'EMPTY_DETAIL')
++ detail_ids={(x['pid'],x['created']) for x in detail['rows']}
++ events,manifest,writer=q.stream(root,'kernel-authority');measurements=telemetry.verify(root)
++ observations=load('observer-identities.json');launcher=load('launcher-identity.json')
++ mapping={};k=ctypes.WinDLL('kernel32',use_last_error=True)
++ for drive in ('C:','D:'):
++  b=ctypes.create_unicode_buffer(32768);q.require(k.QueryDosDeviceW(drive,b,len(b))>0,'VOLUME_MAP');mapping[drive]=b.value
++ norm=lambda s:normalize(s,mapping)
++ roles={};collector_marks=list(root.glob('integration-collector-*.json'));q.require(len(collector_marks)==1,'COLLECTOR_MARKERS')
++ cm=q.load(collector_marks[0]);q.require(cm[0]['event']=='ENTRY' and cm[-1]['event']=='FINAL_SHUTDOWN','COLLECTOR_MARKER_CLOSURE')
++ collector=identity(cm[0]);roles[collector]='DIRECT_WORKER'
++ worker=load('hash-worker-cleanup.json');roles[identity(worker)]='DIRECT_WORKER'
++ q.require(worker['parentHandleClosed'] and worker['handleState']==0 and all(worker[x]['eof'] and not worker[x]['error'] for x in ('stdout','stderr')),'HASH_WORKER_CLEANUP')
++ sampler=load('sampler-results.json');q.require(sampler['threadExited'] and sampler['queries'],'SAMPLER_NOT_EXERCISED')
++ for s in sampler['queries']:
++  q.require(s.get('allExited') and s.get('handleClosed') and not s.get('cleanupObservationTimedOut'),'SAMPLER_CLEANUP')
++  roles[identity(s)]='DIRECT_WORKER'
++ probes=load('probe-timings.json');q.require(probes,'PROBES_NOT_EXERCISED')
++ for p in probes:
++  q.require(not p['hardDeadlineFailure'] and not p['independentObserverFailed'] and p['observerResult']==p['finalHandleState']==p['actualExitCode']==0,'PROBE_FAILURE')
++  roles[(p['pid'],p['initialKernelTimes'][0])]='DIRECT_PROBE'
++ roles[identity(observations['app'])]='APPLICATION_OBSERVER';roles[identity(observations['detail'])]='DETAIL_OBSERVER'
++ expected=[];handles=[];native=[];retained=[];byseq={r['sequence']:r for r in kernel['rows']}
++ for r in kernel['rows']:
++  key=identity(r)
++  if r['parentPid']==launcher['pid']:parent=int(r['created'])>=int(launcher['created'])
++  else:
++   p=byseq.get(r['parentSequence']);parent=bool(p and p['pid']==r['parentPid'] and int(p['created'])<=int(r['created'])<=int(p['exitFiletime']))
++  q.require(parent,'PARENT_INSTANCE')
++  role=roles.get(key)
++  if role is None:
++   q.require(norm(r['image'])=='c:\\windows\\system32\\conhost.exe','UNKNOWN_HELPER');role='OS_CONSOLE_HELPER'
++  expected.append(dict(r,role=role,parentVerified=parent))
++  if role in ('DIRECT_WORKER','DIRECT_PROBE'):
++   q.require(key in detail_ids,'DIRECT_MISSING_DETAILED_TRACE')
++   n=load(f"native-{r['pid']}-{r['created']}.json");native.append(n)
++   ep=root/f"early-image-{r['pid']}-{r['created']}.json";e=q.load(ep)
++   q.require(identity(e)==key and norm(e['image'])==norm(r['image']),'EARLY_IMAGE_BINDING')
++   h=dict(e,retained=True,exited=n['finalWait']==0,closed=True,exitFiletime=n['exitFiletime'],exitCode=n['exitCode'],identityPersistedQpc=n['identityPersistedQpc'],evidenceSHA256=q.sha(ep));handles.append(h)
++   retained.append(dict(pid=r['pid'],created=r['created'],image=e['image'],exited=n['finalWait']==0,closed=True,exitFiletime=n['exitFiletime'],exitCode=n['exitCode']))
++  else:
++   handles.append(dict(pid=r['pid'],created=r['created'],handleCreated=r['handleCreated'],image=r['handleImage'],imageError=r['imageError'],source='tracer-opened-handle',queryBeginQpc=r['imageBeginQpc'],queryEndQpc=r['imageEndQpc'],retained=r['handleRetained'],exited=r['signalObservedQpc']>0,closed=r['handleClosed'],exitFiletime=r['exitFiletime'],exitCode=r['exitCode'],qualifiedPostExit=not r['handleRetained'],reason=r['reason'],openError=r['openError'],attemptBegin=r['handleAttemptBeginQpc'],attemptEnd=r['handleAttemptQpc']))
++ q.require(set(roles).issubset({identity(r) for r in expected}),'DECLARED_PROCESS_MISSING')
++ from tracker_adapter_v3 import adapt
++ handles=adapt(root,expected,handles,kernel,mapping,collector)
++ cov=coverage(expected,events,handles,native,mapping);q.require(cov['status']=='PASS','EVIDENCE_COVERAGE: '+str(cov['errors']))
++ app=load('app-result.json');q.require(app['success'] and app['unsubscribed'] and app['durableFinalization'] and not app['error'],'APPLICATION_FINALIZATION')
++ queue=app['queue'];q.require(not queue['failed'] and queue['remaining']==0 and queue['enqueued']==queue['selected']==queue['persisted']==queue['removed'],'QUEUE_CLOSURE')
++ supporting=application_authority.verify(root);_,cimraw,receipts=application_authority.load_inputs(root)
++ q.require(len(cimraw)==len(receipts)==queue['persisted'],'CIM_COUNT')
++ import copy
++ supporting_rows=copy.deepcopy(kernel['rows'])
++ for r in supporting_rows:
++  if r.get('handleCreated')=='0':
++   q.require(not r['handleRetained'] and r['openError']==87 and r['stopQpc']<r['handleAttemptBeginQpc']<=r['handleAttemptQpc'] and norm(r['image'])=='c:\\windows\\system32\\conhost.exe','INVALID_HANDLE_SENTINEL')
++   r['handleCreated']=None
++ table=InstanceTable(supporting_rows,kernel['session']);cim=[table.correlate(e) for e in cimraw]
++ result=q.qualify(events,kernel,retained,native,cim)
++ q.require(load('native-bridge-cleanup.json')['allThreadsExited'] and not load('native-bridge-cleanup.json')['errors'],'NATIVE_BRIDGE_CLOSURE')
++ tree=load('tree-handles.json');q.require(tree['localFinalized'] and tree['allHandlesClosed'] and tree['threadStopped'],'TREE_LOCAL_CLOSURE')
++ hb=load('app-heartbeats.json');q.require(hb and all(0<=h['interval']<10 for h in hb),'HEARTBEAT')
++ ready=load('app-ready.json');ident=dict(run=root.name,pid=ready['pid'],created=ready['created'],frequency=frequency())
++ journal=Reader(root/'app-health.jsonl',ident,lambda:0,None)
++ try:
++  # Offline structural closure, not a replacement for live health observations.
++  journal.clock=lambda: journal.last['ticks'] if journal.last else ready['qpc']
++  journal.poll();q.require(not journal.pending,'PARTIAL_FINAL_HEALTH')
++ finally:journal.close()
++ if normal:
++  one=load('hash-pass-1.json');two=load('hash-pass-2.json');meta=load('metadata-verified.json')
++  q.require(one['files']==two['files'] and meta['files']==12 and meta['bytes']==786432,'HASH_OR_METADATA')
++  q.require(load('state.json')['phase']=='WORKLOAD_CLOSED','WORKFLOW_CLOSURE')
++ else:
++  q.require(not (root/'metadata-verified.json').exists() and (root/'primary-failure.json').exists(),'CONTROLLED_FAILURE_NOT_REJECTED')
++  q.require(b'CONTROLLED_HASH_START_FAILURE' in (root/'hash-worker-stderr.bin').read_bytes(),'WRONG_FAILURE')
++ return dict(status='SMALL_NORMAL_PASS_PENDING_ARCHIVE' if normal else 'CONTROLLED_FAILURE_REJECTED_PENDING_ARCHIVE',run=root.name,identities=result['unique'],starts=result['starts'],stops=result['stops'],cim=result['cim'],coverage=cov,detail=detailed,writerTelemetry=measurements,queue=queue,maxHeartbeat=max(h['interval'] for h in hb),samplerQueries=len(sampler['queries']),probes=len(probes),supporting=supporting,largeEligible=False)
++if __name__=='__main__':
++ root=run_dir(sys.argv[1]);result=check(root)
++ with (root/'small-check-result-v3.json').open('x') as f:json.dump(result,f,indent=2)
++ print(result['status'])
+--- /dev/null
++++ D:\JARVIS-STAGE6-LIVE\7f204e14c90a497a8476be0e9927e074\code\small_finalize_v3.py
+@@ -0,0 +1,74 @@
++"""Small TEST v2 only. No legacy baseline finalizer or production entry point."""
++import os,json,re,hashlib,zipfile,ctypes,ctypes.wintypes as w,subprocess
++from pathlib import Path
++from workspace import check_path
++from small_binding_v3 import frozen
++
++OUTPUTS={'v3-input-manifest.json','v3-check-result.json','v3-seal.json','v3-evidence.zip','v3-archive-receipt.json'}
++TOP=set('driver-stdout-v3.bin driver-stderr-v3.bin cleanup-origin-v3.json phase-a-v3.json terminal-v3.json terminal-observed-v3.json workload-census-v3.json observer-tail-request-v3.json observer-tail-v3.json observer-exits-v3.json external-controller-v3.json external-exits-v3.json final-census-v3.json coordination-states-v3.json'.split()) | set('allow-app-prompt allow-detail-prompt app-authority.json app-events.jsonl app-health.jsonl app-heartbeats.json app-ready.json app-receipts.json app-result.json app-stop app-tap.json collector-health-samples.json contract.json etw-ready.json etw-result.json etw-stop hash-health-samples.json hash-pass-1.json hash-pass-2.json hash-worker-cleanup.json hash-worker-stderr.bin hash-worker-stderr.bin.json hash-worker-stdout.bin hash-worker-stdout.bin.json integration-launcher.json kernel-authority-manifest.json kernel-authority-result.json kernel-authority-seal.json kernel-authority-telemetry.json launcher-identity.json launcher-result.json loss-telemetry.json metadata-verified.json native-bridge-cleanup.json observer-identities.json probe-timings.json release-handles retained-handle-verification.json sampler-results.json small-declaration-v3.json stage-timing.json state.json stress-result.json tree-handles.json tree-image-support.json work.stderr work.stdout workload-stop primary-failure.json hash-failure.json secondary-failures.jsonl warnings.jsonl'.split())
++PAT=r'(?:early-image|native)-[0-9]+-[0-9]+\.json|integration-(?:collector|hash-worker|sampler)-[0-9]+\.json|kernel-authority-[0-9]+\.jsonl|app-authority-[0-9]+\.jsonl'
++DETAIL={'etw-ready.json','etw-result.json','etw-stop','startup-events.json','stage-timing.json','loss-telemetry.json'}
++def need(v,m):
++ if not v:raise ValueError(m)
++def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
++def load(p):return json.loads(p.read_text(encoding='utf-8-sig'))
++def write(p,value):
++ with p.open('x',encoding='utf8') as f:json.dump(value,f,sort_keys=True,indent=2);f.flush();os.fsync(f.fileno())
++def inventory(root,exclude_outputs=False):
++ check_path(root);rows=[]
++ for base,dirs,names in os.walk(root,followlinks=False):
++  for name in dirs+names:
++   p=Path(base)/name;check_path(p);need(not p.lstat().st_file_attributes&0x400,'REPARSE')
++  for name in names:
++   p=Path(base)/name;rel=p.relative_to(root).as_posix()
++   if exclude_outputs and rel in OUTPUTS:continue
++   need(p.stat().st_nlink==1,'HARDLINK')
++   if '/' not in rel:need(name in TOP or re.fullmatch(PAT,name),'UNEXPECTED_ARTIFACT:'+rel)
++   else:need(rel.startswith('detail/') and (rel[7:] in DETAIL or re.fullmatch(r'trace-[0-9]{5}\.jsonl',rel[7:])),'UNEXPECTED_NESTED_ARTIFACT:'+rel)
++   rows.append(dict(path=rel,bytes=p.stat().st_size,sha256=sha(p)))
++ need(rows and len({r['path'].casefold() for r in rows})==len(rows),'EMPTY_DUPLICATE')
++ return sorted(rows,key=lambda r:r['path'])
++
++def no_live_identities(root):
++ from evidence_support import K,times
++ rows=load(root/'etw-result.json')['rows']+[load(root/'launcher-identity.json')]
++ for row in rows:
++  h=K.OpenProcess(0x100000|0x1000,False,row['pid'])
++  if not h:
++   need(ctypes.get_last_error()==87,'PROCESS_INSPECTION_UNCERTAIN');continue
++  try:
++   if times(h)[0]==row['created']:need(K.WaitForSingleObject(h,0)==0,'LIVE_IDENTITY')
++  finally:need(K.CloseHandle(h),'CENSUS_HANDLE_CLOSE')
++ p=subprocess.run(['logman','query','-ets'],capture_output=True,text=True,timeout=10)
++ need(p.returncode==0,'TRACE_CENSUS_FAILED')
++ need(not re.search(r'(?i)J6|JARVIS|Stage6',p.stdout+p.stderr),'TRACE_STILL_ACTIVE')
++
++def finalize(root):
++ from small_check_v3 import check
++ root=check_path(Path(root));need(not any((root/n).exists() for n in OUTPUTS),'FINALIZATION_ALREADY_STARTED')
++ from completed_v3 import verify_complete
++ verify_complete(root)
++ frozen();before=inventory(root);result=check(root)
++ normal=result['status']=='SMALL_NORMAL_PASS_PENDING_ARCHIVE'
++ need(normal or result['status']=='CONTROLLED_FAILURE_REJECTED_PENDING_ARCHIVE','CHECKER_NOT_PASS')
++ if normal:need(not any((root/n).exists() for n in ('primary-failure.json','hash-failure.json','secondary-failures.jsonl')),'PRESERVED_FAILURE')
++ no_live_identities(root)
++ need(inventory(root)==before,'CHANGED_DURING_CHECK')
++ for row in before:
++  with (root/row['path']).open('r+b',buffering=0) as f:os.fsync(f.fileno())
++ need(inventory(root)==before,'CHANGED_DURING_FLUSH');frozen()
++ write(root/'v3-input-manifest.json',dict(run=root.name,files=before))
++ write(root/'v3-check-result.json',dict(state='CHECKER_FINALIZATION_ALLOWED',result=result,inputManifestSHA256=sha(root/'v3-input-manifest.json')))
++ write(root/'v3-seal.json',dict(run=root.name,contract='stage6-small-tracker-coordination-v3',inputManifestSHA256=sha(root/'v3-input-manifest.json'),resultSHA256=sha(root/'v3-check-result.json')))
++ members=before+[dict(path=n,bytes=(root/n).stat().st_size,sha256=sha(root/n)) for n in ('v3-input-manifest.json','v3-check-result.json','v3-seal.json')]
++ archive=root/'v3-evidence.zip'
++ with zipfile.ZipFile(archive,'x',compression=zipfile.ZIP_DEFLATED) as z:
++  for r in members:z.write(root/r['path'],r['path'])
++ with archive.open('r+b',buffering=0) as f:os.fsync(f.fileno())
++ with zipfile.ZipFile(archive) as z:
++  need(len(z.namelist())==len(members),'ARCHIVE_COUNT')
++  for r in members:
++   b=z.read(r['path']);need(len(b)==r['bytes'] and hashlib.sha256(b).hexdigest()==r['sha256'] and sha(root/r['path'])==r['sha256'],'ARCHIVE_HASH')
++ need(inventory(root,True)==before,'FINAL_INPUT_DRIFT');frozen()
++ receipt=dict(state='ACCEPTED' if normal else 'REJECTED',status='SMALL_NORMAL_PASS' if normal else 'CONTROLLED_FAILURE_REJECTION_VALIDATED',run=root.name,archiveSHA256=sha(archive),members=len(members),largeEligible=False,protectedEligible=False)
++ write(root/'v3-archive-receipt.json',receipt);return receipt
+--- /dev/null
++++ D:\JARVIS-STAGE6-LIVE\7f204e14c90a497a8476be0e9927e074\code\small_launch_v3.ps1
+@@ -0,0 +1,85 @@
++param([Parameter(Mandatory=$true)][ValidatePattern('^protected-[a-f0-9]{32}$')][string]$Run)
++$ErrorActionPreference='Stop';. (Join-Path $PSScriptRoot 'workspace.ps1')
++$root=Get-LiveRun $Run;Set-LiveTemp $root
++$py='C:\Users\jonny\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe'
++$pwsh='C:\Users\jonny\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\powershell\pwsh.exe'
++& $py -B (Join-Path $PSScriptRoot 'small_binding_v3.py') verify $Run
++if($LASTEXITCODE -ne 0){throw 'Pre-observer binding failed'}
++$case=(Get-Content (Join-Path $root 'small-declaration-v3.json') -Raw|ConvertFrom-Json).case
++function Save($name,$obj){$f=[IO.FileStream]::new((Join-Path $root $name),[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::Read);try{$b=[Text.Encoding]::UTF8.GetBytes(($obj|ConvertTo-Json -Depth 16));$f.Write($b,0,$b.Length);$f.Flush($true)}finally{$f.Dispose()}}
++function Ready($p,$name){$sw=[Diagnostics.Stopwatch]::StartNew();while(!(Test-Path -LiteralPath (Join-Path $root $name))){if($p.HasExited -or $sw.Elapsed.TotalSeconds -gt 30){throw "Observer readiness failed: $name"};Start-Sleep -Milliseconds 100}}
++function Gate($name,$process){$sw=[Diagnostics.Stopwatch]::StartNew();Write-Output ('OWNER_GATE '+$name);while(!(Test-Path -LiteralPath (Join-Path $root $name))){if($process.HasExited -or $sw.Elapsed.TotalSeconds -ge 120){throw 'Owner prompt gate expired'};Start-Sleep -Milliseconds 100}}
++$me=Get-Process -Id $PID
++Save 'launcher-identity.json' @{pid=$PID;created=$me.StartTime.ToUniversalTime().ToFileTimeUtc().ToString();image=$me.Path;run=$root}
++$marks=[Collections.Generic.List[object]]::new()
++. (Join-Path $PSScriptRoot 'terminal_control_v3.ps1')
++$phase=$null;$shutdownAllowed=$false;$observerExits=@{}
++function Mark($event,$detail){$marks.Add(@{event=$event;pid=$PID;qpc=[Diagnostics.Stopwatch]::GetTimestamp();frequency=[Diagnostics.Stopwatch]::Frequency;detail=$detail})}
++Mark 'LAUNCHER_ENTRY' $case
++Add-Type -TypeDefinition @'
++using System.Runtime.InteropServices;
++public static class J6SmallCollector { [DllImport("D:\\JARVIS-STAGE6-LIVE\\7f204e14c90a497a8476be0e9927e074\\code\\J6OwnedEntry.dll",CharSet=CharSet.Unicode)] public static extern int RunCollector(string root,string mode); }
++'@
++$kernel=$null;$detail=$null;$app=$null;$workExit=$null;$errorText=$null;$appExited=$false;$detailExited=$false;$kernelExited=$false
++try {
++ $kernel=Start-Process -FilePath (Join-Path $PSScriptRoot 'J6AuthorityTraceV3.exe') -ArgumentList @($root,$PID,$me.StartTime.ToUniversalTime().ToFileTimeUtc().ToString()) -Verb RunAs -WindowStyle Hidden -PassThru
++ Ready $kernel 'etw-ready.json'
++ Gate 'allow-detail-prompt' $kernel
++ $detail=Start-Process -FilePath (Join-Path $PSScriptRoot 'J6StartupTrace.exe') -ArgumentList @((Join-Path $root 'detail'),$PID,$me.StartTime.ToUniversalTime().ToFileTimeUtc().ToString()) -Verb RunAs -WindowStyle Hidden -PassThru
++ Ready $detail 'detail\etw-ready.json'
++ Gate 'allow-app-prompt' $kernel
++ $app=Start-Process -FilePath $pwsh -ArgumentList @('-NoProfile','-File',(Join-Path $PSScriptRoot 'timed_monitor.ps1'),'-Run',$Run,'-KernelPid',$kernel.Id) -Verb RunAs -WindowStyle Hidden -PassThru
++ Ready $app 'app-ready.json'
++ Save 'observer-identities.json' @{etw=@{pid=$kernel.Id;created=$kernel.StartTime.ToUniversalTime().ToFileTimeUtc().ToString();image=(Join-Path $PSScriptRoot 'J6AuthorityTraceV3.exe')};detail=@{pid=$detail.Id;created=$detail.StartTime.ToUniversalTime().ToFileTimeUtc().ToString();image=(Join-Path $PSScriptRoot 'J6StartupTrace.exe')};app=@{pid=$app.Id;created=$app.StartTime.ToUniversalTime().ToFileTimeUtc().ToString();image=$pwsh}}
++ Mark 'RUN_ACTIVE' @{run=$Run}
++ $controller=ReadRecord 'external-controller-v3.json'
++ $management=@(@{pid=$PID;created=$me.StartTime.ToUniversalTime().ToFileTimeUtc().ToString();image=$me.Path})+@((ReadRecord 'observer-identities.json').Values)+@($controller)
++ Mark 'HELPER_INVOCATION' 'collector'
++ $workExit=[J6SmallCollector]::RunCollector($root,$case)
++ Mark 'HELPER_RETURN' @{role='collector';exitCode=$workExit}
++ if($workExit -ne 0){throw 'Collector failed; terminal acceptance prohibited'}
++ $phase=ReadRecord 'phase-a-v3.json'
++ Need ($phase.binding.run -ceq $Run -and $phase.binding.declarationSHA256 -ceq (Hash 'small-declaration-v3.json') -and $phase.binding.observerSHA256 -ceq (Hash 'observer-identities.json')) 'Phase binding'
++ foreach($flag in @('admissionsStopped','localDurable','trackerStopped','localHandlesClosed')){Need ($phase[$flag] -eq $true) ('Phase A '+$flag)}
++ Need ($phase.cleanupPass -eq $false -and $phase.acceptance -eq $false) 'Premature acceptance'
++ State 'COLLECTOR_LOCAL_FINALIZING' @{cleanupEntryQpc=$phase.cleanupEntryQpc}
++ State 'LOCAL_EVIDENCE_FINALIZED_PENDING_EXTERNAL_EXIT' @{phaseASHA256=(Hash 'phase-a-v3.json')}
++ $receipt=WaitEvidence 'terminal-v3.json';AssertTerminal $receipt
++ Save 'terminal-observed-v3.json' @{receiptSHA256=(Hash 'terminal-v3.json');observedQpc=(Now);binding=$phase.binding}
++ State 'COLLECTOR_EXITED' @{evidence='native + kernel + retained handle'}
++ State 'TERMINAL_EVIDENCE_PENDING' @{phaseASHA256=(Hash 'phase-a-v3.json')}
++ State 'TERMINAL_EVIDENCE_COMPLETE' @{receiptSHA256=(Hash 'terminal-v3.json')}
++ WorkloadCensus $receipt
++ State 'PRE_SHUTDOWN_WORKLOAD_CENSUS_COMPLETE' @{censusSHA256=(Hash 'workload-census-v3.json')}
++ State 'OBSERVER_SHUTDOWN_ALLOWED' @{acceptance=$false};$shutdownAllowed=$true
++}catch{$errorText=$_.ToString();Save 'launcher-failure.json' @{error=$errorText};Mark 'EXCEPTION' $errorText}
++finally {
++ try {
++  if(!$shutdownAllowed){throw 'No success shutdown authorization'}
++  [void](Budget);Save 'app-stop' @{reason='terminal receipt and workload census verified';binding=$phase.binding}
++  $observerExits.application=ExitBounded $app 60 'application';$appExited=$true
++  Save 'release-handles' @{observerExited=$true}
++  [void](Budget);Save 'detail\etw-stop' @{reason='application observer exited'}
++  $observerExits.detail=ExitBounded $detail 30 'detail';$detailExited=$true
++  Save 'observer-tail-request-v3.json' @{phaseASHA256=(Hash 'phase-a-v3.json');binding=$phase.binding}
++  while(!(Test-Path -LiteralPath (Join-Path $root 'observer-tail-v3.json'))){[void](Budget);Need (!$kernel.HasExited) 'Authority exited before tail evidence';Need (!(Test-Path -LiteralPath (Join-Path $root 'tail-failure-v3.json'))) 'Tail failed';Start-Sleep -Milliseconds ([Math]::Max(1,[Math]::Min(10,[Math]::Floor((Budget)*1000))))}
++  $tail=ReadRecord 'observer-tail-v3.json';Need ($tail.sequence -eq 2 -and $tail.phaseASHA256 -ceq (Hash 'phase-a-v3.json')) 'Stale tail'
++  [void](Budget);Save 'etw-stop' @{reason='subordinate terminal evidence captured';tailSHA256=(Hash 'observer-tail-v3.json')}
++  $observerExits.authority=ExitBounded $kernel 30 'authority';$kernelExited=$true
++ } catch {
++  if(!$errorText){$errorText=$_.ToString()}
++  if(!(Test-Path -LiteralPath (Join-Path $root 'rejected-v3.json'))){Save 'rejected-v3.json' @{state='REJECTED';error=$errorText;qpc=(Now)}}
++  # Failure-only cleanup: preserves the original bounds; never restores acceptance.
++  foreach($x in @(@('app-stop',$app,60000),@('detail\etw-stop',$detail,30000),@('etw-stop',$kernel,30000))){
++   try{if(!(Test-Path -LiteralPath (Join-Path $root $x[0]))){Save $x[0] @{reason='REJECTED failure cleanup only'}};if($x[1]){[void]$x[1].WaitForExit($x[2])}}catch{}
++  }
++ }
++ if($app){$appExited=$app.HasExited};if($detail){$detailExited=$detail.HasExited};if($kernel){$kernelExited=$kernel.HasExited}
++ Save 'observer-exits-v3.json' @{binding=$(if($phase){$phase.binding});observers=$observerExits;completedQpc=(Now);error=$errorText}
++ Save 'launcher-result.json' @{error=$errorText;case=$case;workExit=$workExit;applicationExited=$appExited;detailExited=$detailExited;kernelExited=$kernelExited;applicationExit=$(if($appExited){$app.ExitCode});detailExit=$(if($detailExited){$detail.ExitCode});kernelExit=$(if($kernelExited){$kernel.ExitCode})}
++ Mark 'FINAL_SHUTDOWN' @{application=$appExited;detail=$detailExited;kernel=$kernelExited}
++ Save 'integration-launcher.json' @($marks.ToArray())
++ foreach($p in @($app,$detail,$kernel)){if($p -and $p.HasExited){$p.Dispose()}}
++}
++if($errorText -or !$appExited -or !$detailExited -or !$kernelExited){throw 'Run blocked; evidence preserved; no retry'}
++Write-Output ('SMALL_COLLECTION_CLOSED_PENDING_CHECK '+$root)
+--- /dev/null
++++ D:\JARVIS-STAGE6-LIVE\7f204e14c90a497a8476be0e9927e074\code\support_verifier_v3.py
+@@ -0,0 +1,122 @@
++"""TEST-only predicates. No I/O, process authority, or acceptance-checker admission.
++
++Cross-channel inputs are a proposed fixture contract, not an adapter for real ETW.
++PASS means predicates satisfied; it does not establish channel authenticity.
++"""
++import hashlib
++from pathlib import PureWindowsPath
++
++class Rejected(ValueError):
++    pass
++
++def require(ok, reason):
++    if not ok:
++        raise Rejected(reason)
++
++def number(value):
++    require(type(value) is int and value > 0, 'positive integer required')
++    return value
++
++def identity(row):
++    pid = number(row['pid'])
++    created = row['created']
++    require(type(created) is str and created.isdecimal() and int(created) > 0,
++            'creation identity required')
++    return pid, created
++
++def capture(row):
++    key = identity(row)
++    c = row['capture']
++    require(identity(c) == key, 'capture identity mismatch')
++    require(c['source'] == 'independent-tree-handle-v1', 'source mismatch')
++    require((c['handlePid'], c['handleCreated']) == key and c['creationAfter'] == key[1],
++            'handle identity mismatch')
++    require(c['valid'] is True and c['imageError'] == 0, 'query failed')
++    require(c['stateBefore'] == c['stateAfter'] == 258, 'query not proven live')
++    require(type(c['handleIdentity']) is str and c['handleIdentity'].isdecimal()
++            and int(c['handleIdentity']) > 0, 'handle missing')
++    number(c['frequency'])
++    points = [number(c[k]) for k in ('captureEntryQpc','stateBeforeQpc',
++              'queryBeginQpc','queryEndQpc','stateAfterQpc')]
++    require(points == sorted(points), 'timing order')
++    path = PureWindowsPath(c['image'])
++    require(path.is_absolute() and '..' not in path.parts and '\x00' not in c['image'],
++            'invalid image path')
++    require(row['closed'] is True, 'handle not closed')
++    return c
++
++def structural(doc):
++    try:
++        require(doc['schema'] == 'stage6-independent-tree-support-v3'
++                and doc['supportingOnly'] is True
++                and doc['kernelQualification'] == 'NOT_PERFORMED', 'scope changed')
++        require(doc['valid'] is True and doc['errors'] == [], 'capture errors')
++        anchor = doc['anchor']; capture(anchor)
++        require(anchor['scopeOnly'] is True and anchor['exitFiletime'] is None
++                and anchor['exitProof'] == 'EXTERNAL_NATIVE_OBSERVER_REQUIRED'
++                and anchor['stateAtClose'] == 258, 'self-exit claim')
++        require(number(anchor['closeQpc']) >= anchor['capture']['stateAfterQpc'], 'anchor close timing')
++        rows = doc['descendants']; capacity = number(doc['capacity'])
++        require(type(rows) is list and 0 < len(rows) <= capacity <= 8192, 'capacity/vacuous')
++        keyed = {identity(anchor): anchor}
++        for row in rows:
++            key = identity(row)
++            require(key not in keyed, 'duplicate identity')
++            capture(row)
++            require(row['capture']['frequency'] == anchor['capture']['frequency'], 'clock mismatch')
++            if row['exitFiletime'] is None:
++                require(row['eligibleConsoleHelper'] is True and row['parentPid']==anchor['pid'] and row['capture']['image'].lower()==r'c:\windows\system32\conhost.exe', 'unapproved pending helper')
++                require(row['stateAtClose']==258 and row['exitCode'] is None, 'pending false exit')
++                number(row['localCloseQpc'])
++            else:
++                require(type(row['exitFiletime']) is str and row['exitFiletime'].isdecimal() and int(row['exitFiletime'])>=int(key[1]), 'missing exit')
++                require(type(row['exitCode']) is int, 'missing exit code')
++            keyed[key] = row
++        # PID by itself cannot select a parent. Require exactly one lifetime match.
++        for key,row in keyed.items():
++            if row is anchor: continue
++            parents = [k for k,p in keyed.items() if k != key and k[0] == row['parentPid']
++                       and int(k[1]) < int(key[1])
++                       and (p['exitFiletime'] is None or int(key[1]) <= int(p['exitFiletime']))]
++            require(len(parents) == 1, 'missing/ambiguous parent')
++        return keyed
++    except (KeyError, TypeError, AttributeError) as exc:
++        raise Rejected('missing/malformed evidence') from exc
++
++def cross_channel(doc, raw_sha256, binding, expected_run, kernel, independent):
++    """Fixture-only boundary proposal: caller must independently prove inputs.
++
++    No claim that sequence arrays alone prove real ETW transport completeness.
++    """
++    try:
++        keyed = structural(doc)
++        require(binding['run'] == expected_run and binding['supportSHA256'] == raw_sha256
++                and len(raw_sha256) == 64, 'stale/unbound artifact')
++        require(kernel['run'] == independent['run'] == expected_run, 'channel run mismatch')
++        require(kernel['lost'] == 0 and kernel['complete'] is True
++                and kernel['segmentsVerified'] is True, 'authority incomplete')
++        require(kernel['sequence'] == list(range(1, 2*len(keyed)+1)), 'sequence gap')
++        kr = kernel['rows']; ir = independent['rows']
++        require(len(kr) == len(ir) == len(keyed), 'missing/extra channel identities')
++        km = {identity(r): r for r in kr}; im = {identity(r): r for r in ir}
++        require(len(km) == len(kr) and len(im) == len(ir)
++                and set(km) == set(im) == set(keyed), 'duplicate/unmatched channel identity')
++        for key,row in keyed.items():
++            k=km[key]; i=im[key]; c=row['capture']
++            require(k['startQpc'] <= c['captureEntryQpc'] <= c['stateAfterQpc'] < k['stopQpc'],
++                    'query outside kernel lifetime')
++            require(k['frequency'] == c['frequency'], 'kernel clock mismatch')
++            require(i['handleSignaled'] is True and i['nativeEntryVerified'] is True,
++                    'independent evidence missing')
++            require(i['image'] == c['image'] and i['exitFiletime'] == k['exitFiletime'],
++                    'independent contradiction')
++            require(i['entryQpc'] >= k['startQpc'] and i['entryQpc'] < k['stopQpc'], 'native timing contradiction')
++            if row is not doc['anchor']:
++                require(k['exitFiletime'] == row['exitFiletime'], 'exit contradiction')
++                parent = tuple(k['parentIdentity'])
++                require(parent in keyed and parent[0] == row['parentPid']
++                        and int(parent[1]) < int(key[1]), 'kernel parent contradiction')
++                require(km[parent]['startQpc'] <= k['startQpc'] < km[parent]['stopQpc'], 'parent lifetime contradiction')
++        return 'FIXTURE_PREDICATES_PASS_NOT_ACCEPTANCE'
++    except (KeyError,TypeError,AttributeError) as exc:
++        raise Rejected('missing/malformed channel evidence') from exc
+--- /dev/null
++++ D:\JARVIS-STAGE6-LIVE\7f204e14c90a497a8476be0e9927e074\code\terminal_control_v3.ps1
+@@ -0,0 +1,89 @@
++# Fixed TEST run evidence only; dot-sourced by the versioned launcher.
++function Need($ok,$why){if(!$ok){throw $why}}
++function Now{[Diagnostics.Stopwatch]::GetTimestamp()}
++function Hash($name){(Get-FileHash -LiteralPath (Join-Path $root $name) -Algorithm SHA256).Hash.ToLowerInvariant()}
++function CheckJson($node){
++ if($node.ValueKind -eq [Text.Json.JsonValueKind]::Object){$keys=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal);foreach($p in $node.EnumerateObject()){Need ($keys.Add($p.Name)) 'Duplicate JSON key';CheckJson $p.Value}}
++ elseif($node.ValueKind -eq [Text.Json.JsonValueKind]::Array){foreach($p in $node.EnumerateArray()){CheckJson $p}}
++}
++function ReadRecord($name){
++ Need ($name -notmatch '[\\/:]' -and $name -notin @('.','..')) 'Fixed artifact only'
++ $path=Join-Path $root $name;$f=Get-Item -LiteralPath $path
++ Need ($f.Length -gt 0 -and $f.Length -le 1048576 -and !($f.Attributes -band [IO.FileAttributes]::ReparsePoint)) 'Record bound/path'
++ $raw=[IO.File]::ReadAllText($path);$doc=[Text.Json.JsonDocument]::Parse($raw)
++ try{CheckJson $doc.RootElement}finally{$doc.Dispose()}
++ return ($raw|ConvertFrom-Json -AsHashtable)
++}
++function Budget{
++ Need (!(Test-Path -LiteralPath (Join-Path $root 'rejected-v3.json'))) 'Permanent rejection'
++ Need ($null -ne $script:phase) 'Phase A unavailable'
++ Need ($phase.deadlineQpc -eq $phase.cleanupEntryQpc+20*$phase.binding.frequency) 'Deadline reset'
++ $left=($phase.deadlineQpc-(Now))/$phase.binding.frequency;Need ($left -gt 0) 'Absolute cleanup deadline exceeded';return $left
++}
++function Same($a,$b){return ($a.pid -eq $b.pid -and $a.created -ceq $b.created)}
++function State($name,$detail){[void](Budget);Mark $name $detail}
++function WaitEvidence($name){
++ while(!(Test-Path -LiteralPath (Join-Path $root $name))){
++  [void](Budget)
++  Need (!$kernel.HasExited -and !$detail.HasExited -and !$app.HasExited) 'Observer failed during terminal phase'
++  Need (!(Test-Path -LiteralPath (Join-Path $root 'terminal-failure-v3.json'))) 'Authority terminal failure'
++  Start-Sleep -Milliseconds ([Math]::Max(1,[Math]::Min(20,[Math]::Floor((Budget)*1000))))
++ }
++ [void](Budget);return ReadRecord $name
++}
++function AssertTerminal($r){
++ [void](Budget)
++ Need ($r.schema -ceq 'stage6-terminal-v3' -and $r.kind -ceq 'workload-terminal' -and $r.sequence -eq 1) 'Receipt schema'
++ Need ($r.phaseASHA256 -ceq (Hash 'phase-a-v3.json')) 'Stale Phase A'
++ foreach($k in @('schema','run','declarationSHA256','sourceManifestSHA256','kernelSession','observerSHA256','frequency')){Need ($r.binding[$k] -ceq $phase.binding[$k]) ('Receipt binding '+$k)}
++ Need ($r.cleanupEntryQpc -eq $phase.cleanupEntryQpc -and $r.deadlineQpc -eq $phase.deadlineQpc) 'Receipt deadline'
++ Need ((Same $r.observer $phase.authorityObserver) -and $r.observer.image -ieq $phase.authorityObserver.image) 'Receipt observer'
++ Need ($r.faults -eq 0 -and $r.eventsLost -eq 0 -and $r.buffersLost -eq 0 -and $r.coordinationOnly -eq $true -and $r.acceptance -eq $false) 'Receipt failure'
++ $expected=@($phase.collector)+@($phase.helpers);Need ($r.rows.Count -eq $expected.Count) 'Receipt completeness'
++ $seq=[Collections.Generic.HashSet[string]]::new()
++ foreach($want in $expected){
++  $xs=@($r.rows|Where-Object {Same $_ $want});Need ($xs.Count -eq 1) 'Exact process instance missing';$x=$xs[0]
++  Need ($seq.Add([string]$x.sequence) -and [UInt64]$x.sequence -gt 0) 'Sequence identity'
++  Need ($x.handleCreated -ceq $want.created -and $x.handleImage -ieq $want.image -and $x.handleRetained -eq $true -and $x.imageError -eq 0 -and $x.metadataError -eq 0) 'Handle identity/image'
++  Need ($x.stopQpc -gt $x.startQpc -and $x.stopQpc -lt $phase.deadlineQpc -and $x.signalObservedQpc -ge $x.handleAttemptQpc -and $x.signalObservedQpc -lt $phase.deadlineQpc -and $x.imageEndQpc -lt $x.stopQpc -and $x.stopCallbackQpc -le $r.capturedQpc) 'Terminal timing'
++  Need ($x.exitFiletime -ceq $x.kernelExitFiletime -and $x.exitCode -eq $x.kernelExitCode) 'Terminal contradiction'
++  if(!(Same $want $phase.collector)){
++   $parent=@($r.rows|Where-Object {Same $_ $phase.collector})[0]
++   Need ($x.parentPid -eq $parent.pid -and $x.parentSequence -ceq $parent.sequence -and $x.handleAttemptQpc -lt $want.localCloseQpc -and $x.imageBeginQpc -lt $want.localCloseQpc -and $want.localClosed -eq $true) 'Parent/handoff'
++  }else{
++   $n=ReadRecord ('native-'+$x.pid+'-'+$x.created+'.json')
++   Need ((Same $n $x) -and $n.finalWait -eq 0 -and !$n.fault -and !$n.deadlineExceeded -and $n.exitCode -eq 0 -and $x.exitCode -eq 0 -and $n.exitFiletime -ceq $x.exitFiletime -and $n.entryQpc -ge $x.startQpc -and $n.entryQpc -lt $x.stopQpc) 'Collector native terminal proof'
++  }
++ }
++ Need ($r.capturedQpc -le (Now)) 'Future receipt'
++}
++function WorkloadCensus($receipt){
++ [void](Budget)
++ foreach($x in $receipt.rows){
++  $p=Get-Process -Id $x.pid -ErrorAction SilentlyContinue
++  if($p){try{Need ($p.StartTime.ToUniversalTime().ToFileTimeUtc().ToString() -cne $x.created -or $p.HasExited) 'Workload remains'}finally{$p.Dispose()}}
++ }
++ # Broad query is read-only; unavailable identity fields are failures, not zero.
++ $seconds=[Math]::Floor((Budget));Need ($seconds -ge 1) 'Insufficient census budget'
++ $all=@(Get-CimInstance Win32_Process -OperationTimeoutSec ([Math]::Min(10,$seconds)) -ErrorAction Stop)
++ $expected=@($script:management)
++ $found=@()
++ foreach($p in $all){
++  $match=$p.Name -match '^(J6|VBox|VirtualBox)' -or ($p.Name -match '^(python|pwsh|powershell)' -and $p.CommandLine -like '*D:\JARVIS-STAGE6-LIVE*')
++  if($match){
++   $nativeProcess=Get-Process -Id $p.ProcessId -ErrorAction Stop
++   try{$nativeCreated=$nativeProcess.StartTime.ToUniversalTime().ToFileTimeUtc().ToString()}finally{$nativeProcess.Dispose()}
++   $known=@($expected|Where-Object {$_.pid -eq $p.ProcessId -and $_.created -ceq $nativeCreated})
++   Need ($known.Count -eq 1) 'Unexpected live diagnostic process';$found+=,$known[0]
++  }
++ }
++ Need ($found.Count -eq $expected.Count) 'Management census incomplete'
++ $v=@{kind='workload-only';binding=$phase.binding;available=$true;unknown=@();workloadRemaining=@();matchingProcesses=$expected;expectedManagement=$expected;completedQpc=(Now)}
++ [void](Budget);Save 'workload-census-v3.json' $v
++}
++function ExitBounded($p,$limit,$role){
++ $ms=[Math]::Floor([Math]::Min($limit,(Budget))*1000);Need ($ms -gt 0) 'No shutdown budget'
++ Need ($p.WaitForExit([int]$ms)) ($role+' shutdown deadline');[void](Budget)
++ Need ($p.ExitCode -eq 0) ($role+' observer failure')
++ return @{pid=$p.Id;created=$p.StartTime.ToUniversalTime().ToFileTimeUtc().ToString();exitQpc=(Now);exitCode=$p.ExitCode;exitVerified=$true}
++}
+--- /dev/null
++++ D:\JARVIS-STAGE6-LIVE\7f204e14c90a497a8476be0e9927e074\code\terminal_receipt_v3.hpp
+@@ -0,0 +1,84 @@
++#pragma once
++// Bounded TEST evidence parsing/publication only. No command dispatch or process control.
++#include <stdexcept>
++#include <cctype>
++#include <set>
++namespace terminal_v3 {
++struct Json {
++ char type='n';std::string text;std::map<std::string,Json> obj;std::vector<Json> arr;
++ const Json& at(const std::string& k)const{auto i=obj.find(k);if(type!='o'||i==obj.end())throw std::runtime_error("missing JSON field");return i->second;}
++ unsigned long long number()const{if(type!='i'||text.empty()||text[0]=='-')throw std::runtime_error("integer required");size_t end;auto n=std::stoull(text,&end);if(end!=text.size())throw std::runtime_error("integer suffix");return n;}
++ std::string str()const{if(type!='s')throw std::runtime_error("string required");return text;}
++ bool yes()const{return type=='b'&&text=="true";}
++ std::string dump()const{if(type=='s')return J(text);if(type=='i'||type=='d'||type=='b'||type=='n')return text;std::string s=type=='o'?"{":"[";bool first=true;if(type=='o'){for(auto&x:obj){if(!first)s+=",";first=false;s+=J(x.first)+":"+x.second.dump();}}else{for(auto&x:arr){if(!first)s+=",";first=false;s+=x.dump();}}return s+(type=='o'?"}":"]");}
++};
++class Parser{
++ const std::string&s;size_t p=0,nodes=0;
++ void ws(){while(p<s.size()&&(s[p]==' '||s[p]=='\r'||s[p]=='\n'||s[p]=='\t'))p++;}
++ char take(){if(p>=s.size())throw std::runtime_error("partial JSON");return s[p++];}
++ std::string string(){if(take()!='"')throw std::runtime_error("JSON string");std::string out;for(;;){char c=take();if(c=='"')return out;if(static_cast<unsigned char>(c)<32)throw std::runtime_error("JSON control");if(c=='\\'){c=take();if(c=='"'||c=='\\'||c=='/')out+=c;else if(c=='n')out+='\n';else if(c=='r')out+='\r';else if(c=='t')out+='\t';else if(c=='u'){unsigned v=0;for(int i=0;i<4;i++){char h=take();v=v*16+(h>='0'&&h<='9'?h-'0':h>='a'&&h<='f'?h-'a'+10:h>='A'&&h<='F'?h-'A'+10:throw std::runtime_error("JSON escape"));}if(v>127)throw std::runtime_error("non-ASCII contract field");out+=char(v);}else throw std::runtime_error("JSON escape");}else out+=c;if(out.size()>32768)throw std::runtime_error("string bound");}}
++ Json value(unsigned depth){if(depth>24||++nodes>100000)throw std::runtime_error("JSON bound");ws();if(p==s.size())throw std::runtime_error("partial JSON");Json v;char c=s[p];if(c=='"'){v.type='s';v.text=string();return v;}if(c=='{'||c=='['){p++;v.type=c=='{'?'o':'a';ws();if(p<s.size()&&s[p]==(c=='{'?'}':']')){p++;return v;}for(;;){ws();if(c=='{'){auto key=string();ws();if(take()!=':')throw std::runtime_error("colon");if(v.obj.count(key))throw std::runtime_error("duplicate JSON key");v.obj.emplace(key,value(depth+1));}else v.arr.push_back(value(depth+1));ws();char sep=take();if(sep==(c=='{'?'}':']'))return v;if(sep!=',')throw std::runtime_error("separator");}}if(c=='t'||c=='f'||c=='n'){std::string w=c=='t'?"true":c=='f'?"false":"null";if(s.compare(p,w.size(),w))throw std::runtime_error("literal");p+=w.size();v.type=c=='n'?'n':'b';v.text=w;return v;}v.type='i';if(c=='-')v.text+=take();size_t begin=p;while(p<s.size()&&std::isdigit(static_cast<unsigned char>(s[p])))v.text+=take();if(p==begin||(p-begin>1&&s[begin]=='0'))throw std::runtime_error("integer");if(p<s.size()&&s[p]=='.'){v.type='d';v.text+=take();size_t part=p;while(p<s.size()&&std::isdigit(static_cast<unsigned char>(s[p])))v.text+=take();if(part==p)throw std::runtime_error("fraction");}if(p<s.size()&&(s[p]=='e'||s[p]=='E')){v.type='d';v.text+=take();if(p<s.size()&&(s[p]=='+'||s[p]=='-'))v.text+=take();size_t part=p;while(p<s.size()&&std::isdigit(static_cast<unsigned char>(s[p])))v.text+=take();if(part==p)throw std::runtime_error("exponent");}return v;}
++ public:explicit Parser(const std::string&raw):s(raw){if(raw.empty()||raw.size()>1048576)throw std::runtime_error("JSON size");}Json parse(){auto v=value(0);ws();if(p!=s.size())throw std::runtime_error("trailing JSON");return v;}
++};
++static std::string Read(const std::wstring&p){HANDLE h=CreateFileW(p.c_str(),GENERIC_READ,FILE_SHARE_READ,nullptr,OPEN_EXISTING,FILE_FLAG_OPEN_REPARSE_POINT,nullptr);if(h==INVALID_HANDLE_VALUE)throw std::runtime_error("evidence read");BY_HANDLE_FILE_INFORMATION info{};LARGE_INTEGER size{};if(!GetFileInformationByHandle(h,&info)||(info.dwFileAttributes&FILE_ATTRIBUTE_REPARSE_POINT)||!GetFileSizeEx(h,&size)||size.QuadPart<=0||size.QuadPart>1048576){CloseHandle(h);throw std::runtime_error("evidence path/size");}std::string b(size_t(size.QuadPart),'\0');DWORD n=0;bool ok=ReadFile(h,b.data(),DWORD(b.size()),&n,nullptr)&&n==b.size();CloseHandle(h);if(!ok)throw std::runtime_error("partial evidence");return b;}
++static std::string Sha(const std::string&b){BCRYPT_ALG_HANDLE a=nullptr;BCRYPT_HASH_HANDLE h=nullptr;BYTE out[32];auto code=BCryptOpenAlgorithmProvider(&a,BCRYPT_SHA256_ALGORITHM,nullptr,0);if(code<0)throw std::runtime_error("hash algorithm");code=BCryptCreateHash(a,&h,nullptr,0,nullptr,0,0);if(code>=0)code=BCryptHashData(h,(PUCHAR)b.data(),ULONG(b.size()),0);if(code>=0)code=BCryptFinishHash(h,out,32,0);if(h)BCryptDestroyHash(h);BCryptCloseAlgorithmProvider(a,0);if(code<0)throw std::runtime_error("hash");std::ostringstream s;for(auto x:out)s<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(x);return s.str();}
++static std::string lower(std::string s){for(char&c:s){if(c=='/')c='\\';else c=char(std::tolower(static_cast<unsigned char>(c)));}return s;}
++static void Require(bool ok,const char*why){if(!ok)throw std::runtime_error(why);}
++static std::string RowJson(const Row&r){std::ostringstream s;s<<"{\"pid\":"<<r.pid<<",\"created\":"<<J(std::to_string(r.created))<<",\"sequence\":"<<J(std::to_string(r.sequence))<<",\"parentPid\":"<<r.parent<<",\"parentSequence\":"<<J(std::to_string(r.parentSequence))<<",\"handleImage\":"<<J(U(r.handleImage))<<",\"handleCreated\":"<<J(std::to_string(r.handleCreated))<<",\"handleRetained\":true,\"imageError\":"<<r.imageError<<",\"metadataError\":"<<r.metadataError<<",\"startQpc\":"<<r.start<<",\"handleAttemptQpc\":"<<r.retained<<",\"imageBeginQpc\":"<<r.imageBegin<<",\"imageEndQpc\":"<<r.imageEnd<<",\"stopQpc\":"<<r.stop<<",\"stopCallbackQpc\":"<<r.stopNotified<<",\"signalObservedQpc\":"<<r.signal<<",\"exitFiletime\":"<<J(std::to_string(r.exitFT))<<",\"exitCode\":"<<r.exitCode<<",\"kernelExitFiletime\":"<<J(std::to_string(r.exitFT))<<",\"kernelExitCode\":"<<r.exitCode<<"}";return s.str();}
++static bool WorkloadReceipt(){
++ const auto phasePath=folder+L"\\phase-a-v3.json";
++ if(GetFileAttributesW(phasePath.c_str())==INVALID_FILE_ATTRIBUTES)return false;
++ auto raw=Read(phasePath);auto p=Parser(raw).parse();auto b=p.at("binding");
++ Require(b.at("schema").str()=="stage6-terminal-v3","schema");
++ Require(b.at("kernelSession").str()==U(session),"session");
++ LARGE_INTEGER f;QueryPerformanceFrequency(&f);auto start=p.at("cleanupEntryQpc").number(),end=p.at("deadlineQpc").number();
++ Require(b.at("frequency").number()==static_cast<unsigned long long>(f.QuadPart)&&end==start+20*f.QuadPart&&static_cast<unsigned long long>(Q())<end,"absolute deadline");
++ auto declRaw=Read(folder+L"\\small-declaration-v3.json");auto decl=Parser(declRaw).parse();
++ Require(Sha(declRaw)==b.at("declarationSHA256").str()&&decl.at("sourceManifestSHA256").str()==b.at("sourceManifestSHA256").str(),"declaration");
++ auto run=folder.substr(folder.find_last_of(L"\\/")+1);Require(U(run)==b.at("run").str()&&decl.at("run").str()==U(run),"run");
++ Require(Sha(Read(folder+L"\\observer-identities.json"))==b.at("observerSHA256").str(),"observer binding");
++ Require(p.at("authorityObserver").at("pid").number()==GetCurrentProcessId(),"observer PID");
++ FILETIME a,c,d,e;Require(GetProcessTimes(GetCurrentProcess(),&a,&c,&d,&e)!=0,"observer identity");Require(p.at("authorityObserver").at("created").str()==std::to_string(FT(a)),"observer creation");
++ Require(p.at("state").str()=="LOCAL_EVIDENCE_FINALIZED_PENDING_EXTERNAL_EXIT"&&p.at("localDurable").yes()&&p.at("localHandlesClosed").yes()&&p.at("trackerStopped").yes()&&p.at("admissionsStopped").yes(),"phase A");
++ auto collector=p.at("collector");auto helpers=p.at("helpers");Require(helpers.type=='a'&&helpers.arr.size()<=8192,"helper bound");
++ std::vector<Json>wanted{collector};for(auto&h:helpers.arr)wanted.push_back(h);
++ std::vector<Row> snapshot;{
++  std::lock_guard<std::mutex>l(guard);Require(faults==0,"authority faults");
++  std::set<std::pair<DWORD,ULONGLONG>> seen;Row parent;
++  for(size_t i=0;i<wanted.size();i++){
++   auto&w=wanted[i];auto pid=w.at("pid").number(),created=std::stoull(w.at("created").str());Require(pid<=MAXDWORD,"pid bound");auto key=std::make_pair(DWORD(pid),created);Require(seen.insert(key).second,"duplicate instance");auto it=rows.find(key);if(it==rows.end())return false;auto&r=it->second;
++   if(!r.stop||!r.signal)return false;
++   Require(r.handle&&r.handleCreated==r.created&&r.sequence&&r.imageError==0&&r.metadataError==0&&r.exitCodeKnown,"terminal handle");
++   Require(r.start<=r.retained&&r.retained<=r.signal&&r.imageBegin<=r.imageEnd&&r.imageEnd<r.stop&&static_cast<unsigned long long>(r.stop)<end&&static_cast<unsigned long long>(r.signal)<end,"terminal timing");
++   Require(lower(U(r.handleImage))==lower(w.at("image").str()),"image mismatch");
++   if(i==0){parent=r;Require(r.exitCode==0,"collector failure");}else{Require(w.at("role").str()=="OS_CONSOLE_HELPER"&&lower(w.at("image").str())=="c:\\windows\\system32\\conhost.exe","class");Require(r.parent==parent.pid&&r.parentSequence==parent.sequence,"parent");Require(w.at("parent").at("pid").number()==parent.pid&&w.at("parent").at("created").str()==std::to_string(parent.created),"parent creation");Require(w.at("localClosed").yes()&&static_cast<unsigned long long>(r.retained)<w.at("localCloseQpc").number()&&static_cast<unsigned long long>(r.imageBegin)<w.at("localCloseQpc").number(),"handoff");}
++   snapshot.push_back(r);
++  }
++ }
++ std::ostringstream out;out<<"{\"schema\":\"stage6-terminal-v3\",\"kind\":\"workload-terminal\",\"sequence\":1,\"binding\":"<<b.dump()<<",\"phaseASHA256\":"<<J(Sha(raw))<<",\"observer\":"<<p.at("authorityObserver").dump()<<",\"cleanupEntryQpc\":"<<start<<",\"deadlineQpc\":"<<end<<",\"capturedQpc\":"<<Q()<<",\"coordinationOnly\":true,\"acceptance\":false,\"faults\":0,\"eventsLost\":0,\"buffersLost\":0,\"rows\":[";
++ for(size_t i=0;i<snapshot.size();i++){if(i)out<<",";out<<RowJson(snapshot[i]);}out<<"]}";
++ Require(Write(L"terminal-v3.json.pending",out.str()),"receipt durable write");
++ Require(static_cast<unsigned long long>(Q())<end,"receipt publication late");
++ Require(MoveFileExW((folder+L"\\terminal-v3.json.pending").c_str(),(folder+L"\\terminal-v3.json").c_str(),MOVEFILE_WRITE_THROUGH)!=0,"receipt exclusive publication");return true;
++}
++static bool TailReceipt(){
++ if(GetFileAttributesW((folder+L"\\observer-tail-request-v3.json").c_str())==INVALID_FILE_ATTRIBUTES)return false;
++ auto phaseRaw=Read(folder+L"\\phase-a-v3.json");auto p=Parser(phaseRaw).parse();auto req=Parser(Read(folder+L"\\observer-tail-request-v3.json")).parse();
++ Require(req.at("phaseASHA256").str()==Sha(phaseRaw)&&req.at("binding").dump()==p.at("binding").dump(),"tail binding");
++ auto end=p.at("deadlineQpc").number();Require(static_cast<unsigned long long>(Q())<end,"tail deadline");
++ std::vector<Row> snapshot;{std::lock_guard<std::mutex>l(guard);Require(!faults,"tail faults");
++  for(auto&item:rows){auto&r=item.second;if(!r.stop)return false;
++   if(r.handle){if(!r.signal)return false;Require(r.handleCreated==r.created&&r.metadataError==0,"tail identity");}
++   else {
++    auto img=lower(U(r.image));wchar_t device[32768];if(QueryDosDeviceW(L"C:",device,32768)){auto prefix=lower(U(device));if(img.rfind(prefix+"\\",0)==0)img="c:"+img.substr(prefix.size());}
++    Require(r.openError==87&&r.stop<r.attemptBegin&&r.sequence&&r.created&&img=="c:\\windows\\system32\\conhost.exe"&&ParentKnown(r.parent,r.created,r.parentSequence),"unqualified missing tail handle");
++   }
++   Require(static_cast<unsigned long long>(r.stop)<end&&static_cast<unsigned long long>(r.signal)<end,"tail late");snapshot.push_back(r);
++  }
++ }
++ std::ostringstream out;out<<"{\"schema\":\"stage6-terminal-v3\",\"kind\":\"observer-tail\",\"sequence\":2,\"binding\":"<<p.at("binding").dump()<<",\"phaseASHA256\":"<<J(Sha(phaseRaw))<<",\"capturedQpc\":"<<Q()<<",\"coordinationOnly\":true,\"rows\":[";
++ for(size_t i=0;i<snapshot.size();i++){if(i)out<<",";out<<"{\"pid\":"<<snapshot[i].pid<<",\"created\":"<<J(std::to_string(snapshot[i].created))<<",\"sequence\":"<<J(std::to_string(snapshot[i].sequence))<<",\"stopQpc\":"<<snapshot[i].stop<<",\"signalObservedQpc\":"<<snapshot[i].signal<<"}";}out<<"]}";
++ Require(Write(L"observer-tail-v3.json.pending",out.str()),"tail persistence");Require(static_cast<unsigned long long>(Q())<end,"tail publication late");
++ Require(MoveFileExW((folder+L"\\observer-tail-v3.json.pending").c_str(),(folder+L"\\observer-tail-v3.json").c_str(),MOVEFILE_WRITE_THROUGH)!=0,"tail publication");return true;
++}
++}
+--- /dev/null
++++ D:\JARVIS-STAGE6-LIVE\7f204e14c90a497a8476be0e9927e074\code\test_coordination_v3.py
+@@ -0,0 +1,104 @@
++"""Offline evidence fixtures. PASS here is not live lifecycle/timing qualification."""
++import unittest,copy,tempfile,pathlib,json
++import coordination_v3 as c
++def fixture():
++ b=dict(schema=c.SCHEMA,run='protected-'+'1'*32,declarationSHA256='a'*64,sourceManifestSHA256='b'*64,kernelSession='J6-fixed-fixture',observerSHA256='c'*64,frequency=100)
++ collector=dict(pid=10,created='1000',image=r'D:\python.exe');observer=dict(pid=20,created='900',image=r'D:\J6AuthorityTraceV3.exe')
++ helper=dict(pid=11,created='1001',image=r'C:\Windows\System32\conhost.exe',role='OS_CONSOLE_HELPER',parent=collector,localClosed=True,localCloseQpc=1020,stateAtClose=258)
++ p=dict(binding=b,state=c.STATES[3],collector=collector,authorityObserver=observer,helpers=[helper],cleanupEntryQpc=1000,deadlineQpc=3000,admissionsStopped=True,localDurable=True,trackerStopped=True,localHandlesClosed=True,cleanupPass=False,acceptance=False,completedQpc=1030)
++ rows=[]
++ for x,seq,parent,stop in ((collector,'41',1,1100),(helper,'42',10,1110)):
++  rows.append(dict(pid=x['pid'],created=x['created'],sequence=seq,parentPid=parent,parentSequence='41' if parent==10 else '40',handleImage=x['image'],handleCreated=x['created'],handleRetained=True,imageError=0,metadataError=0,startQpc=100,handleAttemptQpc=200,imageBeginQpc=210,imageEndQpc=220,stopQpc=stop,stopCallbackQpc=stop+1,signalObservedQpc=stop+2,exitFiletime='2000',exitCode=0,kernelExitFiletime='2000',kernelExitCode=0))
++ r=dict(schema=c.SCHEMA,kind='workload-terminal',sequence=1,binding=copy.deepcopy(b),phaseASHA256='d'*64,observer=observer,cleanupEntryQpc=1000,deadlineQpc=3000,capturedQpc=1120,coordinationOnly=True,acceptance=False,faults=0,eventsLost=0,buffersLost=0,rows=rows)
++ n=dict(pid=10,created='1000',entryQpc=150,exitCode=0,exitFiletime='2000',finalWait=0,fault=False,deadlineExceeded=False)
++ census=dict(kind='workload-only',binding=b,available=True,unknown=[],workloadRemaining=[],matchingProcesses=[observer],expectedManagement=[observer],completedQpc=1130)
++ closure=dict(binding=b,completedQpc=2100,launcherExitVerified=True,launcherExitCode=0,observers={role:dict(exitVerified=True,exitCode=0,drained=True,exitQpc=1500+i*100) for i,role in enumerate(('application','detail','authority'))},durableComplete=True,authoritativeContradictions=[],allRequiredHandlesClosed=True)
++ final=dict(binding=b,completedQpc=2200,available=True,unknown=[],workloadRemaining=[],matchingProcesses=[],traceSessions=[],launcherExitVerified=True,observerExitsVerified=True)
++ return p,r,n,census,closure,final
++def evaluate(v):
++ p,r,n,pre,exits,final=v
++ c.terminal(p,r,'d'*64,1125,n);c.census(p,pre);c.closure(p,exits);c.census(p,final,True)
++ return True
++class Tests(unittest.TestCase):
++ def setUp(self):self.v=fixture()
++ def reject(self,mutate):
++  mutate(self.v)
++  with self.assertRaises((c.Rejected,KeyError,TypeError)):evaluate(self.v)
++ def test_01_helper_before_collector(self):
++  self.v[1]['rows'][1].update(stopQpc=1050,stopCallbackQpc=1051,signalObservedQpc=1052);self.assertTrue(evaluate(self.v))
++ def test_02_helper_after_collector(self):self.assertTrue(evaluate(self.v))
++ def test_03_helper_after_deadline(self):self.reject(lambda v:v[1]['rows'][1].update(stopQpc=3001))
++ def test_04_helper_never_exits(self):self.reject(lambda v:v[1]['rows'][1].update(signalObservedQpc=0))
++ def test_05_collector_crash(self):self.reject(lambda v:v[1]['rows'][0].update(exitCode=1))
++ def test_06_missing_phase(self):self.reject(lambda v:v[0].clear())
++ def test_07_authority_crash(self):self.reject(lambda v:v[4]['observers']['authority'].update(exitCode=1))
++ def test_08_application_crash(self):self.reject(lambda v:v[4]['observers']['application'].update(exitCode=1))
++ def test_09_detail_crash(self):self.reject(lambda v:v[4]['observers']['detail'].update(exitCode=1))
++ def test_10_missing_stop(self):self.reject(lambda v:v[1]['rows'][1].update(stopQpc=0))
++ def test_11_handle_contradiction(self):self.reject(lambda v:v[1]['rows'][1].update(kernelExitCode=1))
++ def test_12_native_contradiction(self):self.reject(lambda v:v[2].update(exitFiletime='other'))
++ def test_13_reused_pid(self):self.reject(lambda v:v[1]['rows'][1].update(created='1002'))
++ def test_14_handle_creation(self):self.reject(lambda v:v[1]['rows'][1].update(handleCreated='1002'))
++ def test_15_full_image(self):self.reject(lambda v:v[1]['rows'][1].update(handleImage=r'D:\conhost.exe'))
++ def test_16_parent(self):self.reject(lambda v:v[1]['rows'][1].update(parentSequence='999'))
++ def test_17_stale_receipt(self):self.reject(lambda v:v[1].update(phaseASHA256='e'*64))
++ def test_18_wrong_run(self):self.reject(lambda v:v[1]['binding'].update(run='old'))
++ def test_19_wrong_observer(self):
++  self.v[1]['observer']=dict(pid=21,created='900',image=r'D:\J6AuthorityTraceV3.exe')
++  with self.assertRaises(c.Rejected):evaluate(self.v)
++ def test_20_partial_publication(self):
++  with tempfile.TemporaryDirectory() as d:
++   p=pathlib.Path(d)/'partial.json';p.write_text('{"schema":')
++   with self.assertRaises(ValueError):c.load(p)
++ def test_21_wrong_version(self):self.reject(lambda v:v[1].update(schema='future'))
++ def test_22_receipt_late(self):
++  with self.assertRaises(c.Rejected):c.terminal(self.v[0],self.v[1],'d'*64,3000,self.v[2])
++ def test_23_observers_in_workload_census(self):self.assertTrue(c.census(self.v[0],self.v[3]))
++ def test_24_workload_remains(self):self.reject(lambda v:v[3].update(workloadRemaining=[11]))
++ def test_25_shutdown_before_receipt(self):
++  m=c.Machine(self.v[0]['binding'])
++  with self.assertRaises(c.Rejected):m.advance('OBSERVER_SHUTDOWN_ALLOWED','launcher',dict(binding=m.binding))
++  self.assertEqual(m.state,'REJECTED')
++ def test_26_shutdown_before_census(self):
++  m=c.Machine(self.v[0]['binding']);m.state='TERMINAL_EVIDENCE_COMPLETE'
++  with self.assertRaises(c.Rejected):m.advance('OBSERVER_SHUTDOWN_ALLOWED','launcher',dict(binding=m.binding))
++ def test_27_application_drain(self):self.reject(lambda v:v[4]['observers']['application'].update(drained=False))
++ def test_28_detail_drain(self):self.reject(lambda v:v[4]['observers']['detail'].update(drained=False))
++ def test_29_authority_drain(self):self.reject(lambda v:v[4]['observers']['authority'].update(drained=False))
++ def test_30_launcher_crash(self):self.reject(lambda v:v[4].update(launcherExitCode=1))
++ def test_31_controller_unavailable(self):self.reject(lambda v:v[5].clear())
++ def test_32_launcher_exit_unproven(self):self.reject(lambda v:v[4].update(launcherExitVerified=False))
++ def test_33_census_unavailable(self):self.reject(lambda v:v[5].update(available=False))
++ def test_34_census_unknown(self):self.reject(lambda v:v[5].update(unknown=[10]))
++ def test_35_process_remains(self):self.reject(lambda v:v[5].update(matchingProcesses=[10]))
++ def test_36_trace_remains(self):self.reject(lambda v:v[5].update(traceSessions=['J6-left']))
++ def test_37_shutdown_deadline(self):self.reject(lambda v:v[4].update(completedQpc=3000))
++ def test_38_census_deadline(self):self.reject(lambda v:v[5].update(completedQpc=3000))
++ def test_39_deadline_reset_collector(self):self.reject(lambda v:v[0].update(deadlineQpc=4000))
++ def test_40_deadline_reset_receipt(self):self.reject(lambda v:v[1].update(deadlineQpc=4000))
++ def test_41_later_contradiction(self):self.reject(lambda v:v[4].update(authoritativeContradictions=['lost']))
++ def test_42_complete(self):self.assertTrue(evaluate(self.v))
++ def test_43_failed_replay(self):
++  m=c.Machine(self.v[0]['binding'])
++  with self.assertRaises(c.Rejected):m.reject('preserved failed run')
++  with self.assertRaises(c.Rejected):m.advance('RUN_ACTIVE','launcher',dict(binding=m.binding))
++  self.assertEqual(m.state,'REJECTED')
++ def test_duplicate_key(self):
++  with tempfile.TemporaryDirectory() as d:
++   p=pathlib.Path(d)/'x.json';p.write_text('{"a":1,"a":2}')
++   with self.assertRaises(c.Rejected):c.load(p)
++ def test_late_handoff(self):self.reject(lambda v:v[1]['rows'][1].update(handleAttemptQpc=1021))
++ def test_late_creation_verification(self):self.reject(lambda v:v[1]['rows'][1].update(imageBeginQpc=1021,imageEndQpc=1022))
++ def test_local_durability(self):self.reject(lambda v:v[0].update(localDurable=False))
++ def test_authority_durability(self):self.reject(lambda v:v[4].update(durableComplete=False))
++ def test_receipt_cannot_accept(self):self.reject(lambda v:v[1].update(acceptance=True))
++ def test_shutdown_order(self):self.reject(lambda v:v[4]['observers']['authority'].update(exitQpc=1400))
++ def test_source_binding(self):self.reject(lambda v:v[1]['binding'].update(sourceManifestSHA256='f'*64))
++ def test_phase_schema(self):self.reject(lambda v:v[0].update(state='PASS'))
++ def test_handle_closed_final(self):self.reject(lambda v:v[4].update(allRequiredHandlesClosed=False))
++ def test_exclusive_publication(self):
++  with tempfile.TemporaryDirectory() as d:
++   p=pathlib.Path(d)/'receipt.json';c.write_once(p,{'first':True});old=p.read_bytes()
++   with self.assertRaises(OSError):c.write_once(p,{'second':True})
++   self.assertEqual(old,p.read_bytes())
++if __name__=='__main__':unittest.main(verbosity=2)
+--- /dev/null
++++ D:\JARVIS-STAGE6-LIVE\7f204e14c90a497a8476be0e9927e074\code\test_successor_v3.py
+@@ -0,0 +1,63 @@
++"""Offline tests of actual successor binding, tracker and completed-evidence adapters."""
++import unittest,json,pathlib,uuid,copy,itertools,threading
++from unittest.mock import patch,Mock
++from workspace import CODE,new_run
++import small_binding_v3 as binding
++import evidence_support_v3 as tracker
++import support_verifier_v3 as support
++import completed_v3
++from coordination_v3 import Rejected
++from fixture_support import fixture as support_fixture
++ROOT=new_run('v3-successor-focused-'+uuid.uuid4().hex)
++
++class Binding(unittest.TestCase):
++ def test_actual_fresh_binding(self):
++  root=binding.make('normal');doc=json.loads((root/'small-declaration-v3.json').read_text());self.assertEqual(binding.validate(root,doc),doc)
++ def test_declaration_rejections(self):
++  root=binding.make('normal');doc=json.loads((root/'small-declaration-v3.json').read_text())
++  for field,value in [('run','previous'),('cleanup',21.0),('coordination','v2'),('sourceManifestSHA256','0'*64),('files',13),('bytes',59665402098),('heartbeat',11),('probe',14)]:
++   with self.subTest(field=field),self.assertRaises(ValueError):binding.validate(root,dict(doc,**{field:value}))
++ def test_failed_run_is_not_completed_evidence(self):
++  root=ROOT/uuid.uuid4().hex;root.mkdir();(root/'primary-failure.json').write_text('{"historical":true}')
++  with self.assertRaises(Rejected):completed_v3.verify_complete(root)
++ def test_no_missing_phase_fallback(self):
++  root=ROOT/uuid.uuid4().hex;root.mkdir()
++  with self.assertRaises(FileNotFoundError):completed_v3.verify_complete(root)
++
++class LocalEvidence(unittest.TestCase):
++ def doc(self):
++  d=support_fixture()[0];d['schema']='stage6-independent-tree-support-v3';r=d['descendants'][0]
++  r.update(eligibleConsoleHelper=True,localCloseQpc=80,stateAtClose=258,exitFiletime=None,exitCode=None)
++  r['capture']['image']=r'C:\Windows\System32\conhost.exe';return d
++ def test_pending_is_not_exit(self):
++  d=self.doc();support.structural(d);self.assertIsNone(d['descendants'][0]['exitFiletime'])
++ def test_direct_process_cannot_pend(self):
++  d=self.doc();d['descendants'][0]['eligibleConsoleHelper']=False
++  with self.assertRaises(ValueError):support.structural(d)
++ def test_wrong_parent_cannot_pend(self):
++  d=self.doc();d['descendants'][0]['parentPid']=999
++  with self.assertRaises(ValueError):support.structural(d)
++ def test_non_console_cannot_pend(self):
++  d=self.doc();d['descendants'][0]['capture']['image']=r'D:\other.exe'
++  with self.assertRaises(ValueError):support.structural(d)
++ def test_open_handle_fails(self):
++  d=self.doc();d['descendants'][0]['closed']=False
++  with self.assertRaises(ValueError):support.structural(d)
++
++class Tracker(unittest.TestCase):
++ def build(self):
++  t=tracker.TreeTracker.__new__(tracker.TreeTracker);t.anchor={'pid':10,'created':'1000','capture':{'image':r'D:\python.exe'}};t.anchorHandle=1;t.rows={};t.handles={};t.errors=[];t.lock=threading.RLock();t.stop=threading.Event();t.thread=Mock();t.thread.is_alive.return_value=False;t.scans=1;t.maxScan=0;t.capacity=8192
++  r=dict(pid=11,created='1001',parentPid=10,role='descendant:conhost.exe',image=r'C:\Windows\System32\conhost.exe',imageCapture={'valid':True,'image':r'C:\Windows\System32\conhost.exe'},closed=False,exitFiletime=None,exitCode=None,signalObservedQpc=None)
++  t.rows[(11,'1001')]=r;t.handles[(11,'1001')]=2;t.scan=lambda:None
++  return t,r
++ def test_pending_closes_local_handle_without_exit_claim(self):
++  t,r=self.build();root=ROOT/uuid.uuid4().hex;root.mkdir();clock=itertools.count(1000)
++  with patch.object(tracker,'ticks',side_effect=lambda:next(clock)),patch.object(tracker,'frequency',return_value=100),patch.object(tracker.K,'WaitForSingleObject',return_value=258),patch.object(tracker.K,'CloseHandle',return_value=True),patch('tracker_adapter_v3.binding',return_value={'synthetic':True}):v=t.finish(root,20)
++  self.assertTrue(v['localFinalized']);self.assertTrue(v['allHandlesClosed']);self.assertFalse(v['allExited']);self.assertIsNone(v['rows'][0]['exitFiletime'])
++  self.assertEqual(v['deadlineQpc']-v['cleanupEntryQpc'],2000)
++ def test_handle_close_failure_is_not_pending_success(self):
++  t,r=self.build();root=ROOT/uuid.uuid4().hex;root.mkdir();clock=itertools.count(1000)
++  with patch.object(tracker,'ticks',side_effect=lambda:next(clock)),patch.object(tracker,'frequency',return_value=100),patch.object(tracker.K,'WaitForSingleObject',return_value=258),patch.object(tracker.K,'CloseHandle',return_value=False),self.assertRaises(Rejected):t.finish(root,20)
++ def test_other_class_is_not_eligible(self):
++  t,r=self.build();r['role']='lifecycle-probe';self.assertFalse(t.eligible(r))
++if __name__=='__main__':unittest.main(verbosity=2)
+--- D:\JARVIS-STAGE6-LIVE\2d922197cf7d4bb098d8da6e070cbff2\code\traced_collect.py
++++ D:\JARVIS-STAGE6-LIVE\7f204e14c90a497a8476be0e9927e074\code\traced_collect.py
+@@ -1,67 +1,6 @@
+-"""Fixed diagnostic adapter; frozen collector semantics and real process identities retained."""
+-import time
+-ENTRY_NS=time.perf_counter_ns()
++"""Versioned TEST collector entry shim; fixed native RunCollector entry."""
+ import sys
+-from workspace import CODE,run_dir,activate_temp
+-from integration_marks import Marks
+-
+-def main(root,case):
+- import large_collect as collector
+- import secondary_sampling
+- from native_bridge import NativeBridge
+- bridge=NativeBridge(root)
+- marks=Marks(root,'collector',ENTRY_NS);status='EXCEPTION'
+- originalManaged=collector.Managed;originalProbe=collector.Probe;originalQuery=secondary_sampling.query
+- class Managed(originalManaged):
+-  def __init__(self,args,root,role,tracker=None):
+-   marks.add('HELPER_INVOCATION',helper=role)
+-   args=list(args)
+-   if role=='hash-worker':
+-    assert args[2]==str(CODE/'baseline_hash_worker.py')
+-    args[2]=str(CODE/'traced_hash_worker.py');args.append(case)
+-   try:super().__init__(args,root,role,tracker)
+-   except BaseException as exc:
+-    marks.add('HELPER_EXCEPTION',helper=role,exceptionType=type(exc).__name__);raise
+-   marks.add('HELPER_CREATED',helper=role,helperPid=self.p.pid,helperCreated=str(self.identity['created']))
+-  def finish(self,seconds=15):
+-   marks.add('HELPER_WAIT',helper=self.role,helperPid=self.p.pid)
+-   result=super().finish(seconds)
+-   marks.add('HELPER_RETURN',helper=self.role,helperPid=self.p.pid,exitCode=result['exit'],handleState=result['handleState'])
+-   return result
+- class Probe(originalProbe):
+-  def __init__(self,*args,**kwargs):
+-   marks.add('HELPER_INVOCATION',helper='lifecycle-probe')
+-   try:super().__init__(*args,**kwargs)
+-   except BaseException as exc:
+-    marks.add('HELPER_EXCEPTION',helper='lifecycle-probe',exceptionType=type(exc).__name__);raise
+-   marks.add('HELPER_CREATED',helper='lifecycle-probe',helperPid=self.process.pid)
+-  def finish_observation(self):
+-   result=super().finish_observation()
+-   marks.add('HELPER_RETURN',helper='lifecycle-probe',helperPid=self.process.pid,exitCode=self.process.poll(),observerFailed=self.row.get('independentObserverFailed'))
+-   return result
+- def query(*args,**kwargs):
+-  marks.add('HELPER_INVOCATION',helper='resource-sampler')
+-  try:result=originalQuery(*args,**kwargs)
+-  except BaseException as exc:
+-   marks.add('HELPER_EXCEPTION',helper='resource-sampler',exceptionType=type(exc).__name__);raise
+-  marks.add('HELPER_RETURN',helper='resource-sampler',helperPid=result.get('pid'),helperCreated=str(result.get('created')),allExited=result.get('allExited'),handleClosed=result.get('handleClosed'))
+-  return result
+- try:
+-  bridge.install()
+-  collector.Managed=Managed;collector.Probe=Probe;secondary_sampling.query=query
+-  marks.add('COLLECTOR_START',case=case)
+-  from baseline_contract import advance
+-  advance(root,'PREPARED','OBSERVERS_READY')
+-  result=collector.main(root)
+-  status='RETURNED' if result==0 else 'FAILED';marks.add('COLLECTOR_RETURN',exitCode=result)
+-  return result
+- except BaseException as exc:
+-  marks.add('EXCEPTION',exceptionType=type(exc).__name__);raise
+- finally:
+-  collector.Managed=originalManaged;collector.Probe=originalProbe;secondary_sampling.query=originalQuery
+-  try:bridge.close()
+-  finally:marks.close(status)
++from workspace import run_dir,activate_temp
++from traced_collect_v3 import main
+ if __name__=='__main__':
+- root=run_dir(sys.argv[1]);activate_temp(root)
+- case=sys.argv[2];assert case in ('normal','hash-start-failure')
+- sys.exit(main(root,case))
++ root=run_dir(sys.argv[1]);activate_temp(root);sys.exit(main(root,sys.argv[2]))
+--- /dev/null
++++ D:\JARVIS-STAGE6-LIVE\7f204e14c90a497a8476be0e9927e074\code\traced_collect_v3.py
+@@ -0,0 +1,73 @@
++"""Fixed diagnostic adapter; frozen collector semantics and real process identities retained."""
++import time
++ENTRY_NS=time.perf_counter_ns()
++import sys
++from workspace import CODE,run_dir,activate_temp
++from integration_marks import Marks
++
++def main(root,case):
++ import large_collect_v3 as collector
++ import secondary_sampling
++ from native_bridge import NativeBridge
++ bridge=NativeBridge(root)
++ marks=Marks(root,'collector',ENTRY_NS);status='EXCEPTION'
++ originalManaged=collector.Managed;originalProbe=collector.Probe;originalQuery=secondary_sampling.query
++ class Managed(originalManaged):
++  def __init__(self,args,root,role,tracker=None):
++   marks.add('HELPER_INVOCATION',helper=role)
++   args=list(args)
++   if role=='hash-worker':
++    assert args[2]==str(CODE/'baseline_hash_worker.py')
++    args[2]=str(CODE/'traced_hash_worker.py');args.append(case)
++   try:super().__init__(args,root,role,tracker)
++   except BaseException as exc:
++    marks.add('HELPER_EXCEPTION',helper=role,exceptionType=type(exc).__name__);raise
++   marks.add('HELPER_CREATED',helper=role,helperPid=self.p.pid,helperCreated=str(self.identity['created']))
++  def finish(self,seconds=15):
++   marks.add('HELPER_WAIT',helper=self.role,helperPid=self.p.pid)
++   result=super().finish(seconds)
++   marks.add('HELPER_RETURN',helper=self.role,helperPid=self.p.pid,exitCode=result['exit'],handleState=result['handleState'])
++   return result
++ class Probe(originalProbe):
++  def __init__(self,*args,**kwargs):
++   marks.add('HELPER_INVOCATION',helper='lifecycle-probe')
++   try:super().__init__(*args,**kwargs)
++   except BaseException as exc:
++    marks.add('HELPER_EXCEPTION',helper='lifecycle-probe',exceptionType=type(exc).__name__);raise
++   marks.add('HELPER_CREATED',helper='lifecycle-probe',helperPid=self.process.pid)
++  def finish_observation(self):
++   result=super().finish_observation()
++   marks.add('HELPER_RETURN',helper='lifecycle-probe',helperPid=self.process.pid,exitCode=self.process.poll(),observerFailed=self.row.get('independentObserverFailed'))
++   return result
++ def query(*args,**kwargs):
++  marks.add('HELPER_INVOCATION',helper='resource-sampler')
++  try:result=originalQuery(*args,**kwargs)
++  except BaseException as exc:
++   marks.add('HELPER_EXCEPTION',helper='resource-sampler',exceptionType=type(exc).__name__);raise
++  marks.add('HELPER_RETURN',helper='resource-sampler',helperPid=result.get('pid'),helperCreated=str(result.get('created')),allExited=result.get('allExited'),handleClosed=result.get('handleClosed'))
++  return result
++ try:
++  bridge.install()
++  collector.Managed=Managed;collector.Probe=Probe;secondary_sampling.query=query
++  marks.add('COLLECTOR_START',case=case)
++  from baseline_contract import advance
++  advance(root,'PREPARED','OBSERVERS_READY')
++  result=collector.main(root)
++  status='RETURNED' if result==0 else 'FAILED';marks.add('COLLECTOR_RETURN',exitCode=result)
++  return result
++ except BaseException as exc:
++  marks.add('EXCEPTION',exceptionType=type(exc).__name__);raise
++ finally:
++  collector.Managed=originalManaged;collector.Probe=originalProbe;secondary_sampling.query=originalQuery
++  try:
++   from evidence_support_v3 import close_bridge_v3
++   close_bridge_v3(root,bridge)
++  finally:
++   marks.close(status)
++   if status=='RETURNED':
++    from evidence_support_v3 import publish_phase_a
++    publish_phase_a(root)
++if __name__=='__main__':
++ root=run_dir(sys.argv[1]);activate_temp(root)
++ case=sys.argv[2];assert case in ('normal','hash-start-failure')
++ sys.exit(main(root,case))
+--- /dev/null
++++ D:\JARVIS-STAGE6-LIVE\7f204e14c90a497a8476be0e9927e074\code\tracker_adapter_v3.py
+@@ -0,0 +1,57 @@
++"""TEST-only OS-helper corroboration; original tracer facts are never rewritten."""
++import json,hashlib,os
++from pathlib import Path
++from journal import frequency
++from small_coverage import identity,normalize
++from support_verifier_v3 import structural
++
++def need(ok,why):
++ if not ok:raise ValueError(why)
++def load(p):return json.loads(Path(p).read_text(encoding='utf-8-sig'))
++def digest(p):return hashlib.sha256(Path(p).read_bytes()).hexdigest()
++
++def binding(root,pid,created):
++ from small_binding_v3 import validate
++ d=validate(root,load(root/'small-declaration-v3.json'));ready=load(root/'etw-ready.json');obs=load(root/'observer-identities.json');launcher=load(root/'launcher-identity.json')
++ need(ready['pid']==obs['etw']['pid'] and ready['rootPid']==launcher['pid'] and ready['rootCreated']==launcher['created'],'SESSION_LAUNCHER')
++ need(ready['frequency']==frequency() and ready['session'],'CLOCK_SESSION')
++ return dict(run=root.name,declarationSHA256=digest(root/'small-declaration-v3.json'),sourceManifestSHA256=d['sourceManifestSHA256'],kernelSession=ready['session'],producer=dict(pid=pid,created=created),frequency=frequency(),observerSHA256=digest(root/'observer-identities.json'))
++
++def adapt(root,expected,handles,kernel,mapping,collector):
++ doc=load(root/'tree-image-support.json');structural(doc)
++ need(identity(doc['anchor'])==collector,'ANCHOR_COLLECTOR')
++ from completed_v3 import verify_terminal
++ verify_terminal(root,kernel)
++ need(doc['binding']==binding(root,*collector),'PRODUCER_BINDING')
++ need(doc['binding']['kernelSession']==kernel['session'],'KERNEL_SESSION')
++ bykey={identity(r):r for r in expected};byseq={r['sequence']:r for r in expected}
++ need(len(bykey)==len(byseq)==len(expected),'KERNEL_DUPLICATE')
++ need(collector in bykey and bykey[collector]['role']=='DIRECT_WORKER','COLLECTOR_REQUIRED')
++ ac=doc['anchor']['capture'];ak=bykey[collector]
++ need(ac['frequency']==doc['binding']['frequency'] and ak['startQpc']<=ac['acquisitionBeginQpc']<=ac['acquisitionReturnedQpc']<=ac['captureEntryQpc']<=ac['stateAfterQpc']<=doc['anchor']['closeQpc']<ak['stopQpc'],'ANCHOR_LIVE_INTERVAL')
++ need(normalize(ac['image'],mapping)==normalize(ak['image'],mapping),'ANCHOR_IMAGE')
++ rows={identity(r):r for r in doc['descendants']}
++ for key,row in rows.items():
++  need(key in bykey,'EXTRA_TRACKER_IDENTITY');k=bykey[key];c=row['capture'];parent=byseq.get(k['parentSequence'])
++  need(parent is not None and parent['pid']==row['parentPid']==k['parentPid'],'EXACT_PARENT_INSTANCE')
++  need(parent['startQpc']<=k['startQpc']<parent['stopQpc'],'PARENT_LIFETIME')
++  need(c['frequency']==doc['binding']['frequency'],'CLOCK')
++  need(k['startQpc']<=c['acquisitionBeginQpc']<=c['acquisitionReturnedQpc']<=c['captureEntryQpc']<=c['stateAfterQpc']<k['stopQpc'],'LIVE_CAPTURE_INTERVAL')
++  need(normalize(c['image'],mapping)==normalize(k['image'],mapping),'TRACKER_IMAGE_CONTRADICTION')
++  if row['exitFiletime'] is not None:
++   need(row['exitFiletime']==k['exitFiletime'] and row['exitCode']==k['exitCode'],'TRACKER_EXIT_CONTRADICTION')
++  else:
++   need(row['eligibleConsoleHelper'] is True and row['closed'],'UNAPPROVED_PENDING')
++ out=[]
++ for h in handles:
++  key=identity(h);k=bykey[key]
++  if k['role']!='OS_CONSOLE_HELPER' or key not in rows or h.get('qualifiedPostExit'):
++   out.append(h);continue
++  c=rows[key]['capture']
++  # Supplement unavailable image only. Other tracer facts must still agree.
++  if h.get('imageError')==0:
++   need(normalize(h['image'],mapping)==normalize(c['image'],mapping),'TRACER_IMAGE_CONTRADICTION');out.append(h);continue
++  need(h.get('imageError') not in (None,0) and not h.get('image'),'UNAVAILABLE_IMAGE_REQUIRED')
++  need(h['source']=='tracer-opened-handle' and h['retained'] and h['closed'] and h['exited'] and h['handleCreated']==key[1] and h['exitFiletime']==k['exitFiletime'] and h['exitCode']==k['exitCode'],'TRACER_CONTRADICTION')
++  out.append(dict(h,source='independent-tree-handle-v1',image=c['image'],imageError=0,queryBeginQpc=c['queryBeginQpc'],queryEndQpc=c['queryEndQpc'],trackerVerified=True,originalTracer=dict(h),trackerEvidence=rows[key]))
++ return out

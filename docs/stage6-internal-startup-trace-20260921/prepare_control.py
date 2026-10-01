@@ -1,0 +1,11 @@
+import pathlib,json,shutil,uuid,hashlib
+R=pathlib.Path(__file__).parent;read=lambda p:json.loads(p.read_text());p=read(R/'followup-plan.json');S=pathlib.Path(p['code']);sha=lambda f:hashlib.sha256(f.read_bytes()).hexdigest()
+C=pathlib.Path('D:/JARVIS-STAGE6-LIVE')/uuid.uuid4().hex/'code';C.mkdir(parents=True)
+for x in p['diagnosticHashes']:assert sha(S/x['name'])==x['sha256'];shutil.copy2(S/x['name'],C/x['name'])
+run='startup-'+uuid.uuid4().hex;(C/run/'temp').mkdir(parents=True)
+s=(C/'startup_driver.py').read_text();s=s.replace("(('minimal','entry') if pair%2==0 else ('entry','minimal'))", "('minimal',)");s=s.replace("condition+' 20 probes completed'", "condition+' 10 minimal-control probes completed'");(C/'startup_driver.py').write_text(s)
+s=(C/'startup_launch.ps1').read_text().replace('J6StartupTrace.exe','J6BaselineTrace.exe');(C/'startup_launch.ps1').write_text(s)
+cp=R.parents[3]/('stage6-startup-load-'+uuid.uuid4().hex);cp.mkdir();(C/'startup-config.json').write_text(json.dumps(dict(cPayload=str(cp/'C-load.bin')),indent=2))
+m=[dict(name=f.name,sha256=sha(f)) for f in sorted(C.iterdir()) if f.is_file()];(C/'startup-source.json').write_text(json.dumps(m,indent=2))
+with (R/'control-plan.json').open('x') as f:json.dump(dict(code=str(C),run=run,root=str(C/run),diagnosticHashes=m,source=p['source'],sourceHashes=p['sourceHashes'],purpose='Minimal process-only ETW and unchanged native launch; quantify full trace overhead'),f,indent=2)
+print(json.dumps(dict(code=str(C),run=run,root=str(C/run))))
