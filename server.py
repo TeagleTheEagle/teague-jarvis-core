@@ -65,6 +65,11 @@ from store import Store
 from wake import WakeDetector
 
 
+WEARABLE_READ_TOOLS = frozenset(('device_registry', 'time_now', 'list_items',
+    'conversation_search', 'conversation_read', 'project_catalog', 'project_read',
+    'web_search', 'news_search'))
+
+
 class Run:
     def __init__(self, conversation):
         self.id = uuid.uuid4().hex
@@ -169,32 +174,38 @@ class App:
             raise ValueError('Message must be 1–12,000 characters.')
         if not isinstance(conversation, str) or not re.fullmatch(r'[a-zA-Z0-9_-]{1,80}', conversation):
             raise ValueError('Invalid conversation ID.')
+        attachment_id = body.get('attachment')
+        if attachment_id is not None and (not isinstance(attachment_id, str) or len(attachment_id) > 80):
+            raise ValueError('Invalid attachment ID.')
         with self.lock:
             if any(not r.done for r in self.runs.values()):
                 raise ValueError('A request is already running. Stop it or wait for completion.')
+            attachment = self.attachments.get(attachment_id) if attachment_id else None
+            if attachment_id and not attachment:
+                raise ValueError('Attachment expired. Upload it again.')
             self.runs = {k: r for k, r in self.runs.items() if time.time() - r.created < 1800}
             run = Run(conversation)
             run.wearable = wearable
             self.runs[run.id] = run
-        attachment = None
-        if body.get('attachment'):
-            with self.lock:
-                attachment = self.attachments.get(body['attachment'])
-                if attachment and (attachment.get('name') == 'screen-capture.jpg' or wearable):
-                    self.attachments.pop(body['attachment'], None)
-            if not attachment:
-                with self.lock:
-                    del self.runs[run.id]
-                raise ValueError('Attachment expired. Upload it again.')
-        self.devices.heartbeat('pc')
-        self.devices.begin(run.id,'local-wearable-client' if wearable else 'pc')
-        threading.Thread(target=self.work, args=(run, text.strip(), attachment), daemon=True).start()
+            consume_attachment = bool(attachment and (attachment.get('name') == 'screen-capture.jpg' or wearable))
+            if consume_attachment:
+                self.attachments.pop(attachment_id, None)
+            try:
+                self.devices.heartbeat('pc')
+                self.devices.begin(run.id, 'local-wearable-client' if wearable else 'pc')
+                threading.Thread(target=self.work, args=(run, text.strip(), attachment), daemon=True).start()
+            except Exception:
+                self.runs.pop(run.id, None)
+                if consume_attachment:
+                    self.attachments[attachment_id] = attachment
+                self.devices.finish(run.id)
+                raise
         return {'run_id': run.id}
 
     def tool(self, name, args, run=None):
         if self.stage4:
             self.stage4.check_tool(name, run)
-        if run and getattr(run, 'wearable', False) and name not in ('device_registry','time_now','list_items','search_conversations','read_conversation','project_catalog','project_read','web_search','news_search'):
+        if run and getattr(run, 'wearable', False) and name not in WEARABLE_READ_TOOLS:
             raise ValueError('This operation is unavailable from the wearable client.')
         try:args = actions.validate(name, args)
         except (ValueError,TypeError) as exc:
@@ -410,9 +421,9 @@ class App:
         work_started=time.perf_counter()
         context_ms=None
         run.user_text = text
-        run.emit('run.started', {})
-        self.store.message(run.conversation, 'user', text)
         try:
+            run.emit('run.started', {})
+            self.store.message(run.conversation, 'user', text)
             memory_answer = memory.command(self.store, text) if not attachment and not getattr(run,'wearable',False) else None
             command = actions.local_command(text) if not attachment and memory_answer is None else None
             if not attachment and memory_answer is None and not command:
@@ -461,7 +472,7 @@ class App:
                 screen_observation = vision and attachment.get('name') == 'screen-capture.jpg'
                 available_tools = [] if screen_observation else actions.TOOLS
                 if getattr(run,'wearable',False):
-                    available_tools = [] if vision else [t for t in actions.TOOLS if t['function']['name'] in ('device_registry','time_now','list_items','search_conversations','read_conversation','project_catalog','project_read','web_search','news_search')]
+                    available_tools = [] if vision else [t for t in actions.TOOLS if t['function']['name'] in WEARABLE_READ_TOOLS]
                 if attachment:
                     if vision:
                         messages[-1]['content'] = [{'type': 'text', 'text': text}, {'type': 'image_url', 'image_url': {'url': attachment['data']}}]
@@ -500,9 +511,10 @@ class App:
                         if ('stream failed' not in str(stream_error).lower() and 'connection failed' not in str(stream_error).lower()) or run.cancel.is_set():
                             raise
                         run.measurements.append({'retry':True,'reason':'stream interruption'})
-                        time.sleep(1)
+                        if run.cancel.wait(1):
+                            break
                         response = providers.chat(messages, available_tools, lambda *_: None, run.cancel, vision)
-                    if response is None:
+                    if run.cancel.is_set() or response is None:
                         break
                     messages.append(response)
                     calls = response.get('tool_calls', [])
@@ -572,17 +584,22 @@ class App:
             if self.stage4:self.stage4.fail_response(run)
             else:run.emit('run.cancelled' if run.cancel.is_set() else 'run.failed', {'message': str(exc), 'retry_after': getattr(exc, 'retry_after', 0)})
         except Exception:
-            self.store.audit('run', 'internal error')
+            try:
+                self.store.audit('run', 'internal error')
+            except Exception:
+                pass  # A failed database must not prevent terminal notification.
             if self.stage4:self.stage4.fail_response(run)
             else:run.emit('run.failed', {'message': 'The request failed internally. See the mission log and retry. No success was assumed.'})
         finally:
-            with self.lock:
-                self.timings.append({'finished_at':companion_tools.stamp()['at'],'queue_ms':round((work_started-run.monotonic_created)*1000),'context_ms':context_ms,'elapsed_ms':round((time.perf_counter()-run.monotonic_created)*1000),'provider_calls':run.measurements,'cancelled':run.cancel.is_set()})
-                self.timings=self.timings[-20:]
-            with run.condition:
-                run.done = True
-                run.condition.notify_all()
-            self.devices.finish(run.id)
+            try:
+                with self.lock:
+                    self.timings.append({'finished_at':companion_tools.stamp()['at'],'queue_ms':round((work_started-run.monotonic_created)*1000),'context_ms':context_ms,'elapsed_ms':round((time.perf_counter()-run.monotonic_created)*1000),'provider_calls':run.measurements,'cancelled':run.cancel.is_set()})
+                    self.timings=self.timings[-20:]
+            finally:
+                with run.condition:
+                    run.done = True
+                    run.condition.notify_all()
+                self.devices.finish(run.id)
 
     @staticmethod
     def describe(name, result):
@@ -763,8 +780,8 @@ class Handler(BaseHTTPRequestHandler):
             self.send(200, raw, mimetypes.guess_type(str(file))[0] or 'text/plain', cookie=path in ('/', '/voice-lab.html'))
         except (ValueError, KeyError):
             self.send(400, {'error': 'Invalid request.'})
-        except (BrokenPipeError, ConnectionResetError):
-            pass
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            self.close_connection = True
         except Exception:
             self.send(500, {'error': 'Local operation failed.'})
 
@@ -958,9 +975,10 @@ class Handler(BaseHTTPRequestHandler):
                     self.app.spotify.access = self.app.spotify.refresh = None
                 result = {'status': 'disconnected'}
             elif path == '/api/conversation/delete':
-                if any(not r.done and r.conversation == body.get('id') for r in self.app.runs.values()):
-                    raise ValueError('Stop the running request first.')
-                self.app.store.clear_conversation(body.get('id'))
+                with self.app.lock:
+                    if any(not r.done and r.conversation == body.get('id') for r in self.app.runs.values()):
+                        raise ValueError('Stop the running request first.')
+                    self.app.store.clear_conversation(body.get('id'))
                 result = {'status': 'deleted'}
             elif path == '/api/shutdown':
                 for run in self.app.runs.values():

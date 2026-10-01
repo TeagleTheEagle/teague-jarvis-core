@@ -94,30 +94,107 @@ def suit_diagram(request, view):
     return {'title': title, 'view': view, 'components': components, 'format': 'mermaid', 'diagram': diagram, 'assumptions': ['Preset concept geometry with selected components.', 'Engineering validation is not included.']}
 
 _MATH = {'abs': abs, 'round': round, 'sqrt': math.sqrt, 'pi': math.pi, 'e': math.e}
+def _bounded_arithmetic(text):
+    """Numeric expressions only; bound every intermediate before further work.
+
+    Keep the existing +, -, *, /, %, **, abs/round/sqrt and pi/e grammar.
+    Limits: 128 AST nodes, depth 32, magnitude 1e100, exponent/round digits 1000.
+    """
+    def number(value):
+        if type(value) not in (int, float) or not math.isfinite(value) or abs(value) > 10**100:
+            raise ValueError('Calculation exceeds the numeric limit (1e100).')
+        return value
+
+    try:
+        tree = ast.parse(text, mode='eval')
+    except (SyntaxError, RecursionError) as exc:
+        raise ValueError('Invalid arithmetic expression.') from exc
+    if sum(1 for _ in ast.walk(tree)) > 128:
+        raise ValueError('Calculation is too complex.')
+
+    def visit(node, depth=0):
+        if depth > 32:
+            raise ValueError('Calculation is too deeply nested.')
+        child = lambda value: visit(value, depth + 1)
+        if isinstance(node, ast.Constant):
+            return number(node.value)
+        if isinstance(node, ast.Name) and node.id in ('pi', 'e'):
+            return _MATH[node.id]
+        if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.USub, ast.UAdd)):
+            value = child(node.operand)
+            return number(-value if isinstance(node.op, ast.USub) else value)
+        if isinstance(node, ast.BinOp):
+            left, right = child(node.left), child(node.right)
+            if isinstance(node.op, ast.Add): value = left + right
+            elif isinstance(node.op, ast.Sub): value = left - right
+            elif isinstance(node.op, ast.Mult): value = left * right
+            elif isinstance(node.op, ast.Div): value = left / right
+            elif isinstance(node.op, ast.Mod): value = left % right
+            elif isinstance(node.op, ast.Pow):
+                if abs(right) > 1000:
+                    raise ValueError('Exponent exceeds the limit (1000).')
+                # Bounded numeric operands and exponent cap the integer allocation.
+                value = left ** right
+            else: raise ValueError('Only safe arithmetic is allowed.')
+            return number(value)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and not node.keywords:
+            name = node.func.id
+            if name not in ('abs', 'round', 'sqrt') or len(node.args) not in ((1, 2) if name == 'round' else (1,)):
+                raise ValueError('Invalid arithmetic function or argument count.')
+            args = [child(arg) for arg in node.args]
+            if name == 'round' and len(args) == 2 and (type(args[1]) is not int or abs(args[1]) > 1000):
+                raise ValueError('Round digits must be an integer between -1000 and 1000.')
+            return number(_MATH[name](*args))
+        raise ValueError('Only safe arithmetic is allowed.')
+
+    try:
+        return visit(tree.body)
+    except (ArithmeticError, TypeError, RecursionError) as exc:
+        raise ValueError('Calculation is undefined or exceeds numeric limits.') from exc
+
+
 def calculate(expression, mode):
     text = str(expression).strip()
     if len(text) > 500: raise ValueError('Calculation is too long.')
     if mode == 'percent':
         match = re.fullmatch(r'([0-9.+-]+)\s*%\s*(?:of\s*)?([0-9.+-]+)', text, re.I)
         if not match: raise ValueError('Use a format such as 15% of 240.')
-        return {'result': float(match[1]) * float(match[2]) / 100, 'expression': expression}
+        percentage, value = float(match[1]), float(match[2])
+        if not math.isfinite(percentage) or not math.isfinite(value):
+            raise ValueError('Percentage calculations require finite numbers.')
+        result = percentage * value / 100
+        if not math.isfinite(result):
+            # Scale before multiplication when only the intermediate product overflowed.
+            result = (percentage / 100) * value
+        if not math.isfinite(result):
+            raise ValueError('Percentage calculation exceeds the finite numeric range.')
+        return {'result': result, 'expression': expression}
     if mode == 'statistics':
         values=[float(x) for x in re.split(r'[,\s]+', text) if x]
         if not values or len(values)>1000: raise ValueError('Provide 1–1000 numbers.')
-        return {'count':len(values),'mean':statistics.fmean(values),'median':statistics.median(values),'minimum':min(values),'maximum':max(values),'stdev':statistics.stdev(values) if len(values)>1 else 0}
+        if any(not math.isfinite(value) for value in values):
+            raise ValueError('Statistics require finite numbers.')
+        try:
+            result = {'count':len(values),'mean':statistics.fmean(values),'median':statistics.median(values),'minimum':min(values),'maximum':max(values),'stdev':statistics.stdev(values) if len(values)>1 else 0}
+        except OverflowError:
+            raise ValueError('Statistics calculation exceeds the finite numeric range.') from None
+        if any(not math.isfinite(value) for value in result.values()):
+            raise ValueError('Statistics calculation did not produce finite results.')
+        return result
     if mode == 'convert':
         match = re.fullmatch(r'([0-9.+-]+)\s*(km|m|cm|mi|ft|kg|lb|c|f)\s+(?:to|in)\s+(km|m|cm|mi|ft|kg|lb|c|f)', text, re.I)
         if not match: raise ValueError('Use a format such as 10 km to mi.')
         units={'m':('length',1),'km':('length',1000),'cm':('length',.01),'mi':('length',1609.344),'ft':('length',.3048),'kg':('mass',1),'lb':('mass',.45359237)}; a,b=match[2].lower(),match[3].lower(); value=float(match[1])
-        if a in units and b in units and units[a][0]==units[b][0]: result=value*units[a][1]/units[b][1]
-        elif a=='c' and b=='f': result=value*9/5+32
-        elif a=='f' and b=='c': result=(value-32)*5/9
+        if not math.isfinite(value):
+            raise ValueError('Conversions require a finite number.')
+        if a in units and b in units and units[a][0]==units[b][0]: result=value*(units[a][1]/units[b][1])
+        elif a=='c' and b=='f': result=value*(9/5)+32
+        elif a=='f' and b=='c': result=(value-32)*(5/9)
         else: raise ValueError('Those units cannot be converted.')
+        if not math.isfinite(result):
+            raise ValueError('Conversion exceeds the finite numeric range.')
         return {'result':result,'expression':expression}
-    tree=ast.parse(text, mode='eval'); allowed=(ast.Expression,ast.Constant,ast.BinOp,ast.UnaryOp,ast.Add,ast.Sub,ast.Mult,ast.Div,ast.Pow,ast.Mod,ast.USub,ast.UAdd,ast.Call,ast.Name,ast.Load)
-    if any(not isinstance(node,allowed) for node in ast.walk(tree)) or any(isinstance(node,ast.Name) and node.id not in _MATH for node in ast.walk(tree)): raise ValueError('Only safe arithmetic is allowed.')
-    result=eval(compile(tree,'<calculation>','eval'),{'__builtins__':{}},_MATH)
-    if not isinstance(result,(int,float)) or not math.isfinite(result): raise ValueError('Calculation did not produce a finite number.')
+    result = _bounded_arithmetic(text)
     return {'result':result,'expression':expression}
 
 

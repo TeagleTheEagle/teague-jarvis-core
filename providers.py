@@ -134,6 +134,8 @@ def live_health():
 
 
 def chat(messages, tools, emit, cancel, vision=False):
+    if cancel.is_set():
+        return None
     if os.getenv('JARVIS_PROVIDER', '').lower() == 'gemini':
         return gemini_chat(messages, tools, emit, cancel, vision)
     use_openai = bool(os.getenv('OPENAI_API_KEY') and os.getenv('JARVIS_PROVIDER', 'groq').lower() == 'openai')
@@ -162,7 +164,11 @@ def chat(messages, tools, emit, cancel, vision=False):
         if tools and not vision:
             payload['tools']=[{'type':'function',**t['function'],'strict':False} for t in tools]
             payload['parallel_tool_calls']=False
+        if cancel.is_set():
+            return None
         result=request('https://api.openai.com/v1/responses',payload,{'Authorization':f'Bearer {key}'},timeout=120)
+        if cancel.is_set():
+            return None
         if result.get('status') in ('incomplete','failed'):
             raise ProviderError('OpenAI response did not complete. Please narrow the request and retry.')
         output=result.get('output',[])
@@ -191,18 +197,34 @@ def chat(messages, tools, emit, cancel, vision=False):
     # keep streaming for Groq, while still emitting the completed answer to the UI.
     if use_openai:
         body['stream'] = False
+        deadline = time.monotonic() + 120
+        def attempt():
+            if cancel.is_set():
+                return None
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise ProviderError('OpenAI request time limit exceeded.')
+            return request(endpoint, body, {'Authorization': f'Bearer {key}'}, timeout=remaining)
         try:
             try:
-                result = request(endpoint, body, {'Authorization': f'Bearer {key}'}, timeout=120)
+                result = attempt()
             except ProviderError as first:
+                if cancel.is_set():
+                    return None
                 if 'connection failed' not in str(first).lower() and 'timed out' not in str(first).lower():
                     raise
-                time.sleep(3)
-                result = request(endpoint, body, {'Authorization': f'Bearer {key}'}, timeout=120)
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise ProviderError('OpenAI request time limit exceeded.')
+                if cancel.wait(min(3, remaining)):
+                    return None
+                result = attempt()
         except ProviderError as exc:
             if 'HTTP 429' in str(exc):
                 exc.retry_after = 30
             raise
+        if cancel.is_set():
+            return None
         choice = (result.get('choices') or [{}])[0]
         if choice.get('finish_reason') == 'length':
             raise ProviderError('The response reached its token limit. Please narrow the request or split it into smaller steps.')

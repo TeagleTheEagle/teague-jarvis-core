@@ -161,6 +161,7 @@ class Store:
         with self.connect() as db:
             db.execute('DELETE FROM messages WHERE conversation=?', (conversation,))
             db.execute('DELETE FROM turn_evidence WHERE conversation=?', (conversation,))
+            db.execute('DELETE FROM research WHERE conversation=?', (conversation,))
 
     def reminder(self, title, seconds):
         if not isinstance(title, str) or not title.strip() or len(title) > 300:

@@ -28,7 +28,7 @@ async function start(){
  const ready=await backend.ready;origin=ready.origin;
  require('node:fs').writeFileSync(sessionFile,JSON.stringify({origin,token:ready.token,created:new Date().toISOString()}),'utf8');
  const ses=session.fromPartition('jarvis-desktop'); // memory-only session
- ses.webRequest.onBeforeSendHeaders((details,callback)=>{const headers={...details.requestHeaders};if(trusted(details.url,origin))headers['X-Jarvis-Desktop']=ready.token;else delete headers['X-Jarvis-Desktop'];callback({requestHeaders:headers});});
+ ses.webRequest.onBeforeSendHeaders((details,callback)=>{const headers={...details.requestHeaders};for(const key of Object.keys(headers))if(key.toLowerCase()==='x-jarvis-desktop')delete headers[key];if(trusted(details.url,origin))headers['X-Jarvis-Desktop']=ready.token;callback({requestHeaders:headers});});
  let micApproved=Boolean(preferences.microphoneAllowed);
  ses.setPermissionCheckHandler((contents,permission,requestingOrigin,details)=>((permission==='media'&&micApproved&&details.mediaType!=='video')||(permission==='display-capture'&&capture?.source&&Date.now()<liveGrantUntil))&&contents===win?.webContents&&trusted(requestingOrigin,origin));
  ses.setPermissionRequestHandler(async(contents,permission,callback,details)=>{
