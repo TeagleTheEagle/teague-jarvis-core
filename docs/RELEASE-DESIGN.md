@@ -1,6 +1,7 @@
 # JARVIS release design (Stage 6 FINAL package, Stage 7 installer)
 
-Status: **proposed** 2026-10-01, for owner approval before construction.
+Status: **approved by the owner 2026-10-01** (the four choices below, as built; see
+"Owner decision"). Proposed earlier the same day.
 Governing criteria: reference/governing/STAGE6-MASTER-V1.txt Gates 17–20 (as amended by
 AMENDMENT-v2), and the Stage 7 section of 1241140b (installer, update, uninstall,
 reinstall, failure paths, release regression, release manifest).
@@ -58,7 +59,21 @@ touch memory or keys. One Core per data folder is already enforced (core_lock.py
 - Production cutover (switching your everyday JARVIS) and Stage 7 start.
 - Entering API keys (config\.env) on any machine.
 
-## Open choices (defaults proposed)
+## Owner decision 2026-10-01
+
+**Approved**, as built and rehearsed in `docs/release-rehearsal-20261001/`:
+
+| Choice | Approved as built |
+|---|---|
+| Installer form | Hash-verified zip containing `install.cmd`, which runs `installer.py` with the release's bundled Python (in place of the `install.ps1` / `maintenance.ps1` proposed below; same actions: install, update, rollback, uninstall, verify, status). Per user, no administrator rights. |
+| Models | Bundled in the release (Whisper base.en, openWakeWord), hash-pinned in the manifest. |
+| Python | CPython 3.12.10 embeddable (x64) with locked site-packages, inside the release. |
+| Personality/preferences | `config\personality.txt` (installer copies the default once) and `config\preferences.json` (desktop app copies the default on first run); never overwritten by update, rollback or uninstall. |
+
+This approves the release design only. Gate 16R, the Stage 6 tokens, FINAL selection,
+production cutover and Stage 7 remain separate owner decisions.
+
+## Open choices (as originally proposed)
 
 | Choice | Proposed default | Why |
 |---|---|---|

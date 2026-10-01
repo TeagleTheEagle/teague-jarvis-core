@@ -21,8 +21,8 @@ only records where the work stands. Historical handover context: `docs/PROJECT-C
 
 Owner only (Claude must stop and ask, never infer or pre-stage tokens):
 
-1. Confirm the release design choices in `docs/RELEASE-DESIGN.md` (zip + `install.cmd`,
-   bundled models, Python 3.12.10, personality in `config\`).
+1. ~~Confirm the release design choices~~ **Done: approved by the owner 2026-10-01**
+   (recorded in `docs/RELEASE-DESIGN.md`, "Owner decision").
 2. Gate 16R: create the fresh Windows 11 VM (VirtualBox) and give `RESUME_STAGE6_FRESH_VM`.
    ISO: `D:\C-drive-overflow\Users\jonny\Downloads\Win11_25H2_English_x64_v2.iso`.
    This spends the last Stage 6 attempt.
