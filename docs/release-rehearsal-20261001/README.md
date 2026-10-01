@@ -112,6 +112,78 @@ Full regression on 1.0.7 itself (`regression-1.0.7-report.json`): 316 Python, 34
 because build-time files that record the build folder (bytecode, pip console-script
 launchers and their RECORD files) differ between releases; the sources do not.
 
+## 6. Backup/restore and Gate 17 preparation: releases 1.0.8 to 1.0.10 (later on 2026-10-01)
+
+| Release | Commit | Change |
+|---|---|---|
+| 1.0.8-d326428391cc | d326428 | regression tests for the main-desktop header and delete/admission defects (15a1ad1) |
+| 1.0.9-37eb838823dc | 37eb838 | backup/restore from an installed release; installer phase timings |
+| 1.0.10-915e906516dc | 915e906 | owner-config location follows the installation; offline voice check uses the bundled model; zip 525,619,975 bytes, SHA-256 `a945b38a3aff733d3228d617812c8ab7f85f0f8b09c66b2aaed5212c2ec771d4` |
+
+**1.0.8 regression:** 318 Python, 36 desktop, 18 Intelligence, 16 JS scripts, all pass
+(`regression-1.0.8-report.json`).
+
+**1.0.9 regression:** desktop 36, Intelligence 18 and the 16 scripts pass; **1 Python
+failure** (`test_personal_config_only_when_asked`): with the suite running inside an
+installed layout, `switch_over` wrote a synthetic installation's personality into the
+process's own config folder. A real semantics defect in that day's change (the config
+location followed the process environment, not the installation being operated on), caught
+only because the packaged regression runs the suite with `JARVIS_*` set. Fixed in 1.0.10
+(`runtime_paths.config_dir_for`); the affected tests now run both normally and under an
+installed-style environment.
+
+Defects in the packaged layout found while designing the Gate 18 rehearsal, all fixed
+with tests before 1.0.10 (commits 37eb838, f033546, and the config-location fix):
+
+1. `recovery.py` / `switch_over.py` command lines looked for data beside the program;
+   the installed release keeps it in `<home>\data`. An installed release is now recognised
+   from its own layout, so the documented commands work without the launcher's environment.
+2. Backups of an installed release left out the owner's `personality.txt` and
+   `preferences.json` (they live in `config\`, not beside the code).
+3. `switch_over --include-personal-config` wrote into the release's program files, which
+   would have broken verification; it writes to `config\` now.
+4. `check_voice_offline.py` loaded Whisper from a development path (`app\data\...`) and
+   would have failed on the VM; it now uses the Core's own model location.
+5. The config-location semantics defect above.
+6. Found by the Gate 18 rehearsal against 1.0.10 (step 2 failed, HTTP 400 "PermissionError
+   13"): a backup could not be made while the Core was running, because the backup read
+   `data\core.lock`, which the one-Core lock (added the same day) holds open. The backup
+   inventory now skips the live Core files, `data\logs` (the documentation already said
+   logs are excluded; the code did not) and `.jarvis-session.json`, which carries the Core
+   token and must never be in a backup. Fixed in 1.0.11 with a test that holds a real lock.
+
+The Core now reports `installed_release` (from the release manifest) in `/api/state`,
+and the installer reports per-phase seconds, for the Gate 17–19 identity and timing evidence.
+
+**1.0.10 regression** (`regression-1.0.10-report.json`): 324 Python, 36 desktop, 18
+Intelligence, 16 JS scripts, all pass.
+
+**1.0.10 zip install** (`zip_install_rehearsal-1.0.10.output.txt`): hash matches the
+record; `install.cmd` installs in 41 s; launch (8 processes, Core answering); verify after
+use; uninstall removes 10,645 program files, keeps `data`/`config`/`profile`, 0 processes,
+0 leftover program files. The running Core reported `installed_release`
+`1.0.10-915e906516dc` and `source_revision e9c5a87060d78190` (Gate 18 step 1).
+
+**Gate 18 rehearsal, 1.0.8 → 1.0.10** (`gate18_rehearsal.py`, output
+`gate18_rehearsal-1.0.10.output.txt`): install A (1.0.10), owner personality in `config\`,
+memories saved; backup through the Core, hash recorded, rehearsal verified, the shipped
+command line verifies it with no environment; owner configuration present in the backup;
+disposable target B (1.0.8 then 1.0.10, so a rollback exists); switch-over dry run and
+import with personal config; restored data and config before launch, program files still
+verify; startup on restored data with identity, duplicate-Core fencing (a second launch
+joins the same Core), shutdown; rollback with the restored data in place; backup source
+unchanged. Against 1.0.10 the run **failed at step 2** (defect 6 above); rerun against
+1.0.11: RESULT_PENDING_GATE18
+
+**Gate 17 guest script, local rehearsal** (`tools/guest/Invoke-Gate17.ps1`, output
+`gate17_local_rehearsal-1.0.10.output.txt`; sandbox home on D:, `-NoShortcuts`,
+`-SkipBaseline` because this is a development PC): RESULT_PENDING_GATE17
+
+Limitation recorded for both rehearsals: "clean shutdown" is scripted through
+`/api/shutdown` (the Core stops on request and releases its lock); the desktop shell then
+shows "Core stopped" and is ended by the harness. The owner's tray "Quit JARVIS completely"
+path is not scriptable and is a manual step on the VM.
+
 ## Not covered (still needed before or during Stage 6)
 
 - Desktop and Startup shortcuts (all runs used `--no-shortcuts`; creating them changes the

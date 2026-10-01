@@ -87,11 +87,15 @@ function StopJarvis {
 function Release {
     $current = (Get-Content -LiteralPath (Join-Path $InstallHome 'current.json') -Raw | ConvertFrom-Json).release
     $dir = Join-Path $InstallHome ('releases\' + $current)
-    @{ id = $current; python = (Join-Path $dir 'python\python.exe'); app = (Join-Path $dir 'app'); installer = (Join-Path $Staging 'installer.py') }
+    @{ id = $current; python = (Join-Path $dir 'python\python.exe'); app = (Join-Path $dir 'app') }
 }
 function Installer([string[]] $arguments) {
-    $r = Release
-    $out = & $r.python $r.installer @arguments --home $InstallHome $(if ($NoShortcuts) { '--no-shortcuts' }) 2>&1 | Out-String
+    # Maintenance runs with the PACKAGE's own Python (installer.py ships beside release\ and is not
+    # installed). Never run it with the installed release's Python: uninstall and update first stop
+    # every process running from the install folder, which would include that interpreter.
+    $python = Join-Path $Staging 'release\python\python.exe'
+    $out = & $python (Join-Path $Staging 'installer.py') @arguments --home $InstallHome $(if ($NoShortcuts) { '--no-shortcuts' }) 2>&1 | Out-String
+    if ([string]::IsNullOrWhiteSpace($out)) { return @{ status = 'error'; output = '(no output)' } }
     try { $out | ConvertFrom-Json } catch { @{ status = 'error'; output = $out.Substring(0, [Math]::Min(1500, $out.Length)) } }
 }
 
@@ -246,7 +250,7 @@ if ($Phase -eq 'Uninstall' -or $Phase -eq 'All') {
     if (Test-Path -LiteralPath $logs) { Copy-Item -LiteralPath $logs -Destination (Join-Path $script:EvidenceDir 'core-logs') -Recurse -Force }
     $u = Installer @('uninstall')
     $leftover = @(Get-ChildItem -LiteralPath (Join-Path $InstallHome 'releases') -Recurse -File -ErrorAction SilentlyContinue).Count
-    $data = [ordered]@{ status = 'PASS'; result = $u.status; program_files_removed = $u.program_files_removed; kept = $u.kept; leftover_program_files = $leftover; processes = (Processes).Count
+    $data = [ordered]@{ status = 'PASS'; result = $u.status; output = $u.output; program_files_removed = $u.program_files_removed; kept = $u.kept; leftover_program_files = $leftover; processes = (Processes).Count
                         data_kept = (Test-Path -LiteralPath (Join-Path $InstallHome 'data\jarvis.sqlite3')); config_kept = (Test-Path -LiteralPath (Join-Path $InstallHome 'config\personality.txt'))
                         desktop_shortcut_gone = -not (Test-Path -LiteralPath (Join-Path ([Environment]::GetFolderPath('Desktop')) 'JARVIS.lnk')); startup_shortcut_gone = -not (Test-Path -LiteralPath (Join-Path ([Environment]::GetFolderPath('Startup')) 'JARVIS.lnk')) }
     if ($u.status -ne 'uninstalled' -or $leftover -or $data.processes -or -not $data.data_kept -or -not $data.desktop_shortcut_gone -or -not $data.startup_shortcut_gone) { Fail 'U1-uninstall' $data 'uninstall left program files, processes or shortcuts, or removed data' }

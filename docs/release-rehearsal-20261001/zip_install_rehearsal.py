@@ -1,14 +1,14 @@
 """Distributable zip rehearsal: hash check, Windows extraction, install.cmd into a sandbox home
 (no shortcuts), launch, verify, uninstall. Never runs install.cmd without --home."""
-import hashlib, json, subprocess, time, urllib.request
+import hashlib, json, subprocess, sys, time, urllib.request
 from pathlib import Path
 
 WORK = Path(r'D:\JARVIS-release-work')
-RELEASE_ID = '1.0.7-6c356bf982de'
+RELEASE_ID = sys.argv[1]
 RECORD = json.loads((WORK / 'release' / f'JARVIS-{RELEASE_ID}.release.json').read_text(encoding='utf-8'))
 ZIP = WORK / 'release' / RECORD['zip']
-EXTRACT = WORK / 'zip-test' / 'extracted'
-HOME = WORK / 'zip-test' / 'sandbox-home'
+EXTRACT = WORK / f'zip-test-{RELEASE_ID}' / 'extracted'
+HOME = WORK / f'zip-test-{RELEASE_ID}' / 'sandbox-home'
 
 
 def report(step, **facts):

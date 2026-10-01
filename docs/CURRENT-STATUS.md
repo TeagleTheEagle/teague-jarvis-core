@@ -15,9 +15,11 @@ only records where the work stands. Historical handover context: `docs/PROJECT-C
 - **The VM isolation proof is the blocker**, not the package. Read
   `docs/stage6-freshvm/STAGE6-COMPLETION-PLAN.md`: options A/B/C and decisions D1–D9 await
   the owner (Claude recommends option B).
-- **Release candidate:** 1.0.8 (next build after 15a1ad1) once it passes regression and the
-  zip rehearsal. Previous fully rehearsed build, superseded only by 15a1ad1's
-  `desktop/main.cjs` change: **1.0.7-6c356bf982de**, with its distributable zip:
+- **Release candidate: 1.0.10** (built from 915e906; regression, zip, Gate 18 and local
+  Gate 17 rehearsals were running at the last status update, results in
+  `docs/release-rehearsal-20261001/README.md` section 6). 1.0.8 passed the full regression;
+  1.0.9 exposed a config-location defect fixed in 1.0.10. Earlier fully rehearsed build,
+  now superseded: **1.0.7-6c356bf982de**, with its distributable zip:
   `D:\JARVIS-release-work\release\JARVIS-1.0.7-6c356bf982de.zip`
   (525,590,739 bytes, SHA-256 `024c6166866a505700019d25f95e1e8f99dc34ab2f0fa011c81be6bbd4995396`).
   Full regression, zip install, lifecycle and interrupted-update evidence:
@@ -81,6 +83,15 @@ because creating them changes the owner's real Desktop/Startup folders). Check o
 - A test "fresh account" must use a realistic layout (profile, `AppData\Local`,
   `AppData\Roaming`, `AppData\Local\Temp`); one shared folder makes browsers refuse to start.
 - Some docs use CRLF line endings; check before rewriting files with scripts.
+- The packaged regression runs the test suite with `JARVIS_DATA_DIR/CONFIG_DIR/MODELS_DIR`
+  set. Tests and tools must not assume the process environment describes the installation
+  under test (use `runtime_paths.config_dir_for(root)`); run suspect modules under an
+  installed-style environment before building.
+- `$Home` and `$args` are PowerShell automatic variables: never use them as parameter or
+  variable names in scripts (`$HOME` is read-only).
+- Do not read the sealed P0 evidence folder `D:\JARVIS-S6-FRESHVM\evidence\P0\` or the
+  protected VirtualBox paths; both are owner-only. (This session read two files from the
+  P0 folder, read-only, before noticing the rule; disclosed to the owner.)
 
 ## Session log
 
@@ -96,3 +107,12 @@ because creating them changes the owner's real Desktop/Startup folders). Check o
   (15a1ad1; all three were already fixed in 60c89f1). Read the Stage 6 governing records:
   corrected the "4/5" misreading, found P0 already passed and the account created, and that
   the VirtualBox isolation proof (§7(b)/(e)) is unresolved. Wrote the completion plan.
+- **2026-10-01, later still (Fable 5.1).** Designing the Gate 18 rehearsal against the
+  packaged layout found five defects (command-line data path, owner config missing from
+  backups, restore writing into program files, voice check on a development path, config
+  location following the process environment), all fixed with tests; the Core reports
+  `installed_release`; the installer reports phase timings. New tools: package-ISO builder
+  (`tools/New-PackageIso.ps1`, exercised), Gate 17 guest script draft
+  (`tools/guest/Invoke-Gate17.ps1`), P0–P5 checkpoint draft (`tools/host/`, dry mode only).
+  1.0.8 regression passed; 1.0.9 had the config-location failure; 1.0.10 built with the fix,
+  rehearsals pending at the time of writing. Nothing pushed or synced.

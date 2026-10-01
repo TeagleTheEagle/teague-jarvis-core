@@ -1,0 +1,252 @@
+{
+  "release_id": "1.0.9-37eb838823dc",
+  "commit": "37eb838823dcc5458215bd69c3ae4fee84a65237",
+  "package": "D:\\JARVIS-release-work\\release\\JARVIS-1.0.9-37eb838823dc",
+  "release_verified_before_and_after_copy": true,
+  "test_files_added_to_copy": 69,
+  "runtime": {
+    "python": "release\\python\\python.exe",
+    "node": "bundled electron (ELECTRON_RUN_AS_NODE)",
+    "system_node_used": false,
+    "dev_venv_used": false
+  },
+  "passed": false,
+  "suites": [
+    {
+      "suite": "python unittest",
+      "exit_code": 1,
+      "seconds": 243.9,
+      "log": "python_unittest.log",
+      "tail": [
+        "..............................................................................................................................................................................................................................................................................F...................................................",
+        "======================================================================",
+        "FAIL: test_personal_config_only_when_asked (test_switch_over.SwitchOverTests.test_personal_config_only_when_asked)",
+        "----------------------------------------------------------------------",
+        "Traceback (most recent call last):",
+        "  File \"D:\\JARVIS-release-work\\regression-1.0.9\\release\\app\\test_switch_over.py\", line 74, in test_personal_config_only_when_asked",
+        "    self.assertEqual((self.new / 'personality.txt').read_text(encoding='utf-8'), 'Old personality.\\n')",
+        "AssertionError: 'New personality.\\n' != 'Old personality.\\n'",
+        "- New personality.",
+        "? ^^^",
+        "+ Old personality.",
+        "? ^^^",
+        "",
+        "",
+        "----------------------------------------------------------------------",
+        "Ran 322 tests in 240.772s",
+        "",
+        "FAILED (failures=1)"
+      ]
+    },
+    {
+      "suite": "desktop node --test",
+      "exit_code": 0,
+      "seconds": 103.4,
+      "log": "desktop_node_--test.log",
+      "tail": [
+        "\u2714 closing cancels undispatched requests but permits cooperative detach (0.2621ms)",
+        "\u2714 bridge exit rejects active and queued calls and ignores stale replies (0.1523ms)",
+        "\u2714 queue limit rejects excess work without sending it (0.1782ms)",
+        "\u2714 ordinary operation denial does not poison a healthy transport (0.1179ms)",
+        "\u2714 worker send failure fails closed without a leaked timer (0.1343ms)",
+        "\u2714 media watchdog expiry stops locally without transport and rejects stale callbacks (6.1903ms)",
+        "\u2714 late grant after local stop never starts modeled capture (0.5703ms)",
+        "\u2714 media deadline includes network latency and enforces returned epoch/validity (0.4523ms)",
+        "\u2714 renewal denied stops owned media and no reacquisition follows (1.1013ms)",
+        "\u2714 capture/playback stop and request cancellation are separate; another adapter is unaffected (0.4583ms)",
+        "\u2714 fresh adapter has no grants; transport loss cannot revive old callbacks (0.2062ms)",
+        "\u2714 preserves exact Windows creation-time integer (0.4267ms)",
+        "\u2714 unsafe Number rejected (0.1355ms)",
+        "\u2714 canonical protocol bytes sorted with Python-compatible ASCII escapes (0.1092ms)",
+        "\u2714 missing native bridge fails closed (0.5171ms)",
+        "\u2714 production identity refused before bridge load (0.2205ms)",
+        "\u2714 renderer cannot load native functions (0.0914ms)",
+        "\u2139 tests 36",
+        "\u2139 suites 0",
+        "\u2139 pass 36",
+        "\u2139 fail 0",
+        "\u2139 cancelled 0",
+        "\u2139 skipped 0",
+        "\u2139 todo 0",
+        "\u2139 duration_ms 97687.1961"
+      ]
+    },
+    {
+      "suite": "intelligence node --test",
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "intelligence_node_--test.log",
+      "tail": [
+        "\u2714 no token for http://127.0.0.1:43210/api/state (0.5033ms)",
+        "\u2714 no token for http://127.0.0.1:4321@untrusted.invalid/collect (0.6099ms)",
+        "\u2714 no token for http://localhost:4321/api/state (0.5124ms)",
+        "\u2714 no token for https://127.0.0.1:4321/api/state (0.4667ms)",
+        "\u2714 no token for http://127.0.0.2:4321/api/state (0.4049ms)",
+        "\u2714 no token for https://untrusted.invalid/ (0.423ms)",
+        "\u2714 no token for file:///fixture.html (0.7495ms)",
+        "\u2714 no token for data:text/html,fixture (0.4929ms)",
+        "\u2714 no token for not a URL (0.4735ms)",
+        "\u2714 cross-origin redirect drops inherited token regardless of header casing (1.1613ms)",
+        "\u2714 trusted requests replace supplied credential variants with one canonical token (0.3955ms)",
+        "\u2714 missing session still opens local prototype without credential hook (0.448ms)",
+        "\u2714 failed local Core load retains existing local-file fallback (0.4433ms)",
+        "\u2714 explicit Stage4 TEST branch bypasses ordinary client setup (0.753ms)",
+        "\u2714 application result may contain finite timestamps without changing identity transcript parsing (1.0104ms)",
+        "\u2714 invalid namespace cannot initialize an Electron TEST profile (0.2297ms)",
+        "\u2714 Intelligence external renderer is inert without gated preload (0.865ms)",
+        "\u2139 tests 18",
+        "\u2139 suites 0",
+        "\u2139 pass 18",
+        "\u2139 fail 0",
+        "\u2139 cancelled 0",
+        "\u2139 skipped 0",
+        "\u2139 todo 0",
+        "\u2139 duration_ms 80.9414"
+      ]
+    },
+    {
+      "suite": "test_barge_in.cjs",
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "test_barge_in.cjs.log",
+      "tail": [
+        "PASS: sustained interruption, pre-roll, silence/noise rejection, disabled playback, ended conversation and stop."
+      ]
+    },
+    {
+      "suite": "test_conversation_voice.cjs",
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "test_conversation_voice.cjs.log",
+      "tail": [
+        "Conversation mode: persistent session, single nudge, pause tolerance, resume and exact end phrase passed."
+      ]
+    },
+    {
+      "suite": "test_local_voice_main.cjs",
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "test_local_voice_main.cjs.log",
+      "tail": [
+        "Main local voice: continuous audio, playback suppression, PCM and stale-wake checks passed."
+      ]
+    },
+    {
+      "suite": "test_navigation.cjs",
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "test_navigation.cjs.log",
+      "tail": [
+        "Navigation commands and non-navigation exclusions passed."
+      ]
+    },
+    {
+      "suite": "test_proactive_voice.cjs",
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "test_proactive_voice.cjs.log",
+      "tail": [
+        "PASS: invited conversation, muted microphone, end phrase latch and explicit restart."
+      ]
+    },
+    {
+      "suite": "test_prompt_speech.cjs",
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "test_prompt_speech.cjs.log",
+      "tail": [
+        "PASS: prompt acknowledgement, explicit read-aloud and clarification handling."
+      ]
+    },
+    {
+      "suite": "test_screen_intent.cjs",
+      "exit_code": 0,
+      "seconds": 0.0,
+      "log": "test_screen_intent.cjs.log",
+      "tail": [
+        "PASS: screen session voice intent and unrelated conversation."
+      ]
+    },
+    {
+      "suite": "test_screen_vision.cjs",
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "test_screen_vision.cjs.log",
+      "tail": [
+        "PASS: unified start, observations, fresh question capture, deduplication, stop, limit and cancelled picker."
+      ]
+    },
+    {
+      "suite": "test_timer_fast_path.cjs",
+      "exit_code": 0,
+      "seconds": 0.0,
+      "log": "test_timer_fast_path.cjs.log",
+      "tail": [
+        "PASS: timer fast path, qualified timing, empty/expired/multiple timers, read failure, cancellation, configured cloud voice."
+      ]
+    },
+    {
+      "suite": "test_voice.cjs",
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "test_voice.cjs.log",
+      "tail": [
+        "Voice tests passed: wake gate, interruption, silence, timeout, mute, WAV format."
+      ]
+    },
+    {
+      "suite": "test_voice_cancellation.cjs",
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "test_voice_cancellation.cjs.log",
+      "tail": [
+        "PASS: superseded speech aborts; cancellation is silent; old cleanup preserves current request."
+      ]
+    },
+    {
+      "suite": "test_voice_diagnostics.cjs",
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "test_voice_diagnostics.cjs.log",
+      "tail": [
+        "PASS: live RMS during playback/processing, no monitoring requests, stopped capture and bounded metadata."
+      ]
+    },
+    {
+      "suite": "test_voice_lab.cjs",
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "test_voice_lab.cjs.log",
+      "tail": [
+        "Voice lab: ordered audio, cancellation and overload checks passed."
+      ]
+    },
+    {
+      "suite": "test_voice_recovery.cjs",
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "test_voice_recovery.cjs.log",
+      "tail": [
+        "PASS: selected-input recovery, standby, mute cancellation and bounded retries."
+      ]
+    },
+    {
+      "suite": "test_wake_race.cjs",
+      "exit_code": 0,
+      "seconds": 0.0,
+      "log": "test_wake_race.cjs.log",
+      "tail": [
+        "PASS: stale pause/reset failures ignored; current failures reported; new session preserved."
+      ]
+    },
+    {
+      "suite": "test_wake_startup.cjs",
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "test_wake_startup.cjs.log",
+      "tail": [
+        "PASS: preparation precedes capture; mute during preparation prevents capture."
+      ]
+    }
+  ]
+}
