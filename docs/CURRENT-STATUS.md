@@ -8,10 +8,16 @@ only records where the work stands. Historical handover context: `docs/PROJECT-C
 
 ## Where we are
 
-- **Stage 6: INCOMPLETE.** Fresh-VM route active, 4 of 5 attempts used, so one left.
-  Experiment 5 unconsumed. Stage 7 not started. Production cutover not authorized.
-- **Everything Claude can do locally for Stage 6 is done.** The next steps are the owner's.
-- **Release candidate: 1.0.7-6c356bf982de**, built with its distributable zip:
+- **Stage 6: INCOMPLETE.** Fresh-VM route active, gate pointer OWNER STOP #1R. P0 PASS
+  (2026-09-30, sealed); owner created `jarvis-s6-val`. Experiment 5 unconsumed, its budget
+  frozen at 4/5 (that is the experiment budget, **not** a count of Stage 6 attempts).
+  Stage 7 not started. Production cutover not authorized.
+- **The VM isolation proof is the blocker**, not the package. Read
+  `docs/stage6-freshvm/STAGE6-COMPLETION-PLAN.md`: options A/B/C and decisions D1–D9 await
+  the owner (Claude recommends option B).
+- **Release candidate:** 1.0.8 (next build after 15a1ad1) once it passes regression and the
+  zip rehearsal. Previous fully rehearsed build, superseded only by 15a1ad1's
+  `desktop/main.cjs` change: **1.0.7-6c356bf982de**, with its distributable zip:
   `D:\JARVIS-release-work\release\JARVIS-1.0.7-6c356bf982de.zip`
   (525,590,739 bytes, SHA-256 `024c6166866a505700019d25f95e1e8f99dc34ab2f0fa011c81be6bbd4995396`).
   Full regression, zip install, lifecycle and interrupted-update evidence:
@@ -23,11 +29,14 @@ Owner only (Claude must stop and ask, never infer or pre-stage tokens):
 
 1. ~~Confirm the release design choices~~ **Done: approved by the owner 2026-10-01**
    (recorded in `docs/RELEASE-DESIGN.md`, "Owner decision").
-2. Gate 16R: create the fresh Windows 11 VM (VirtualBox) and give `RESUME_STAGE6_FRESH_VM`.
-   ISO: `D:\C-drive-overflow\Users\jonny\Downloads\Win11_25H2_English_x64_v2.iso`.
-   This spends the last Stage 6 attempt.
-3. `RESUME_STAGE6_RECOVERY` before Gate 18.
+2. Choose a way forward in `docs/stage6-freshvm/STAGE6-COMPLETION-PLAN.md` (A, B or C)
+   and settle D1–D9. Only then an execution prompt for Gate 16R can be drafted for approval.
+3. `RESUME_STAGE6_FRESH_VM` with that approved prompt; `RESUME_STAGE6_RECOVERY` before Gate 18.
 4. After Stage 6 passes: FINAL selection, switching the everyday JARVIS over, Stage 7.
+   The owner's freeze from P0 still applies: keep VirtualBox closed under the owner account
+   and do not install, upgrade or repair it until Gate 20.
+
+Claude's local preparation (no approval needed) is listed in section 9 of that plan.
 
 Not yet tested anywhere: Desktop and Startup shortcuts (all rehearsals used `--no-shortcuts`,
 because creating them changes the owner's real Desktop/Startup folders). Check on the VM.
@@ -82,3 +91,8 @@ because creating them changes the owner's real Desktop/Startup folders). Check o
   Edge with a retry and failures logged to core.log. Lifecycle 1.0.4 → 1.0.6, zip install of
   1.0.7, and full regression of 1.0.6 and 1.0.7 all pass. Freed C: from 5 GB to 20 GB by
   moving files to D:. Nothing pushed or synced.
+- **2026-10-01, later.** Owner approved the release design (recorded, e5daefc). Added the
+  missing regression tests for two of the three defects from the preparation review
+  (15a1ad1; all three were already fixed in 60c89f1). Read the Stage 6 governing records:
+  corrected the "4/5" misreading, found P0 already passed and the account created, and that
+  the VirtualBox isolation proof (§7(b)/(e)) is unresolved. Wrote the completion plan.
