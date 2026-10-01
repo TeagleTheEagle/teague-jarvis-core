@@ -44,8 +44,24 @@ Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
 
 Always pass `--user-data-dir`. The workspace build and the live installation are the
 same Electron app: without it they would share `%APPDATA%\jarvis-desktop` and its
-single-instance lock. The Core it starts uses the repository's own `data\` folder
-(fresh database, no personal memory) and listens on 127.0.0.1 only.
+single-instance lock. The Core uses the repository's own `data\` folder (fresh
+database, no personal memory) and listens on 127.0.0.1 only.
+
+## One Core, many clients (background Core)
+
+The desktop app no longer owns the Core. On launch it joins the running Core through
+`data\core-connection.json`, or starts one with `server.py --background` if none is
+running. Closing the desktop app (window or tray "Close desktop app") leaves JARVIS
+running for the Intelligence window and future phone/glasses clients; tray
+"Quit JARVIS completely" stops the Core. `Start JARVIS.cmd` now opens the desktop app.
+
+- Only one Core may own a data folder (`data\core.lock`, released by Windows on any
+  exit or crash). A second start is refused with a clear message.
+- `data\core-owner.json`: pid and port only. `data\core-connection.json`: origin and
+  the client token (same trust level as the old desktop session file; git-ignored,
+  removed when the Core stops). Core output goes to `data\logs\core.log`.
+- To stop a dev Core without the tray: use "Quit JARVIS completely", or end the
+  `python3.12.exe ... server.py --background` process.
 
 Without a `.env` file no AI provider key is present, so AI replies are not expected
 to work in this build (provider behaviour without keys not yet verified). Real provider keys are placed by the

@@ -20,4 +20,72 @@ function startBackend(root,options={}){
  async function quit(){if(!child.pid||child.exitCode!==null||child.killed)return;await new Promise(resolve=>{const timer=setTimeout(()=>{child.kill();resolve();},4000);child.once('exit',()=>{clearTimeout(timer);resolve();});child.stdin.end('quit\n');});}
  return {child,ready,stop,quit};
 }
-module.exports={startBackend};
+
+// ONE CORE, MANY CLIENTS: the shared background Core outlives any one app. Clients
+// find it through <data>/core-connection.json and start it only if none is running.
+const fs=require('node:fs');
+const LOCAL_ORIGIN=/^http:\/\/127\.0\.0\.1:\d+$/;
+function connectionFile(root,dataDir){return path.join(dataDir||path.join(root,'data'),'core-connection.json');}
+function readConnection(file){
+ try{const link=JSON.parse(fs.readFileSync(file,'utf8'));if(LOCAL_ORIGIN.test(link.origin)&&typeof link.token==='string'&&link.token.length>=32)return link;}catch{}
+ return null;
+}
+async function coreAlive(link){
+ try{const response=await fetch(link.origin+'/',{headers:{'X-Jarvis-Desktop':link.token},signal:AbortSignal.timeout(3000)});return response.status===200&&(await response.text()).includes('JARVIS');}catch{return false;}
+}
+function spawnBackgroundCore(root,dataDir){
+ const logs=path.join(dataDir||path.join(root,'data'),'logs');fs.mkdirSync(logs,{recursive:true});
+ const out=fs.openSync(path.join(logs,'core.log'),'a');
+ const env={...process.env};delete env.JARVIS_DESKTOP_TOKEN;delete env.ELECTRON_RUN_AS_NODE;
+ const child=spawn(path.join(root,'.venv','Scripts','python.exe'),['-u',path.join(root,'server.py'),'--port','0','--background',...(dataDir?['--data-dir',dataDir]:[])],{cwd:root,detached:true,windowsHide:true,env,stdio:['ignore',out,out]});
+ fs.closeSync(out);child.unref();
+ let exitCode=null;child.once('exit',code=>{exitCode=code;});child.once('error',()=>{exitCode=-1;});
+ return {exited:()=>exitCode};
+}
+async function connectCore(root,options={}){
+ const file=connectionFile(root,options.dataDir);
+ let link=readConnection(file),started=false;
+ if(!(link&&await coreAlive(link))){
+  const launch=spawnBackgroundCore(root,options.dataDir);started=true;
+  const deadline=Date.now()+(options.timeoutMs||90000);
+  let refusedAt=0;
+  for(link=null;!link;){
+   if(Date.now()>deadline)throw new Error('JARVIS Core did not become ready within 90 seconds. See data/logs/core.log.');
+   await new Promise(r=>setTimeout(r,250));
+   const candidate=readConnection(file);
+   if(candidate&&await coreAlive(candidate)){link=candidate;break;}
+   const code=launch.exited();
+   if(code===3){
+    // Another Core owns this data folder. If it is a background Core started by another
+    // client at the same moment, its connection file appears shortly; attach to it.
+    started=false;refusedAt||=Date.now();
+    if(Date.now()-refusedAt>5000){const error=new Error('JARVIS is already running as the browser version, which other apps cannot join. Close it, then open JARVIS again.');error.code='CORE_ALREADY_RUNNING';throw error;}
+   }else if(code!==null){
+    const error=new Error('JARVIS Core exited during startup. See data/logs/core.log.');error.code='CORE_START_FAILED';throw error;
+   }
+  }
+ }
+ const {origin,token}=link;let cookie='';
+ async function request(route,body){
+  if(!cookie){const page=await fetch(origin+'/',{headers:{'X-Jarvis-Desktop':token},signal:AbortSignal.timeout(5000)});cookie=(page.headers.get('set-cookie')||'').split(';')[0];}
+  const response=await fetch(origin+route,{method:'POST',headers:{'X-Jarvis-Desktop':token,Cookie:cookie,'Content-Type':'application/json'},body:JSON.stringify(body||{}),signal:AbortSignal.timeout(10000)});
+  if(!response.ok)throw new Error('JARVIS Core refused '+route+' ('+response.status+').');
+  return response.json();
+ }
+ return {
+  origin,token,started,
+  ready:Promise.resolve({origin,token}),
+  alive:()=>coreAlive(link),
+  stop:()=>request('/api/cancel-all').catch(()=>{}),       // emergency stop; the Core keeps running
+  quit:async()=>{},                                         // closing an app never stops the shared Core
+  async shutdown(){                                          // "Quit JARVIS completely"
+   await request('/api/shutdown').catch(()=>{});
+   for(const deadline=Date.now()+10000;Date.now()<deadline&&await coreAlive(link);)await new Promise(r=>setTimeout(r,200));
+  },
+  watch(onLost,intervalMs=5000){                            // report a Core that stopped or crashed
+   let misses=0,timer=setInterval(async()=>{if(await coreAlive(link)){misses=0;return;}if(++misses>=3){clearInterval(timer);onLost();}},intervalMs);
+   return ()=>clearInterval(timer);
+  }
+ };
+}
+module.exports={startBackend,connectCore,readConnection};

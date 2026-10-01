@@ -25,3 +25,22 @@ test('one Core per data folder: a second desktop backend is refused, not started
   await second.quit();
  }finally{await first.quit();}
 });
+test('shared background Core: first app starts it, a second app joins it, closing an app keeps it running',{timeout:180000},async()=>{
+ const {connectCore}=require('../backend.cjs');
+ const root=path.resolve(__dirname,'../..');
+ const folder=fs.mkdtempSync(path.join(os.tmpdir(),'jarvis-shared-core-'));
+ const first=await connectCore(root,{dataDir:folder});
+ try{
+  assert.equal(first.started,true);
+  const second=await connectCore(root,{dataDir:folder});
+  assert.equal(second.started,false,'second app must join, not start another Core');
+  assert.equal(second.origin,first.origin);
+  assert.equal(second.token,first.token);
+  await second.stop();                       // emergency stop reaches the shared Core
+  await second.quit();                       // closing one app...
+  assert.equal(await first.alive(),true);    // ...leaves JARVIS running for the others
+  assert.equal((await fetch(first.origin+'/')).status,403,'the Core requires its client token');
+ }finally{await first.shutdown();}
+ assert.equal(await first.alive(),false);
+ assert.equal(fs.existsSync(path.join(folder,'core-connection.json')),false);
+});

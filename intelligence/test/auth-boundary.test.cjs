@@ -33,7 +33,8 @@ function host(link = {origin, token}, stage4 = false) {
       if (name === 'electron') return electron;
       if (name === 'node:path') return path;
       if (name === 'node:fs') return {readFileSync(file) {
-        assert.equal(path.basename(file), '.jarvis-session.json');
+        // The one Core's connection file first; the desktop session file as fallback.
+        assert.ok(['core-connection.json', '.jarvis-session.json'].includes(path.basename(file)), file);
         if (link === null) throw new Error('synthetic missing session');
         return JSON.stringify(link);
       }};

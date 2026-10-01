@@ -1,5 +1,13 @@
 $ErrorActionPreference = 'Stop'
 $jarvisRoot = $PSScriptRoot
+# ONE CORE, MANY CLIENTS: where the desktop app is installed, every launcher opens it and
+# it joins (or starts) the shared background Core. The browser-only Core below remains
+# only as a fallback for machines without the desktop app.
+$jarvisDesktopLauncher = Join-Path $jarvisRoot 'Start-Desktop.ps1'
+if ((Test-Path -LiteralPath (Join-Path $jarvisRoot 'desktop/node_modules/electron/dist/electron.exe')) -and (Test-Path -LiteralPath $jarvisDesktopLauncher)) {
+    & $jarvisDesktopLauncher
+    exit 0
+}
 $jarvisPython = Join-Path $jarvisRoot '.venv/Scripts/python.exe'
 if (-not (Test-Path -LiteralPath $jarvisPython)) {
     $jarvisBundledPython = Join-Path $env:USERPROFILE '.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe'

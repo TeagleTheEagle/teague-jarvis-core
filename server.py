@@ -870,6 +870,11 @@ class Handler(BaseHTTPRequestHandler):
                 if run:
                     run.cancel.set()
                 result = {'status': 'cancel requested'}
+            elif path == '/api/cancel-all':
+                # Emergency stop from any client of the one Core.
+                for run in list(self.app.runs.values()):
+                    run.cancel.set()
+                result = {'status': 'cancel requested'}
             elif path == '/api/settings':
                 result = self.app.store.save_settings(body)
             elif path == '/api/item':
@@ -1007,8 +1012,14 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=int(os.getenv('JARVIS_PORT', '8765')))
     parser.add_argument('--data-dir', default=str(ROOT / 'data'))
+    parser.add_argument('--background', action='store_true',
+                        help='Run as the shared background Core: it outlives any one app, and local '
+                             'clients attach through <data>/core-connection.json.')
     args = parser.parse_args()
     import core_lock
+    if args.background and not os.getenv('JARVIS_DESKTOP_TOKEN'):
+        # Every request must then carry this client token (see Handler.allowed).
+        os.environ['JARVIS_DESKTOP_TOKEN'] = secrets.token_hex(32)
     try:
         # One Core per data folder: claim ownership before touching the store.
         ownership = core_lock.CoreLock(args.data_dir)
@@ -1023,6 +1034,7 @@ def main():
         return
     ownership.publish(server.server_port)
     server.app = App(args.data_dir)
+    origin = f'http://127.0.0.1:{server.server_port}'
     from wearables.service import publish_connection
     wearable_connection = publish_connection(server)
     if os.getenv('JARVIS_DESKTOP_TOKEN'):
@@ -1041,8 +1053,13 @@ def main():
             for run in list(server.app.runs.values()):
                 run.cancel.set()
             server.shutdown()
-        threading.Thread(target=desktop_control, daemon=True).start()
-    print(f'JARVIS ready at http://127.0.0.1:{server.server_port}', flush=True)
+        if not args.background:
+            # An app-owned Core is controlled through its owner's stdin; a background
+            # Core has none and stops only through the authenticated /api/shutdown.
+            threading.Thread(target=desktop_control, daemon=True).start()
+    if args.background:
+        ownership.publish_connection(origin, os.environ['JARVIS_DESKTOP_TOKEN'])
+    print(f'JARVIS ready at {origin}', flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

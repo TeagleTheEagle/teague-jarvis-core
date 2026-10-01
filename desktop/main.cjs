@@ -4,12 +4,12 @@ if (process.argv.includes('--stage4-test')) {
 const {app,BrowserWindow,Tray,Menu,nativeImage,dialog,shell,session,ipcMain,desktopCapturer,screen,globalShortcut}=require('electron');
 const path=require('node:path');
 const {trusted,external}=require('./policy.cjs');
-const {startBackend}=require('./backend.cjs');
+const {connectCore}=require('./backend.cjs');
 const {ScreenCapture}=require('./capture.cjs');
 const {watchUpdates}=require('./local-updates.cjs');
 let updates;
 let companionWanted=false;
-let win,tray,backend,quitting=false,origin='',capture,companion,lastCompanionState,resumeMicOnShow=false,liveGrantUntil=0;
+let unwatchCore,win,tray,backend,quitting=false,origin='',capture,companion,lastCompanionState,resumeMicOnShow=false,liveGrantUntil=0;
 const sessionFile=path.join(__dirname,'.jarvis-session.json');
 const loginLaunch=process.argv.includes('--login-launch');
 const preferences=JSON.parse(require('node:fs').readFileSync(path.join(__dirname,'preferences.json'),'utf8').replace(/^\uFEFF/,''));
@@ -17,14 +17,14 @@ if(!app.requestSingleInstanceLock()){app.quit();}else{
  app.on('second-instance',()=>show());
  app.on('before-quit',event=>{if(!quitting){event.preventDefault();void quit();}});
  app.on('window-all-closed',()=>{});
- app.whenReady().then(start).catch(async(error)=>{if((process.argv.includes('--smoke-test')||process.argv.includes('--animation-test')||process.argv.includes('--live-test')))require('node:fs').writeFileSync(path.join(__dirname,'smoke-result.json'),JSON.stringify({passed:false,error:String(error)}));else dialog.showErrorBox('JARVIS desktop',error?.code==='CORE_ALREADY_RUNNING'?error.message+' Close the other JARVIS window (or the browser version) first: only one JARVIS Core may own its memory.':'The desktop shell could not start. The browser version has not been stopped. Check that the JARVIS Python environment exists.');await quit();});
+ app.whenReady().then(start).catch(async(error)=>{if((process.argv.includes('--smoke-test')||process.argv.includes('--animation-test')||process.argv.includes('--live-test')))require('node:fs').writeFileSync(path.join(__dirname,'smoke-result.json'),JSON.stringify({passed:false,error:String(error)}));else dialog.showErrorBox('JARVIS desktop',['CORE_ALREADY_RUNNING','CORE_START_FAILED'].includes(error?.code)?error.message:'The desktop shell could not start. The browser version has not been stopped. Check that the JARVIS Python environment exists.');await quit();});
 }
 function show(){if(win&&!win.isDestroyed()){if(win.isMinimized())win.restore();win.show();win.focus();win.webContents.send('jarvis:reset-navigation');if(resumeMicOnShow){resumeMicOnShow=false;win.webContents.send('jarvis:resume-mic');}}}
 function stop(){liveGrantUntil=0;capture?.stop();backend?.stop();if(win&&!win.isDestroyed()){win.webContents.send('jarvis:stop');}}
-async function quit(){if(quitting)return;quitting=true;updates?.close();stop();await backend?.quit();try{require('node:fs').unlinkSync(sessionFile);}catch{}globalShortcut.unregisterAll();companion?.destroy();tray?.destroy();app.quit();}
+async function quit(stopCore=false){if(quitting)return;quitting=true;updates?.close();liveGrantUntil=0;capture?.stop();unwatchCore?.();if(stopCore)await backend?.shutdown();else await backend?.quit();try{require('node:fs').unlinkSync(sessionFile);}catch{}globalShortcut.unregisterAll();companion?.destroy();tray?.destroy();app.quit();}
 async function start(){
  app.setAppUserModelId('local.jarvis.desktop');
- backend=startBackend(path.resolve(__dirname,'..'));
+ backend=await connectCore(path.resolve(__dirname,'..'));
  const ready=await backend.ready;origin=ready.origin;
  require('node:fs').writeFileSync(sessionFile,JSON.stringify({origin,token:ready.token,created:new Date().toISOString()}),'utf8');
  const ses=session.fromPartition('jarvis-desktop'); // memory-only session
@@ -48,7 +48,7 @@ async function start(){
   if(!pending||!updates.validate(revision))return {applied:false};
   if(pending.kind==='restart'){
    app.relaunch({execPath:process.execPath,args:[app.getAppPath()]});
-   setImmediate(()=>void quit());
+   setImmediate(()=>void quit(true)); // a code update must restart the Core as well
   }else{
    updates.acknowledge();setImmediate(()=>{stop();win.webContents.reloadIgnoringCache();});
   }
@@ -93,10 +93,10 @@ async function start(){
  win.webContents.on('render-process-gone',()=>{capture?.stop();backend.stop();dialog.showErrorBox('JARVIS desktop','The interface stopped. Voice requests were cancelled. Quit and relaunch JARVIS Desktop.');});
  win.on('close',event=>{if(!quitting){event.preventDefault();stop();resumeMicOnShow=!!preferences.micOnLaunch;win.hide();}});
  win.on('show',()=>win.webContents.setAudioMuted(false));
- backend.child.once('exit',()=>{if(!quitting){dialog.showErrorBox('JARVIS desktop','The desktop backend stopped. Relaunch JARVIS Desktop. Your browser backend is separate.');void quit();}});
+ unwatchCore=backend.watch(()=>{if(!quitting){dialog.showErrorBox('JARVIS desktop','The JARVIS Core stopped. Open JARVIS again to restart it.');void quit();}});
  tray=new Tray(nativeImage.createFromPath(path.join(__dirname,'tray.png')));
- tray.setToolTip('JARVIS Desktop � close stops activity; tray Quit exits');
- tray.setContextMenu(Menu.buildFromTemplate([{label:'Show JARVIS',click:show},{label:'Floating JARVIS',click:showCompanion},{label:'Stop activity',click:stop},{type:'separator'},{label:'Quit JARVIS Desktop',click:()=>void quit()}]));tray.on('double-click',show);
+ tray.setToolTip('JARVIS · closing this window keeps JARVIS running');
+ tray.setContextMenu(Menu.buildFromTemplate([{label:'Show JARVIS',click:show},{label:'Floating JARVIS',click:showCompanion},{label:'Stop activity',click:stop},{type:'separator'},{label:'Close desktop app (JARVIS keeps running)',click:()=>void quit()},{label:'Quit JARVIS completely',click:()=>void quit(true)}]));tray.on('double-click',show);
  win.webContents.once('did-finish-load',()=>{
   if(loginLaunch&&!process.argv.some(a=>['--smoke-test','--animation-test','--live-test'].includes(a)))setTimeout(()=>{if(!quitting&&!win.isDestroyed()){const hour=new Date().getHours();win.webContents.send('jarvis:login-greeting',hour<12?'Good morning, Mr. Teague. JARVIS is online and ready for your day, sir.':hour<18?'Good afternoon, Mr. Teague. JARVIS is online and ready, sir.':'Good evening, Mr. Teague. JARVIS is online and ready, sir.');}},1400);
  });
@@ -106,14 +106,14 @@ async function start(){
   const result=await win.webContents.executeJavaScript(`startDesktopLive({automatic:false}).then(()=>({live:desktopLive,width:document.getElementById('screenLive').videoWidth,status:document.getElementById('screenStatus').textContent,automatic:document.getElementById('screenAuto').checked}))`);
   assert.equal(result.live,true,result.status);assert.ok(result.width>0);assert.equal(result.automatic,false);
   const stopped=await win.webContents.executeJavaScript('(()=>{const track=screenStream.getVideoTracks()[0];stopScreenVision();return {ended:track.readyState,live:desktopLive};})()');assert.equal(stopped.ended,'ended');assert.equal(stopped.live,false);
-  require('node:fs').writeFileSync(path.join(__dirname,'live-result.json'),JSON.stringify({passed:true,...result,stopped}));await quit();return;
+  require('node:fs').writeFileSync(path.join(__dirname,'live-result.json'),JSON.stringify({passed:true,...result,stopped}));await quit(backend.started);return;
  }
  if(process.argv.includes('--animation-test')){
   const assert=require('node:assert/strict');showCompanion();win.show();win.minimize();
   await new Promise(r=>setTimeout(r,2000));
   const result=await companion.webContents.executeJavaScript('({...window.animationMetrics,status:document.getElementById("status").textContent})');
   result.fps=Number(((result.frames-1)*1000/(result.last-result.first)).toFixed(1));assert.ok(result.frames>30);assert.ok(!result.status.includes('Waiting for'));
-  require('node:fs').writeFileSync(path.join(__dirname,'animation-result.json'),JSON.stringify(result));await quit();return;
+  require('node:fs').writeFileSync(path.join(__dirname,'animation-result.json'),JSON.stringify(result));await quit(backend.started);return;
  }
  if(process.argv.includes('--smoke-test')){
    const assert=require('node:assert/strict');
@@ -130,8 +130,8 @@ async function start(){
    require('node:fs').writeFileSync(path.join(__dirname,'companion-test.png'),(await companion.webContents.capturePage()).toPNG());
    stop();assert.equal(capture.source,null);
    await new Promise(r=>setTimeout(r,100));assert.equal(await win.webContents.executeJavaScript('screenBlob===null'),true);
-   win.show();win.close();assert.equal(win.isDestroyed(),false);assert.equal(win.isVisible(),false);assert.equal(backend.child.exitCode,null);show();assert.equal(win.isVisible(),true);
-   require('node:fs').writeFileSync(path.join(__dirname,'smoke-result.json'),JSON.stringify({passed:true,checks:['page loaded','isolated preload','no renderer Node','screen controls available without capture authority','native single capture','renderer local preview and discard','floating hologram mirrored','stop revokes capture','muted startup','close to tray','restore'],at:new Date().toISOString()}));await quit();
+   win.show();win.close();assert.equal(win.isDestroyed(),false);assert.equal(win.isVisible(),false);assert.equal(await backend.alive(),true);show();assert.equal(win.isVisible(),true);
+   require('node:fs').writeFileSync(path.join(__dirname,'smoke-result.json'),JSON.stringify({passed:true,checks:['page loaded','isolated preload','no renderer Node','screen controls available without capture authority','native single capture','renderer local preview and discard','floating hologram mirrored','stop revokes capture','muted startup','close to tray','restore'],at:new Date().toISOString()}));await quit(backend.started);
  }else {win.show();showCompanion();}
 }
 
