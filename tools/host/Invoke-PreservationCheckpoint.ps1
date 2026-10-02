@@ -21,11 +21,12 @@ param(
     [Parameter(Mandatory)] [ValidateSet('P0', 'P1', 'P2', 'P3', 'P4', 'P5')] [string] $Checkpoint,
     [Parameter(Mandatory)] [string] $Evidence,
     [string] $Reference,
-    [switch] $OwnerAuthorized
+    [switch] $OwnerAuthorized,
+    # Self-test only: point both at scratch folders to exercise the script without reading the protected paths.
+    [string] $ProtectedVm = 'C:\Users\jonny\VirtualBox VMs\JARVIS-CLEAN-WIN11',
+    [string] $ProtectedConfig = 'C:\Users\jonny\.VirtualBox'
 )
 $ErrorActionPreference = 'Stop'
-$ProtectedVm = 'C:\Users\jonny\VirtualBox VMs\JARVIS-CLEAN-WIN11'
-$ProtectedConfig = 'C:\Users\jonny\.VirtualBox'
 $Historical = @{   # AMENDMENT-v2 section 8(b), from the 2026-09-18 recorded artifacts
     vbox = '98a89e62fd19ba49dc316b6e9c902fb6ba18fe4c66ec0ba8bf20deb3a892e93c'
     vbox_prev = '9d69cc14a480aac13c9c03817aeeb4bc4d068a6fc27a81fc15ff2bc91de2c797'
@@ -48,11 +49,17 @@ $runId = "$($Checkpoint.ToLower())-$((Get-Date).ToUniversalTime().ToString('yyyy
 $dir = Join-Path $Evidence $runId
 if (Test-Path -LiteralPath $dir) { throw "Checkpoint folder already exists: $dir" }
 New-Item -ItemType Directory -Path $dir | Out-Null
-function Save($name, $obj) { [IO.File]::WriteAllText((Join-Path $dir "$name.json"), ($obj | ConvertTo-Json -Depth 6), $Utf8) }
+function ToJson($obj) { ConvertTo-Json -InputObject $obj -Depth 6 }   # -InputObject keeps arrays as arrays; an empty census becomes [] not an empty file
+function Save($name, $obj) {
+    $text = if ($null -eq $obj) { '[]' } else { ToJson $obj }
+    if ([string]::IsNullOrWhiteSpace($text)) { $text = '[]' }   # never write an empty file: an empty list is '[]'
+    [IO.File]::WriteAllText((Join-Path $dir "$name.json"), $text, $Utf8)
+}
 function Census {
-    @(Get-CimInstance Win32_Process | Where-Object { $_.Name -in $VBoxBinaries } | ForEach-Object {
+    $list = @(Get-CimInstance Win32_Process | Where-Object { $_.Name -in $VBoxBinaries } | ForEach-Object {
         $o = Invoke-CimMethod -InputObject $_ -MethodName GetOwner
         [ordered]@{ name = $_.Name; pid = $_.ProcessId; owner = "$($o.Domain)\$($o.User)" } })
+    return ,$list   # a real array even when empty, so the census is written as [] (an empty census is the expected, good case)
 }
 function Inventory($root) {
     @(Get-ChildItem -LiteralPath $root -Recurse -File -Force | Sort-Object FullName | ForEach-Object {
@@ -84,7 +91,7 @@ try {
     $hashes = [ordered]@{ vbox = Sha256 $vbox[0].FullName; vbox_prev = Sha256 $vboxPrev[0].FullName; virtualbox_xml = Sha256 $xml }
     $dacl = [ordered]@{ protected_vm = (Get-Acl -LiteralPath $ProtectedVm).Sddl; protected_config = (Get-Acl -LiteralPath $ProtectedConfig).Sddl }
     Save 'control-hashes' $hashes; Save 'dacl' $dacl
-    $result.vm_files = $vmInv.Count; $result.vm_bytes = ($vmInv | Measure-Object bytes -Sum).Sum; $result.control_hashes = $hashes
+    $result.vm_files = $vmInv.Count; $result.vm_bytes = ($vmInv | ForEach-Object { [int64]$_.bytes } | Measure-Object -Sum).Sum; $result.control_hashes = $hashes
 
     # Historical constants (every checkpoint) and exact equality with the reference checkpoint (P1..P5).
     foreach ($k in 'vbox', 'vbox_prev', 'virtualbox_xml') { if ($hashes[$k] -ne $Historical[$k]) { $findings.Add("$k hash differs from the 2026-09-18 reference") | Out-Null } }
@@ -92,7 +99,7 @@ try {
     if ($Reference) {
         foreach ($pair in @(@('protected-vm-inventory', $vmInv), @('protected-config-inventory', $cfgInv))) {
             $ref = Get-Content -LiteralPath (Join-Path $Reference "$($pair[0]).json") -Raw
-            if ($ref -ne ($pair[1] | ConvertTo-Json -Depth 6)) { $findings.Add("$($pair[0]) differs from reference $Reference") | Out-Null }
+            if ($ref -ne (ToJson $pair[1])) { $findings.Add("$($pair[0]) differs from reference $Reference") | Out-Null }
         }
         $refDacl = Get-Content -LiteralPath (Join-Path $Reference 'dacl.json') -Raw | ConvertFrom-Json
         if ($refDacl.protected_vm -ne $dacl.protected_vm -or $refDacl.protected_config -ne $dacl.protected_config) { $findings.Add('DACL differs from reference') | Out-Null }
@@ -109,5 +116,5 @@ try {
     $result.status = 'STOPPED'
 }
 Save 'CHECKPOINT' $result
-$result | ConvertTo-Json -Depth 4
+ToJson $result
 if ($result.status -ne 'PASS') { exit 2 }
