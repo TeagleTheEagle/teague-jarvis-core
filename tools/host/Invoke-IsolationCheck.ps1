@@ -15,12 +15,26 @@ param(
 $ErrorActionPreference = 'Continue'
 if ($env:USERNAME -ne 'jarvis-s6-val') { throw "Run this in the jarvis-s6-val session, not as $env:USERNAME" }
 if (([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'Elevated session: STOP' }
-$out = Join-Path $Evidence 'validation-results.jsonl'
+$runId = (Get-Date).ToUniversalTime().ToString('yyyyMMdd-HHmmss')
+$out = Join-Path $Evidence "validation-results-$runId.jsonl"   # one file per run; earlier runs are never overwritten
 $results = New-Object Collections.ArrayList
+# Rename through the Win32 call itself. .NET's File.Move first asks whether the source exists, and for an
+# account that cannot see inside the restricted folder Windows answers "not found", which would hide the denial.
+Add-Type -Namespace Stage6 -Name Native -MemberDefinition @'
+[System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+public static extern bool MoveFileExW(string lpExistingFileName, string lpNewFileName, uint dwFlags);
+'@
+function RenameRaw($from, $to) {
+    if ([Stage6.Native]::MoveFileExW($from, $to, 0)) { return }
+    $code = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
+    if ($code -eq 5) { throw (New-Object UnauthorizedAccessException("Access is denied (Win32 error 5) renaming $from")) }
+    if ($code -in 2, 3) { throw (New-Object UnauthorizedAccessException("Not visible to this account (Win32 error $code) renaming $from")) }
+    throw (New-Object ComponentModel.Win32Exception($code))
+}
 function Rec($case, $target, $expect, $outcome, $detail) {
     $r = [ordered]@{ utc = (Get-Date).ToUniversalTime().ToString('o'); case = $case; target = $target; expected = $expect; outcome = $outcome; detail = $detail; pass = ($expect -eq $outcome) }
     $results.Add($r) | Out-Null
-    Add-Content -LiteralPath $out -Value ($r | ConvertTo-Json -Compress) -Encoding UTF8
+    [IO.File]::AppendAllText($out, (($r | ConvertTo-Json -Compress) + "`r`n"), (New-Object Text.UTF8Encoding $false))   # plain UTF-8, no byte-order mark
     Write-Host ("{0,-6} {1,-22} {2}" -f $(if ($r.pass) { 'ok' } else { 'FAIL' }), $case, $target)
 }
 function Attempt($case, $target, [scriptblock] $action, $expect = 'denied') {
@@ -51,7 +65,7 @@ foreach ($name in $targets.Keys) {
     Attempt "read ($name)" $t { [IO.File]::ReadAllBytes($t) }
     Attempt "open-write ($name)" $t { $s = [IO.File]::Open($t, 'Open', 'Write'); $s.Close() }
     Attempt "delete ($name)" $t { [IO.File]::Delete($t) }
-    Attempt "rename ($name)" $t { [IO.File]::Move($t, "$t.renamed") }
+    Attempt "rename ($name)" $t { RenameRaw $t "$t.renamed" }
 }
 Attempt 'enumerate' $restricted { [IO.Directory]::GetFileSystemEntries($restricted) }
 Attempt 'enumerate (junction)' (Join-Path $Root 'aliases\junction') { [IO.Directory]::GetFileSystemEntries((Join-Path $Root 'aliases\junction')) }
@@ -76,6 +90,7 @@ foreach ($p in 'C:\Users\jonny\VirtualBox VMs\JARVIS-CLEAN-WIN11', 'C:\Users\jon
 $failed = @($results | Where-Object { -not $_.pass })
 $summary = [ordered]@{ schema = 'stage6-isolation-check-v1'; utc = (Get-Date).ToUniversalTime().ToString('o'); account = $env:USERNAME; cases = $results.Count; failed = $failed.Count
                        status = $(if ($failed.Count -eq 0) { 'PASS_PENDING_OWNER_POSTFLIGHT' } else { 'FIRST_FAIL_STOP' }); short_name_listing = $dirx }
-[IO.File]::WriteAllText((Join-Path $Evidence 'validation-summary.json'), ($summary | ConvertTo-Json -Depth 3), (New-Object Text.UTF8Encoding $false))
+$summary.run_id = $runId; $summary.results_file = (Split-Path -Leaf $out)
+[IO.File]::WriteAllText((Join-Path $Evidence "validation-summary-$runId.json"), ($summary | ConvertTo-Json -Depth 3), (New-Object Text.UTF8Encoding $false))
 "$($summary.status): $($results.Count) cases, $($failed.Count) failed. Next: owner runs New-IsolationFixtures.ps1 -Phase Postflight."
 if ($failed.Count) { exit 2 }
