@@ -30,6 +30,16 @@ only records where the work stands. Historical handover context: `docs/PROJECT-C
   Full regression, zip install, lifecycle and interrupted-update evidence:
   `docs/release-rehearsal-20261001/README.md`.
 
+## Approved direction (2026-10-02)
+
+- **Roadmap** `docs/ROADMAP.md` and **simplified acceptance** `docs/stage6-freshvm/
+  SIMPLIFIED-ACCEPTANCE-PROPOSAL.md`: both approved by the owner ("Both Approved"), record
+  `../governance/STAGE6-SIMPLIFIED-ACCEPTANCE-RECORD.json`. Simplified acceptance applies from
+  Gate 17 (records not photos, one command per gate, one next-step launcher, 15-minute hang
+  rule, Gate 19 with Gate 17, batched decisions). Roadmap order: finish Stage 6 on the frozen
+  build, cutover, lean Stage 7, codebase clean-up and provider pruning, automatic backups,
+  device pairing and phone client, glasses. No source change until cutover.
+
 ## Next steps
 
 Owner only (Claude must stop and ask, never infer or pre-stage tokens):

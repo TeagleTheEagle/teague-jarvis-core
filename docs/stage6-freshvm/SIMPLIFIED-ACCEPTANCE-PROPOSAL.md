@@ -44,4 +44,7 @@ went, and they remove the "which launcher" mistakes by having one entry point.
 
 ## Approval
 
-(not yet approved)
+**Approved by the owner on 2026-10-02 (about 06:00 UTC)**, in the Claude Code chat, message
+"Both Approved" (this proposal and `docs/ROADMAP.md` together), with no edits. Recorded as
+`../governance/STAGE6-SIMPLIFIED-ACCEPTANCE-RECORD.json`. In effect from Gate 17; Gate 16R
+continues under its approved execution prompt.

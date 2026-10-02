@@ -79,4 +79,6 @@ Historical reports stay where they are and are not rewritten.
 
 ## Approval
 
-(not yet approved)
+**Approved by the owner on 2026-10-02 (about 06:00 UTC)**, in the Claude Code chat, message
+"Both Approved" (this roadmap and the simplified acceptance proposal together), with no
+edits. Each phase still starts only on the owner's word as listed above.
