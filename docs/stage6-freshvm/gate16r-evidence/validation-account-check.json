@@ -1,0 +1,42 @@
+{
+    "schema":  "stage6-validation-account-check-v1",
+    "utc":  "2026-10-02T01:38:33.3595188Z",
+    "account":  "thegrizzlybear\\jarvis-s6-val",
+    "sid":  "S-1-5-21-3412258525-483417857-2736759773-1010",
+    "elevated":  false,
+    "groups":  [
+                   "thegrizzlybear\\None",
+                   "Everyone",
+                   "BUILTIN\\Users",
+                   "NT AUTHORITY\\INTERACTIVE",
+                   "CONSOLE LOGON",
+                   "NT AUTHORITY\\Authenticated Users",
+                   "NT AUTHORITY\\This Organization",
+                   "NT AUTHORITY\\Local account",
+                   "LOCAL",
+                   "NT AUTHORITY\\NTLM Authentication"
+               ],
+    "privileges":  [
+                       "SeChangeNotifyPrivilege",
+                       "SeIncreaseWorkingSetPrivilege",
+                       "SeShutdownPrivilege",
+                       "SeTimeZonePrivilege",
+                       "SeUndockPrivilege"
+                   ],
+    "saved_credential_entries":  2,
+    "saved_credential_targets":  [
+                                     "MicrosoftAccount:target=SSO_POP_Device",
+                                     "WindowsLive:target=virtualapp/didlogical"
+                                 ],
+    "profile":  "C:\\Users\\jarvis-s6-val",
+    "profile_created_utc":  "2026-09-30T07:29:25.8755903Z",
+    "vbox_user_home":  null,
+    "virtualbox_processes":  [
+
+                             ],
+    "unresolved_by_owner_decision_20260930":  "the two credential entries of the 2026-09-30 bounded decision remain UNRESOLVED (AMENDMENT-v3 A3)",
+    "findings":  [
+                     "VBOX_USER_HOME is \u0027\u0027 (expected D:\\JARVIS-S6-FRESHVM\\vbox-home; set it before VM creation)"
+                 ],
+    "status":  "FAIL"
+}

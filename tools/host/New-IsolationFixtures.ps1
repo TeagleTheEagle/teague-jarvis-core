@@ -55,6 +55,7 @@ function Snapshot {
                 fsutil_8dot3_query = (cmd /c 'fsutil 8dot3name query D:' 2>&1 | Out-String) }
 }
 
+$evidenceIsNew = -not (Test-Path -LiteralPath $Evidence)
 New-Item -ItemType Directory -Path $Evidence -Force | Out-Null
 if ($Phase -eq 'Create') {
     if (Test-Path -LiteralPath $Root) { throw "fixture root already exists: $Root (no overwrite, no repair)" }
@@ -70,7 +71,7 @@ if ($Phase -eq 'Create') {
     Protect (Join-Path $Root 'aliases') ($full + (Rule $validation $RX 'Allow'))
     Protect (Join-Path $Root 'restricted') (@((Rule $validation $FA 'Deny')) + $full)   # explicit deny first, inherited by its contents
     Protect (Join-Path $Root 'scratch') ($full + (Rule $validation $MOD 'Allow'))
-    Protect $Evidence ($full + (Rule $validation $MOD 'Allow'))
+    if ($evidenceIsNew) { Protect $Evidence ($full + (Rule $validation $MOD 'Allow')) }   # an existing evidence folder (owner-created with its own grant) is never re-permissioned
     $pre = Snapshot
     [IO.File]::WriteAllText((Join-Path $Evidence 'owner-preflight.json'), ($pre | ConvertTo-Json -Depth 5), $Utf8)
     "fixtures created under $Root; owner-preflight.json written. Next: Invoke-IsolationCheck.ps1 in the $ValidationAccount session."
