@@ -1,0 +1,15 @@
+{
+    "schema":  "stage6-preservation-checkpoint-v1",
+    "checkpoint":  "P0",
+    "run_id":  "p0-20261002-011703",
+    "utc":  "2026-10-02T01:17:03.0942537Z",
+    "account":  "THEGRIZZLYBEAR\\jonny",
+    "elevated":  false,
+    "status":  "STOPPED",
+    "findings":  [
+                     "stopped: Cannot process argument because the value of argument \"Property\" is not valid. Change the value of the \"Property\" argument and run the operation again."
+                 ],
+    "virtualbox_version":  "7.2.18.175117",
+    "vboxmanage_sha256":  "ac0e4a475c628fdcf711b3a78f9704d7a2eb568b9d681b826f31429384c6a936",
+    "vm_files":  12
+}
