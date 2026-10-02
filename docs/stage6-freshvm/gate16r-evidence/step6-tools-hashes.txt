@@ -1,0 +1,4 @@
+092a2d64966a4a40543a2b51d857060fc2d08c9f04d99348ccdd2756f598fc0b *New-GuestEgressFolder.ps1
+9f112169c97a63653442c0d01c1cdde8d33b9e44dad0dde384d5775e99c48ce5 *step6a-create-egress.cmd
+86488234c3990ecceef13bdec5afca7da9fe2477dc13c8ce74482ed0db15994e *New-FreshVm.ps1
+4006b666d0bebea62b427f0e19bcdea98b841704bf0da18a629c3a2d5be08889 *step6-create-vm.cmd
