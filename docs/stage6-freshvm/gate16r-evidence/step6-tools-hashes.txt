@@ -5,3 +5,5 @@
 3d0caafda56feb1648c48356088f768a78111354ccdeb599d87e6a20589f44c1 *Disable-FreshVmAudio.ps1
 bb676747de8f813b91af06c4eec561c3202bb3bd5a61b3e68fd3ef9ec0c6e909 *step6b-disable-audio.cmd
 bed82338c2bc9c9907488bfa3147f3d2153cb98716e7ee0acaf2e5b2934bde24 *step7-start-vm.cmd
+71eb7082d3bd66803516bb2b3d1c61e7b7768b49c40da34ac29143c125f3cb89 *Start-FreshVm.ps1  (revision for every VM start: re-applies NAT localhost-reachable off)
+62dbeb6ff5c5b7d31855ad859a4e34bf2e11ddc842b5493d21e50e7fa030f31e *step7-start-vm.cmd  (revision for every VM start: re-applies NAT localhost-reachable off)

@@ -1,0 +1,15 @@
+{
+  "schema": "stage6-owner-decision-record-v1",
+  "subject": "Gate 16R step 6: VirtualBox 7.2.18 does not persist NAT localhost-reachable=off (step6-evaluation.json, step6b)",
+  "utc": "2026-10-02T04:12:00Z",
+  "owner_message": "Direct human message in the Claude Code chat, 2026-10-02 (local): \"option 1 and yes NO UAC prompt apperaed\"",
+  "options_offered": {
+    "1": "keep the approved network setup; every start of the VM goes through Start-FreshVm.ps1 (step7-start-vm.cmd), which re-applies --nat-localhostreachable1 off, confirms localhostReachable=0 in the same VBoxSVC session, starts the VM at once and records the running VM's VBox.log value (LocalhostReachable = 0); a non-zero value stops",
+    "2": "amend the approved prompt to give the VM no network adapter",
+    "stop": "stop the route here"
+  },
+  "decision": "option 1",
+  "uac": "owner confirms no host UAC (administrator) prompt appeared during step 6 or step 6b",
+  "effect": "step 6 closed as PASS with the recorded deviation and its per-start mitigation; step 7 may begin; the same launcher is mandatory for every later start of JARVIS-S6-FRESH during Stage 6 (steps 9 and 11 snapshots, Gates 17-20)",
+  "recorded_by": "Claude Code (Claude Fable 5.1), owner account. This record documents the owner's act; it grants no authority beyond the approved Gate 16R prompt."
+}
