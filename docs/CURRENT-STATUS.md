@@ -1,7 +1,7 @@
 # JARVIS: current status (living document)
 
 **Read this first in every new Claude Code session, and update it at the end of each one.**
-Last updated: 2026-10-01 (end of the release-readiness session).
+Last updated: 2026-10-02 (Gate 16R step 4 PASS; P1 next).
 
 Rules and authority are in `CLAUDE.md` and `../governance/OWNER-DELEGATION.md`; this file
 only records where the work stands. Historical handover context: `docs/PROJECT-CONTEXT.md`.
@@ -51,11 +51,16 @@ Owner only (Claude must stop and ask, never infer or pre-stage tokens):
    an earlier run `p0-20261002-011703` stopped on a script defect after the reads and is
    kept). Step 2 **§7(b) PASS** (A3 applied; `VBOX_USER_HOME` set in step 4). Step 3
    **§7(e) PASS** (A1, A2 applied; run 2 of the check after a harness classification fix,
-   run 1 kept; postflight PASS). Next: step 4 (owner: `step4a-prepare-storage.cmd` in own
-   account, `step4b-set-vbox-home.cmd` in the validation session), then P1 on "run P1",
-   then VM creation. The owner runs every launcher in `D:\JARVIS-S6-FRESHVM\tools\`
-   (ACL/VirtualBox work is owner-only); Claude reads the JSON results from the evidence
-   folder. Evidence: `D:\JARVIS-S6-FRESHVM\evidence\gate16r-20261002\`.
+   run 1 kept; postflight PASS). Step 4 **§7(c),(d) PASS** (2026-10-02T02:43Z: `vbox-home`,
+   `machines`, `media` created as new objects with the jarvis-s6-val Modify grant, four discs
+   copied and hash-verified, `VBOX_USER_HOME` set user-scoped in the validation session and
+   the account check re-run PASS). The first step-4a run was closed by accident mid-copy;
+   Claude's byte comparison showed a partial copy, not corruption; the owner removed the three
+   unfinished folders by hand and re-ran the unchanged script (`step4-run1-incident.json`).
+   Next: P1 on the owner's literal "run P1", then step 6 VM creation (owner, validation
+   session). The owner runs every launcher in `D:\JARVIS-S6-FRESHVM\tools\` (ACL/VirtualBox
+   work is owner-only); Claude reads the JSON results from the evidence folder. Evidence:
+   `D:\JARVIS-S6-FRESHVM\evidence\gate16r-20261002\`.
 3. `RESUME_STAGE6_RECOVERY` before Gate 18.
 4. After Stage 6 passes: FINAL selection, switching the everyday JARVIS over, Stage 7.
    The owner's freeze from P0 still applies: keep VirtualBox closed under the owner account
@@ -151,3 +156,9 @@ because creating them changes the owner's real Desktop/Startup folders). Check o
   and its support files (answer file, validation-account check, VM creation, isolation
   fixtures and check; owner-account half rehearsed in a scratch folder). Next: the owner
   approves the 16R prompt, then issues `RESUME_STAGE6_FRESH_VM`. Nothing pushed or synced.
+- **2026-10-02, Gate 16R in execution (Fable 5.1).** Owner approved the 16R prompt and issued
+  `RESUME_STAGE6_FRESH_VM`. Step 0 media built and hashed; step 1 P0 PASS; step 2 §7(b) PASS
+  (A3); step 3 §7(e) PASS (A1, A2; harness classification fix, run 1 kept); step 4 §7(c),(d)
+  PASS after a documented re-run (first run closed mid-copy; partial copy, not corruption).
+  All owner-run work goes through one-click launchers in `D:\JARVIS-S6-FRESHVM\tools\`;
+  evidence copied under `docs/stage6-freshvm/gate16r-evidence/`. Nothing pushed or synced.

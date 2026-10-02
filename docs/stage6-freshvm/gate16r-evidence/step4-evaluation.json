@@ -1,0 +1,26 @@
+{
+  "schema": "stage6-gate16r-step-evaluation-v1",
+  "step": "4: AMENDMENT-v2 section 7(c),(d) storage folders, media and VirtualBox home",
+  "utc": "2026-10-02T02:52:00Z",
+  "sources": {
+    "storage": "step4-storage.json (sha256 86c846fea7328422f28369140f366b6cd9a2ed7c6e00a12b01ad0d611b0dfec6), written by New-Stage6Storage.ps1 (sha256 616139c8fffb44b371e5bbe29b3ab8e601bd0c90f29c0da36a6c2483d90368fd) run by the owner in the owner account at 2026-10-02T02:43:30Z through step4a-prepare-storage.cmd revision 2 (sha256 4d0ad4043f470d0941a39a7e18bf418be06ccbe932530be90589203d4569344f; all tool hashes in step4-tools-hashes.txt)",
+    "account": "account/validation-account-check.json (sha256 9fd11662a7b1ff5c82b2e92fbf5650e10a031624bee09a25fff953df783ddec0), written by Invoke-ValidationAccountCheck.ps1 run by the owner inside the jarvis-s6-val session at 2026-10-02T02:14:28Z through step4b-set-vbox-home.cmd (sha256 b1ca1c5dd8e76bc8d3b46b8a219498ada0238d9a3d0569e92f5fd3f6afec0a5f)",
+    "incident": "step4-run1-incident.json: the first step-4a run (02:12:59Z) was closed by accident while still copying the Windows image; Claude's byte comparison showed a partial copy (identical to the source for 2,620,391,424 bytes, zeros after), not corruption; the owner removed the three unfinished folders by hand and re-ran the step with the unchanged script"
+  },
+  "checks": {
+    "vbox-home, machines and media created as new objects": "PASS (created 2026-10-02T02:41:50-51Z, owner THEGRIZZLYBEAR\\jonny; vbox-home and machines empty; media holds exactly the four discs)",
+    "jarvis-s6-val Modify on those three folders only": "PASS (each folder carries one explicit entry 'Allow thegrizzlybear\\jarvis-s6-val Modify, Synchronize'; every other entry is an inherited D: volume default)",
+    "no change to the parent or to evidence\\": "PASS (at 02:50Z D:\\JARVIS-S6-FRESHVM and evidence\\ have no explicit entries, inheritance intact, owner unchanged)",
+    "Windows ISO copied, hash equal to step 0": "PASS (9,047,330,816 bytes, sha256 bd4307df32bc8af33b39ccecb1174aeb345386630f89a2b86c7a4e36b55ea650 = Microsoft's published value, step-0 record windows-iso-26H2-acquisition.json)",
+    "UNATTEND.iso copied, hash equal to step 0": "PASS (1,179,648 bytes, sha256 89f97c7b162d68b93b123517b1f823bf8ff9cce76f5e88d2cfbb303c7bc17c00 = UNATTEND.iso.sha256.json)",
+    "JARVIS-TOOLS.iso copied, hash equal to step 0": "PASS (1,245,184 bytes, sha256 0c0d5de3b93f8338ffb3b8e0ef608cb21a935b61863c56a68ecef0d972fcde4b = JARVIS-TOOLS.iso.sha256.json)",
+    "VBoxGuestAdditions.iso copied from the host": "RECORDED (53,141,504 bytes, sha256 346ea2b9ed47bb954464af83835b14bd8afa5fc1864f34e2561ed923fb74981c; first measurement: step 0 recorded no value because reading the VirtualBox installation is owner-only; source C:\\Program Files\\Oracle\\VirtualBox, VirtualBox 7.2.18.175117 frozen since P0; the Guest Additions version is recorded again from inside the guest at step 7)",
+    "VBOX_USER_HOME set, user scope, validation account only": "PASS (account record: vbox_user_home = D:\\JARVIS-S6-FRESHVM\\vbox-home, status PASS, 0 findings, not elevated, no VirtualBox process; set with setx inside the jarvis-s6-val session; the owner account was not touched)",
+    "section 7(b) record now PASS": "PASS (the single step-2 finding, VBOX_USER_HOME unset, is resolved; the two Windows device sign-on credential entries remain UNRESOLVED under AMENDMENT-v3 A3)",
+    "nothing under C:\\Users\\jonny; E: not used": "PASS as far as checked (the script writes only under D:\\JARVIS-S6-FRESHVM; no top-level item of the owner profile changed after 02:43Z; E: is not referenced)",
+    "ordering": "NOTE: step 4b (02:14:28Z) ran before the successful step-4a run (02:43:30Z). The variable is a path string and does not depend on the folder existing, and VirtualBox has not been started in the validation session (vbox-home is empty), so the order has no effect."
+  },
+  "result": "SECTION 7(c),(d): PASS. Step 4 complete. Documented re-run after an interrupted first attempt; no check failed, no stop rule triggered.",
+  "next": "step 5: P1 checkpoint, run by Claude only on the owner's literal \"run P1\" (reference p0-20261002-012032; mismatch = PRESERVATION_FAILURE, STOP); then step 6 VM creation (owner, validation session, VirtualBox opened only after step 4b)",
+  "recorded_by": "Claude Code (Claude Fable 5.1), owner account"
+}
