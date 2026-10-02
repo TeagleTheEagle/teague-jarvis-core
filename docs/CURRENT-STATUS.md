@@ -1,7 +1,7 @@
 # JARVIS: current status (living document)
 
 **Read this first in every new Claude Code session, and update it at the end of each one.**
-Last updated: 2026-10-02 (Gate 16R step 4 PASS; P1 next).
+Last updated: 2026-10-02 (Gate 16R step 5 P1 PASS; step 6 VM creation next).
 
 Rules and authority are in `CLAUDE.md` and `../governance/OWNER-DELEGATION.md`; this file
 only records where the work stands. Historical handover context: `docs/PROJECT-CONTEXT.md`.
@@ -57,9 +57,14 @@ Owner only (Claude must stop and ask, never infer or pre-stage tokens):
    the account check re-run PASS). The first step-4a run was closed by accident mid-copy;
    Claude's byte comparison showed a partial copy, not corruption; the owner removed the three
    unfinished folders by hand and re-ran the unchanged script (`step4-run1-incident.json`).
-   Next: P1 on the owner's literal "run P1", then step 6 VM creation (owner, validation
-   session). The owner runs every launcher in `D:\JARVIS-S6-FRESHVM\tools\` (ACL/VirtualBox
-   work is owner-only); Claude reads the JSON results from the evidence folder. Evidence:
+   Step 5 **P1 PASS** (run `p1-20261002-025102`, 2026-10-02T02:51:02Z, on the owner's "run
+   p1": 12 files / 59,665,402,098 bytes, control hashes, inventories and DACLs equal to P0,
+   VirtualBox 7.2.18.175117 unchanged, empty process census). Step 6a done (owner created
+   `evidence\guest-egress-01` with the validation account's Modify grant). Next: step 6 VM
+   creation (owner, `step6-create-vm.cmd` in the validation session; UAC prompt = STOP),
+   then steps 7–9 inside the VM, then P2 on the owner's "run P2". The owner runs every
+   launcher in `D:\JARVIS-S6-FRESHVM\tools\` (ACL/VirtualBox work is owner-only); Claude
+   reads the JSON results from the evidence folder. Evidence:
    `D:\JARVIS-S6-FRESHVM\evidence\gate16r-20261002\`.
 3. `RESUME_STAGE6_RECOVERY` before Gate 18.
 4. After Stage 6 passes: FINAL selection, switching the everyday JARVIS over, Stage 7.
@@ -159,6 +164,7 @@ because creating them changes the owner's real Desktop/Startup folders). Check o
 - **2026-10-02, Gate 16R in execution (Fable 5.1).** Owner approved the 16R prompt and issued
   `RESUME_STAGE6_FRESH_VM`. Step 0 media built and hashed; step 1 P0 PASS; step 2 §7(b) PASS
   (A3); step 3 §7(e) PASS (A1, A2; harness classification fix, run 1 kept); step 4 §7(c),(d)
-  PASS after a documented re-run (first run closed mid-copy; partial copy, not corruption).
+  PASS after a documented re-run (first run closed mid-copy; partial copy, not corruption);
+  step 5 P1 PASS; step 6a egress folder created by the owner.
   All owner-run work goes through one-click launchers in `D:\JARVIS-S6-FRESHVM\tools\`;
   evidence copied under `docs/stage6-freshvm/gate16r-evidence/`. Nothing pushed or synced.
