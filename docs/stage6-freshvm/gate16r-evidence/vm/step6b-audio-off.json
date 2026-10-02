@@ -1,0 +1,20 @@
+{
+    "schema":  "stage6-fresh-vm-audio-off-v1",
+    "utc":  "2026-10-02T03:52:48.1644601Z",
+    "account":  "jarvis-s6-val",
+    "vm_name":  "JARVIS-S6-FRESH",
+    "vm_uuid":  "4ef16bdd-2a1b-46af-83db-ee69c2f868bb",
+    "audio_before":  [
+                         "audio=\"null\"",
+                         "audio_out=\"off\"",
+                         "audio_in=\"off\""
+                     ],
+    "audio_after":  [
+                        "audio=\"none\"",
+                        "audio_out=\"off\"",
+                        "audio_in=\"off\""
+                    ],
+    "vbox_file":  "D:\\JARVIS-S6-FRESHVM\\machines\\JARVIS-S6-FRESH\\JARVIS-S6-FRESH.vbox",
+    "vbox_sha256":  "35a589495bc6e5a9d3b68b362b9996df74bf90efd33475db63bd5e640ab9d60b",
+    "vm_state":  "poweroff"
+}
