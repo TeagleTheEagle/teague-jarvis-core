@@ -60,9 +60,15 @@ Owner only (Claude must stop and ask, never infer or pre-stage tokens):
    Step 5 **P1 PASS** (run `p1-20261002-025102`, 2026-10-02T02:51:02Z, on the owner's "run
    p1": 12 files / 59,665,402,098 bytes, control hashes, inventories and DACLs equal to P0,
    VirtualBox 7.2.18.175117 unchanged, empty process census). Step 6a done (owner created
-   `evidence\guest-egress-01` with the validation account's Modify grant). Next: step 6 VM
-   creation (owner, `step6-create-vm.cmd` in the validation session; UAC prompt = STOP),
-   then steps 7–9 inside the VM, then P2 on the owner's "run P2". The owner runs every
+   `evidence\guest-egress-01` with the validation account's Modify grant). Step 6 **VM
+   created** (`JARVIS-S6-FRESH`, uuid 4ef16bdd…, 2026-10-02T03:41Z, validation session,
+   registered only in `vbox-home`; verified against the spec from the `.vbox` and
+   `VirtualBox.xml`; audio adapter corrected at 6b, 03:52Z; never started). **OPEN, owner
+   decision before step 7:** VirtualBox 7.2.18 does not persist NAT `localhost-reachable=off`
+   (saved as the empty default, read back as on; proven by the before/after `.vbox` diff).
+   Prepared mitigation: `Start-FreshVm.ps1` (via `step7-start-vm.cmd`) re-applies "off"
+   before every start and records the running VM's `VBox.log` value. Then steps 7–9 inside
+   the VM, then P2 on the owner's "run P2". The owner runs every
    launcher in `D:\JARVIS-S6-FRESHVM\tools\` (ACL/VirtualBox work is owner-only); Claude
    reads the JSON results from the evidence folder. Evidence:
    `D:\JARVIS-S6-FRESHVM\evidence\gate16r-20261002\`.
