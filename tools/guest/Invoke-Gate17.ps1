@@ -102,7 +102,18 @@ function Installer([string[]] $arguments) {
 # ---------------------------------------------------------------- Baseline (FRESH-CLEAN-BASELINE negative checks)
 if (($Phase -eq 'Baseline' -or $Phase -eq 'All') -and -not $SkipBaseline) {
     $cv = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'
-    $tools = foreach ($t in 'python', 'py', 'node', 'npm', 'git', 'codex', 'code', 'cl', 'pip') { $c = Get-Command $t -ErrorAction SilentlyContinue; if ($c) { "$t -> $($c.Source)" } }
+    # A fresh Windows 11 ships Microsoft Store "app execution aliases" (zero-byte reparse-point stubs under
+    # %LOCALAPPDATA%\Microsoft\WindowsApps, e.g. python.exe) that only open the Store: nothing is installed.
+    # They are recorded separately and do not count as development tools.
+    $aliasDir = Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps'
+    $tools = @(); $storeAliases = @()
+    foreach ($t in 'python', 'py', 'node', 'npm', 'git', 'codex', 'code', 'cl', 'pip') {
+        $c = Get-Command $t -ErrorAction SilentlyContinue
+        if (-not $c -or -not $c.Source) { continue }
+        $item = Get-Item -LiteralPath $c.Source -ErrorAction SilentlyContinue
+        $isStoreAlias = ($c.Source -like (Join-Path $aliasDir '*')) -and $item -and ((($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) -or $item.Length -eq 0)
+        if ($isStoreAlias) { $storeAliases += "$t -> $($c.Source) (Microsoft Store app execution alias, $($item.Length) bytes; nothing installed)" } else { $tools += "$t -> $($c.Source)" }
+    }
     $dirs = foreach ($d in "$env:ProgramFiles\Python*", "${env:ProgramFiles(x86)}\Python*", "$env:ProgramFiles\nodejs", "$env:ProgramFiles\Git", "$env:ProgramFiles\Microsoft Visual Studio", "$env:LOCALAPPDATA\Programs\Python", "$env:LOCALAPPDATA\Programs\Microsoft VS Code", "$env:APPDATA\npm") { if (Test-Path $d) { $d } }
     $envFiles = @(Get-ChildItem -LiteralPath $env:USERPROFILE -Recurse -Force -Filter '.env*' -ErrorAction SilentlyContinue | Select-Object -First 20 -ExpandProperty FullName)
     $cred = (cmdkey /list 2>$null | Out-String)
@@ -118,9 +129,10 @@ if (($Phase -eq 'Baseline' -or $Phase -eq 'All') -and -not $SkipBaseline) {
         windows_update_pause_expiry = if ($wu) { $wu.PauseUpdatesExpiryTime } else { $null }
         account = "$env:USERDOMAIN\$env:USERNAME"; is_administrator = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
         path = $env:PATH
-        development_tools_on_path = @($tools); development_tool_folders = @($dirs)
+        development_tools_on_path = @($tools); store_app_execution_aliases = @($storeAliases); development_tool_folders = @($dirs)
         jarvis_install_present = (Test-Path -LiteralPath $InstallHome); jarvis_processes = (Processes).Count
         env_files_in_profile = $envFiles; jarvis_credentials = ($cred -match 'JARVIS'); credential_entries = ([regex]::Matches($cred, 'Target:')).Count
+        credential_targets = @([regex]::Matches($cred, 'Target:\s*(.+)') | ForEach-Object { $_.Groups[1].Value.Trim() })
         installed_programs = $programs.Count; services = $services.Count
     }
     [IO.File]::WriteAllText((Join-Path $script:EvidenceDir 'baseline-programs.json'), ($programs | ConvertTo-Json -Depth 3), $Utf8)

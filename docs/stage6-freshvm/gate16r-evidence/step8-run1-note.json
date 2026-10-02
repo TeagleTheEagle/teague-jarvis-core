@@ -1,0 +1,20 @@
+{
+  "schema": "stage6-gate16r-step-incident-v1",
+  "step": "8 run 1: Invoke-Gate17.ps1 -Phase Baseline inside JARVIS-S6-FRESH (AMENDMENT-v2 section 6(f) negative checks)",
+  "utc": "2026-10-02T07:20:00Z",
+  "run": "guest-egress-01/gate17-20261002-071120, 2026-10-02T07:11:20Z to 07:11:44Z, tools disc v1 (JARVIS-TOOLS.iso sha256 0c0d5de3b93f8338ffb3b8e0ef608cb21a935b61863c56a68ecef0d972fcde4b, guest script sha256 4f29c219d7f88ee61ef4bbd0191a0e4b02c899a40476ba9c902131fe2e1e026b), egress mapped as Z: by the owner with net use; result B1-baseline FAIL, reason 'development tools on PATH'",
+  "finding": "development_tools_on_path = ['python -> C:\\Users\\jarvis-s6-guest\\AppData\\Local\\Microsoft\\WindowsApps\\python.exe']",
+  "classification": "HARNESS FALSE POSITIVE. That path is the Microsoft Store app execution alias that every fresh Windows 11 carries: a zero-byte reparse-point stub that opens the Store when run. No Python is installed: development_tool_folders is empty and the installed-programs list holds only Copilot, Microsoft Edge, Edge WebView2 Runtime, Microsoft OneDrive and Oracle VirtualBox Guest Additions 7.2.18.175117, all Windows inbox components plus the Guest Additions installed at step 7.",
+  "other_fields_as_recorded": {
+    "edition": "registry ProductName 'Windows 10 Home' (a known Windows 11 quirk), EditionID Core = Windows 11 Home, DisplayVersion 26H2, build 26300.9457 (equal to the installation media; the setup updates fetched during OOBE did not change the build)",
+    "activation_license_status": "5 = notification (not activated), as designed; activation is not required",
+    "windows_update_pause_expiry": "2026-11-06T05:27:32Z (paused by the owner at step 7)",
+    "account": "JARVIS-S6-FRESH\\jarvis-s6-guest; is_administrator false because the process ran with the non-elevated token of an Administrators-group account",
+    "jarvis": "install absent, 0 processes, no .env files, no JARVIS credential entries; credential_entries 1 (target not listed by the v1 script; run 2 lists it)",
+    "services": "260 recorded in baseline-services.json",
+    "hypervisor_present": true
+  },
+  "correction": "tools\\guest\\Invoke-Gate17.ps1: Store app execution aliases (under %LOCALAPPDATA%\\Microsoft\\WindowsApps, reparse point or zero length) are recorded in store_app_execution_aliases and excluded from development_tools_on_path; saved-credential targets are listed. The corrected script ships on a second tools disc, JARVIS-TOOLS-v2.iso, built by the owner (step8-tools-disc-v2.json); the first disc is unchanged. Step 8 is rerun as run 2; run 1's records are kept.",
+  "route_status": "The FAIL was honoured as a STOP; no silent retry; a documented harness correction and rerun, with the same precedent as step 3 (run 1 kept, run 2 after the fix).",
+  "recorded_by": "Claude Code (Claude Fable 5.1), owner account"
+}
