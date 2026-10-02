@@ -49,9 +49,13 @@ Owner only (Claude must stop and ask, never infer or pre-stage tokens):
    execution.** Step 1 **P0 PASS** (run `p0-20261002-012032`, 2026-10-02T01:20:32Z: 12 files /
    59,665,402,098 bytes, three control hashes equal the reference, VirtualBox 7.2.18.175117;
    an earlier run `p0-20261002-011703` stopped on a script defect after the reads and is
-   kept). Next: step 2, the §7(b) account check by the owner in the `jarvis-s6-val` session
-   (`D:\JARVIS-S6-FRESHVM\tools\Invoke-ValidationAccountCheck.ps1`), then steps 3–12 in
-   order. Evidence: `D:\JARVIS-S6-FRESHVM\evidence\gate16r-20261002\`.
+   kept). Step 2 **§7(b) PASS** (A3 applied; `VBOX_USER_HOME` set in step 4). Step 3
+   **§7(e) PASS** (A1, A2 applied; run 2 of the check after a harness classification fix,
+   run 1 kept; postflight PASS). Next: step 4 (owner: `step4a-prepare-storage.cmd` in own
+   account, `step4b-set-vbox-home.cmd` in the validation session), then P1 on "run P1",
+   then VM creation. The owner runs every launcher in `D:\JARVIS-S6-FRESHVM\tools\`
+   (ACL/VirtualBox work is owner-only); Claude reads the JSON results from the evidence
+   folder. Evidence: `D:\JARVIS-S6-FRESHVM\evidence\gate16r-20261002\`.
 3. `RESUME_STAGE6_RECOVERY` before Gate 18.
 4. After Stage 6 passes: FINAL selection, switching the everyday JARVIS over, Stage 7.
    The owner's freeze from P0 still applies: keep VirtualBox closed under the owner account
