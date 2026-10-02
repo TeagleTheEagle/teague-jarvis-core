@@ -1,0 +1,38 @@
+{
+  "schema": "stage6-gate16r-step-evaluation-v1",
+  "step": "6: VM creation (AMENDMENT-v2 section 6(d), v3 A4 and D4; approved prompt step 6)",
+  "utc": "2026-10-02T03:56:00Z",
+  "sources": {
+    "creation": "vm/vm-creation.json (sha256 35de283461628210d6218ab862d59eab2001b37a2f73bf2b893365ff2d385439) and vm/showvminfo.txt (sha256 f5a0adc963c58ed90d76704c0f43146c39f6e8f483be403f18f9dc64a94a5fad), written by New-FreshVm.ps1 (sha256 86488234c3990ecceef13bdec5afca7da9fe2477dc13c8ce74482ed0db15994e) run by the owner in the jarvis-s6-val session at 2026-10-02T03:41:44Z through step6-create-vm.cmd (sha256 4006b666d0bebea62b427f0e19bcdea98b841704bf0da18a629c3a2d5be08889; step6-tools-hashes.txt). The owner's photograph of the window shows the VBoxManage output ('created and registered', 'Medium created') and 'Finished OK'.",
+    "read_by_claude": "machines\\JARVIS-S6-FRESH\\JARVIS-S6-FRESH.vbox (sha256 67b62f9e576abcb92ba855ae040e5f53118ea52af99321537b38f338ae96e492, equal to the record; copy vm/JARVIS-S6-FRESH.vbox.step6-copy) and vbox-home\\VirtualBox.xml (sha256 944c9f14b011caa5f12dd919576c3bb23b64bcbc25aee1da320a392c08169492; copy vm/VirtualBox.xml.step6-copy), plus directory listings of vbox-home and machines. No VirtualBox program was executed by Claude."
+  },
+  "identity": {
+    "vm_name": "JARVIS-S6-FRESH",
+    "vm_uuid": "4ef16bdd-2a1b-46af-83db-ee69c2f868bb",
+    "vbox_file": "D:\\JARVIS-S6-FRESHVM\\machines\\JARVIS-S6-FRESH\\JARVIS-S6-FRESH.vbox",
+    "vbox_sha256_at_creation": "67b62f9e576abcb92ba855ae040e5f53118ea52af99321537b38f338ae96e492",
+    "disk": "JARVIS-S6-FRESH.vdi, uuid 6daf9ccf-1fb3-4682-bb6d-6b4230e87e5b, VDI, type Normal, dynamic (createmedium --variant Standard --size 98304 MiB per the script; 2,097,152 bytes on disk at creation)",
+    "registered_in": "D:\\JARVIS-S6-FRESHVM\\vbox-home\\VirtualBox.xml: <MachineEntry uuid=\"{4ef16bdd-2a1b-46af-83db-ee69c2f868bb}\" src=\"D:\\JARVIS-S6-FRESHVM\\machines\\JARVIS-S6-FRESH\\JARVIS-S6-FRESH.vbox\"/> (the only entry)",
+    "state": "poweroff, never started (no Logs folder; lastStateChange 2026-10-02T03:41:43Z = creation)",
+    "virtualbox": "7.2.18 r175117 (frozen since P0)"
+  },
+  "checks": {
+    "new VM, new disk; no clone, import, reused .vbox, snapshot or disk": "PASS (created 03:41:43-44Z; new VDI uuid above; machines\\JARVIS-S6-FRESH holds only .vbox, .vbox-prev, .vdi, .nvram)",
+    "name and OS type": "PASS (JARVIS-S6-FRESH, Windows11_64)",
+    "4 vCPU, 8192 MiB": "PASS (CPU count=4; Memory RAMSize=8192; VRAM 128, VBoxSVGA)",
+    "EFI with Secure Boot and TPM 2.0": "PASS (Firmware type=EFI; showvminfo SecureBoot=on; TrustedPlatformModule type=v2_0)",
+    "NAT only, localhost unreachable, no other adapter, no port forwarding": "PASS (one adapter, slot 0, NAT; nic2-4 none; no host-only or bridged adapter; no forwarding rules; localhostReachable=0)",
+    "shared clipboard and drag-and-drop disabled": "PASS (clipboard=disabled, draganddrop=disabled; <Clipboard/> default)",
+    "no USB passthrough": "PASS (usb=off; no USB controller in the .vbox)",
+    "no audio device": "DEVIATION, corrected by step 6b: the .vbox shows <AudioAdapter driver=\"Null\" enabled=\"true\"/> (showvminfo audio=null, audio_in off, audio_out off), an enabled adapter with the Null driver that reaches nothing on the host. Cause: New-FreshVm.ps1 used --audio-driver none instead of --audio-enabled off. Correction: Disable-FreshVmAudio.ps1 (step6b-disable-audio.cmd, validation session, before the first start) sets --audio-enabled off, re-records showvminfo and the .vbox hash into vm/step6b-audio-off.json; the step-6 identity is then the post-6b .vbox hash.",
+    "optical drives: Windows ISO and UNATTEND.iso; boot order": "PASS (SATA port 1 D:/JARVIS-S6-FRESHVM/media/Windows11_Client_x64_en-us_26300_9457.iso, port 2 D:/JARVIS-S6-FRESHVM/media/UNATTEND.iso; the record hashes both media files: bd4307df… and 89f97c7b…, equal to step 0; boot DVD, HardDisk, None, None)",
+    "one shared folder guest-egress-01, not auto-mounted, writable": "PASS (hostPath D:\\JARVIS-S6-FRESHVM\\evidence\\guest-egress-01, writable=true, autoMount=false; the global SharedFolders list is empty)",
+    "registered only in vbox-home\\VirtualBox.xml": "PASS as far as readable: VirtualBox.xml, VirtualBox.xml-prev and VBoxSVC.log were written in vbox-home at 03:41Z, so the VBoxSVC of that session ran with vbox-home as its home; the owner's protected VirtualBox.xml is verified unchanged by P2 (step 10); the validation account's default home under its own profile is not readable by Claude. The global file's defaultMachineFolder text (C:\\Users\\jarvis-s6-val\\VirtualBox VMs) is VirtualBox's default property and unused (explicit basefolder); its host-only DHCP entry is VirtualBox's own global default and is not attached to this VM.",
+    "nothing else enabled": "PASS (vrde off, recording off, autostart off, teleporter off)",
+    "UAC prompt": "none reported by the owner (to be confirmed in chat)"
+  },
+  "script_defect_noted": "vm-creation.json says registry_mentions_vm=false. False negative: VBoxManage showvminfo --machinereadable doubles the backslashes in CfgFile, so the script searched VirtualBox.xml for a doubled-backslash path (its vbox_file field shows the doubled form). Claude's read of VirtualBox.xml shows the MachineEntry with the real path. New-FreshVm.ps1 is fixed in the repo for future runs; it is not re-run, the VM stands.",
+  "result": "STEP 6: VM created to the approved specification except the audio adapter; PASS conditional on step 6b (audio adapter off) before the first start.",
+  "next": "step 6b (owner, validation session: step6b-disable-audio.cmd), then step 7 (step7-start-vm.cmd; Windows installation from the answer file)",
+  "recorded_by": "Claude Code (Claude Fable 5.1), owner account"
+}

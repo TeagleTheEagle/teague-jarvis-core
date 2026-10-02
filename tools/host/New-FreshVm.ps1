@@ -47,7 +47,7 @@ VBM sharedfolder add $Name --name guest-egress-01 --hostpath "$Root\evidence\gue
 # Identity record for section 6(i): machine-readable info, .vbox path and hash, registration location.
 $info = & $vbm showvminfo $Name --machinereadable
 [IO.File]::WriteAllLines((Join-Path $Evidence 'showvminfo.txt'), $info)
-$vbox = ($info | Where-Object { $_ -like 'CfgFile=*' }) -replace '^CfgFile="(.*)"$', '$1'
+$vbox = (($info | Where-Object { $_ -like 'CfgFile=*' }) -replace '^CfgFile="(.*)"$', '$1') -replace '\\\\', '\'   # --machinereadable doubles backslashes; undo it or the registry check below misses the real path
 $uuid = ($info | Where-Object { $_ -like 'UUID=*' }) -replace '^UUID="(.*)"$', '$1'
 $registry = Join-Path $env:VBOX_USER_HOME 'VirtualBox.xml'
 $record = [ordered]@{
