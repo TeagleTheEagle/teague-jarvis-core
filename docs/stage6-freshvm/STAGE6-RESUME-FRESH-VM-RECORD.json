@@ -1,0 +1,31 @@
+{
+  "schema": "stage6-owner-token-record-v1",
+  "token": "RESUME_STAGE6_FRESH_VM",
+  "provision": "AMENDMENT-v2 section 3(c): the owner token RESUME_STAGE6_FRESH_VM together with a separately owner-approved execution prompt authorizes Gate 16R execution",
+  "issued_utc": "2026-10-02T01:15:45Z",
+  "owner_issuance": {
+    "source": "Direct human message in the Claude Code chat, 2026-10-02 (local), consisting of the exact token text",
+    "text": "RESUME_STAGE6_FRESH_VM",
+    "preceding_context": "Claude had stated twice that neither \"go\" nor \"so we can proceed\" could be taken as the token and gave the exact text to send; the owner then sent it verbatim."
+  },
+  "execution_prompt": {
+    "path": "C:\\Users\\jonny\\JARVIS-claude-workspace\\governance\\STAGE6-GATE16R-EXECUTION-PROMPT.md",
+    "sha256": "922302aa74b0a3c5a406f7906e4b965e49721a2a8536b5b4b27d3116dcf114b9",
+    "approval_record": "STAGE6-GATE16R-PROMPT-APPROVAL.json (owner: \"approved\", 2026-10-02)"
+  },
+  "amendments_in_force": {
+    "v2": "STAGE6-ROUTE-FRESH-VM-20260930-v2, RECORDED_ACTIVE (activation 2026-09-30)",
+    "v3": "STAGE6-ROUTE-FRESH-VM-20261001-v3, RECORDED_ACTIVE (sha256 5f4d3b63430863781d96530280018ae5b1dc574df7f5b4387142714cc44f6170)"
+  },
+  "effect": {
+    "gate_pointer_before": "OWNER STOP #1R",
+    "gate_pointer_after": "GATE 16R FRESH_VM_QUALIFICATION (in execution, step 0 complete, step 1 P0 next)",
+    "authorized": "Gate 16R steps 1-12 as written in the approved prompt, including checkpoints P0, P1 and P2 at their sequence points, each run only on the owner's explicit \"run P0\" / \"run P1\" / \"run P2\"",
+    "not_authorized": "Gate 17 and later; FINAL selection; any read of the protected paths outside P0-P2; any VirtualBox operation under the owner account; installing, upgrading or repairing VirtualBox; Experiment 5; provider credentials; production; Stage 7",
+    "stop_rules": "any failure stops the route at that step; no silent retry; no in-place repair; a replacement VM is an owner decision; a UAC prompt is a STOP",
+    "experiment5": "UNCONSUMED, budget frozen at 4/5 (unchanged)",
+    "rc_obligations": ["protected-original preservation mandatory", "backup/restore-source preservation mandatory"]
+  },
+  "evidence_folder": "D:\\JARVIS-S6-FRESHVM\\evidence\\gate16r-20261002\\",
+  "recorded_by": "Claude Code (Claude Fable 5.1). This record documents the owner's act; it grants no authority of its own."
+}

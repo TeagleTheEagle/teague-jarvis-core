@@ -44,8 +44,11 @@ Owner only (Claude must stop and ask, never infer or pre-stage tokens):
    hashes (`D:\JARVIS-release-work\stage6-media\`); support scripts committed; evidence
    folder `D:\JARVIS-S6-FRESHVM\evidence\gate16r-20261002\` holds the step-0 records. Not
    done by Claude: the freeze/capacity check (declined twice in chat; D: free space recorded separately, 1610 GiB; the P0 checkpoint records the VirtualBox version, hash and process census itself).
-   **Next: the owner issues `RESUME_STAGE6_FRESH_VM`; then step 1 (P0) runs when the
-   owner says "run P0".** Claude never requests or infers the token.
+   ~~The owner issues `RESUME_STAGE6_FRESH_VM`~~ **Issued 2026-10-02T01:15:45Z** (record
+   `../governance/STAGE6-RESUME-FRESH-VM-RECORD.json`). **Gate pointer: GATE 16R in
+   execution.** Next: step 1, the P0 checkpoint, run only on the owner's "run P0"; then
+   steps 2–12 of the approved prompt in order. Evidence:
+   `D:\JARVIS-S6-FRESHVM\evidence\gate16r-20261002\`.
 3. `RESUME_STAGE6_RECOVERY` before Gate 18.
 4. After Stage 6 passes: FINAL selection, switching the everyday JARVIS over, Stage 7.
    The owner's freeze from P0 still applies: keep VirtualBox closed under the owner account
