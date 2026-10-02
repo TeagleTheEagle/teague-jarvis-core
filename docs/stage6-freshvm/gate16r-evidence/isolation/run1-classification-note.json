@@ -1,0 +1,11 @@
+{
+  "schema": "stage6-harness-note-v1",
+  "utc": "2026-10-02T01:52:00Z",
+  "about": "validation-results.jsonl and validation-summary.json (run 1 of Invoke-IsolationCheck.ps1 in the jarvis-s6-val session, 2026-10-02T01:46:41Z, script sha256 d14076a07c83ad6c33ce917391f74fb8b908a81adb65614ea75cbbeb046d2007)",
+  "summary_status_recorded": "FIRST_FAIL_STOP (37 cases, 5 'failed')",
+  "what_the_five_rows_are": "rename (direct), rename (nested), rename (junction), rename (extended-path), rename (dot-dot-path): outcome 'error', detail FileNotFoundException. .NET's File.Move checks whether the source exists before calling Windows; for an account denied on the restricted folder, that check reports 'not found', so the script saw an unexpected exception type rather than UnauthorizedAccessException. The hard-link rename, whose parent folder the account can list, reported the denial directly and passed.",
+  "substance": "No rename took place: the account could not even observe the files. The owner's postflight (owner-postflight.json) is the proof: fixture hashes, permissions and the restricted folder's contents unchanged, no *.renamed files.",
+  "everything_else_in_run_1": "read, open-write, delete by every path (direct, nested, hard link, junction, extended \\\\?\\ path, dot-dot path): denied; enumerate (direct and via junction): denied; create (direct and nested): denied; permission change and ownership change: denied; delete from writable parent: denied; positive control write/read/delete in scratch: succeeded; protected-path enumerate of C:\\Users\\jonny\\VirtualBox VMs\\JARVIS-CLEAN-WIN11 and C:\\Users\\jonny\\.VirtualBox: denied (nothing read); short-name alias: not exercised, no 8.3 name present (AMENDMENT-v3 A2: NOT_APPLICABLE_WITH_EVIDENCE).",
+  "action": "Script corrected (rename through MoveFileExW with the Win32 error code; one results file per run; plain UTF-8), new sha256 recorded in step3-tools-hashes.txt. Run 1's files are kept unchanged. The owner runs the postflight for run 1, then the corrected check (run 2) and a second postflight. This is a documented re-run after a harness defect, not a retry of a failed isolation case.",
+  "recorded_by": "Claude Code (Claude Fable 5.1), owner account"
+}

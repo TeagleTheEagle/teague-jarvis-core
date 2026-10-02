@@ -1,0 +1,109 @@
+{
+    "utc":  "2026-10-02T01:53:59.4339387Z",
+    "owner_account":  "THEGRIZZLYBEAR\\jonny",
+    "validation_sid":  "S-1-5-21-3412258525-483417857-2736759773-1010",
+    "items":  [
+                  {
+                      "path":  "",
+                      "exists":  true,
+                      "sddl":  "O:S-1-5-21-3412258525-483417857-2736759773-1001G:S-1-5-21-3412258525-483417857-2736759773-1001D:PAI(A;OICI;FA;;;SY)(A;OICI;FA;;;S-1-5-21-3412258525-483417857-2736759773-1001)(A;OICI;0x1200a9;;;S-1-5-21-3412258525-483417857-2736759773-1010)",
+                      "owner":  "THEGRIZZLYBEAR\\jonny",
+                      "sha256":  null,
+                      "link_type":  null,
+                      "link_target":  null
+                  },
+                  {
+                      "path":  "runner",
+                      "exists":  true,
+                      "sddl":  "O:S-1-5-21-3412258525-483417857-2736759773-1001G:S-1-5-21-3412258525-483417857-2736759773-1001D:PAI(A;OICI;FA;;;SY)(A;OICI;FA;;;S-1-5-21-3412258525-483417857-2736759773-1001)(A;OICI;0x1200a9;;;S-1-5-21-3412258525-483417857-2736759773-1010)",
+                      "owner":  "THEGRIZZLYBEAR\\jonny",
+                      "sha256":  null,
+                      "link_type":  null,
+                      "link_target":  null
+                  },
+                  {
+                      "path":  "aliases",
+                      "exists":  true,
+                      "sddl":  "O:S-1-5-21-3412258525-483417857-2736759773-1001G:S-1-5-21-3412258525-483417857-2736759773-1001D:PAI(A;OICI;FA;;;SY)(A;OICI;FA;;;S-1-5-21-3412258525-483417857-2736759773-1001)(A;OICI;0x1200a9;;;S-1-5-21-3412258525-483417857-2736759773-1010)",
+                      "owner":  "THEGRIZZLYBEAR\\jonny",
+                      "sha256":  null,
+                      "link_type":  null,
+                      "link_target":  null
+                  },
+                  {
+                      "path":  "restricted",
+                      "exists":  true,
+                      "sddl":  "O:S-1-5-21-3412258525-483417857-2736759773-1001G:S-1-5-21-3412258525-483417857-2736759773-1001D:PAI(D;OICI;FA;;;S-1-5-21-3412258525-483417857-2736759773-1010)(A;OICI;FA;;;SY)(A;OICI;FA;;;S-1-5-21-3412258525-483417857-2736759773-1001)",
+                      "owner":  "THEGRIZZLYBEAR\\jonny",
+                      "sha256":  null,
+                      "link_type":  null,
+                      "link_target":  null
+                  },
+                  {
+                      "path":  "restricted\\nested",
+                      "exists":  true,
+                      "sddl":  "O:S-1-5-21-3412258525-483417857-2736759773-1001G:S-1-5-21-3412258525-483417857-2736759773-1001D:AI(D;OICIID;FA;;;S-1-5-21-3412258525-483417857-2736759773-1010)(A;OICIID;FA;;;SY)(A;OICIID;FA;;;S-1-5-21-3412258525-483417857-2736759773-1001)",
+                      "owner":  "THEGRIZZLYBEAR\\jonny",
+                      "sha256":  null,
+                      "link_type":  null,
+                      "link_target":  null
+                  },
+                  {
+                      "path":  "scratch",
+                      "exists":  true,
+                      "sddl":  "O:S-1-5-21-3412258525-483417857-2736759773-1001G:S-1-5-21-3412258525-483417857-2736759773-1001D:PAI(A;OICI;FA;;;SY)(A;OICI;FA;;;S-1-5-21-3412258525-483417857-2736759773-1001)(A;OICI;0x1301bf;;;S-1-5-21-3412258525-483417857-2736759773-1010)",
+                      "owner":  "THEGRIZZLYBEAR\\jonny",
+                      "sha256":  null,
+                      "link_type":  null,
+                      "link_target":  null
+                  },
+                  {
+                      "path":  "restricted\\sentinel.bin",
+                      "exists":  true,
+                      "sddl":  "O:S-1-5-21-3412258525-483417857-2736759773-1001G:S-1-5-21-3412258525-483417857-2736759773-1001D:AI(D;ID;FA;;;S-1-5-21-3412258525-483417857-2736759773-1010)(A;ID;FA;;;SY)(A;ID;FA;;;S-1-5-21-3412258525-483417857-2736759773-1001)",
+                      "owner":  "THEGRIZZLYBEAR\\jonny",
+                      "sha256":  "d67c656e01756650d77717b0839985a056ec28ffe174601d690fc407a2ceffca",
+                      "link_type":  "HardLink",
+                      "link_target":  "D:\\JARVIS-S6-FRESHVM\\synthetic\\isolation-01\\aliases\\hardlink.bin"
+                  },
+                  {
+                      "path":  "restricted\\nested\\sentinel.bin",
+                      "exists":  true,
+                      "sddl":  "O:S-1-5-21-3412258525-483417857-2736759773-1001G:S-1-5-21-3412258525-483417857-2736759773-1001D:AI(D;ID;FA;;;S-1-5-21-3412258525-483417857-2736759773-1010)(A;ID;FA;;;SY)(A;ID;FA;;;S-1-5-21-3412258525-483417857-2736759773-1001)",
+                      "owner":  "THEGRIZZLYBEAR\\jonny",
+                      "sha256":  "d67c656e01756650d77717b0839985a056ec28ffe174601d690fc407a2ceffca",
+                      "link_type":  null,
+                      "link_target":  null
+                  },
+                  {
+                      "path":  "aliases\\hardlink.bin",
+                      "exists":  true,
+                      "sddl":  "O:S-1-5-21-3412258525-483417857-2736759773-1001G:S-1-5-21-3412258525-483417857-2736759773-1001D:AI(D;ID;FA;;;S-1-5-21-3412258525-483417857-2736759773-1010)(A;ID;FA;;;SY)(A;ID;FA;;;S-1-5-21-3412258525-483417857-2736759773-1001)",
+                      "owner":  "THEGRIZZLYBEAR\\jonny",
+                      "sha256":  "d67c656e01756650d77717b0839985a056ec28ffe174601d690fc407a2ceffca",
+                      "link_type":  "HardLink",
+                      "link_target":  "D:\\JARVIS-S6-FRESHVM\\synthetic\\isolation-01\\restricted\\sentinel.bin"
+                  },
+                  {
+                      "path":  "aliases\\junction",
+                      "exists":  true,
+                      "sddl":  "O:S-1-5-21-3412258525-483417857-2736759773-1001G:S-1-5-21-3412258525-483417857-2736759773-1001D:AI(A;OICIID;FA;;;SY)(A;OICIID;FA;;;S-1-5-21-3412258525-483417857-2736759773-1001)(A;OICIID;0x1200a9;;;S-1-5-21-3412258525-483417857-2736759773-1010)",
+                      "owner":  "THEGRIZZLYBEAR\\jonny",
+                      "sha256":  null,
+                      "link_type":  "Junction",
+                      "link_target":  "D:\\JARVIS-S6-FRESHVM\\synthetic\\isolation-01\\restricted"
+                  }
+              ],
+    "restricted_contents":  [
+                                "restricted\\nested",
+                                "restricted\\sentinel.bin",
+                                "restricted\\nested\\sentinel.bin"
+                            ],
+    "short_names":  " Volume in drive D is New Volume\r\n Volume Serial Number is 74F9-D5F1\r\n\r\n Directory of D:\\JARVIS-S6-FRESHVM\\synthetic\\isolation-01\\restricted\r\n\r\n02/10/2026  11:43 AM    \u003cDIR\u003e                       .\r\n02/10/2026  11:43 AM    \u003cDIR\u003e                       ..\r\n02/10/2026  11:43 AM    \u003cDIR\u003e                       nested\r\n02/10/2026  11:43 AM             4,096              sentinel.bin\r\n               1 File(s)          4,096 bytes\r\n               3 Dir(s)  1,729,144,397,824 bytes free\r\n",
+    "ntfs_8dot3_policy":  2,
+    "fsutil_8dot3_query":  "Failed to open the volume.\r\nError 5: Access is denied.\r\n",
+    "findings":  [
+
+                 ],
+    "status":  "PASS"
+}
