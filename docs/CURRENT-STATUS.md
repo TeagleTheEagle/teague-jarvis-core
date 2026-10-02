@@ -43,7 +43,7 @@ Owner only (Claude must stop and ask, never infer or pre-stage tokens):
    permission and hash-verified against Microsoft; answer-file and tools discs built with
    hashes (`D:\JARVIS-release-work\stage6-media\`); support scripts committed; evidence
    folder `D:\JARVIS-S6-FRESHVM\evidence\gate16r-20261002\` holds the step-0 records. Not
-   done: the freeze/capacity check (declined once; runs at execution time).
+   done by Claude: the freeze/capacity check (declined twice in chat; D: free space recorded separately, 1610 GiB; the P0 checkpoint records the VirtualBox version, hash and process census itself).
    **Next: the owner issues `RESUME_STAGE6_FRESH_VM`; then step 1 (P0) runs when the
    owner says "run P0".** Claude never requests or infers the token.
 3. `RESUME_STAGE6_RECOVERY` before Gate 18.
