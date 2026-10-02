@@ -37,13 +37,15 @@ Owner only (Claude must stop and ask, never infer or pre-stage tokens):
 1. ~~Confirm the release design choices~~ **Done: approved by the owner 2026-10-01**
    (recorded in `docs/RELEASE-DESIGN.md`, "Owner decision").
 2. ~~Choose A/B/C and settle D1–D9~~ **Done 2026-10-01 (option B, amendment v3).**
-   Next: approve the Gate 16R execution prompt (`docs/stage6-freshvm/GATE16R-EXECUTION-PROMPT.md`,
-   drafted 2026-10-01), then issue `RESUME_STAGE6_FRESH_VM` with the prompt when ready.
-   Step-0 preparation done: Windows 11 26H2 ISO downloaded with the owner's permission and
-   hash-verified against Microsoft (D2 settled, no limitation), answer-file and tools discs
-   built with hashes (all in `D:\JARVIS-release-work\stage6-media\`), support scripts
-   committed. Not done: the pre-token freeze/capacity check (declined once; runs at
-   execution time).
+   ~~Approve the Gate 16R execution prompt~~ **Done 2026-10-02 ("approved"; record
+   `../governance/STAGE6-GATE16R-PROMPT-APPROVAL.json`, frozen text sha256 922302aa…).**
+   Step 0 of the prompt is complete: Windows 11 26H2 ISO downloaded with the owner's
+   permission and hash-verified against Microsoft; answer-file and tools discs built with
+   hashes (`D:\JARVIS-release-work\stage6-media\`); support scripts committed; evidence
+   folder `D:\JARVIS-S6-FRESHVM\evidence\gate16r-20261002\` holds the step-0 records. Not
+   done: the freeze/capacity check (declined once; runs at execution time).
+   **Next: the owner issues `RESUME_STAGE6_FRESH_VM`; then step 1 (P0) runs when the
+   owner says "run P0".** Claude never requests or infers the token.
 3. `RESUME_STAGE6_RECOVERY` before Gate 18.
 4. After Stage 6 passes: FINAL selection, switching the everyday JARVIS over, Stage 7.
    The owner's freeze from P0 still applies: keep VirtualBox closed under the owner account
