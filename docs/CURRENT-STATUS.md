@@ -20,8 +20,9 @@ Last updated: 2026-10-04 11:00Z (STAGE_6_COMPLETE, SWITCH-OVER COMPLETE and **ST
   (then the Stage 7 check 1.0.11 -> 1.0.12, then an update of the everyday JARVIS); after a trouble-free
   period, deleting the test VM and data copies and retiring the old folder and Codex.
 
-Handover summaries `docs/HANDOVER-20261002.md`, `HANDOVER-20261004.md` and `HANDOVER-20261004-2.md` are
-out of date (the newest stops before Gate 18); this file is the current record.
+Newest handover summary for a fresh session: `docs/HANDOVER-20261004-3.md` (after Stage 7). The earlier
+`HANDOVER-20261002.md`, `HANDOVER-20261004.md` and `HANDOVER-20261004-2.md` are out of date; this file is the
+current record.
 
 Rules and authority are in `CLAUDE.md` and `../governance/OWNER-DELEGATION.md`; this file
 only records where the work stands. Historical handover context: `docs/PROJECT-CONTEXT.md`.
