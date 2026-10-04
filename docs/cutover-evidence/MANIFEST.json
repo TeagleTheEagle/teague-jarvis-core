@@ -1,0 +1,63 @@
+{
+  "schema": "stage6-evidence-manifest-v1",
+  "generated_utc": "2026-10-04T08:46:23Z",
+  "root": "D:\\JARVIS-cutover",
+  "folders": [
+    "evidence"
+  ],
+  "not_listed": "this manifest itself; the sealed P0 folder is never read",
+  "files": 10,
+  "bytes": 13622,
+  "entries": [
+    {
+      "file": "evidence/check.json",
+      "bytes": 1167,
+      "sha256": "56efba4b1d209f697856137adf0799991a7193ec7135e564d8f2a243e7a71beb"
+    },
+    {
+      "file": "evidence/cutover-evaluation.json",
+      "bytes": 3848,
+      "sha256": "45aeaff7d363c7f764079bb3774cf419164e464813e5f5696b924c00c11d8781"
+    },
+    {
+      "file": "evidence/dryrun.json",
+      "bytes": 1829,
+      "sha256": "937b7e034c7a38f54ad5350a2c8acab06371e60bb31ae5ac3d86d84edcf5d68d"
+    },
+    {
+      "file": "evidence/import-approved.json",
+      "bytes": 680,
+      "sha256": "1c92ed7cbf9b5250c59e8e20d28d6ddd646af24e2c7114f57ae783a78ec0ea11"
+    },
+    {
+      "file": "evidence/import.json",
+      "bytes": 1570,
+      "sha256": "5a7696ec0767754375a5de720bb164ade6f87daf815bf33756eb7ad3e7f124d0"
+    },
+    {
+      "file": "evidence/install.json",
+      "bytes": 1040,
+      "sha256": "e69bc746df4addd3d441bb32f552e0a9d136e667fc035f6f573291dd0ee006ac"
+    },
+    {
+      "file": "evidence/owner-statements.jsonl",
+      "bytes": 885,
+      "sha256": "f14795f5f7e7fa776a8c22b7e635db4ac8017e3239ce6470033523377aecfedc"
+    },
+    {
+      "file": "evidence/retire-approved.json",
+      "bytes": 870,
+      "sha256": "8ca282bd0634d3ff6f736c3ee1216beec59875861f088451ee71ece254f1e092"
+    },
+    {
+      "file": "evidence/retire.json",
+      "bytes": 1376,
+      "sha256": "3f2c2f13f3204f0eee50b6db69fd59d76f4c87397e5e7977adc2dc6b8f2e90bd"
+    },
+    {
+      "file": "evidence/tools-hashes.txt",
+      "bytes": 357,
+      "sha256": "e8f4a106c76db54818cfb656dff0eabe41144e0429843c7441500108be5a8248"
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 # JARVIS: current status (living document)
 
 **Read this first in every new Claude Code session, and update it at the end of each one.**
-Last updated: 2026-10-04 (STAGE_6_COMPLETE; switch-over plan APPROVED by the owner 08:21Z, launcher in `D:\JARVIS-cutover\tools`; waiting for the owner to run step 1; do not edit docs/CUTOVER-BLUEPRINT.md, its hash is in the approval record).
+Last updated: 2026-10-04 (STAGE_6_COMPLETE and SWITCH-OVER COMPLETE: the owner's everyday JARVIS is the installed 1.0.11 at `%LOCALAPPDATA%\JARVIS`; nothing in progress; Stage 7 and the first post-switch release wait for the owner's word; do not edit docs/CUTOVER-BLUEPRINT.md, its hash is in the approval record).
 Newest handover summary for a fresh session: `docs/HANDOVER-20261004-2.md` (the earlier
 `HANDOVER-20261002.md` and `HANDOVER-20261004.md` are out of date).
 
@@ -10,22 +10,28 @@ only records where the work stands. Historical handover context: `docs/PROJECT-C
 
 ## Where we are
 
-- **Stage 6: `STAGE_6_COMPLETE` (2026-10-04T08:10Z, Gate 20).** `PRODUCTION_CUTOVER_NOT_AUTHORIZED`,
-  `STAGE_7_NOT_STARTED`. Passed on FINAL 1.0.11: Gates 16R, 17, 19, 18, 20 and checkpoints P0 to
+- **SWITCH-OVER COMPLETE (2026-10-04T08:45Z).** The owner's everyday JARVIS is now the installed
+  build **1.0.11-60d406fb6398 at `%LOCALAPPDATA%\JARVIS`** (data, preferences and keys carried
+  over; Desktop and Startup shortcut "JARVIS"; AI provider Groq for now). **That folder is the
+  live installation: Claude does not modify it (owner-only); updates reach it only as a tested
+  release on the owner's word.** Approval `../governance/CUTOVER-APPROVAL-RECORD.json`; records
+  `D:\JARVIS-cutover\evidence\` (`cutover-evaluation.json`, manifest 82ff8be6…; repo copy
+  `docs/cutover-evidence/`). The old folder `...\outputs\jarvis` is retired but kept untouched (it
+  cannot start: its Codex Python is gone); its three shortcuts are in
+  `D:\JARVIS-cutover\old-shortcuts\`. Not yet confirmed: JARVIS starting by itself at the owner's
+  next sign-in. **Next, each on the owner's word:** lean Stage 7; the first release after the
+  switch-over (`docs/POST-CUTOVER-FIXES.md`); after a trouble-free period, deleting the test VM
+  and data copies and retiring the old folder and Codex. Source changes are no longer frozen,
+  but nothing has been changed yet.
+- **Stage 6: `STAGE_6_COMPLETE` (2026-10-04T08:10Z, Gate 20).** `STAGE_7_NOT_STARTED`. Passed on FINAL 1.0.11: Gates 16R, 17, 19, 18, 20 and checkpoints P0 to
   P5 (P5 `evidence\gate20\checkpoints\p5-20261004-080906`, on the owner's "run P5"; VirtualBox
   version equal to P0). Verdict and limitations: `evidence\gate20\gate20-evaluation.json`; owner's
   four Gate 20 decisions: `gate20-owner-decisions.json` ("accept all"); index of everything:
   `docs/EVIDENCE-INDEX.md`. The VM (snapshot GATE18-PASS) and the backup copies on D: hold the
   owner's personal data and are kept until the switch-over has run well (owner decision).
-  **Phase 1 preparation done on the owner's "start this" (2026-10-04): switch-over plan
-  `docs/CUTOVER-BLUEPRINT.md` READY FOR APPROVAL, launcher `tools/host/Invoke-Cutover.ps1` +
-  `cutover-step.cmd` rehearsed in a sandbox (`docs/release-rehearsal-20261004/README.md`). Waiting for
-  the owner's approval of the plan; then Claude copies the launcher to `D:\JARVIS-cutover\tools\`,
-  writes `cutover-authorized.json` and the hashes, and the owner runs step 1. `import-approved.json`
-  and `retire-approved.json` (in `D:\JARVIS-cutover\evidence\`) are written by Claude only on the
-  owner's OK at steps 4 and 7. Stage 7 only on the owner's word.** Known: the everyday JARVIS
-  cannot start (its Codex Python runtime is gone, Gate 18 incident 02); the owner's new Alibaba
-  account is refused `qwen3.8-max` until its identity check completes (`tools/host/Test-QwenKey.ps1`).
+  Known: the owner's new Alibaba account is refused `qwen3.8-max` until its identity check
+  completes; OpenAI has no credits; the Gemini model in the key file is retired
+  (`tools/host/Test-AiKeys.ps1`, owner-run, shows which providers work).
   The long "Next steps" item 2 below is the history of how Stage 6 got here.
   Earlier: P0 PASS (2026-09-30, sealed); owner created `jarvis-s6-val`. Experiment 5
   unconsumed, its budget frozen at 4/5 (that is the experiment budget, **not** a count of
@@ -277,8 +283,10 @@ because creating them changes the owner's real Desktop/Startup folders). Check o
 - **E: (JARVIS BACK UP) is the backup drive. Never write to it.**
 - `D:\C-drive-overflow\`: large files moved off C: on 2026-10-01 at the owner's request
   (Windows ISO, installers, `Documents\Codex\2026-09-12`); its README lists the original paths.
-- The live JARVIS is not in `%LOCALAPPDATA%\JARVIS`; see `../governance/LIVE-INSTALLATION-MAP.md`.
-  Never run `install.cmd` without `--home <sandbox>` until cutover is authorized.
+- **Since the switch-over of 2026-10-04 the live JARVIS IS `%LOCALAPPDATA%\JARVIS`** (the older
+  `../governance/LIVE-INSTALLATION-MAP.md` describes the retired folder). Never run `install.cmd`
+  or `installer.py` without `--home <sandbox>`: without it they act on the owner's live
+  installation. Never start, stop or edit the live installation; never read `config\.env`.
 
 ## Commands
 
@@ -405,3 +413,13 @@ because creating them changes the owner's real Desktop/Startup folders). Check o
   present; never filter files with `-Include` on `-LiteralPath`; an owner-run tool that reads an
   untested location needs refusal checks for what it expects to find. Also written: an owner-run
   Qwen key check (`tools/host/Test-QwenKey.ps1`). Nothing pushed or synced.
+- **2026-10-04, switch-over (Fable 5.1, same session).** On the owner's word: plan finished and
+  rehearsed in a sandbox (one launcher defect found there: the zip has a top folder), approved, then
+  run by the owner step by step: check, install, dry run, import (176 files, counts equal), keys
+  copied by the owner, first start. OpenAI had no credits; the owner-run provider check showed Groq
+  working and the owner switched the provider line. The owner confirmed memories, conversations and
+  voice, then "make the switch": three old shortcuts moved aside, nothing deleted. A requested
+  all-in-one launcher that would import without the owner seeing the dry-run list was refused by the
+  session's safety check and not built. Mistake to avoid: I told the owner the version shows in
+  Settings; it does not (now item 4 of docs/POST-CUTOVER-FIXES.md). Shell heredocs and sed mangled
+  backslash paths in this file twice; use the Edit tool for any path. Nothing pushed or synced.

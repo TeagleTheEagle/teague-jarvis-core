@@ -1,0 +1,27 @@
+{
+  "schema": "jarvis-cutover-evaluation-v1",
+  "subject": "Switch-over (cutover) of the everyday JARVIS to the installed FINAL build 1.0.11-60d406fb6398",
+  "written_utc": "2026-10-04T08:46:23Z",
+  "authority": "owner's approval 'I approve the switch-over plan', 2026-10-04T08:21:51Z (governance\\CUTOVER-APPROVAL-RECORD.json; plan docs/CUTOVER-BLUEPRINT.md sha256 f7c2e2ce52d3e4db5f295b4bbcdf5962cf2e7cb5f1bbe86c304110a536cf054a); STAGE_6_COMPLETE the same day",
+  "steps": {
+    "1 check (08:23:53Z)": "PASS: zip sha256 1923651176dd... = FINAL; backup sha256 b81be404... = the Gate 18 backup, test receipt passed; old database not newer than the backup; install location empty; no JARVIS running; 14.4 GB free; not elevated (check.json)",
+    "2 install (08:28:56Z)": "PASS: unpacked in 15.5 s, installed in 42.3 s into C:\\Users\\jonny\\AppData\\Local\\JARVIS, every file verified, new Desktop and Startup shortcuts created, old shortcuts untouched (install.json)",
+    "3 dry run (08:29:53Z)": "PASS: backup copy on D: equals the source; FINAL verified the backup: 176 data files, counts equal to Gate 18 (messages 1133), nothing to move aside (dryrun.json)",
+    "4 import (08:30:55Z)": "PASS on the owner's 'ok, import' (import-approved.json): switch_over_imported, 176 files, counts equal to the backup, desktop/preferences.json written, program files verified, backup copy unchanged (import.json)",
+    "5 keys": "done by the owner: the old key file copied to config\\.env by the owner's own command; Claude checked only that the file exists",
+    "6 first start and check": "by the owner: JARVIS online on the shared Core, greeting by name; memories, old conversations and voice confirmed by the owner; the first AI request was refused by OpenAI (no credits); owner-run Test-AiKeys.ps1 showed Groq working; the owner changed JARVIS_PROVIDER to groq and restarted; the AI then answered. Running from releases\\1.0.11-60d406fb6398 with 8 processes (7 electron, 1 python), nothing from the old folder (owner-statements.jsonl)",
+    "7 switch (08:45:24Z)": "PASS on the owner's 'make the switch' (retire-approved.json): three old shortcuts moved to D:\\JARVIS-cutover\\old-shortcuts (nothing deleted); Desktop now holds only JARVIS.lnk; Startup holds JARVIS.lnk (-ExecutionPolicy Bypass, -LoginLaunch) (retire.json)"
+  },
+  "result": "SWITCH_OVER_COMPLETE: the everyday JARVIS is the installed build 1.0.11-60d406fb6398 at %LOCALAPPDATA%\\JARVIS, with the owner's data, preferences and keys. The old folder C:\\Users\\jonny\\Documents\\Codex\\2026-09-07\\cr\\outputs\\jarvis and its backups were only read and are unchanged by the launcher.",
+  "deviations": [
+    "The owner asked for one launcher that runs all steps; a combined launcher that imports without the owner seeing the dry-run list was refused by the session's safety check and was not built. The steps stayed separate; the owner ran steps 2 and 3 back to back.",
+    "Plan step 6 said the version shows in Settings; the interface does not display the release id. Confirmed instead from current.json and the running program's path.",
+    "Not verified at the time of writing: start at sign-in (the Startup shortcut exists; the owner has not signed out and in again since the switch)."
+  ],
+  "open_after_the_switch": [
+    "AI provider: Groq for now. OpenAI has no credits; the Gemini model in the key file (gemini-2.5-flash) is retired by Google; Qwen waits for Alibaba's identity check.",
+    "Kept until the owner decides: the old folder, Codex, D:\\JARVIS-cutover (package, backup copy, old shortcuts, records), the test VM and the Stage 6 data copies, %LOCALAPPDATA%\\JARVIS-package.",
+    "Stage 7 (lean) and the first release after the switch-over: on the owner's word (docs/POST-CUTOVER-FIXES.md)."
+  ],
+  "recorded_by": "Claude Code (Claude Fable 5.1), owner account"
+}
