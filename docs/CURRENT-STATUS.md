@@ -148,7 +148,13 @@ Owner only (Claude must stop and ask, never infer or pre-stage tokens):
    `../governance/STAGE6-RESUME-RECOVERY-RECORD.json`). Gate 18 IN EXECUTION.** Steps 1 and 2
    below done 05:42–05:43Z (tools copied, `gate18-authorized.json`, hashes in
    `evidence\gate18\prep-tools-hashes.txt`; launcher dry run as jonny points to the owner's copy
-   command). Next: the owner's copy from E:. The plan on the token was:
+   command). **Gate 18 STOPPED at the backup copy (incident 01, 05:46Z;
+   `evidence\gate18\incident-01-backup-copy.json`, repo copy in `gate18-evidence/`):** the copy
+   script's `.zip` filter is ignored by PowerShell 5.1 with `-LiteralPath` and it copied a 2 KB
+   report file; and `E:\JARVIS-BACKUP` turned out to hold a file-by-file copy of the old project
+   (newest 2026-09-17), not a JARVIS data backup. E: unchanged (hash before = after). Launcher
+   suspended (`gate18-authorized.json` renamed `.SUSPENDED-incident-01.json`). **Owner decision
+   required: where Gate 18's backup comes from** (options in the incident note). The plan on the token was:
    (1) writes `../governance/STAGE6-RESUME-RECOVERY-RECORD.json`; (2) copies
    `gate18-step.cmd`, `Invoke-Gate18Step.ps1`, `New-Gate18RecoveryDisc.ps1`,
    `Start-Gate18Vm.ps1` to `D:\JARVIS-S6-FRESHVM\tools\` and writes

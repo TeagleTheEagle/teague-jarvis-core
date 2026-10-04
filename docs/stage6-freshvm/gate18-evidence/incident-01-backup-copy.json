@@ -1,0 +1,15 @@
+{
+  "schema": "stage6-incident-v1",
+  "id": "gate18-incident-01",
+  "recorded_utc": "2026-10-04T05:49:28Z",
+  "gate": "Gate 18 (after RESUME_STAGE6_RECOVERY 2026-10-04T05:41:52Z)",
+  "step": "owner's copy of the backup from E: with Copy-BackupForGate18.ps1 (sha256 b14a29cf24e76b6cf28a8989eb45a70c86da980f6f4dc9bbc99c5cfd5d6e98d8), run by THEGRIZZLYBEAR\\jonny, record backup-copy.json utc 2026-10-04T05:46:27Z",
+  "what_happened": "The script copied E:\\JARVIS-BACKUP\\jarvis\\docs\\stage6-watchdog-20260917\\archive-verification.json (2,270 bytes, a report file) instead of a backup archive. backup-copy.json lists 120,101 files as 'archives_seen'.",
+  "cause_1_tool_defect": "Get-ChildItem -LiteralPath ... -Recurse -Include '*.zip' ignores -Include in Windows PowerShell 5.1 when -LiteralPath is used, so every file was listed and the newest file of any type was chosen. Not caught by the rehearsal, which did not exercise this script (the E: copy is owner-only and was not rehearsed).",
+  "cause_2_plan_assumption": "The plan (AMENDMENT-v3 D8, GATE18-STEPS.md) assumed E:\\JARVIS-BACKUP holds verified backup archives (.zip) made by the everyday JARVIS. According to backup-copy.json, E:\\JARVIS-BACKUP holds one folder, 'jarvis', that is a file-by-file copy of the old project (tests 89,460 files, .venv 11,186, release 10,204, docs 5,846, desktop 2,101, review 786, data 190, ...), newest file 2026-09-17. Its only .zip files are an Electron download cache, two release packages from 2026-09-07 and Python base_library.zip copies: none is a JARVIS data backup. Even with cause 1 fixed, no correct file would have been found.",
+  "backup_drive": "not changed: source_sha256_before = source_sha256_after = 503622c118d854cdeb922f7463ae85cfa908392765cd00ad986eaa74fbe0f9d6; backup_drive_written false. Claude did not read or list E:; the facts above come from the record the owner's run wrote on D:.",
+  "side_effects": "D:\\JARVIS-S6-FRESHVM\\media\\archive-verification.json (2,270 bytes) created by the copy; backup-copy.json (about 42.6 MB) in this folder. Both kept as evidence. No disc built, VM not started, nothing entered the VM.",
+  "containment": "Claude renamed D:\\JARVIS-S6-FRESHVM\\tools\\gate18-authorized.json to gate18-authorized.SUSPENDED-incident-01.json so gate18-step stops instead of building a recovery disc from the wrong file. Restoring the name re-enables it (after the owner's decision and a fixed copy).",
+  "status": "Gate 18 STOPPED at the backup copy. No repeat without the owner's decision.",
+  "owner_decision_required": "how Gate 18 obtains a backup: (A) a verified backup made now by the everyday JARVIS's own backup function, copied by the owner; (B) AMENDMENT-v3 D8 alternative: a synthetic backup made inside the VM (no personal data in the VM; does not test old-format to FINAL); (C) another source the owner names."
+}
