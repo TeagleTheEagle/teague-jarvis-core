@@ -41,6 +41,16 @@ restore_rehearsal_passed; `Copy-BackupForGate18-v2.ps1` DONE (plus six refusal c
 `Invoke-Gate18.ps1` on that **old-format** backup with the Gates 17/19 sandbox standing in for the VM: **K0 to K9
 PASS** (`gate18-oldformat.output.txt`); helper `New-OldJarvisBackup.ps1` end to end PASS, refusals PASS.
 
+**Switch-over launcher (2026-10-04, after STAGE_6_COMPLETE, Claude Fable 5.1):** `tools/host/Invoke-Cutover.ps1`
++ `cutover-step.cmd` rehearsed with `rehearse-cutover.ps1` in `D:\JARVIS-release-work\cutover-rehearsal-3` (real
+FINAL zip, sandbox install home, the old-format rehearsal copy as "old JARVIS", made-up backup, made-up old
+shortcuts, `-NoShortcuts`): refusals (not authorised; wrong backup hash) PASS; check, install (unpack 16.9 s,
+install 29.6 s, verified), dry run, import (refused without approval, then PASS, counts equal, verified), retire
+(refused without approval, then 3 shortcuts moved, none deleted), idempotent afterwards. Runs 1 and 2
+(`cutover-rehearsal`, `cutover-rehearsal-2`) stopped on a harness slip and on a launcher defect (the zip's top
+folder), both fixed; kept. Not rehearsed: the real install location, real Desktop/Startup shortcuts, the real
+backup on this PC, the key file, the "shortcut does not point at the old JARVIS" refusal.
+
 Not rehearsed for Gate 18: the owner's real backup (made by the old everyday JARVIS; whether FINAL accepts it
 is what the gate tests), the copy from the backup drive, `New-Gate18RecoveryDisc.ps1` and `Start-Gate18Vm.ps1`
 (disc build and VirtualBox), and double-clicking `gate18.cmd` from the disc.

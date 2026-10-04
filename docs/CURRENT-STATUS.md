@@ -1,7 +1,7 @@
 # JARVIS: current status (living document)
 
 **Read this first in every new Claude Code session, and update it at the end of each one.**
-Last updated: 2026-10-04 (STAGE_6_COMPLETE at Gate 20: Gates 16R, 17, 19, 18, 20 and P0 to P5 passed on FINAL 1.0.11; no cutover, no Stage 7; next acts are the owner's).
+Last updated: 2026-10-04 (STAGE_6_COMPLETE; switch-over plan and launcher prepared and rehearsed, waiting for the owner's approval of the plan; nothing executed on the real JARVIS).
 Newest handover summary for a fresh session: `docs/HANDOVER-20261004-2.md` (the earlier
 `HANDOVER-20261002.md` and `HANDOVER-20261004.md` are out of date).
 
@@ -17,8 +17,13 @@ only records where the work stands. Historical handover context: `docs/PROJECT-C
   four Gate 20 decisions: `gate20-owner-decisions.json` ("accept all"); index of everything:
   `docs/EVIDENCE-INDEX.md`. The VM (snapshot GATE18-PASS) and the backup copies on D: hold the
   owner's personal data and are kept until the switch-over has run well (owner decision).
-  **Nothing is in progress. Next is the owner's: cutover (`docs/CUTOVER-BLUEPRINT.md`, draft, open
-  points listed there) and Stage 7, each only on the owner's word.** Known: the everyday JARVIS
+  **Phase 1 preparation done on the owner's "start this" (2026-10-04): switch-over plan
+  `docs/CUTOVER-BLUEPRINT.md` READY FOR APPROVAL, launcher `tools/host/Invoke-Cutover.ps1` +
+  `cutover-step.cmd` rehearsed in a sandbox (`docs/release-rehearsal-20261004/README.md`). Waiting for
+  the owner's approval of the plan; then Claude copies the launcher to `D:\JARVIS-cutover	ools\`,
+  writes `cutover-authorized.json` and the hashes, and the owner runs step 1. `import-approved.json`
+  and `retire-approved.json` (in `D:\JARVIS-cutover\evidence\`) are written by Claude only on the
+  owner's OK at steps 4 and 7. Stage 7 only on the owner's word.** Known: the everyday JARVIS
   cannot start (its Codex Python runtime is gone, Gate 18 incident 02); the owner's new Alibaba
   account is refused `qwen3.8-max` until its identity check completes (`tools/host/Test-QwenKey.ps1`).
   The long "Next steps" item 2 below is the history of how Stage 6 got here.
