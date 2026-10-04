@@ -140,6 +140,7 @@ foreach ($phase in $order) {
     }
 }
 Say ''; Say "ALL STAGE 7 STEPS PASSED for $release."
-Say 'Now shut Windows down: Start > Power > Shut down. Wait until the VM window closes, then tell Claude: stage 7 done'
+Say 'Now shut Windows down: Start > Power > Shut down. Wait until the VM window closes.'
+Say 'Then, on the PC in the jarvis-s6-val account, double-click stage7-step again (it takes the snapshot) and tell Claude: stage 7 done'
 Log @{ outcome = 'all phases passed'; ran_now = $ranNow }
 exit 0

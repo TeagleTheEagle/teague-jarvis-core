@@ -85,7 +85,11 @@ async function connectCore(root,options={}){
   quit:async()=>{},                                         // closing an app never stops the shared Core
   async shutdown(){                                          // "Quit JARVIS completely"
    await request('/api/shutdown').catch(()=>{});
-   for(const deadline=Date.now()+10000;Date.now()<deadline&&await coreAlive(link);)await new Promise(r=>setTimeout(r,200));
+   // Done only when the Core process has exited: until then it can still answer on a connection that was already
+   // open (HTTP keep-alive), although it refuses new ones and has removed its connection file (release 1.0.13 check).
+   // A crashed Core's process is gone at once, so quitting after a crash does not wait.
+   const gone=async()=>!processAlive(link.pid)&&!await coreAlive(link);
+   for(const deadline=Date.now()+10000;Date.now()<deadline&&!await gone();)await new Promise(r=>setTimeout(r,200));
   },
   watch(onEnd,options){return watchCore(link,file,onEnd,options);} // tells a requested stop from a crash
  };

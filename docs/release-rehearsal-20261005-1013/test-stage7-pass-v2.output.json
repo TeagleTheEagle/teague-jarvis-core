@@ -1,0 +1,50 @@
+[
+    {
+        "case":  "target names this check: its own folder gets the cycle marker",
+        "passed":  true,
+        "exit":  0,
+        "output":  "Now shut Windows down: Start \u003e Power \u003e Shut down. Wait until the VM window closes. | Then, on the PC in the jarvis-s6-val account, double-click stage7-step again (it takes the snapshot) and tell Claude: stage 7 done"
+    },
+    {
+        "case":  "folder not created on the PC: stops, creates nothing",
+        "passed":  true,
+        "exit":  3,
+        "output":  "STOPPED: the evidence folder D:\\JARVIS-release-work\\scratch\\stage7-v2-pass-test\\egress\\stage7-1.0.13-6d4ff851cca4 cannot be reached. Photograph this window for Claude and wait."
+    },
+    {
+        "case":  "target for another build: stops",
+        "passed":  true,
+        "exit":  3,
+        "output":  "STOPPED: this disc\u0027s target names 1.0.99-x but the disc holds 1.0.13-6d4ff851cca4. | Photograph this window for Claude and wait."
+    },
+    {
+        "case":  "disc without a target file: stops",
+        "passed":  true,
+        "exit":  3,
+        "output":  "STOPPED: this disc has no stage7-target.json; it was not built for a version 2 check. | Photograph this window for Claude and wait."
+    },
+    {
+        "case":  "unsafe folder name: stops",
+        "passed":  true,
+        "exit":  3,
+        "output":  "STOPPED: this disc\u0027s target folder name is not valid: ..\\outside | Photograph this window for Claude and wait."
+    },
+    {
+        "case":  "no release record on the disc: stops cleanly",
+        "passed":  true,
+        "exit":  3,
+        "output":  "STOPPED: no JARVIS release record in D:\\JARVIS-release-work\\scratch\\stage7-v2-pass-test\\disc | Photograph this window for Claude and wait."
+    },
+    {
+        "case":  "cycle of another build in this folder: stops",
+        "passed":  true,
+        "exit":  3,
+        "output":  "STOPPED: this disc holds 1.0.13-6d4ff851cca4 but the pass was started with 1.0.11-60d406fb6398 | Photograph this window for Claude and wait."
+    },
+    {
+        "case":  "started from the disc without -Package (as stage7.cmd does): finds the disc and its folder",
+        "passed":  true,
+        "exit":  0,
+        "output":  "Now shut Windows down: Start \u003e Power \u003e Shut down. Wait until the VM window closes. | Then, on the PC in the jarvis-s6-val account, double-click stage7-step again (it takes the snapshot) and tell Claude: stage 7 done"
+    }
+]
