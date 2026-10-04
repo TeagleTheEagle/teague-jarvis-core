@@ -2,7 +2,8 @@
 
 **Read this first in every new Claude Code session, and update it at the end of each one.**
 Last updated: 2026-10-04 (Gates 16R, 17 and 19 and P3 passed on FINAL 1.0.11; at OWNER STOP #2: Claude prepares the Gate 18 restore tooling, then the owner decides on RESUME_STAGE6_RECOVERY).
-Newest handover summary for a fresh session: `docs/HANDOVER-20261004.md`.
+Newest handover summary for a fresh session: `docs/HANDOVER-20261004-2.md` (the earlier
+`HANDOVER-20261002.md` and `HANDOVER-20261004.md` are out of date).
 
 Rules and authority are in `CLAUDE.md` and `../governance/OWNER-DELEGATION.md`; this file
 only records where the work stands. Historical handover context: `docs/PROJECT-CONTEXT.md`.
