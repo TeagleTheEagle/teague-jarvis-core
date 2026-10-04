@@ -10,20 +10,25 @@ only records where the work stands. Historical handover context: `docs/PROJECT-C
 
 ## Where we are
 
-- **Stage 6: INCOMPLETE.** Fresh-VM route active, gate pointer OWNER STOP #1R. P0 PASS
-  (2026-09-30, sealed); owner created `jarvis-s6-val`. Experiment 5 unconsumed, its budget
-  frozen at 4/5 (that is the experiment budget, **not** a count of Stage 6 attempts).
-  Stage 7 not started. Production cutover not authorized.
+- **Stage 6: INCOMPLETE.** Fresh-VM route active. **Gate pointer: OWNER STOP #2 (before
+  Gate 18), since 2026-10-04.** Passed on FINAL 1.0.11: Gate 16R, Gate 17, Gate 19 and
+  checkpoints P0 to P3. Not done: Gate 18, P4, Gate 20, P5. `RESUME_STAGE6_FRESH_VM` was
+  issued 2026-10-02; `RESUME_STAGE6_RECOVERY` is not issued. Details under "Next steps".
+  Earlier: P0 PASS (2026-09-30, sealed); owner created `jarvis-s6-val`. Experiment 5
+  unconsumed, its budget frozen at 4/5 (that is the experiment budget, **not** a count of
+  Stage 6 attempts). Stage 7 not started. Production cutover not authorized.
 - **Owner chose option B and approved amendment v3 on 2026-10-01** ("i approve everything"):
   the two unprovable isolation cases are dispositioned with a stated limitation, D1–D9 are
   settled at their recommended selections, Claude Code is the executor. Record:
   `../governance/STAGE6-AMENDMENT-v3-RECORD.json` (text `STAGE6-AMENDMENT-v3.md`, sha256
-  5f4d3b63…). Gate pointer still OWNER STOP #1R; no token issued; nothing executed.
-- **Release candidate: 1.0.11-60d406fb6398** (built from 60d406f; zip 525,622,280 bytes,
+  5f4d3b63…). (On that day the gate pointer was still OWNER STOP #1R and no token had been
+  issued; see the first bullet for today's pointer.)
+- **FINAL: 1.0.11-60d406fb6398, selected by the owner on 2026-10-04**
+  (`../governance/STAGE6-FINAL-SELECTION-RECORD.json`; built from 60d406f; zip 525,622,280 bytes,
   SHA-256 `19236511…`, in `D:\JARVIS-release-work\release\`). Full regression (325/36/18/16),
   zip install, the Gate 18 backup/restore rehearsal and the local Gate 17 rehearsal **all
-  pass on it** (`docs/release-rehearsal-20261001/README.md` section 6). It is the candidate
-  for the owner's FINAL selection. 1.0.10 failed Gate 18 (backup
+  pass on it** (`docs/release-rehearsal-20261001/README.md` section 6); Gates 17 and 19 then
+  passed on it in the VM. 1.0.10 failed the Gate 18 rehearsal (backup
   blocked by the Core lock, fixed in 1.0.11); 1.0.9 exposed a config-location defect fixed
   in 1.0.10. Earlier fully rehearsed build, now superseded: **1.0.7-6c356bf982de**, with its
   distributable zip:
@@ -157,8 +162,9 @@ Owner only (Claude must stop and ask, never infer or pre-stage tokens):
    launcher in `D:\JARVIS-S6-FRESHVM\tools\` (ACL/VirtualBox work is owner-only); Claude
    reads the JSON results from the evidence folder. Evidence:
    `D:\JARVIS-S6-FRESHVM\evidence\gate16r-20261002\`.
-3. `RESUME_STAGE6_RECOVERY` before Gate 18.
-4. After Stage 6 passes: FINAL selection, switching the everyday JARVIS over, Stage 7.
+3. `RESUME_STAGE6_RECOVERY` before Gate 18 (**this is where the work stands**).
+4. After Stage 6 passes: switching the everyday JARVIS over (cutover), then Stage 7. (FINAL
+   selection is done: 1.0.11, 2026-10-04.)
    The owner's freeze from P0 still applies: keep VirtualBox closed under the owner account
    and do not install, upgrade or repair it until Gate 20.
 
