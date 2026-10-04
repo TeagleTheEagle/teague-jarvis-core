@@ -1,7 +1,7 @@
 # JARVIS: current status (living document)
 
 **Read this first in every new Claude Code session, and update it at the end of each one.**
-Last updated: 2026-10-04 (Gate 16R steps 0–9 PASS; step 10, P2, waits for the owner's "run P2").
+Last updated: 2026-10-04 (Gate 16R steps 0–10 PASS incl. P2; step 11 snapshot pending the owner's click).
 Newest handover summary for a fresh session: `docs/HANDOVER-20261004.md`.
 
 Rules and authority are in `CLAUDE.md` and `../governance/OWNER-DELEGATION.md`; this file
@@ -93,11 +93,15 @@ Owner only (Claude must stop and ask, never infer or pre-stage tokens):
    the snapshot; manifest `FRESH-CLEAN-BASELINE-manifest.json` written by
    `tools/host/snapshot_manifest.py`; `step9-evaluation.json`). The saved settings still
    hold NAT localhost-reachable "true" (the known defect), so every start after restoring a
-   snapshot also goes through `step7-start-vm.cmd`. **Step 10 pending:** P2 on the owner's
-   "run P2" (reference `checkpoints\p1-20261002-025102`). Then `step11-snapshot-prereq.cmd`
-   (owner, validation session, VM stays off; reuse `snapshot_manifest.py` with
-   `--snapshot FRESH-PREREQ` and the v3 D1 statement) and the step 12 qualification
-   record. The owner runs every
+   snapshot also goes through `step7-start-vm.cmd`. Step 10 **P2 PASS** (run
+   `p2-20261004-030308`, 2026-10-04T03:03:08Z, on the owner's "RUN P2": inventories, control
+   hashes and DACLs byte-identical to P1, VirtualBox 7.2.18.175117 unchanged, empty process
+   census; `step10-evaluation.json`). **Step 11 pending:** the owner runs
+   `step11-snapshot-prereq.cmd` in the validation session (VM stays off) and says "step 11
+   done"; Claude then verifies the record, writes the manifest (`snapshot_manifest.py
+   --snapshot FRESH-PREREQ --baseline-run gate17-20261004-022130 --statement` with the
+   approved prompt's step 11 sentence) and the section 6(i) identity record. Then the
+   step 12 qualification record (P3 will reference `checkpoints\p2-20261004-030308`). The owner runs every
    launcher in `D:\JARVIS-S6-FRESHVM\tools\` (ACL/VirtualBox work is owner-only); Claude
    reads the JSON results from the evidence folder. Evidence:
    `D:\JARVIS-S6-FRESHVM\evidence\gate16r-20261002\`.
