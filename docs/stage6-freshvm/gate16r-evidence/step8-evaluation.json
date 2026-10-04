@@ -1,0 +1,39 @@
+{
+  "schema": "stage6-gate16r-step-evaluation-v1",
+  "step": "8: cleanliness and baseline record inside JARVIS-S6-FRESH (AMENDMENT-v2 section 6(b), (f), (g); approved prompt step 8)",
+  "utc": "2026-10-04T02:15:00Z",
+  "runs": {
+    "run1": "guest-egress-01/gate17-20261002-071120 (tools disc v1): FAIL on the Microsoft Store python.exe app execution alias; harness false positive (step8-run1-note.json)",
+    "run2": "guest-egress-01/gate17-20261004-014927 (tools disc v2): PASS; record did not enumerate every section 6(f) negative, check extended",
+    "run3": "guest-egress-01/gate17-20261004-015834 (tools disc v3): FAIL on the Guest Additions pipe VBoxTrayIPC-jarvis-s6-guest, named after the Windows account; harness false positive introduced by the extension (step8-run3-note.json)",
+    "run4": "guest-egress-01/gate17-20261004-020257 (tools disc v4, JARVIS-TOOLS-v4.iso sha256 1a64839bc6b528cf05c18426eca10d8d639ac91ec19c38f9cd4e24e8e39c4cf2, guest script sha256 25588a408933f754a59cfc176f2c00edca090ac6b005204731c0489eecc67d64): PASS, 2026-10-04T02:02:57Z to 02:03:03Z. This is the baseline record. B1-baseline.json sha256 db191f62ba4ced0d5519f3a295c8ada3b288cc5a302169adf0cedd541a86f54b; baseline-programs.json dcfc72dba6b6cade449ecf51356eb63e49710625b4d169ef62a140b7c076c2ed; baseline-services.json 8dbcb588043c0f5a6628bf2ea57f5f016187f4f5d653a3c39dd56ddd437b2717; SUMMARY.json 7fd31346df0a8ce3af51d2995f454c8a8bb7fbad87c4270d589063c64edd38eb"
+  },
+  "all_four_runs_kept": true,
+  "checks_from_run4": {
+    "6(b) edition": "PASS: Microsoft Windows 11 Home, 64-bit (EditionID Core; the registry ProductName reads 'Windows 10 Home', a known Windows 11 quirk); activation status 5 (not activated; activation is not required, status recorded)",
+    "6(c) local account, no Microsoft account": "PASS: account JARVIS-S6-FRESH\\jarvis-s6-guest, principal source Local; OneDrive not signed in; Settings showed 'Local Account' (owner's photographs, 2026-10-02)",
+    "6(e) Guest Additions counted in the baseline": "PASS: Oracle VirtualBox Guest Additions 7.2.18.175117 in the installed-programs list; installed at step 7 from media\\VBoxGuestAdditions.iso (sha256 346ea2b9ed47bb954464af83835b14bd8afa5fc1864f34e2561ed923fb74981c)",
+    "6(f) no JARVIS installation, source, Core state, AppData directories, pipes, services or tasks": "PASS: install folder absent, 0 processes, jarvis_folders [], jarvis_services [] of 260, jarvis_scheduled_tasks [], jarvis_named_pipes [] of 55 enumerated (one pipe, VBoxTrayIPC-jarvis-s6-guest, is named after the account and belongs to Guest Additions)",
+    "6(f) no Codex, Git, Node.js, Python, Visual Studio or build tools": "PASS: development_tools_on_path [] and development_tool_folders []; the Microsoft Store alias python.exe (0 bytes, opens the Store) is recorded separately and is not an installation",
+    "6(f) default PATH; no global packages": "PASS: non_default_path_entries [] (system32, Windows, Wbem, WindowsPowerShell, OpenSSH, the user's WindowsApps); global_package_folders []",
+    "6(f) no secrets: .env files, provider keys or tokens": "PASS: env_files_in_profile []; no JARVIS credential entries",
+    "6(f) credential-manager entries": "OWNER DISPOSITION REQUIRED: two entries exist, MicrosoftAccount:target=SSO_POP_Device and WindowsLive:target=virtualapp/didlogical. Both are created by Windows itself (device sign-on stubs), hold no owner, provider or JARVIS secret, and are the same two targets that exist in the host validation account, left UNRESOLVED there by the owner's 2026-09-30 decision (AMENDMENT-v3 A3). The text of 6(f) lists credential-manager entries under 'no secrets'.",
+    "6(f) signed-in online accounts": "PASS: local account; OneDrive not signed in; no Microsoft account sign-in was performed (answer file path, no account screens shown)",
+    "6(g) Windows Update paused; build and UBR recorded": "PASS: paused until 2026-11-06T05:27:32Z; build 26300.9457, equal to the installation media"
+  },
+  "installed_programs_at_baseline": [
+    "Copilot 154.0.4258.53",
+    "Microsoft Edge 154.0.4258.53",
+    "Microsoft Edge WebView2 Runtime 154.0.4258.53",
+    "Microsoft OneDrive 26.168.0830.0006",
+    "Microsoft Windows Application Compatibility Fix Database",
+    "Oracle VirtualBox Guest Additions 7.2.18.175117"
+  ],
+  "observations": [
+    "Between run 1 (2026-10-02) and run 2 (2026-10-04) the VM stayed running. Windows inbox components changed on their own although Windows Update is paused: Copilot 154.0.4258.37 -> .53 and the appearance of 'Microsoft Windows Application Compatibility Fix Database'; the credential entries went from 1 to 2. The baseline is the state recorded by run 4.",
+    "The process ran with the non-elevated token of the Administrators-group guest account (is_administrator false), as intended for a per-user install."
+  ],
+  "result": "STEP 8: PASS on every scripted negative of section 6(f) (run 4), with one item awaiting the owner's disposition: the two Windows-generated credential-manager entries.",
+  "next": "owner disposition of the credential entries (before the snapshot, because removing them would change the guest); then clean shutdown and step 9 (FRESH-CLEAN-BASELINE)",
+  "recorded_by": "Claude Code (Claude Fable 5.1), owner account"
+}

@@ -1,3 +1,8 @@
 90cb26ef951186a0fb006f02faaabd4e0d59c27f9deb265cf86daa7ab6829bce *New-ToolsDiscV2.ps1
 20a523314531ba96989f0b94c323682e93f25797dafc9cf8166b8ae8e50d8da2 *build-tools-disc-v2.cmd
 a0bc5d947da35ad894ca70cc7b9640125fa8494646e3294aa64b8ac84c5949e9 *Invoke-Gate17.ps1 (repo, corrected; goes onto JARVIS-TOOLS-v2.iso)
+4629227043dfe42a599a0f77c093a2da86e17554e9243bf0442299968357a224 *New-ToolsDisc.ps1
+39725419504dee70eacd6b07147ee85e76150213ee4087690bfdf5c01d8c5ec6 *build-tools-disc-v3.cmd
+0a88627e7f32b9a6ea6c01242a03f3be61b031e8b33e28bf01acf5c61329fae8 *Invoke-Gate17.ps1 (repo, full section 6(f) record; goes onto JARVIS-TOOLS-v3.iso)
+c507cd3b547491025a55296c50c2638b70d92926e2fbd5d7bdcded074fc0e77d *build-tools-disc-v4.cmd
+25588a408933f754a59cfc176f2c00edca090ac6b005204731c0489eecc67d64 *Invoke-Gate17.ps1 (repo, account and computer names excluded from matching; goes onto JARVIS-TOOLS-v4.iso)

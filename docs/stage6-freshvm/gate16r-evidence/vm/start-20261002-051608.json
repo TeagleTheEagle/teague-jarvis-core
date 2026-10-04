@@ -1,0 +1,26 @@
+{
+    "schema":  "stage6-fresh-vm-start-v1",
+    "utc":  "2026-10-02T05:16:18.7157429Z",
+    "account":  "jarvis-s6-val",
+    "vm_name":  "JARVIS-S6-FRESH",
+    "vm_uuid":  "4ef16bdd-2a1b-46af-83db-ee69c2f868bb",
+    "settings_at_start":  {
+                              "vbox_sha256":  "d0c3f1631c11c498bb6d2a5081345e98a2ace4fe522a55c26db3af17b932b16a",
+                              "localhostReachable":  "0",
+                              "audio":  "none",
+                              "nic1":  "nat",
+                              "nic2":  "none",
+                              "nic3":  "none",
+                              "nic4":  "none",
+                              "usb":  "off",
+                              "clipboard":  "disabled",
+                              "draganddrop":  "disabled",
+                              "SecureBoot":  "on"
+                          },
+    "vbox_log":  "D:\\JARVIS-S6-FRESHVM\\machines\\JARVIS-S6-FRESH\\Logs\\VBox.log",
+    "vbox_log_localhost_reachable":  [
+                                         "00:00:05.410919   LocalhostReachable \u003cinteger\u003e = 0x0000000000000000 (0)"
+                                     ],
+    "verdict":  "LocalhostReachable = 0 confirmed in VBox.log",
+    "vm_state_after":  "running"
+}
