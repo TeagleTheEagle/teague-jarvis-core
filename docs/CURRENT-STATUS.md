@@ -1,7 +1,8 @@
 # JARVIS: current status (living document)
 
 **Read this first in every new Claude Code session, and update it at the end of each one.**
-Last updated: 2026-10-02 (Gate 16R step 5 P1 PASS; step 6 VM creation next).
+Last updated: 2026-10-04 (Gate 16R steps 0–8 PASS; step 9 snapshot pending the owner's click).
+Newest handover summary for a fresh session: `docs/HANDOVER-20261004.md`.
 
 Rules and authority are in `CLAUDE.md` and `../governance/OWNER-DELEGATION.md`; this file
 only records where the work stands. Historical handover context: `docs/PROJECT-CONTEXT.md`.
@@ -78,9 +79,18 @@ Owner only (Claude must stop and ask, never infer or pre-stage tokens):
    (saved as the empty default, read back as on; proven by the before/after `.vbox` diff).
    Owner chose option 1 (2026-10-02T04:12Z, `step6-owner-decision-nat.json`): every start of
    the VM goes through `step7-start-vm.cmd` / `Start-FreshVm.ps1`, which re-applies "off" and
-   records the running VM's `VBox.log` value; no host UAC prompt occurred. Next: step 7
-   (owner starts the VM; Windows installs from the answer file), steps 8–9 inside the VM,
-   then P2 on the owner's "run P2". The owner runs every
+   records the running VM's `VBox.log` value; no host UAC prompt occurred. Step 7
+   **PASS** (Windows 11 Home 26H2 build 26300.9457 from the answer file on the second
+   attempt, local account `jarvis-s6-guest`, Guest Additions 7.2.18, Windows Update paused
+   until 2026-11-06, egress mounted by hand non-persistent; boot list reset and disc prompt
+   answered from the host, all recorded). Step 8 **PASS** (2026-10-04; baseline record =
+   run 5 `guest-egress-01\gate17-20261004-022130`, tools disc v4, full §6(f) list; runs 1 and 3
+   were harness false positives, kept; owner approved two dispositions: the two
+   Windows-generated credential entries, and LocalhostReachable proven from VBox.log
+   instead of the `.vbox`). **Step 9 pending:** the VM is shut down cleanly (2026-10-04
+   13:26 local); the owner runs `step9-snapshot-clean-baseline.cmd` in the validation session
+   and says "step 9 done". Then P2 on "run P2", `step11-snapshot-prereq.cmd`, and the
+   step 12 qualification record. The owner runs every
    launcher in `D:\JARVIS-S6-FRESHVM\tools\` (ACL/VirtualBox work is owner-only); Claude
    reads the JSON results from the evidence folder. Evidence:
    `D:\JARVIS-S6-FRESHVM\evidence\gate16r-20261002\`.
@@ -186,3 +196,13 @@ because creating them changes the owner's real Desktop/Startup folders). Check o
   step 5 P1 PASS; step 6a egress folder created by the owner.
   All owner-run work goes through one-click launchers in `D:\JARVIS-S6-FRESHVM\tools\`;
   evidence copied under `docs/stage6-freshvm/gate16r-evidence/`. Nothing pushed or synced.
+- **2026-10-02 to 04, Gate 16R steps 6–8 (Fable 5.1).** VM created and verified; audio
+  adapter corrected; found that VirtualBox 7.2.18 does not persist NAT localhost-reachable
+  off (every start now goes through the start launcher, owner option 1). Windows installed on
+  the second attempt (first stalled at 42%); baseline recorded in five runs (two harness
+  false positives fixed with new tools discs v2–v4; the check now covers the full §6(f)
+  list). Owner approved the roadmap and the simplified acceptance (from Gate 17) and two
+  wording dispositions. Lessons: test guest-script changes with the VM's account and
+  computer names; never run the Baseline phase on the host; Windows applies staged updates
+  at shutdown, so re-record before a snapshot. Next: step 9 snapshot, P2, step 11, step 12.
+  Nothing pushed or synced.
