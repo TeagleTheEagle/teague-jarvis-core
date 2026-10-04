@@ -20,6 +20,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -97,8 +98,9 @@ def file_sha256(path):
 
 
 def ps_quote(text):
-    """A PowerShell single-quoted literal."""
-    return "'" + str(text).replace("'", "''") + "'"
+    """A PowerShell single-quoted literal. PowerShell also takes the typographic quotes ‘ ’ ‚ ‛ as single quotes
+    (a folder named D’Arcy), so each of them is doubled like the plain one."""
+    return "'" + re.sub("(['‘’‚‛])", r'\1\1', str(text)) + "'"
 
 
 def default_home():
@@ -174,20 +176,34 @@ def ask_core_to_stop(link_file):
 def end_processes_script(releases, own_pid):
     """PowerShell that ends every process whose executable lives inside `releases` (never `own_pid`), waits
     until they have really exited (ending a process is asynchronous, and a program file is locked until
-    then), looks again (a closing app can still start a helper process), and prints how many remain."""
-    return ("$root=[IO.Path]::GetFullPath(" + ps_quote(str(releases) + os.sep) + ");$own=" + str(own_pid) + ";"
-            "function Mine { @(Get-CimInstance Win32_Process | Where-Object { $_.ProcessId -ne $own -and $_.ExecutablePath -and "
-            "$_.ExecutablePath.StartsWith($root, [StringComparison]::OrdinalIgnoreCase) }) };"
+    then), looks again (a closing app can still start a helper process), and prints how many remain.
+    - Any error stops the script with a nonzero exit code: a failed process search must never read as
+      'remaining=0', and a missing folder name must never match every program on the PC.
+    - Paths are also compared in their full long form (a program started through an 8.3 short name), and
+      against the folder with links resolved.
+    - Each process is held open before it is ended, then found again in a fresh search: while it is held its
+      number cannot be given to an unrelated program, so only JARVIS's own programs are ended."""
+    roots = sorted({os.path.abspath(releases) + os.sep, os.path.realpath(releases) + os.sep})
+    return ("$ErrorActionPreference='Stop';$own=" + str(int(own_pid)) + ";"
+            "function Full($p) { try { [IO.Path]::GetFullPath($p) } catch { $p } };"
+            "$roots=@(@(" + ','.join(ps_quote(r) for r in roots) + ") | ForEach-Object { Full $_ });"
+            "if (@($roots | Where-Object { -not $_ -or $_.Length -lt 4 -or -not $_.EndsWith('\\') }).Count) { exit 3 };"
+            "function Inside($path) { if (-not $path) { return $false }; foreach ($s in @($path, (Full $path))) {"
+            " foreach ($r in $roots) { if ($s.StartsWith($r, [StringComparison]::OrdinalIgnoreCase)) { return $true } } }; return $false };"
+            "function Mine { @(Get-CimInstance Win32_Process | Where-Object { $_.ProcessId -ne $own -and (Inside $_.ExecutablePath) }) };"
             "for ($round = 0; $round -lt 5; $round++) { $found = Mine; if (-not $found) { break };"
-            "$found | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue };"
-            "Wait-Process -Id @($found | ForEach-Object { $_.ProcessId }) -Timeout 10 -ErrorAction SilentlyContinue };"
-            "Write-Output ('remaining=' + (Mine).Count)")
+            "$held = @{}; foreach ($c in $found) { try { $p = [Diagnostics.Process]::GetProcessById([int]$c.ProcessId);"
+            " $null = $p.Handle; $held[[int]$c.ProcessId] = $p } catch { } };"
+            "foreach ($c in Mine) { $p = $held[[int]$c.ProcessId]; if ($p) { try { $p.Kill() } catch { } } };"
+            "if ($held.Count) { Wait-Process -Id @($held.Keys) -Timeout 10 -ErrorAction SilentlyContinue };"
+            "foreach ($p in $held.Values) { $p.Dispose() } };"
+            "Write-Output ('remaining=' + @(Mine).Count)")
 
 
 def stop_running_jarvis(home, timeout=30):
     """Ask the shared Core to shut down, then end any leftover JARVIS processes from this home
-    (never this installer's own process). Refuses if one is still running afterwards, so nothing is
-    switched or deleted while a program file is in use."""
+    (never this installer's own process). Refuses if one is still running afterwards, or if that could
+    not be checked, so nothing is switched or deleted while a program file is in use."""
     home = Path(home)
     link_file = home / 'data' / 'core-connection.json'
     if ask_core_to_stop(link_file):
@@ -195,10 +211,16 @@ def stop_running_jarvis(home, timeout=30):
         while time.monotonic() < deadline and link_file.exists():
             time.sleep(0.5)
     if os.name == 'nt' and (home / 'releases').is_dir():
-        done = subprocess.run(['powershell', '-NoProfile', '-Command', end_processes_script(home / 'releases', os.getpid())],
-                              capture_output=True, text=True, timeout=180)
-        remaining = [line for line in (done.stdout or '').splitlines() if line.startswith('remaining=')]
-        require(remaining and remaining[-1] == 'remaining=0',
+        unchecked = ('Windows could not check whether JARVIS is still running from this installation. Nothing was '
+                     'changed. Quit JARVIS completely (its icon near the clock), then run this again.')
+        try:
+            done = subprocess.run(['powershell', '-NoProfile', '-Command', end_processes_script(home / 'releases', os.getpid())],
+                                  capture_output=True, text=True, errors='replace', timeout=180)
+        except (subprocess.SubprocessError, OSError):
+            raise InstallError(unchecked) from None
+        remaining = [line.strip() for line in (done.stdout or '').splitlines() if line.startswith('remaining=')]
+        require(done.returncode == 0 and remaining, unchecked)
+        require(remaining[-1] == 'remaining=0',
                 'JARVIS is still running from this installation and could not be stopped. Nothing was changed. '
                 'Quit JARVIS completely (its icon near the clock), then run this again.')
 
@@ -244,7 +266,11 @@ def install(package, home, shortcuts=True, stop=stop_running_jarvis, replace_leg
                 stop(home)  # repairing the running release: its files must be free to move
                 lap('stop')
             damaged = releases / f'.damaged-{release_id}-{int(time.time())}'
-            os.replace(target, damaged)
+            try:
+                os.replace(target, damaged)
+            except OSError:  # e.g. a program JARVIS opened still has that release's folder as its working folder
+                raise InstallError(f'The installed release {release_id} is still in use and cannot be replaced. Nothing '
+                                   'was changed. Quit JARVIS and any program it opened, then run this again.') from None
             shutil.rmtree(damaged, ignore_errors=True)
     if not target.exists():
         incoming = releases / ('.incoming-' + release_id)

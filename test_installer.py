@@ -212,6 +212,17 @@ class InstallerTests(unittest.TestCase):
 
     def test_powershell_quoting(self):
         self.assertEqual(installer.ps_quote("C:\\Users\\O'Brien\\JARVIS"), "'C:\\Users\\O''Brien\\JARVIS'")
+        self.assertEqual(installer.ps_quote('D\u2019Arcy \u2018\u201a\u201b'), "'D\u2019\u2019Arcy \u2018\u2018\u201a\u201a\u201b\u201b'")
+
+    @unittest.skipUnless(os.name == 'nt', 'Windows PowerShell')
+    def test_powershell_quoting_round_trips_every_single_quote_mark(self):
+        # PowerShell also reads the typographic single quotes as quote marks: a folder named D'Arcy with a curly
+        # apostrophe broke the process-ending script (independent review of the 1.0.13 installer change).
+        text = "C:\\Users\\D\u2019Arcy \u2018x\u2019 \u201ay\u201b O'Brien\\JARVIS"
+        done = installer.subprocess.run(['powershell', '-NoProfile', '-Command',
+                                         '(' + installer.ps_quote(text) + ').ToCharArray() | ForEach-Object { [int]$_ }'],
+                                        capture_output=True, text=True, timeout=60)
+        self.assertEqual([int(n) for n in done.stdout.split()], [ord(c) for c in text])
 
     def test_timings_keep_verifying_an_installed_release_out_of_stop(self):
         # Gate 19 G6 and Stage 7 G6 recorded about 95 s as 'stop': it was mostly this check.
@@ -284,12 +295,56 @@ class InstallerTests(unittest.TestCase):
         # Nothing may be switched or deleted while a program file is in use (Stage 7 rehearsal of 1.0.12:
         # an uninstall reached electron.exe while a closing JARVIS window still ran).
         (self.home / 'releases').mkdir(parents=True)
-        for stdout in ('remaining=2\n', 'garbage\n', ''):
+        for stdout in ('remaining=2\n', 'remaining=\n'):  # 'remaining=' alone: one process left (PowerShell 5.1 .Count)
             done = installer.subprocess.CompletedProcess([], 0, stdout=stdout)
             with self.subTest(stdout=stdout), patch.object(installer.os, 'name', 'nt'), \
                     patch.object(installer.subprocess, 'run', return_value=done), self.assertRaises(installer.InstallError) as caught:
                 installer.stop_running_jarvis(self.home)
-            self.assertIn('still running', str(caught.exception))
+            self.assertIn('could not be stopped', str(caught.exception))
+
+    def test_stop_refuses_when_the_check_itself_fails(self):
+        # A failed process search must never pass as "nothing running" (independent review of the 1.0.13 change).
+        (self.home / 'releases').mkdir(parents=True)
+        outcomes = {'script error, then remaining=0': installer.subprocess.CompletedProcess([], 1, stdout='remaining=0\n'),
+                    'no answer': installer.subprocess.CompletedProcess([], 0, stdout='garbage\n'),
+                    'nothing printed': installer.subprocess.CompletedProcess([], 0, stdout=''),
+                    'timed out': installer.subprocess.TimeoutExpired('powershell', 180),
+                    'no PowerShell': FileNotFoundError(2, 'not found')}
+        for name, outcome in outcomes.items():
+            run = {'side_effect': outcome} if isinstance(outcome, BaseException) else {'return_value': outcome}
+            with self.subTest(name), patch.object(installer.os, 'name', 'nt'), \
+                    patch.object(installer.subprocess, 'run', **run), self.assertRaises(installer.InstallError) as caught:
+                installer.stop_running_jarvis(self.home)
+            self.assertIn('could not check', str(caught.exception))
+
+    @unittest.skipUnless(os.name == 'nt', 'Windows PowerShell')
+    def test_a_failed_process_search_never_reads_as_nothing_running(self):
+        releases = self.home / 'releases'
+        releases.mkdir(parents=True)
+        script = installer.end_processes_script(releases, os.getpid())
+        run = lambda text: installer.subprocess.run(['powershell', '-NoProfile', '-Command', text], capture_output=True,
+                                                    text=True, errors='replace', timeout=120)
+        done = run(script)  # nothing runs from this test folder
+        self.assertEqual((done.returncode, done.stdout.strip()), (0, 'remaining=0'))
+        self.assertIn('Get-CimInstance Win32_Process', script)
+        done = run(script.replace('Get-CimInstance Win32_Process', 'Get-CimInstance Win32_NoSuchClass'))
+        self.assertNotEqual(done.returncode, 0)
+        self.assertNotIn('remaining=', done.stdout)
+
+    def test_repairing_a_release_that_is_still_in_use_is_refused_plainly(self):
+        self.install(self.v1)
+        (self.home / 'releases' / '1.0.0-abc' / 'app' / 'server.py').write_bytes(b'# damaged')
+        real_replace = installer.os.replace
+
+        def replace(src, dst):
+            if Path(dst).name.startswith('.damaged-'):  # a folder in the release is some program's working folder
+                raise PermissionError(5, 'Access is denied', str(src))
+            return real_replace(src, dst)
+
+        with patch.object(installer.os, 'replace', side_effect=replace), self.assertRaises(installer.InstallError) as caught:
+            self.install(self.v1)
+        self.assertIn('still in use', str(caught.exception))
+        self.assertEqual(self.current()['release'], '1.0.0-abc')
 
     @unittest.skipUnless(os.name == 'nt', 'Windows process handling')
     def test_stop_ends_every_program_of_this_home_and_waits_until_they_are_gone(self):
@@ -315,6 +370,29 @@ class InstallerTests(unittest.TestCase):
                 if p.poll() is None:
                     p.kill()
                 p.wait(10)
+
+    @unittest.skipUnless(os.name == 'nt', 'Windows process handling')
+    def test_stop_ends_a_program_started_through_a_short_folder_name(self):
+        # Windows reports a program's path as it was started; an 8.3 short spelling of this home's releases
+        # folder must still be recognised (independent review of the 1.0.13 installer change).
+        import ctypes
+        folder = self.home / 'releases' / '1.0.0-abc' / 'electron-runtime'
+        folder.mkdir(parents=True)
+        ping = folder / 'ping.exe'
+        shutil.copyfile(Path(os.environ['SYSTEMROOT']) / 'System32' / 'PING.EXE', ping)
+        buffer = ctypes.create_unicode_buffer(1024)
+        short = buffer.value if ctypes.windll.kernel32.GetShortPathNameW(str(ping), buffer, 1024) else str(ping)
+        if os.path.normcase(short) == os.path.normcase(str(ping)):
+            self.skipTest('this volume has no 8.3 short names')
+        flags = getattr(installer.subprocess, 'CREATE_NO_WINDOW', 0)
+        program = installer.subprocess.Popen([short, '-n', '120', '127.0.0.1'], stdout=installer.subprocess.DEVNULL, creationflags=flags)
+        try:
+            installer.stop_running_jarvis(self.home)
+            self.assertIsNotNone(program.poll())
+        finally:
+            if program.poll() is None:
+                program.kill()
+            program.wait(10)
 
     def test_uninstall_waits_briefly_for_a_file_still_in_use_and_otherwise_leaves_jarvis_not_installed(self):
         self.install(self.v1)
