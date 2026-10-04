@@ -121,8 +121,26 @@ if (($Phase -eq 'Baseline' -or $Phase -eq 'All') -and -not $SkipBaseline) {
     $wu = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings' -ErrorAction SilentlyContinue
     $programs = @(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*', 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*', 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue | Where-Object DisplayName | Select-Object DisplayName, DisplayVersion, Publisher | Sort-Object DisplayName)
     $services = @(Get-Service | Select-Object Name, Status, StartType | Sort-Object Name)
+    # AMENDMENT-v2 section 6(f), the remaining negatives: JARVIS services, scheduled tasks, named pipes and folders;
+    # global package folders; default PATH; and the sign-in state (local account, no signed-in online account).
+    $jarvisServices = @(Get-Service | Where-Object { $_.Name -match 'jarvis' -or $_.DisplayName -match 'jarvis' } | ForEach-Object { $_.Name })
+    $jarvisTasks = @(Get-ScheduledTask -ErrorAction SilentlyContinue | Where-Object { $_.TaskName -match 'jarvis' -or $_.TaskPath -match 'jarvis' } | ForEach-Object { "$($_.TaskPath)$($_.TaskName)" })
+    $pipeNames = @(try { [IO.Directory]::GetFiles('\\.\pipe\') } catch { @(Get-ChildItem '\\.\pipe\' -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName }) })
+    $jarvisPipes = @($pipeNames | Where-Object { $_ -match 'jarvis' })
+    $jarvisDirs = @(foreach ($d in "$env:LOCALAPPDATA\JARVIS*", "$env:APPDATA\JARVIS*", "$env:ProgramData\JARVIS*", "$env:ProgramFiles\JARVIS*", "$env:USERPROFILE\JARVIS*") { Get-Item -Path $d -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName } })
+    $globalPackages = @(foreach ($d in "$env:APPDATA\npm", "$env:APPDATA\Python", "$env:LOCALAPPDATA\pip", "$env:USERPROFILE\.cargo", "$env:USERPROFILE\.nuget") { if (Test-Path $d) { $d } })
+    $nonDefaultPath = @($env:PATH -split ';' | Where-Object { $_ -and ($_ -notlike "$env:SystemRoot*") -and ($_.TrimEnd('\') -ne $aliasDir.TrimEnd('\')) })
+    $localUser = Get-LocalUser -Name $env:USERNAME -ErrorAction SilentlyContinue
+    $principalSource = if ($localUser) { "$($localUser.PrincipalSource)" } else { 'unknown' }
+    $oneDrive = Get-ItemProperty 'HKCU:\Software\Microsoft\OneDrive\Accounts\Personal' -ErrorAction SilentlyContinue
+    $os = Get-CimInstance Win32_OperatingSystem
+    $credCount = ([regex]::Matches($cred, 'Target:')).Count
+    $forOwner = @()
+    if ($credCount -gt 0 -and -not ($cred -match 'JARVIS')) { $forOwner += "credential-manager entries exist ($credCount); section 6(f) lists credential-manager entries under 'no secrets'; recorded for the owner's disposition, not failed by the script" }
+    if ($principalSource -eq 'unknown') { $forOwner += 'the account principal source could not be read' }
     $data = [ordered]@{
         status = 'PASS'; at = (Now)
+        os_caption = $os.Caption; os_architecture = $os.OSArchitecture
         edition = $cv.ProductName; display_version = $cv.DisplayVersion; build = "$($cv.CurrentBuildNumber).$($cv.UBR)"; edition_id = $cv.EditionID
         activation_license_status = if ($lic) { $lic.LicenseStatus } else { 'unknown' }
         hypervisor_present = (Get-CimInstance Win32_ComputerSystem).HypervisorPresent
@@ -133,6 +151,10 @@ if (($Phase -eq 'Baseline' -or $Phase -eq 'All') -and -not $SkipBaseline) {
         jarvis_install_present = (Test-Path -LiteralPath $InstallHome); jarvis_processes = (Processes).Count
         env_files_in_profile = $envFiles; jarvis_credentials = ($cred -match 'JARVIS'); credential_entries = ([regex]::Matches($cred, 'Target:')).Count
         credential_targets = @([regex]::Matches($cred, 'Target:\s*(.+)') | ForEach-Object { $_.Groups[1].Value.Trim() })
+        account_principal_source = $principalSource; onedrive_account_configured = [bool]($oneDrive -and $oneDrive.UserEmail)
+        jarvis_services = $jarvisServices; jarvis_scheduled_tasks = $jarvisTasks; jarvis_named_pipes = $jarvisPipes; named_pipes_enumerated = $pipeNames.Count; jarvis_folders = $jarvisDirs
+        global_package_folders = $globalPackages; non_default_path_entries = $nonDefaultPath
+        owner_disposition_required = $forOwner
         installed_programs = $programs.Count; services = $services.Count
     }
     [IO.File]::WriteAllText((Join-Path $script:EvidenceDir 'baseline-programs.json'), ($programs | ConvertTo-Json -Depth 3), $Utf8)
@@ -144,6 +166,14 @@ if (($Phase -eq 'Baseline' -or $Phase -eq 'All') -and -not $SkipBaseline) {
     if ($data.jarvis_processes) { $problems += 'JARVIS processes running' }
     if ($envFiles) { $problems += '.env files in the profile' }
     if ($data.jarvis_credentials) { $problems += 'JARVIS credential entries' }
+    if ($jarvisServices) { $problems += 'JARVIS services present' }
+    if ($jarvisTasks) { $problems += 'JARVIS scheduled tasks present' }
+    if ($jarvisPipes) { $problems += 'JARVIS named pipes present' }
+    if ($jarvisDirs) { $problems += 'JARVIS folders present' }
+    if ($globalPackages) { $problems += 'global package folders present' }
+    if ($nonDefaultPath) { $problems += 'non-default PATH entries' }
+    if ($principalSource -in 'MicrosoftAccount', 'AzureAD', 'ActiveDirectory') { $problems += "the account is not a local account ($principalSource)" }
+    if ($data.onedrive_account_configured) { $problems += 'OneDrive is signed in to an online account' }
     if ($problems) { Fail 'B1-baseline' $data ($problems -join '; ') }
     Record 'B1-baseline' $data
 }

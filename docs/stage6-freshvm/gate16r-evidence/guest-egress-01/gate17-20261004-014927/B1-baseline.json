@@ -1,0 +1,36 @@
+{
+    "status":  "PASS",
+    "at":  "2026-10-04T01:49:50.9185869Z",
+    "edition":  "Windows 10 Home",
+    "display_version":  "26H2",
+    "build":  "26300.9457",
+    "edition_id":  "Core",
+    "activation_license_status":  5,
+    "hypervisor_present":  true,
+    "windows_update_pause_expiry":  "2026-11-06T05:27:32Z",
+    "account":  "JARVIS-S6-FRESH\\jarvis-s6-guest",
+    "is_administrator":  false,
+    "path":  "C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\WINDOWS\\System32\\OpenSSH\\;C:\\Users\\jarvis-s6-guest\\AppData\\Local\\Microsoft\\WindowsApps;",
+    "development_tools_on_path":  [
+
+                                  ],
+    "store_app_execution_aliases":  [
+                                        "python -\u003e C:\\Users\\jarvis-s6-guest\\AppData\\Local\\Microsoft\\WindowsApps\\python.exe (Microsoft Store app execution alias, 0 bytes; nothing installed)"
+                                    ],
+    "development_tool_folders":  [
+
+                                 ],
+    "jarvis_install_present":  false,
+    "jarvis_processes":  0,
+    "env_files_in_profile":  [
+
+                             ],
+    "jarvis_credentials":  false,
+    "credential_entries":  2,
+    "credential_targets":  [
+                               "MicrosoftAccount:target=SSO_POP_Device",
+                               "WindowsLive:target=virtualapp/didlogical"
+                           ],
+    "installed_programs":  6,
+    "services":  260
+}

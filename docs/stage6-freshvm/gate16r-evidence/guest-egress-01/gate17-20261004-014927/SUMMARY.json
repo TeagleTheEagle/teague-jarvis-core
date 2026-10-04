@@ -1,0 +1,16 @@
+{
+    "schema":  "jarvis-gate17-run-v1",
+    "overall":  "PASS",
+    "phase":  "Baseline",
+    "home":  "C:\\Users\\jarvis-s6-guest\\AppData\\Local\\JARVIS",
+    "package":  "E:\\",
+    "started_utc":  "2026-10-04T01:49:27.3184135Z",
+    "finished_utc":  "2026-10-04T01:50:08.0859707Z",
+    "steps":  [
+                  {
+                      "step":  "B1-baseline",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T01:50:08.0684764Z"
+                  }
+              ]
+}
