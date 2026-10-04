@@ -1,7 +1,7 @@
 # JARVIS: current status (living document)
 
 **Read this first in every new Claude Code session, and update it at the end of each one.**
-Last updated: 2026-10-04 (STAGE_6_COMPLETE; switch-over plan and launcher prepared and rehearsed, waiting for the owner's approval of the plan; nothing executed on the real JARVIS).
+Last updated: 2026-10-04 (STAGE_6_COMPLETE; switch-over plan APPROVED by the owner 08:21Z, launcher in D:JARVIS-cutover	ools; waiting for the owner to run step 1; do not edit docs/CUTOVER-BLUEPRINT.md, its hash is in the approval record).
 Newest handover summary for a fresh session: `docs/HANDOVER-20261004-2.md` (the earlier
 `HANDOVER-20261002.md` and `HANDOVER-20261004.md` are out of date).
 
