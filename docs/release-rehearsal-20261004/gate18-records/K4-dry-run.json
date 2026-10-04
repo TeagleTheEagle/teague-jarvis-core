@@ -1,0 +1,36 @@
+{
+    "status":  "PASS",
+    "result":  "dry_run_only",
+    "backup_verified":  true,
+    "backup_id":  "dcbbb1d59e0a4a5eaad65d2466d27719",
+    "files_to_import":  2,
+    "database_counts":  {
+                            "items":  2,
+                            "messages":  0,
+                            "reminders":  0,
+                            "settings":  0,
+                            "audit":  0,
+                            "feedback":  0,
+                            "documents":  0,
+                            "task_meta":  0,
+                            "research":  0,
+                            "turn_evidence":  0,
+                            "workspaces":  0,
+                            "workspace_links":  0,
+                            "project_budget_limits":  0,
+                            "project_budget_reservations":  0,
+                            "inspection_records":  0,
+                            "inspection_findings":  0,
+                            "inspection_finding_sources":  0,
+                            "inspection_finding_events":  0
+                        },
+    "would_move_aside":  [
+
+                         ],
+    "skipped_protected":  0,
+    "personal_config":  {
+                            "personality.txt":  "differs",
+                            "desktop/preferences.json":  "differs"
+                        },
+    "output":  null
+}

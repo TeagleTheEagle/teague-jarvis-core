@@ -132,10 +132,23 @@ Owner only (Claude must stop and ask, never infer or pre-stage tokens):
    byte-identical to P2, VirtualBox unchanged, empty census; `p3-evaluation.json`).
    Manifests: `evidence\gate17\MANIFEST.json` (23 files, sha256 53ac88ff…) and
    `MANIFEST-guest-egress-01.json` (55 files, aa3e8a30…). P4 will reference the P3 folder.
-   **Now at OWNER STOP #2**: build and rehearse the Gate 18 tooling (recovery
-   disc with the owner's backup copied by the owner from E:, a guest restore script; local
-   rehearsal exists as `gate18_rehearsal.py`), present the exact steps, and wait for
-   `RESUME_STAGE6_RECOVERY` (never requested). Before reuse, fix `Invoke-Gate.ps1`'s restart
+   **Now at OWNER STOP #2.** Gate 18 tooling is written and rehearsed with a made-up
+   backup (`docs/release-rehearsal-20261004/README.md`): `tools/guest/Invoke-Gate18.ps1` +
+   `gate18.cmd` (checks K0–K9), `tools/host/New-Gate18RecoveryDisc.ps1`,
+   `Start-Gate18Vm.ps1`, `Invoke-Gate18Step.ps1` + `gate18-step.cmd`. The exact steps for
+   the owner are in `docs/stage6-freshvm/GATE18-STEPS.md`. **Waiting for the owner's
+   `RESUME_STAGE6_RECOVERY` (never requested or inferred).** When it arrives, Claude:
+   (1) writes `../governance/STAGE6-RESUME-RECOVERY-RECORD.json`; (2) copies
+   `gate18-step.cmd`, `Invoke-Gate18Step.ps1`, `New-Gate18RecoveryDisc.ps1`,
+   `Start-Gate18Vm.ps1` to `D:\JARVIS-S6-FRESHVM\tools\` and writes
+   `gate18-authorized.json` there (hashes to `evidence\gate18\prep-tools-hashes.txt`);
+   (3) gives the owner the copy command for the jonny account:
+   `powershell -ExecutionPolicy Bypass -File D:\JARVIS-S6-FRESHVM\tools\Copy-BackupForGate18.ps1`
+   (the owner runs it; no launcher for the E: copy, and Claude never touches E:);
+   (4) then `gate18-step` in jonny (disc), in jarvis-s6-val (start), `gate18` in the VM,
+   shut down, `gate18-step` (snapshot GATE18-PASS), evaluation, P4 on "run P4" (reference
+   `evidence\gate17\checkpoints\p3-20261004-051026`), Gate 20 with P5. Do not edit
+   `tools/guest/Invoke-Gate18.ps1` after the recovery disc is built. Before reuse, fix `Invoke-Gate.ps1`'s restart
    check (use uptime, not wall-clock) on a NEW disc; the discs already built are evidence.
    A cutover blueprint draft exists (`docs/CUTOVER-BLUEPRINT.md`; not approved).
    P3 will reference `checkpoints\p2-20261004-030308`. Every VM start, including after

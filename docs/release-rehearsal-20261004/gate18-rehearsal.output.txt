@@ -1,0 +1,14 @@
+﻿K0-not-elevated                PASS
+K1-backup-identity             PASS
+K2-starting-point              PASS
+K3-restore-target              PASS
+K4-dry-run                     PASS
+K5-import                      PASS
+K6-startup                     PASS
+K7-shutdown                    PASS
+K8-separation                  PASS
+K9-backup-unchanged            PASS
+gate18 Restore : PASS  (D:\JARVIS-release-work\gate18-local\evidence\gate18-20261004-051626)
+
+ALL GATE 18 STEPS PASSED.
+Now shut Windows down: Start > Power > Shut down. Wait until the VM window closes, then tell Claude: gate 18 done
