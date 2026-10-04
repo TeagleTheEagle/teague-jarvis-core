@@ -1,7 +1,7 @@
 # JARVIS: current status (living document)
 
 **Read this first in every new Claude Code session, and update it at the end of each one.**
-Last updated: 2026-10-04 (Gate 16R steps 0–10 PASS incl. P2; step 11 snapshot pending the owner's click).
+Last updated: 2026-10-04 (Gate 16R steps 0–11 PASS incl. P2 and both snapshots; step 12 waits for the owner's answer on two wording differences).
 Newest handover summary for a fresh session: `docs/HANDOVER-20261004.md`.
 
 Rules and authority are in `CLAUDE.md` and `../governance/OWNER-DELEGATION.md`; this file
@@ -96,12 +96,21 @@ Owner only (Claude must stop and ask, never infer or pre-stage tokens):
    snapshot also goes through `step7-start-vm.cmd`. Step 10 **P2 PASS** (run
    `p2-20261004-030308`, 2026-10-04T03:03:08Z, on the owner's "RUN P2": inventories, control
    hashes and DACLs byte-identical to P1, VirtualBox 7.2.18.175117 unchanged, empty process
-   census; `step10-evaluation.json`). **Step 11 pending:** the owner runs
-   `step11-snapshot-prereq.cmd` in the validation session (VM stays off) and says "step 11
-   done"; Claude then verifies the record, writes the manifest (`snapshot_manifest.py
-   --snapshot FRESH-PREREQ --baseline-run gate17-20261004-022130 --statement` with the
-   approved prompt's step 11 sentence) and the section 6(i) identity record. Then the
-   step 12 qualification record (P3 will reference `checkpoints\p2-20261004-030308`). The owner runs every
+   census; `step10-evaluation.json`). Step 11 **PASS** (2026-10-04T03:04:55Z: snapshot
+   `FRESH-PREREQ`, uuid 9f1d7bec-e410-4ed0-bc2f-4966125329ad, child of FRESH-CLEAN-BASELINE,
+   VM not started in between; `.vbox` sha256 03ce709e…; `FRESH-PREREQ-manifest.json`,
+   `fresh-vm-identity.json` (section 6(i)), `step11-evaluation.json`). **Step 12 is waiting
+   for the owner on two items** (`step12-open-items.json`), found while checking every
+   section 6(k) item: (A) the guest account `jarvis-s6-guest` is in the guest's
+   Administrators group, while v3 D3 and the approved prompt say "local standard account"
+   (section 6(c) itself only requires a local account); (B) VirtualBox's "default machine
+   folder" property was left at its default, while section 7(d) names
+   `D:\JARVIS-S6-FRESHVM\machines` (the VM, disk and snapshots are all there). Claude
+   recommends accepting both as recorded; `FRESH_VM_QUALIFICATION_PASS` is **not** declared
+   until the owner answers. After the answer: `step12-owner-dispositions.json`,
+   `step12-evaluation.json`, evidence `MANIFEST.json` (gate16r-20261002 and guest-egress-01,
+   never the sealed `evidence\P0`), report, STOP before Gate 17 (P3 will reference
+   `checkpoints\p2-20261004-030308`). The owner runs every
    launcher in `D:\JARVIS-S6-FRESHVM\tools\` (ACL/VirtualBox work is owner-only); Claude
    reads the JSON results from the evidence folder. Evidence:
    `D:\JARVIS-S6-FRESHVM\evidence\gate16r-20261002\`.

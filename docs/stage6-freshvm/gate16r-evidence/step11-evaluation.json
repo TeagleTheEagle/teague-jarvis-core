@@ -1,0 +1,27 @@
+{
+  "schema": "stage6-gate16r-step-evaluation-v1",
+  "step": "11: snapshot FRESH-PREREQ of JARVIS-S6-FRESH with its manifest, and the identity record (AMENDMENT-v2 section 6(h)2-3 and 6(i); AMENDMENT-v3 D1; approved prompt step 11)",
+  "utc": "2026-10-04T03:20:00Z",
+  "run": "owner, jarvis-s6-val session, 2026-10-04T03:04:55Z: step11-snapshot-prereq.cmd (sha256 ecc152e1dfdabc9b42c0b90491fb7e119e9ee87604e15b04f842453b28836f8b) -> Take-FreshVmSnapshot.ps1 (sha256 f4065b26a4abecf0bc71e6b219ee423832775ce822bde3588a764608bca3cad8), both equal to the repo copies and step9-11-tools-hashes.txt. Record: vm/snapshot-FRESH-PREREQ-20261004-030455.json (sha256 ef90f692d83fd4d213153e7ffec94d2c784c1fc3e10b38f041bc7d1ace1d59a7). Owner's report: a photograph of the window showing the end of the record and 'Finished OK. Tell Claude \"step 11 done\". Do not start the VM.'",
+  "sequence": [
+    "2026-10-04T02:40:17Z: snapshot FRESH-CLEAN-BASELINE (step 9).",
+    "03:03:08Z: P2 run, status PASS written 03:03:09Z (step 10).",
+    "03:04:55Z: snapshot FRESH-PREREQ. The VM was not started between the two snapshots: five start records, the last at 02:14:17Z; VBox.log last written 02:26:35Z."
+  ],
+  "checks": {
+    "taken after P2 PASS (section 7(h) sequence)": "PASS (P2 record written 03:03:09Z, snapshot 03:04:55Z)",
+    "VM powered off; nothing installed between the snapshots (v3 D1)": "PASS: record vm_state poweroff. The differencing disk created by the first snapshot, {0d8d6176-2b81-4fc8-90d9-e2007869cc58}.vdi, is still 2,097,152 bytes and was last written at 02:40:17Z, its creation: no guest write happened between the snapshots. .nvram a57321307a5296ab3a759bb1113726bdff35e7dbe7fe51ff85c886403dd027bc unchanged.",
+    "snapshot named FRESH-PREREQ, taken once, child of FRESH-CLEAN-BASELINE": "PASS (before.snapshots [FRESH-CLEAN-BASELINE]; all_snapshots lists the two; in the .vbox copy FRESH-PREREQ is nested inside FRESH-CLEAN-BASELINE and is the current snapshot)",
+    "snapshot UUID recorded": "PASS: 9f1d7bec-e410-4ed0-bc2f-4966125329ad",
+    ".vbox SHA-256 recorded": "PASS: before 8647a9ec115e721920185419ff5e5bc6795408116d4258424cb89c8bd1a01b91 (the value after step 9); after 03ce709e3e000298e4696d30692f563c12b07d848927e9c61a75e7e28f457130. Claude hashed the live .vbox and vm/JARVIS-S6-FRESH.vbox.FRESH-PREREQ-copy after the snapshot: both 03ce709e...",
+    "disk lineage": "PASS: {6daf9ccf-1fb3-4682-bb6d-6b4230e87e5b} JARVIS-S6-FRESH.vdi (FRESH-CLEAN-BASELINE's disk, 25,677,529,088 bytes, last written 02:26:33Z) -> {0d8d6176-2b81-4fc8-90d9-e2007869cc58} (FRESH-PREREQ's disk) -> {979ac965-1d18-4965-bc20-64bc957b4346} (current state, new, 2,097,152 bytes). One chain, no other hard disk.",
+    "VM settings": "PASS: the three hardware sections of the .vbox (two snapshots, current state) differ only in the disk attachment and the .nvram path. No port forwarding, host-only, bridged or internal adapter, no USB controller, no remote display, and no path under C:\\Users anywhere in the file.",
+    "NAT localhost-reachable in the saved settings": "RECORDED, as at step 9: all three sections hold <NAT localhost-reachable=\"true\"/> (the VirtualBox 7.2.18 persistence defect, owner decisions of 2026-10-02 and 2026-10-04). Every start, including after restoring FRESH-PREREQ for Gate 17, goes through step7-start-vm.cmd.",
+    "host UAC prompt": "none reported by the owner; the script stops in an elevated session and it completed"
+  },
+  "manifest": "FRESH-PREREQ-manifest.json (sha256 16752ac763233550221bcf1c1439a989905339ac1dfd7bb74e9dbac0321ef58e), written by tools/host/snapshot_manifest.py (sha256 98ce9557571da40e30234be6d3aac5fe9835bedfbb61fb31ca484b8510146326) with the same fields as the FRESH-CLEAN-BASELINE manifest and the recorded statement 'the documented deployment procedure requires no prerequisites; the release carries CPython 3.12.10, Electron, the VC++ runtime and models'. Its guest content (6(f) outputs, programs, services) is identical to the FRESH-CLEAN-BASELINE manifest's; both come from baseline run 5.",
+  "identity_record": "fresh-vm-identity.json (section 6(i))",
+  "result": "STEP 11: PASS. Snapshot FRESH-PREREQ (9f1d7bec-e410-4ed0-bc2f-4966125329ad) equals FRESH-CLEAN-BASELINE in guest content; manifest and identity record written.",
+  "next": "step 12: evaluation of every section 6(k) item. Two differences between the approved wording and what was built were found during that evaluation and need the owner's disposition first (step12-open-items.json).",
+  "recorded_by": "Claude Code (Claude Fable 5.1), owner account"
+}

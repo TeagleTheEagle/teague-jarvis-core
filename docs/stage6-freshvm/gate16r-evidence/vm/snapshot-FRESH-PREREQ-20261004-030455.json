@@ -1,0 +1,55 @@
+{
+    "schema":  "stage6-fresh-vm-snapshot-v1",
+    "utc":  "2026-10-04T03:04:55.9448102Z",
+    "account":  "jarvis-s6-val",
+    "vm_name":  "JARVIS-S6-FRESH",
+    "vm_uuid":  "4ef16bdd-2a1b-46af-83db-ee69c2f868bb",
+    "snapshot_name":  "FRESH-PREREQ",
+    "snapshot_uuid":  "9f1d7bec-e410-4ed0-bc2f-4966125329ad",
+    "description":  "Gate 16R step 11 (AMENDMENT-v3 D1): equals FRESH-CLEAN-BASELINE; the documented deployment procedure requires no prerequisites, so nothing was installed",
+    "current_snapshot_name":  "FRESH-PREREQ",
+    "current_snapshot_uuid":  "9f1d7bec-e410-4ed0-bc2f-4966125329ad",
+    "before":  {
+                   "vbox_sha256":  "8647a9ec115e721920185419ff5e5bc6795408116d4258424cb89c8bd1a01b91",
+                   "nvram_sha256":  "a57321307a5296ab3a759bb1113726bdff35e7dbe7fe51ff85c886403dd027bc",
+                   "snapshots":  [
+                                     "FRESH-CLEAN-BASELINE"
+                                 ]
+               },
+    "vbox_file":  "D:\\JARVIS-S6-FRESHVM\\machines\\JARVIS-S6-FRESH\\JARVIS-S6-FRESH.vbox",
+    "vbox_sha256_after":  "03ce709e3e000298e4696d30692f563c12b07d848927e9c61a75e7e28f457130",
+    "nvram_sha256_after":  "a57321307a5296ab3a759bb1113726bdff35e7dbe7fe51ff85c886403dd027bc",
+    "all_snapshots":  [
+                          {
+                              "name":  "FRESH-CLEAN-BASELINE",
+                              "uuid":  "0da943df-12e5-4eac-93bf-727c03dd5d94"
+                          },
+                          {
+                              "name":  "FRESH-PREREQ",
+                              "uuid":  "9f1d7bec-e410-4ed0-bc2f-4966125329ad"
+                          }
+                      ],
+    "snapshots_folder":  [
+                             {
+                                 "name":  "2026-10-04T02-40-17-827151100Z.nvram",
+                                 "bytes":  547328,
+                                 "last_write_utc":  "2026-10-04T02:26:33.6341554Z"
+                             },
+                             {
+                                 "name":  "2026-10-04T03-04-55-784457300Z.nvram",
+                                 "bytes":  547328,
+                                 "last_write_utc":  "2026-10-04T02:26:33.6341554Z"
+                             },
+                             {
+                                 "name":  "{0d8d6176-2b81-4fc8-90d9-e2007869cc58}.vdi",
+                                 "bytes":  2097152,
+                                 "last_write_utc":  "2026-10-04T02:40:17.8271511Z"
+                             },
+                             {
+                                 "name":  "{979ac965-1d18-4965-bc20-64bc957b4346}.vdi",
+                                 "bytes":  2097152,
+                                 "last_write_utc":  "2026-10-04T03:04:55.7844573Z"
+                             }
+                         ],
+    "vm_state":  "poweroff"
+}

@@ -1,0 +1,52 @@
+{
+  "schema": "stage6-fresh-vm-identity-v1",
+  "requirement": "AMENDMENT-v2 section 6(i): VirtualBox host version; ISO hash; VM UUID; .vbox path and hash; both snapshot UUIDs; guest edition and build; the account name the VM runs under",
+  "utc": "2026-10-04T03:20:00Z",
+  "virtualbox_host": {
+    "version": "7.2.18.175117 (7.2.18 r175117)",
+    "vboxmanage_sha256": "ac0e4a475c628fdcf711b3a78f9704d7a2eb568b9d681b826f31429384c6a936",
+    "source": "checkpoints P0, P1 and P2 (static file metadata, equal at all three); the .vbox header reads 'Written by VirtualBox 7.2.18 (r175117)'"
+  },
+  "windows_iso": {
+    "file": "Windows11_Client_x64_en-us_26300_9457.iso",
+    "bytes": 9047330816,
+    "sha256": "bd4307df32bc8af33b39ccecb1174aeb345386630f89a2b86c7a4e36b55ea650",
+    "source": "step0/windows-iso-26H2-acquisition.json (equal to Microsoft's published value); the copy in D:\\JARVIS-S6-FRESHVM\\media was verified at steps 4 and 6"
+  },
+  "vm": {
+    "name": "JARVIS-S6-FRESH",
+    "uuid": "4ef16bdd-2a1b-46af-83db-ee69c2f868bb",
+    "vbox_file": "D:\\JARVIS-S6-FRESHVM\\machines\\JARVIS-S6-FRESH\\JARVIS-S6-FRESH.vbox",
+    "vbox_sha256": "03ce709e3e000298e4696d30692f563c12b07d848927e9c61a75e7e28f457130",
+    "vbox_sha256_history": {
+      "at creation (step 6)": "67b62f9e576abcb92ba855ae040e5f53118ea52af99321537b38f338ae96e492",
+      "after step 6b (audio adapter off)": "35a589495bc6e5a9d3b68b362b9996df74bf90efd33475db63bd5e640ab9d60b",
+      "after the clean shutdown, before any snapshot": "f4cbd27f2ff2afb712c4e073637fb0291b3a16e63fd2b92f415796fb6a9139b0",
+      "after FRESH-CLEAN-BASELINE": "8647a9ec115e721920185419ff5e5bc6795408116d4258424cb89c8bd1a01b91",
+      "after FRESH-PREREQ (current)": "03ce709e3e000298e4696d30692f563c12b07d848927e9c61a75e7e28f457130"
+    },
+    "nvram_sha256": "a57321307a5296ab3a759bb1113726bdff35e7dbe7fe51ff85c886403dd027bc",
+    "registered_in": "D:\\JARVIS-S6-FRESHVM\\vbox-home\\VirtualBox.xml (sha256 6758bb02d9fbe333c5d2b33ce97460954a460d2be130c9499ca9a00176e94789 on 2026-10-04): one MachineEntry, this VM"
+  },
+  "snapshots": [
+    { "name": "FRESH-CLEAN-BASELINE", "uuid": "0da943df-12e5-4eac-93bf-727c03dd5d94", "taken_utc": "2026-10-04T02:40:17Z", "parent": null, "disk": "{6daf9ccf-1fb3-4682-bb6d-6b4230e87e5b} JARVIS-S6-FRESH.vdi" },
+    { "name": "FRESH-PREREQ", "uuid": "9f1d7bec-e410-4ed0-bc2f-4966125329ad", "taken_utc": "2026-10-04T03:04:55Z", "parent": "FRESH-CLEAN-BASELINE", "disk": "{0d8d6176-2b81-4fc8-90d9-e2007869cc58}" }
+  ],
+  "current_state_disk": "{979ac965-1d18-4965-bc20-64bc957b4346}",
+  "guest": {
+    "edition": "Microsoft Windows 11 Home, 64-bit (EditionID Core)",
+    "display_version": "26H2",
+    "build_ubr": "26300.9457",
+    "computer_name": "JARVIS-S6-FRESH",
+    "guest_account": "JARVIS-S6-FRESH\\jarvis-s6-guest (local account, member of the guest's Administrators group; see step12-open-items.json)",
+    "guest_additions": "7.2.18.175117",
+    "source": "baseline run 5, guest-egress-01/gate17-20261004-022130"
+  },
+  "host_account_the_vm_runs_under": {
+    "account": "thegrizzlybear\\jarvis-s6-val",
+    "sid": "S-1-5-21-3412258525-483417857-2736759773-1010",
+    "kind": "standard user, not elevated (account/validation-account-check.json)",
+    "vbox_user_home": "D:\\JARVIS-S6-FRESHVM\\vbox-home (user-scoped, this account only)"
+  },
+  "recorded_by": "Claude Code (Claude Fable 5.1), owner account"
+}
