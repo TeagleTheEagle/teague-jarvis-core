@@ -1,0 +1,71 @@
+{
+  "schema": "stage6-gate16r-result-v1",
+  "step": "12: Gate 16R result. Every item of AMENDMENT-v2 section 6(k) checked against the evidence (approved prompt step 12)",
+  "utc": "2026-10-04T03:35:00Z",
+  "authority": "token RESUME_STAGE6_FRESH_VM issued 2026-10-02T01:15:45Z with the approved execution prompt (sha256 922302aa74b0a3c5a406f7906e4b965e49721a2a8536b5b4b27d3116dcf114b9); AMENDMENT-v2 and AMENDMENT-v3 in force. Wording used below: PASS = met as written; DISPOSITIONED = accepted by a recorded owner decision in place of the written clause, never called a pass.",
+  "section_6": {
+    "(a) media": "PASS. Official Microsoft ISO Windows11_Client_x64_en-us_26300_9457.iso, 9,047,330,816 bytes, sha256 bd4307df32bc8af33b39ccecb1174aeb345386630f89a2b86c7a4e36b55ea650, equal to Microsoft's published value (step0/windows-iso-26H2-acquisition.json; downloaded with the owner's permission); the copy in media\\ verified at steps 4 and 6. Unmodified; the answer file is on a separate disc.",
+    "(b) edition": "PASS. Windows 11 Home x64 (v3 selection), recorded from inside the guest: Microsoft Windows 11 Home, 64-bit, EditionID Core, 26H2. Activation status 5 (not activated), recorded.",
+    "(c) account": "PASS on the section as written, with one DISPOSITIONED difference. One local account, jarvis-s6-guest, created by the Microsoft-documented answer file (tools/guest/autounattend.xml, kept verbatim; UNATTEND.iso 89f97c7b...); principal source Local; no Microsoft account screen or sign-in; OWNER_DECISION_REQUIRED_FRESH_VM_ACCOUNT did not arise. DISPOSITIONED (step12-owner-dispositions.json, A): the account is in the guest's Administrators group where v3 D3 and the approved prompt say 'standard'.",
+    "(d) VM creation": "PASS, with one DISPOSITIONED clause. New VM and new disk (step6-evaluation.json); one NAT adapter, no port forwarding, host-only, bridged or internal adapter, no USB controller; clipboard and drag-and-drop disabled; EFI, Secure Boot on, TPM 2.0; no audio device (corrected at step 6b before the first start). DISPOSITIONED (step6-owner-decision-nat.json; step8-owner-dispositions.json): 'LocalhostReachable=0 read from the .vbox' cannot be met on VirtualBox 7.2.18, which saves the value as on; every start goes through Start-FreshVm.ps1 and the running VM's own VBox.log shows LocalhostReachable = 0. Five starts, five records, all 0.",
+    "(e) ingress and egress": "PASS. Everything entered on read-only optical media with recorded SHA-256 (Windows ISO, UNATTEND.iso, VBoxGuestAdditions.iso, JARVIS-TOOLS.iso and -v2, -v3, -v4). One egress, declared at 16R: shared folder guest-egress-01 -> D:\\JARVIS-S6-FRESHVM\\evidence\\guest-egress-01, autoMount=false, mounted by hand and non-persistent. Guest Additions 7.2.18.175117 installed before FRESH-CLEAN-BASELINE and counted in it.",
+    "(f) cleanliness": "PASS on every scripted negative (baseline run 5, gate17-20261004-022130), with one DISPOSITIONED item (step8-owner-dispositions.json): two Windows-generated credential-manager entries, accepted as recorded.",
+    "(g) Windows Update": "PASS. Paused until 2026-11-06T05:27:32Z; build.UBR 26300.9457 at the baseline, equal to the media. To be recorded again at every later gate.",
+    "(h) baselines": "PASS. FRESH-CLEAN-BASELINE 0da943df-12e5-4eac-93bf-727c03dd5d94 with FRESH-CLEAN-BASELINE-manifest.json; no prerequisites installed (v3 D1); FRESH-PREREQ 9f1d7bec-e410-4ed0-bc2f-4966125329ad with FRESH-PREREQ-manifest.json, same fields and the recorded statement. Nothing was installed and the VM was not started between them.",
+    "(i) identity record": "PASS. fresh-vm-identity.json.",
+    "(j) disposable": "PASS as a standing condition: JARVIS-S6-FRESH is Stage 6 acceptance-only and is referenced by nothing outside D:\\JARVIS-S6-FRESHVM. Keeping or destroying it after Gate 20 is a separate owner decision."
+  },
+  "section_7": {
+    "(a) P0 before any 16R action": "PASS. p0-20261002-012032, 2026-10-02T01:20:32Z, after the token and before step 2. An earlier run, p0-20261002-011703, stopped on a script defect after its reads and is kept. (The sealed P0 of 2026-09-30 is a separate record and was not read.)",
+    "(b) account": "PASS with v3 A3 (step2-evaluation.json; account/validation-account-check.json re-run at step 4: standard user, no privileged group or privilege, fresh profile, status PASS). The two credential entries stay UNRESOLVED under A3.",
+    "(c) storage": "PASS. D:\\JARVIS-S6-FRESHVM holds vbox-home, machines, media, evidence and synthetic, plus tools (the launchers and scripts the owner runs). Nothing placed under C:\\Users\\jonny; E: not used (as far as checked, step4-evaluation.json).",
+    "(d) VirtualBox home": "PASS for VBOX_USER_HOME (user-scoped, jarvis-s6-val only, never the owner account). DISPOSITIONED (step12-owner-dispositions.json, B): the default-machine-folder property was left at VirtualBox's default; the VM and everything belonging to it are in machines\\.",
+    "(e) ACL boundary": "PASS with v3 A1 and A2 (step3-evaluation.json: 37 cases, 0 failed on run 2; both protected paths denied to jarvis-s6-val; fixtures unchanged at postflight). Broker case dispositioned, short-name case not applicable with evidence.",
+    "(f) owner-account freeze": "PASS at every checkpoint so far: the process census before and after the reads is empty at P0, P1 and P2. LIMITATION as the section itself states: handle-level proof without elevation is unavailable.",
+    "(g) installation freeze": "PASS so far: VirtualBox 7.2.18.175117, VBoxManage sha256 ac0e4a475c628fdcf711b3a78f9704d7a2eb568b9d681b826f31429384c6a936, identical at P0, P1 and P2. The P0 = P5 comparison is made at Gate 20.",
+    "(h) sequence": "PASS. P0 2026-10-02T01:20Z -> account (created by the owner 2026-09-30, checked 01:38Z) -> isolation 01:43-01:54Z -> storage and VirtualBox home 02:14-02:43Z -> P1 02:51Z -> VM creation 03:41Z -> registered only in vbox-home\\VirtualBox.xml -> FRESH-CLEAN-BASELINE 2026-10-04T02:40:17Z -> P2 03:03:08Z -> FRESH-PREREQ 03:04:55Z."
+  },
+  "checkpoints": {
+    "P0": "PASS, p0-20261002-012032",
+    "P1": "PASS, p1-20261002-025102, equal to P0",
+    "P2": "PASS, p2-20261004-030308, equal to P1",
+    "all three": "12 files / 59,665,402,098 bytes; .vbox 98a89e62..., .vbox-prev 9d69cc14..., VirtualBox.xml f05da097..., equal to the 2026-09-18 reference; DACLs equal"
+  },
+  "continuity_list": {
+    "account boundary": "met: section 7(b)",
+    "ACL boundary": "met: section 7(e). Recorded LIMITATION (step2-limitation-d-volume-acl.json): the D: volume default lets Authenticated Users modify the D:\\JARVIS-S6-FRESHVM tree, so the integrity of this evidence rests on the hash manifest and the repo copies, not on permissions.",
+    "isolated VirtualBox configuration": "met: VirtualBox runs only under jarvis-s6-val with VBOX_USER_HOME on D:; vbox-home\\VirtualBox.xml registers exactly one machine, the fresh VM.",
+    "registry/config separation": "met: the fresh VM's registration and media registry exist only in vbox-home\\VirtualBox.xml and its own .vbox; the owner's VirtualBox.xml and the protected VM's .vbox are byte-identical to the reference at P0, P1 and P2, so nothing was registered there. As at step 6, the validation account's own profile is not readable by Claude.",
+    "disk identity": "met: one chain, {6daf9ccf-1fb3-4682-bb6d-6b4230e87e5b} (new at step 6) -> {0d8d6176-2b81-4fc8-90d9-e2007869cc58} -> {979ac965-1d18-4965-bc20-64bc957b4346}; no other hard disk in the .vbox.",
+    "snapshot lineage rooted at FRESH-CLEAN-BASELINE": "met: FRESH-PREREQ is the only child of FRESH-CLEAN-BASELINE and is the current snapshot.",
+    "networking": "met: one NAT adapter, no forwarding rule, no host-only, bridged or internal adapter. The host-only DHCP entry in vbox-home\\VirtualBox.xml is VirtualBox's own global default and is attached to nothing.",
+    "validation LocalhostReachable=0": "DISPOSITIONED as under 6(d): proven per start from VBox.log.",
+    "no path back to the protected original": "met: the .vbox contains no path under C:\\Users; its only shared folder is the egress folder; clipboard and drag-and-drop are off; jarvis-s6-val is denied on both protected paths; P0-P2 show the protected original unchanged."
+  },
+  "owner_dispositions_applied": [
+    "AMENDMENT-v3 A1 (broker case), A2 (short names), A3 (two credential entries of the host validation account), A4 (launch path)",
+    "step6-owner-decision-nat.json, 2026-10-02: per-start re-apply of NAT localhost-reachable off with VBox.log proof",
+    "step8-owner-dispositions.json, 2026-10-04: two Windows-generated credential entries in the guest; LocalhostReachable proven from VBox.log instead of the .vbox",
+    "step12-owner-dispositions.json, 2026-10-04: guest account in the Administrators group; default-machine-folder property left at its default"
+  ],
+  "recorded_reruns_and_corrections": [
+    "P0: first run stopped on a script defect after its reads; second run is the record (both kept).",
+    "Step 3: run 1 misclassified five rename rows (harness defect); run 2 is the record (both kept).",
+    "Step 4: first run closed by accident mid-copy; the owner removed the unfinished folders and re-ran the unchanged script (step4-run1-incident.json).",
+    "Step 6: audio adapter created enabled with the Null driver, switched off at step 6b before the first start; vm-creation.json's registry check gave a false negative explained in step6-evaluation.json.",
+    "Step 7: first Windows installation stalled and was reset; the UEFI boot list was re-initialised twice with Secure Boot kept on; the second installation is the record.",
+    "Step 8: five baseline runs; runs 1 and 3 were harness false positives; run 5 is the record (all kept)."
+  ],
+  "limitations_carried_forward": [
+    "Installing JARVIS under a non-administrator account is not tested by this VM (disposition A).",
+    "That the last shutdown before FRESH-CLEAN-BASELINE applied no staged update rests on the owner's report; build.UBR is recorded again at Gate 17.",
+    "Restoring either snapshot restores the saved NAT value 'on'; every start must go through step7-start-vm.cmd.",
+    "Windows Update pause ends 2026-11-06T05:27:32Z.",
+    "The limitations stated in v3 A1-A3, section 7(f) and step2-limitation-d-volume-acl.json."
+  ],
+  "result": "FRESH_VM_QUALIFICATION_PASS",
+  "result_statement": "Every item of section 6(k) is met as written or covered by a recorded owner disposition: 6(a)-(j), section 7, checkpoints P0-P2 and the continuity list. No item is unmet.",
+  "stop": "STOP before Gate 17. Not authorised by this result: Gate 17 or later, FINAL selection, P3, RESUME_STAGE6_RECOVERY, cutover, Stage 7.",
+  "evidence_manifest": "MANIFEST.json in this folder (written after this file): every file of gate16r-20261002 and guest-egress-01 with its SHA-256",
+  "recorded_by": "Claude Code (Claude Fable 5.1), owner account"
+}

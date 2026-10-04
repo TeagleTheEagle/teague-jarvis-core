@@ -1,0 +1,19 @@
+{
+  "schema": "stage6-owner-decision-record-v1",
+  "subject": "Gate 16R step 12: the owner's decision on the two open items of step12-open-items.json",
+  "utc": "2026-10-04T03:30:00Z",
+  "owner_message": "Direct human message in the Claude Code chat, 2026-10-04 (local): \"I accept and approve all your recommendations\", in reply to Claude's message that described items A and B, recommended 'accept both as recorded' with a condition for A, and asked for the reply 'accept both' or the item not accepted.",
+  "dispositions": {
+    "A: guest account jarvis-s6-guest is a member of the guest's Administrators group; AMENDMENT-v3 D3 and the approved prompt (steps 0.4 and 7) say 'local standard account'": {
+      "decision": "APPROVED_DISPOSITION: accepted as recorded. AMENDMENT-v2 section 6(c) (local account only, no Microsoft account, supported setup path, answer file kept verbatim) is met; the word 'standard' in v3 D3 and in the approved prompt is not, and the owner accepts the account as built.",
+      "condition": "Carried into Gate 17: the JARVIS install and run are recorded as non-elevated, and any UAC or administrator prompt during them is a STOP.",
+      "stated_limitation": "Installing JARVIS under an account that is not an administrator is not tested by Stage 6 with this VM."
+    },
+    "B: VirtualBox's default-machine-folder property was left at its default; AMENDMENT-v2 section 7(d) names D:\\JARVIS-S6-FRESHVM\\machines": {
+      "decision": "APPROVED_DISPOSITION: accepted as recorded. The VM, its disk, logs and both snapshots are under D:\\JARVIS-S6-FRESHVM\\machines\\JARVIS-S6-FRESH and it is the only registered machine; the property is not changed.",
+      "stated_limitation": "Claude cannot read C:\\Users\\jarvis-s6-val to show that VirtualBox's default folder there is empty or absent."
+    }
+  },
+  "effect": "Both items are dispositioned, not passed. The step 12 evaluation applies them to sections 6(c) and 7(d). Neither changes any other requirement.",
+  "recorded_by": "Claude Code (Claude Fable 5.1), owner account. This record documents the owner's act; it grants no gate token."
+}

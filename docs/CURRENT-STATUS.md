@@ -1,7 +1,7 @@
 # JARVIS: current status (living document)
 
 **Read this first in every new Claude Code session, and update it at the end of each one.**
-Last updated: 2026-10-04 (Gate 16R steps 0–11 PASS incl. P2 and both snapshots; step 12 waits for the owner's answer on two wording differences).
+Last updated: 2026-10-04 (Gate 16R complete: FRESH_VM_QUALIFICATION_PASS; stopped before Gate 17, which needs the owner's FINAL selection and prompt approval).
 Newest handover summary for a fresh session: `docs/HANDOVER-20261004.md`.
 
 Rules and authority are in `CLAUDE.md` and `../governance/OWNER-DELEGATION.md`; this file
@@ -99,18 +99,21 @@ Owner only (Claude must stop and ask, never infer or pre-stage tokens):
    census; `step10-evaluation.json`). Step 11 **PASS** (2026-10-04T03:04:55Z: snapshot
    `FRESH-PREREQ`, uuid 9f1d7bec-e410-4ed0-bc2f-4966125329ad, child of FRESH-CLEAN-BASELINE,
    VM not started in between; `.vbox` sha256 03ce709e…; `FRESH-PREREQ-manifest.json`,
-   `fresh-vm-identity.json` (section 6(i)), `step11-evaluation.json`). **Step 12 is waiting
-   for the owner on two items** (`step12-open-items.json`), found while checking every
-   section 6(k) item: (A) the guest account `jarvis-s6-guest` is in the guest's
-   Administrators group, while v3 D3 and the approved prompt say "local standard account"
-   (section 6(c) itself only requires a local account); (B) VirtualBox's "default machine
-   folder" property was left at its default, while section 7(d) names
-   `D:\JARVIS-S6-FRESHVM\machines` (the VM, disk and snapshots are all there). Claude
-   recommends accepting both as recorded; `FRESH_VM_QUALIFICATION_PASS` is **not** declared
-   until the owner answers. After the answer: `step12-owner-dispositions.json`,
-   `step12-evaluation.json`, evidence `MANIFEST.json` (gate16r-20261002 and guest-egress-01,
-   never the sealed `evidence\P0`), report, STOP before Gate 17 (P3 will reference
-   `checkpoints\p2-20261004-030308`). The owner runs every
+   `fresh-vm-identity.json` (section 6(i)), `step11-evaluation.json`). Step 12:
+   **`FRESH_VM_QUALIFICATION_PASS`** (2026-10-04; `step12-evaluation.json`). Two wording
+   differences found during the check were put to the owner (`step12-open-items.json`) and
+   accepted as recorded ("I accept and approve all your recommendations";
+   `step12-owner-dispositions.json`): (A) the guest account `jarvis-s6-guest` is in the
+   guest's Administrators group where v3 D3 and the approved prompt say "standard"
+   (**condition for Gate 17: install and run recorded as non-elevated; any UAC or
+   administrator prompt is a STOP**; non-administrator install stays untested); (B)
+   VirtualBox's default-machine-folder property left at its default. Evidence
+   `MANIFEST.json`: 116 files, sha256 38d487a6… (`tools/host/evidence_manifest.py`; covers
+   gate16r-20261002 and guest-egress-01, never the sealed `evidence\P0`). **Gate 16R is
+   complete; STOPPED before Gate 17.** Next are the owner's batched decisions (FINAL
+   selection; approval of a plain-language Gates 17–20 prompt), then the package discs.
+   P3 will reference `checkpoints\p2-20261004-030308`. Every VM start, including after
+   restoring `FRESH-PREREQ`, goes through `step7-start-vm.cmd`. The owner runs every
    launcher in `D:\JARVIS-S6-FRESHVM\tools\` (ACL/VirtualBox work is owner-only); Claude
    reads the JSON results from the evidence folder. Evidence:
    `D:\JARVIS-S6-FRESHVM\evidence\gate16r-20261002\`.
@@ -230,8 +233,13 @@ because creating them changes the owner's real Desktop/Startup folders). Check o
   Checked the step 9 launcher against its recorded hashes, the owner took snapshot
   FRESH-CLEAN-BASELINE, Claude verified the record, the `.vbox` copy, the disk lineage and
   the VM log, and wrote the section 6(h)1 manifest with a small reusable tool
-  (`tools/host/snapshot_manifest.py`). Next: P2 on "run P2", step 11, step 12. Nothing
-  pushed or synced.
+  (`tools/host/snapshot_manifest.py`). Then P2 PASS on the owner's "RUN P2", snapshot
+  FRESH-PREREQ, identity record, and the step 12 check of every section 6(k) item, which
+  found two undispositioned wording differences (guest account group; default machine
+  folder property); the owner accepted both; **FRESH_VM_QUALIFICATION_PASS**, evidence
+  manifest written. Lesson: compare what was built with the approved wording when it is
+  built, not at the end. Next: FINAL selection and the Gates 17–20 prompt. Nothing pushed
+  or synced.
 - **2026-10-04, skill drafts (side task, requested through another Claude session).** Three
   Claude Code skills drafted in `docs/skill-drafts/` (jarvis-verify, jarvis-owner-gate,
   jarvis-codex-review-brief). **Not active**: nothing in `.claude/skills/`, no hook, no
