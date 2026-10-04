@@ -172,8 +172,13 @@ Owner only (Claude must stop and ask, never infer or pre-stage tokens):
    `backup-evaluation.json` PASS (06:21Z); launcher re-enabled. Recovery disc built by the owner
    06:46Z (`recovery-disc.json`: `JARVIS-RECOVERY.iso` 5,898,240 bytes, sha256 1189ac01…, both
    copies re-hashed equal, guest files equal the repo's, backup inside equals the copy record).
-   **Next: owner double-clicks `gate18-step` in the jarvis-s6-val account (attach disc, start
-   VM), then `gate18` on the disc inside the VM.** Repairing the everyday JARVIS is a
+   VM started by the owner 06:47Z (disc on port 2, snapshot GATE17-19-PASS, LocalhostReachable 0).
+   **Incident 03 (`incident-03-k2-jarvis-running.json`): guest run `gate18-20261004-065046` K0, K1
+   PASS, K2 FAIL** because the first install was running (8 processes): the Gate 17 install's
+   Startup shortcut starts JARVIS at sign-in, and the prepared steps lacked "quit JARVIS first".
+   Nothing was changed in the VM by Gate 18. **Owner decision required to repeat:** quit JARVIS in
+   the VM (tray > Quit JARVIS completely), Claude moves the failed run folder unchanged to
+   `guest-egress-01\incident-03-run1\`, owner double-clicks `gate18` again (rerun). VM is running. Repairing the everyday JARVIS is a
    separate owner decision.
    The plan on the token was:
    (1) writes `../governance/STAGE6-RESUME-RECOVERY-RECORD.json`; (2) copies
