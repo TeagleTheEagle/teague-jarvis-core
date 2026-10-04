@@ -80,14 +80,21 @@ the new data folder; it can be carried back with a backup in the other direction
    not exist yet.
 4. **Your choice:** whether step 2's backup is made by you in the old JARVIS's settings screen (recommended) or
    by command.
-5. **Qwen model access (found 2026-10-04):** the owner's updated DASHSCOPE key is accepted by Model Studio
+5. **The old JARVIS cannot start at present (found 2026-10-04, Gate 18 incident 02):** its `.venv` is based on
+   Codex's Python runtime (`C:\Users\jonny\.cache\codex-runtimes\...`), which no longer exists. So "Going back"
+   above does not work until that Python is restored (owner decision; not done). Step 1 ("quit the old JARVIS")
+   is moot while it cannot run. Step 2's backup can be made with `tools/host/New-OldJarvisBackup.ps1` (the old
+   JARVIS's own backup code run with the new build's Python), as at Gate 18; Gate 18 proved that such a backup
+   imports into FINAL (open point 1 is closed: `docs/stage6-freshvm/gate18-evidence/gate18-evaluation.json`).
+   Also from Gate 18: keep the backup in a normal folder, never on read-only media (FINAL hangs there).
+6. **Qwen model access (found 2026-10-04):** the owner's updated DASHSCOPE key is accepted by Model Studio
    (international endpoint) but the account is refused the FINAL build's default model `qwen3.8-max`
    (`HTTP 403 AccessDenied.Unpurchased`, `tools/host/Test-QwenKey.ps1`). Before step 7 either that model is
    activated in the Model Studio console or `QWEN_MODEL` names a model the account has. The old everyday JARVIS
    (baseline e6fc40b) has no Qwen support at all (Groq, OpenAI, Gemini only), so this affects only the new one.
-6. **Leftover to tidy with your OK:** `%LOCALAPPDATA%\JARVIS-package` (about 1.2 GB) from a rehearsal on
+7. **Leftover to tidy with your OK:** `%LOCALAPPDATA%\JARVIS-package` (about 1.2 GB) from a rehearsal on
    2026-10-01.
-7. **After the cutover:** the lean Stage 7 pass, then the two known rough edges (the "Core stopped" notice
+8. **After the cutover:** the lean Stage 7 pass, then the two known rough edges (the "Core stopped" notice
    after shutdown; the installer stopping its own process) in the first release after cutover.
 
 ## Not part of the cutover
