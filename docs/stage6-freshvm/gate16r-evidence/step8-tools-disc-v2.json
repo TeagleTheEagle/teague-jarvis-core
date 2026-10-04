@@ -1,0 +1,16 @@
+{
+    "schema":  "stage6-gate16r-step8-tools-disc-v2-v1",
+    "utc":  "2026-10-04T01:41:00.3636476Z",
+    "performed_by":  "THEGRIZZLYBEAR\\jonny",
+    "reason":  "step 8 run 1 (gate17-20261002-071120) reported FAIL on the Microsoft Store python.exe app execution alias, a harness false positive; the corrected guest script ships on a second tools disc; the first disc is unchanged",
+    "guest_script_sha256":  "a0bc5d947da35ad894ca70cc7b9640125fa8494646e3294aa64b8ac84c5949e9",
+    "iso":  "D:\\JARVIS-release-work\\stage6-media\\JARVIS-TOOLS-v2.iso",
+    "iso_sha256":  "e4630a54a42b4dc39315bb241ef05b4dbd91e5d98cda2f928bbc0f943da980ca",
+    "iso_bytes":  1245184,
+    "payload_files":  7,
+    "readback":  "every payload file read back from the mounted ISO with its recorded SHA-256",
+    "copy":  "D:\\JARVIS-S6-FRESHVM\\media\\JARVIS-TOOLS-v2.iso",
+    "copy_sha256":  "e4630a54a42b4dc39315bb241ef05b4dbd91e5d98cda2f928bbc0f943da980ca",
+    "first_disc_unchanged":  true,
+    "next":  "validation session: Devices \u003e Optical Drives \u003e SATA Port 2 \u003e Choose a Disk File \u003e JARVIS-TOOLS-v2.iso; rerun the step 8 command (run 2); run 1 kept"
+}

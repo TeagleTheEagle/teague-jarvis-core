@@ -1,0 +1,3 @@
+90cb26ef951186a0fb006f02faaabd4e0d59c27f9deb265cf86daa7ab6829bce *New-ToolsDiscV2.ps1
+20a523314531ba96989f0b94c323682e93f25797dafc9cf8166b8ae8e50d8da2 *build-tools-disc-v2.cmd
+a0bc5d947da35ad894ca70cc7b9640125fa8494646e3294aa64b8ac84c5949e9 *Invoke-Gate17.ps1 (repo, corrected; goes onto JARVIS-TOOLS-v2.iso)
