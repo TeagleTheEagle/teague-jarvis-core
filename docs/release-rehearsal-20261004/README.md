@@ -32,7 +32,7 @@ Install and Uninstall code that ran is the code in the final file (sha256
 |---|---|---|
 | A made-up backup | `make_synthetic_backup.py`: FINAL installed into a new sandbox, a made-up personality and two made-up memories, backup created and rehearsed through the running Core | backup_verified, restore_rehearsal_passed; laid out as a "disc" folder with `BACKUP-RECORD.json` |
 | `tools/guest/Invoke-Gate18.ps1` (sha256 `cf0fe657…`) | run against that disc folder with the sandbox left by the Gates 17/19 driver rehearsal standing in for the VM (FINAL installed and stopped, package extracted) | PASS, all ten checks K0 to K9 (`gate18-rehearsal.output.txt`, `gate18-records/`); a second start is refused |
-| `tools/host/Invoke-Gate18Step.ps1` decisions | fake folder tree, test mode (`test-gate18-step.ps1`) | 16 cases, each gives the intended step or message; refuses until the authorisation file exists; never touches the backup drive or VirtualBox outside the jarvis-s6-val session |
+| `tools/host/Invoke-Gate18Step.ps1` decisions | fake folder tree, test mode (`test-gate18-step.ps1`) | 15 cases, each gives the intended step or message; refuses until the authorisation file exists; never touches the backup drive or VirtualBox outside the jarvis-s6-val session |
 
 Not rehearsed for Gate 18: the owner's real backup (made by the old everyday JARVIS; whether FINAL accepts it
 is what the gate tests), the copy from the backup drive, `New-Gate18RecoveryDisc.ps1` and `Start-Gate18Vm.ps1`
