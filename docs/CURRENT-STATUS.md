@@ -1,7 +1,7 @@
 # JARVIS: current status (living document)
 
 **Read this first in every new Claude Code session, and update it at the end of each one.**
-Last updated: 2026-10-04 (Gates 16R, 17 and 19 passed on FINAL 1.0.11; waiting for the owner's "run P3"; then OWNER STOP #2 before Gate 18).
+Last updated: 2026-10-04 (Gates 16R, 17 and 19 and P3 passed on FINAL 1.0.11; at OWNER STOP #2: Claude prepares the Gate 18 restore tooling, then the owner decides on RESUME_STAGE6_RECOVERY).
 Newest handover summary for a fresh session: `docs/HANDOVER-20261004.md`.
 
 Rules and authority are in `CLAUDE.md` and `../governance/OWNER-DELEGATION.md`; this file
@@ -127,10 +127,12 @@ Owner only (Claude must stop and ask, never infer or pre-stage tokens):
    05:05:41Z. Recorded deviations: the owner reset the VM once before sign-in; the driver's
    restart check gave a false negative (guest clock about 3 min slow after boot), continued
    with `E:\gate -NoRestartCheck`; one Windows credential entry fewer than at the baseline.
-   VM stop times were slow in the VM (about 95 s). **Next: P3 on the owner's "run P3"**
-   (`-Checkpoint P3 -Evidence D:\JARVIS-S6-FRESHVM\evidence\gate17\checkpoints -Reference
-   ...\gate16r-20261002\checkpoints\p2-20261004-030308`), then the evidence manifest for
-   Gates 17/19, then **OWNER STOP #2**: build and rehearse the Gate 18 tooling (recovery
+   VM stop times were slow in the VM (about 95 s). **P3 PASS** (run
+   `evidence\gate17\checkpoints\p3-20261004-051026`, 05:10:26Z, on the owner's "run P3":
+   byte-identical to P2, VirtualBox unchanged, empty census; `p3-evaluation.json`).
+   Manifests: `evidence\gate17\MANIFEST.json` (23 files, sha256 53ac88ff…) and
+   `MANIFEST-guest-egress-01.json` (55 files, aa3e8a30…). P4 will reference the P3 folder.
+   **Now at OWNER STOP #2**: build and rehearse the Gate 18 tooling (recovery
    disc with the owner's backup copied by the owner from E:, a guest restore script; local
    rehearsal exists as `gate18_rehearsal.py`), present the exact steps, and wait for
    `RESUME_STAGE6_RECOVERY` (never requested). Before reuse, fix `Invoke-Gate.ps1`'s restart
@@ -203,7 +205,9 @@ because creating them changes the owner's real Desktop/Startup folders). Check o
 - `$Home` and `$args` are PowerShell automatic variables: never use them as parameter or
   variable names in scripts (`$HOME` is read-only).
 - Timestamps written into evidence records come from the clock (`Get-Date` in the same
-  command), never from an estimate. Seven Gate 16R records of 2026-10-04 carry estimated
+  command, or the marker `@@NOW@@` filled by `tools/host/stamp_record.py`), never from an
+  estimate. Keep tool commands short: one long command that read, wrote and ran a tool at
+  once was refused by the permission check on 2026-10-04; split into small steps instead. Seven Gate 16R records of 2026-10-04 carry estimated
   `utc` fields; `gate16r-evidence/timestamp-correction-20261004.json` lists the true times.
 - When something is built from an approved text, compare the two at build time and put any
   difference to the owner then. Two differences (guest account group, default machine folder)
