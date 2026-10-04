@@ -1,0 +1,13 @@
+{
+    "schema":  "jarvis-owner-decision-record-v1",
+    "subject":  "Stage 7: the owner\u0027s two decisions before the plan is written",
+    "recorded_utc":  "2026-10-04T08:51:11Z",
+    "owner_text":  "A AND A",
+    "source":  "direct human message in the Claude Code chat, 2026-10-04 (local), in reply to Claude\u0027s two questions",
+    "decisions":  {
+                      "1 machine":  "A: reuse the Stage 6 test VM JARVIS-S6-FRESH for Stage 7, starting from its clean snapshot FRESH-PREREQ (no JARVIS, no personal data); snapshot GATE18-PASS (personal data) stays. This is the owner\u0027s explicit ruling on the conflict Claude reported between AMENDMENT-v2 section 6(j) (VM Stage 6 acceptance-only) and the approved roadmap (Stage 7 on the same VM and snapshots): the roadmap applies; section 6(j) is set aside for Stage 7 only.",
+                      "2 versions":  "A: Stage 7 now on the existing builds, 1.0.10-915e906516dc updating to 1.0.11-60d406fb6398, with one script for the whole pass including an interrupted update; the same script becomes the standard check for later updates (1.0.12 onward)."
+                  },
+    "not_decided":  "the Stage 7 plan itself (to be written, rehearsed and approved); any VM start",
+    "recorded_by":  "Claude Code (Claude Fable 5.1)"
+}
