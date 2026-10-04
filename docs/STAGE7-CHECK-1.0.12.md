@@ -1,8 +1,9 @@
 # Stage 7 check of 1.0.12 (plan for the owner's approval)
 
 **Superseded draft (2026-10-05): not for approval.** The sandbox Stage 7 rehearsal of 1.0.12 found an uninstall
-defect (see `docs/release-rehearsal-20261004-1012/README.md`); 1.0.12 is not offered and this plan will be rewritten
-for 1.0.13 after its build and checks.
+defect (see `docs/release-rehearsal-20261004-1012/README.md`); 1.0.12 is not offered. 1.0.13 was superseded too (its
+release regression found a shutdown race, `docs/release-rehearsal-20261005-1013/README.md`). The plan for approval
+is `docs/STAGE7-CHECK-1.0.14.md`.
 
 Draft, 2026-10-04. Nothing here has run in the VM. Approving it lets Claude place the tools and create the two
 record folders; every VirtualBox step stays yours, as for 1.0.11.

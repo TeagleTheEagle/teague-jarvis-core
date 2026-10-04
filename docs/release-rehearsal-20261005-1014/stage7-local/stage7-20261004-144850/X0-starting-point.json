@@ -1,0 +1,10 @@
+{
+    "status":  "PASS",
+    "release_under_acceptance":  "1.0.14-e03872680e1d",
+    "previous_release":  "1.0.11-60d406fb6398",
+    "extracted_package":  "1.0.14-e03872680e1d",
+    "extracted_previous":  "1.0.11-60d406fb6398",
+    "release_files":  10645,
+    "installed_before":  "1.0.14-e03872680e1d",
+    "processes_before":  0
+}

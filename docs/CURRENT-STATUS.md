@@ -1,10 +1,29 @@
 # JARVIS: current status (living document)
 
 **Read this first in every new Claude Code session, and update it at the end of each one.**
-Last updated: 2026-10-05 (just after midnight, local) (STAGE_6_COMPLETE, SWITCH-OVER COMPLETE, STAGE_7_COMPLETE;
-**release 1.0.12 built, then superseded by a fix found in its sandbox Stage 7 rehearsal; 1.0.13 is next**).
+Last updated: 2026-10-05 (about 02:00 local) (STAGE_6_COMPLETE, SWITCH-OVER COMPLETE, STAGE_7_COMPLETE;
+**release 1.0.14 built and checked on this PC; its Stage 7 check plan waits for the owner's approval**).
 
-- **Release 1.0.12 (2026-10-04, on the owner's "next move" / "now do the next move").** The fix list
+- **Release 1.0.14 (2026-10-05, owner: "use this session go"; 1.0.12 and 1.0.13 superseded, never offered).**
+  Build **`1.0.14-e03872680e1d`** (commit e038726; `D:\JARVIS-release-work\release\`, zip sha256 `ceb7d9e1...d8d3`,
+  525,633,503 bytes; package folder `D:\JARVIS-release-work\pkg-1.0.14`). On this PC: compared with 1.0.11 (the same
+  10,645 files, 14 source files changed, pinned inputs identical); release regression PASS (373 Python with 1
+  expected skip, 52 desktop, 18 Intelligence, 17 scripts); zip install PASS (uninstall while running: all files
+  removed, nothing left running); **the sandbox Stage 7 pass 1.0.11 -> 1.0.14 ALL PASS** (13.4 min, incl. the
+  interrupted update). Records: `docs/release-rehearsal-20261005-1014/README.md`. On the way: the installer change of
+  eb620cd got its independent review (the one started before the session restart had been interrupted; rerun here):
+  2 medium + 6 low findings, applied in 6d4ff85 except one recorded limit. 1.0.13 (6d4ff85) then failed its release
+  regression twice on a real race: "Quit JARVIS completely" could return while the Core process still ran and still
+  answered on an open keep-alive connection (reproduced; fixed in e038726, reviewed, new tests
+  `desktop/test/shutdown-wait.test.cjs`; records `docs/release-rehearsal-20261005-1013/README.md`). Version 2 Stage 7
+  scripts: the guest's last message now names the snapshot step before "stage 7 done"; decision tests 17 + 8 PASS with
+  the 1.0.14 label. **Next, owner:** approve the Stage 7 check of 1.0.14 (`docs/STAGE7-CHECK-1.0.14.md`, all
+  differences from `docs/STAGE7-PLAN.md` listed; approval wording there). **Then Claude:** record the approval, place the
+  tools in `D:\JARVIS-S6-FRESHVM\tools\stage7-1.0.14\` with `stage7-authorized.json` (schema v2, expected current
+  snapshot STAGE7-PASS, checked unchanged on 2026-10-05) and create the two record folders. **Then owner:** the VM pass
+  (before 2026-11-06, when the VM's Windows Update pause ends); then, separately, updating the everyday JARVIS (steps
+  not designed yet).
+- **Release 1.0.12 (2026-10-04, on the owner's "next move" / "now do the next move"; superseded, see above).** The fix list
   `docs/POST-CUTOVER-FIXES.md` items 1-6 fixed (status table at the end of that file; item 7 partly, 8 open,
   9 nothing to do). Each fix was designed and challenged by an independent check first, and the finished diff was
   reviewed by independent checks (9 findings, all applied). Commit d28016b. **Build `1.0.12-d28016b12efe`**
@@ -20,13 +39,8 @@ Last updated: 2026-10-05 (just after midnight, local) (STAGE_6_COMPLETE, SWITCH-
   `electron\electron.exe`, leaving a half-removed release). Fixed in `tools/installer.py` (the process-ending step
   waits until programs have exited, looks again and refuses before any change; uninstall removes the launcher
   first and retries a file in use for 10 s); 23 installer tests pass, one ending real stand-in programs (copies of
-  PING.EXE) in a test folder. An independent review of that fix was interrupted when the session restarted and is
-  being run again. **1.0.12 is superseded** (never offered to the everyday JARVIS). **Next, Claude:** after that
-  review, build **1.0.13**, run the regression, the zip install and the sandbox Stage 7 pass again, and rewrite
-  the plan for 1.0.13 (`docs/STAGE7-CHECK-1.0.12.md` is a superseded draft). **Then, owner:** approve the Stage 7
-  check of 1.0.13 (then Claude places the tools in a new `D:\JARVIS-S6-FRESHVM\tools\stage7-<release>\` folder,
-  writes `stage7-authorized.json` (schema v2) and creates the two record folders); then the VM pass; then,
-  separately, updating the everyday JARVIS.
+  PING.EXE) in a test folder. **1.0.12 is superseded** (never offered to the everyday JARVIS); what followed is in
+  the 1.0.14 bullet above.
 - **Stage 7: `STAGE_7_COMPLETE` (2026-10-04T11:00Z).** On the owner's "start stage 7", decisions "A AND A"
   and "I approve the Stage 7 plan" (`../governance/STAGE7-APPROVAL-RECORD.json`; plan `docs/STAGE7-PLAN.md`,
   hash recorded, do not edit). One pass in the Stage 6 VM restored to FRESH-PREREQ (no personal data, no
@@ -320,7 +334,7 @@ changes the owner's real folders); tested in the VM at Gate 17 and Stage 7 (auto
   `tools/installer.py` (per-user install, update, rollback, uninstall, verify; crash-safe),
   `tools/release_regression.py` (all suites against a built release with its own runtimes).
 - Test totals on the packaged release: 316 Python, 34 desktop, 18 Intelligence, 16 JS scripts (2026-10-01);
-  1.0.11: 325/36/18/16; 1.0.12: 365/50/18/17.
+  1.0.11: 325/36/18/16; 1.0.12: 365/50/18/17; 1.0.14: 373/52/18/17.
 
 ## This PC: disks and folders
 
@@ -490,3 +504,14 @@ changes the owner's real folders); tested in the VM at Gate 17 and Stage 7 (auto
   pass: every phase PASS, snapshot STAGE7-PASS, STAGE_7_COMPLETE. The uptime-based restart check proved
   itself: the guest clock fell about 9.5 minutes behind after the restart. Lesson: when a launcher path has
   to be typed by the owner, give the exact name (they typed stage-7-step). Nothing pushed or synced.
+- **2026-10-04/05, releases 1.0.12 to 1.0.14 (Opus 5.5; the night session, then a new session from the handover
+  summary, opened in the old OneDrive handover folder and moved to the repo).** 1.0.12 (fix list items 1-6) built
+  and checked; its sandbox Stage 7 rehearsal found the uninstall race (installer fix eb620cd). The review of that fix
+  was interrupted with its session at 00:24 and returned nothing; rerun with one reviewer (applied in 6d4ff85). 1.0.13
+  built; its release regression failed twice on the desktop "shared background Core" test: reproduced as a real race
+  (the Core answers on an open keep-alive connection until its process exits), fixed in e038726 with a reviewed
+  change and tests. 1.0.14 built: comparison, regression, zip install and the sandbox Stage 7 pass all PASS; plan
+  `docs/STAGE7-CHECK-1.0.14.md` ready for approval. Lessons: a regression failure that passed before is not "load"
+  until reproduced (run 3 on an idle PC settled it); a reviewer can find that a new wait condition hurts the crash
+  path. The owner's pasted summary contained "Ultracode is off", which switched on multi-agent mode by mistake; no
+  workflow was started (two single reviewer agents instead). Nothing pushed or synced.

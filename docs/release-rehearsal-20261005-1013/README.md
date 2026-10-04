@@ -15,7 +15,7 @@ folders on D:; the owner's installed JARVIS (`%LOCALAPPDATA%\JARVIS`) was never 
 
 ## Build and comparison with 1.0.11
 
-- `build-1.0.13.log`, `JARVIS-1.0.13-6d4ff851cca4.release.json`: 10,645 files, 1,177,430,753 bytes, built in 118 s;
+- `build-1.0.13.log.txt`, `JARVIS-1.0.13-6d4ff851cca4.release.json`: 10,645 files, 1,177,430,753 bytes, built in 118 s;
   zip 525,632,584 bytes, sha256 `a663b838d3dc47d732db603f6a361c5cee8ee6e87f4106ee7ae81835029713e2`.
 - `JARVIS-1.0.13-6d4ff851cca4.compare-1.0.11.json`: the same 10,645 paths; changed: the same 14 shipped source files
   as 1.0.12 (exactly `git diff 60d406f 6d4ff85` outside docs, tools and tests), 3,973 bytecode files and the 29 pip
@@ -28,7 +28,7 @@ folders on D:; the owner's installed JARVIS (`%LOCALAPPDATA%\JARVIS`) was never 
 
 | Run | Folder | Result |
 |---|---|---|
-| 1 | `regression-1.0.13` | Python 373 OK (1 skipped), Intelligence 18, 17 scripts PASS; desktop 48 of 50: "shared background Core ..." (`backend.test.cjs:44`, Core still answering right after `shutdown()`) and "one authenticated job captures the actual 13 panels" (still running at its 100 s limit). `regression-1.0.13-run1-*` |
+| 1 | `regression-1.0.13` | Python 373 OK (1 skipped), Intelligence 18, 17 scripts PASS; desktop 48 of 50: "shared background Core ..." (`backend.test.cjs:44`, Core still answering right after `shutdown()`) and "one authenticated job captures the actual 13 panels" (still running at its 100 s limit). `regression-1.0.13-run1-*` (report, desktop log) |
 | 2 | `regression-1.0.13-run2` | stopped during the copy when the session was interrupted; no result |
 | 3 | `regression-1.0.13-run3` | the PC idle (CPU 2-5 % before the start): desktop 49 of 50, the same "shared background Core" assertion. `regression-1.0.13-run3-*` |
 

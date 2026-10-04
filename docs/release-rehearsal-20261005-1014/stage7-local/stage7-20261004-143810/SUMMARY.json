@@ -1,0 +1,56 @@
+{
+    "schema":  "jarvis-stage7-run-v1",
+    "overall":  "PASS",
+    "phase":  "Install",
+    "home":  "D:\\JARVIS-release-work\\stage7-local-1.0.14\\home",
+    "package":  "D:\\JARVIS-release-work\\pkg-1.0.14",
+    "started_utc":  "2026-10-04T14:38:10.8252409Z",
+    "finished_utc":  "2026-10-04T14:41:58.1348718Z",
+    "steps":  [
+                  {
+                      "step":  "E0-not-elevated",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T14:38:10.9497728Z"
+                  },
+                  {
+                      "step":  "I1-package",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T14:38:11.5998585Z"
+                  },
+                  {
+                      "step":  "I2-extract",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T14:40:03.0330392Z"
+                  },
+                  {
+                      "step":  "I3-install",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T14:40:52.8353731Z"
+                  },
+                  {
+                      "step":  "I4-verify",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T14:41:02.5053962Z"
+                  },
+                  {
+                      "step":  "I5-launch",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T14:41:22.2796683Z"
+                  },
+                  {
+                      "step":  "I6-duplicate-core",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T14:41:34.4991129Z"
+                  },
+                  {
+                      "step":  "I7-local-stt",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T14:41:38.6980169Z"
+                  },
+                  {
+                      "step":  "I8-restart",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T14:41:58.1316796Z"
+                  }
+              ]
+}

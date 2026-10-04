@@ -1,0 +1,6 @@
+﻿0 zip hash                     {"matches_record": true, "bytes": 525633503}
+1 extract (Expand-Archive)     {"ok": true, "package_files": ["install.cmd", "installer.py", "release"]}
+2 install.cmd                  {"exit_code": 0, "result": "installed", "release": "1.0.14-e03872680e1d", "seconds": 56}
+3 launch                       {"processes": 8, "core_answers": true}
+4 verify after use             {"result": "verified", "release": "1.0.14-e03872680e1d"}
+5 uninstall                    {"result": "uninstalled", "files_removed": 10645, "kept": ["data", "config", "profile"], "jarvis_processes": 0, "leftover_program_files": 0}
