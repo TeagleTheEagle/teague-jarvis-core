@@ -1,0 +1,20 @@
+{
+  "schema": "stage6-owner-decision-record-v1",
+  "subject": "Gate 16R: two dispositions of AMENDMENT-v2 section 6 wording, decided before the FRESH-CLEAN-BASELINE snapshot",
+  "utc": "2026-10-04T02:25:00Z",
+  "owner_message": "Direct human message in the Claude Code chat, 2026-10-04 (local): \"approved what do i need to do now?\", in reply to Claude's request to reply \"approve both dispositions\" if both recommendations were accepted; the two items had been described in three consecutive messages; followed at once by a second message: \"approved both\"",
+  "dispositions": {
+    "6(f) credential-manager entries": {
+      "text": "section 6(f): 'no secrets: no .env files, provider keys or tokens, credential-manager entries, or signed-in online accounts'",
+      "fact": "the baseline (step 8 run 4, gate17-20261004-020257) records two entries, MicrosoftAccount:target=SSO_POP_Device and WindowsLive:target=virtualapp/didlogical, both created by Windows itself; no .env file, provider key, token or JARVIS entry; local account; OneDrive not signed in",
+      "decision": "APPROVED_DISPOSITION: accepted as recorded. They are Windows device sign-on stubs, not owner, provider or JARVIS secrets, and are the same two targets left UNRESOLVED in the host validation account by the owner's 2026-09-30 decision (AMENDMENT-v3 A3). They are not removed; the snapshot includes them."
+    },
+    "6(d) LocalhostReachable=0 read from the VM's own .vbox": {
+      "text": "section 6(d): 'NAT only, with LocalhostReachable=0 read from the fresh VM's own .vbox'; section 6(k) continuity list: 'validation LocalhostReachable=0'",
+      "fact": "VirtualBox 7.2.18 does not persist the value off in the .vbox: it writes the empty default <NAT/> and reads that default back as on (step6-evaluation.json, step6b). The .vbox therefore cannot carry the value.",
+      "decision": "APPROVED_DISPOSITION: the owner's 2026-10-02T04:12Z option 1 (step6-owner-decision-nat.json) substitutes for the clause. Every start of the VM goes through Start-FreshVm.ps1, which re-applies --nat-localhostreachable1 off, confirms localhostReachable=0 in the same VBoxSVC session, and records LocalhostReachable = 0 from the running VM's own VBox.log; a non-zero value stops. Four starts so far, four records, all 0."
+    }
+  },
+  "effect": "step 8 closes as PASS with the first disposition; the second is carried into the step 12 evaluation of sections 6(d) and 6(k). Neither disposition changes any other requirement.",
+  "recorded_by": "Claude Code (Claude Fable 5.1), owner account. This record documents the owner's act; it grants no gate token."
+}
