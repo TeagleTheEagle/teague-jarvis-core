@@ -1,0 +1,11 @@
+{
+  "schema": "stage6-owner-decision-v1",
+  "id": "gate18-owner-decision-02",
+  "recorded_utc": "2026-10-04T06:20:10Z",
+  "incident": "gate18-incident-02 (incident-02-everyday-jarvis-cannot-start.json)",
+  "question": "Make Gate 18's backup with the everyday JARVIS's own backup code (recovery.py create + rehearse) run by the owner's command with the FINAL package's Python (New-OldJarvisBackup.ps1, sha256 a324f7a8f5a380f882e79e3b647f78ef0daae3e8ca4bbb2708a7059613c1d056, which then runs Copy-BackupForGate18-v2.ps1), instead of the Settings button, which cannot be used because the everyday JARVIS cannot start.",
+  "owner_answer_literal": "approved",
+  "source": "direct human message in the Claude Code chat, 2026-10-04 (local)",
+  "effect": "The owner runs New-OldJarvisBackup.ps1 in the jonny account. This approval covers that command only; repairing the everyday JARVIS is not decided. The launcher stays suspended until Claude has checked old-backup-made.json and backup-copy.json.",
+  "recorded_by": "Claude Code (Claude Opus 5.5)"
+}

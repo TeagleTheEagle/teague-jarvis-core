@@ -166,8 +166,12 @@ Owner only (Claude must stop and ask, never infer or pre-stage tokens):
    exists.** Rehearsed alternative: the old JARVIS's own `recovery.py create/rehearse` run with
    FINAL's Python; `Invoke-Gate18.ps1` on such an old-format backup K0–K9 PASS in a sandbox. New
    helper `tools/host/New-OldJarvisBackup.ps1` (makes, tests, records, then runs copy v2), placed on
-   D:. **Next: owner approves the helper route; owner runs it; Claude checks the records and
-   re-enables the launcher.** Repairing the everyday JARVIS is a separate owner decision.
+   D:. Owner approved the helper route (06:20Z, `owner-decision-02.json`) and ran it: backup
+   `bcc2753f736f43ba946ec3f342b35c3a.zip` (4,659,473 bytes, 398 files, real data, test restore
+   passed, copied and hash-verified; the live `recovery.py` equals baseline e6fc40b);
+   `backup-evaluation.json` PASS (06:21Z); launcher re-enabled. **Next: owner double-clicks
+   `gate18-step` in the jonny account (recovery disc).** Repairing the everyday JARVIS is a
+   separate owner decision.
    The plan on the token was:
    (1) writes `../governance/STAGE6-RESUME-RECOVERY-RECORD.json`; (2) copies
    `gate18-step.cmd`, `Invoke-Gate18Step.ps1`, `New-Gate18RecoveryDisc.ps1`,

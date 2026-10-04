@@ -1,0 +1,115 @@
+{
+    "schema":  "stage6-gate18-backup-copy-v2",
+    "utc":  "2026-10-04T06:20:27.9766387Z",
+    "performed_by":  "THEGRIZZLYBEAR\\jonny",
+    "copy_script":  {
+                        "name":  "Copy-BackupForGate18-v2.ps1",
+                        "sha256":  "165c302f4e5b0e2a169353d7ee3a39a057d1612eb991507868b3b46176ce6225"
+                    },
+    "source_folder":  "C:\\Users\\jonny\\Documents\\Codex\\2026-09-07\\cr\\outputs\\jarvis-backups",
+    "source":  "C:\\Users\\jonny\\Documents\\Codex\\2026-09-07\\cr\\outputs\\jarvis-backups\\bcc2753f736f43ba946ec3f342b35c3a.zip",
+    "source_bytes":  4659473,
+    "source_last_write_utc":  "2026-10-04T06:20:26.7526273Z",
+    "source_sha256_before":  "b81be404e1677c48cffc7d26a8d77998b54fa2fa588bd4eeb5614e841ce0bfe3",
+    "source_sha256_after":  "b81be404e1677c48cffc7d26a8d77998b54fa2fa588bd4eeb5614e841ce0bfe3",
+    "copy":  "D:\\JARVIS-S6-FRESHVM\\media\\bcc2753f736f43ba946ec3f342b35c3a.zip",
+    "copy_sha256":  "b81be404e1677c48cffc7d26a8d77998b54fa2fa588bd4eeb5614e841ce0bfe3",
+    "copy_bytes":  4659473,
+    "backup":  {
+                   "id":  "bcc2753f736f43ba946ec3f342b35c3a",
+                   "format":  1,
+                   "created_utc":  "2026-10-04T06:20:25.9430000Z",
+                   "files_in_manifest":  398,
+                   "archive_entries":  399,
+                   "database_counts":  {
+                                           "items":  6,
+                                           "messages":  1133,
+                                           "reminders":  0,
+                                           "settings":  12,
+                                           "audit":  689,
+                                           "feedback":  8,
+                                           "documents":  6,
+                                           "task_meta":  0,
+                                           "research":  26,
+                                           "workspaces":  2,
+                                           "workspace_links":  3,
+                                           "turn_evidence":  13,
+                                           "inspection_records":  1,
+                                           "inspection_findings":  9,
+                                           "inspection_finding_sources":  9,
+                                           "inspection_finding_events":  9,
+                                           "project_budget_limits":  0,
+                                           "project_budget_reservations":  0
+                                       },
+                   "key_files":  0
+               },
+    "restore_check":  {
+                          "status":  "restore_rehearsal_passed",
+                          "checked_utc":  "2026-10-04T06:20:27.6930000Z",
+                          "files":  398,
+                          "database_counts":  {
+                                                  "items":  6,
+                                                  "messages":  1133,
+                                                  "reminders":  0,
+                                                  "settings":  12,
+                                                  "audit":  689,
+                                                  "feedback":  8,
+                                                  "documents":  6,
+                                                  "task_meta":  0,
+                                                  "research":  26,
+                                                  "workspaces":  2,
+                                                  "workspace_links":  3,
+                                                  "turn_evidence":  13,
+                                                  "inspection_records":  1,
+                                                  "inspection_findings":  9,
+                                                  "inspection_finding_sources":  9,
+                                                  "inspection_finding_events":  9,
+                                                  "project_budget_limits":  0,
+                                                  "project_budget_reservations":  0
+                                              }
+                      },
+    "source_written":  false,
+    "archives_seen":  [
+                          {
+                              "name":  "bcc2753f736f43ba946ec3f342b35c3a.zip",
+                              "bytes":  4659473,
+                              "last_write_utc":  "2026-10-04T06:20:26.7526273Z"
+                          },
+                          {
+                              "name":  "307f657d032e4d2cac60119445d3345b.zip",
+                              "bytes":  2383772,
+                              "last_write_utc":  "2026-09-10T01:06:56.8519832Z"
+                          },
+                          {
+                              "name":  "bd5bc6fa8a68493482c30304deb1afe6.zip",
+                              "bytes":  2344894,
+                              "last_write_utc":  "2026-09-09T12:39:51.1843418Z"
+                          },
+                          {
+                              "name":  "cfb5b1d5fb60437ab180485f0d95f200.zip",
+                              "bytes":  2301148,
+                              "last_write_utc":  "2026-09-09T11:28:47.3923714Z"
+                          },
+                          {
+                              "name":  "793e61d5ff8f48158da0c2781b7b52e6.zip",
+                              "bytes":  2213836,
+                              "last_write_utc":  "2026-09-09T07:19:21.7624909Z"
+                          },
+                          {
+                              "name":  "61733ad26c1a4aa7adc8eebf08c814d1.zip",
+                              "bytes":  2144378,
+                              "last_write_utc":  "2026-09-09T06:22:58.7780678Z"
+                          },
+                          {
+                              "name":  "50fe5f453d084b32aec90bad88b4edd0.zip",
+                              "bytes":  2105398,
+                              "last_write_utc":  "2026-09-09T05:56:25.4818646Z"
+                          },
+                          {
+                              "name":  "03f021f6a4ba4a96995b1318ba18f32c.zip",
+                              "bytes":  2093277,
+                              "last_write_utc":  "2026-09-09T05:38:33.5982483Z"
+                          }
+                      ],
+    "next":  "gate18-step in the jonny account builds the recovery disc (after Claude has checked this record)"
+}
