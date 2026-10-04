@@ -1,0 +1,27 @@
+{
+    "schema":  "stage6-owner-execution-prompt-approval-v1",
+    "subject":  "Gates 17 to 20 execution plan (plain-language prompt), applying the simplified acceptance approved 2026-10-02",
+    "recorded_utc":  "2026-10-04T03:42:52Z",
+    "text":  {
+                 "path":  "C:\\Users\\jonny\\JARVIS-claude-workspace\\governance\\STAGE6-GATES17-20-EXECUTION-PROMPT.md",
+                 "sha256":  "b3fbade4f3ded84b9bd8137b8581cf1a052b3c409cb0b8212d4b195cd7f007ce",
+                 "note":  "The approved draft with only its title and status line changed to record the approval."
+             },
+    "source_draft":  {
+                         "path":  "repo\\docs\\stage6-freshvm\\GATES17-20-EXECUTION-PROMPT.md",
+                         "commit":  "5b6e965",
+                         "sha256":  "a56f27b0f154c895ad00693df7f10b25dcbe186730243e6680dd123a58737b00"
+                     },
+    "owner_approval":  {
+                           "source":  "Direct human message in the Claude Code chat, 2026-10-04 (local)",
+                           "text":  "FINAL is 1.0.11 and I approve the Gates 17 to 20 plan",
+                           "scope":  "The plan as frozen above, including its section \"Where this plan differs from what you approved earlier\" (five differences) and its \"Not authorised\" section."
+                       },
+    "effect":  {
+                   "execution_prompt_status":  "APPROVED",
+                   "gate17_and_19":  "run under the RESUME_STAGE6_FRESH_VM token issued 2026-10-02T01:15:45Z, after FRESH_VM_QUALIFICATION_PASS (2026-10-04)",
+                   "not_issued":  "RESUME_STAGE6_RECOVERY (Gate 18) is not issued and is never requested or inferred; P3, P4 and P5 run only on the owner\u0027s literal run P3 / run P4 / run P5",
+                   "not_authorised":  "cutover, Stage 7, any change to the everyday JARVIS, provider keys in the VM, VirtualBox under the owner account, Experiment 5"
+               },
+    "recorded_by":  "Claude Code (Claude Fable 5.1), owner account. This record documents the owner\u0027s decision; it grants no authority of its own and issues no token."
+}

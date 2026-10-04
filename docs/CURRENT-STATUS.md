@@ -1,7 +1,7 @@
 # JARVIS: current status (living document)
 
 **Read this first in every new Claude Code session, and update it at the end of each one.**
-Last updated: 2026-10-04 (Gate 16R complete: FRESH_VM_QUALIFICATION_PASS; stopped before Gate 17, which needs the owner's FINAL selection and prompt approval).
+Last updated: 2026-10-04 (Gate 16R complete; FINAL = 1.0.11 and the Gates 17–20 plan approved; Gate 17 waits for the owner's first click: next-step.cmd in the jonny account).
 Newest handover summary for a fresh session: `docs/HANDOVER-20261004.md`.
 
 Rules and authority are in `CLAUDE.md` and `../governance/OWNER-DELEGATION.md`; this file
@@ -110,21 +110,25 @@ Owner only (Claude must stop and ask, never infer or pre-stage tokens):
    VirtualBox's default-machine-folder property left at its default. Evidence
    `MANIFEST.json`: 116 files, sha256 38d487a6… (`tools/host/evidence_manifest.py`; covers
    gate16r-20261002 and guest-egress-01, never the sealed `evidence\P0`). **Gate 16R is
-   complete; STOPPED before Gate 17.** **Waiting for the owner:** FINAL selection
-   (proposed 1.0.11-60d406fb6398; previous build for Gate 19: 1.0.10-915e906516dc) and
-   approval of `docs/stage6-freshvm/GATES17-20-EXECUTION-PROMPT.md` (rewritten 2026-10-04 in
-   plain words; its last section lists where it differs from earlier approved wording).
-   Tooling is written and rehearsed (`docs/release-rehearsal-20261004/README.md`, which also
-   lists what could not be rehearsed: everything VirtualBox, the 526 MB disc build, the
-   in-VM restart step). **On approval Claude must:** (1) write the two governance records
-   (FINAL selection; prompt approval with the frozen text hash); (2) write
-   `D:\JARVIS-S6-FRESHVM\tools\gate17-plan.json` = `{"final": "<id>", "previous": "<id>"}`;
-   (3) copy to `D:\JARVIS-S6-FRESHVM\tools\`: `next-step.cmd`, `Invoke-NextStep.ps1`,
-   `New-Gate17PackageDisc.ps1`, `Start-Gate17Vm.ps1` (the disc builder takes the guest
-   scripts from the repo, so the tree must be committed first), and append their hashes to
-   `evidence\gate17\prep-tools-hashes.txt`; (4) tell the owner: jonny account,
-   double-click `next-step`. Gate 17 evidence lives in `evidence\gate17\` (host) and
-   `evidence\guest-egress-01\` (guest, after `gate17-cycle.json`).
+   complete.** **FINAL = 1.0.11-60d406fb6398 and the Gates 17–20 plan APPROVED by the
+   owner on 2026-10-04** ("FINAL is 1.0.11 and I approve the Gates 17 to 20 plan";
+   `../governance/STAGE6-FINAL-SELECTION-RECORD.json`,
+   `STAGE6-GATES17-20-PROMPT-APPROVAL.json`, approved text
+   `STAGE6-GATES17-20-EXECUTION-PROMPT.md` sha256 b3fbade4…; previous build for Gate 19:
+   1.0.10-915e906516dc). Tooling rehearsed (`docs/release-rehearsal-20261004/README.md`,
+   which lists what could not be rehearsed: everything VirtualBox, the 526 MB disc build,
+   the in-VM restart step) and installed in `D:\JARVIS-S6-FRESHVM\tools\` with
+   `gate17-plan.json` (hashes appended to `evidence\gate17\prep-tools-hashes.txt`).
+   **Gate 17 in execution, waiting for the owner's clicks:** (1) jonny: `next-step.cmd`
+   builds both package discs; (2) jarvis-s6-val: `next-step.cmd` attaches them and starts
+   the VM; (3) in the VM: `gate` on the JARVIS_PKG disc, twice (quit JARVIS and restart
+   Windows in between), one photo of the JARVIS window; (4) shut down, `next-step.cmd` in
+   jarvis-s6-val takes snapshot GATE17-19-PASS; (5) owner says "gate 17 done"; Claude
+   evaluates `evidence\gate17\` (host) and `evidence\guest-egress-01\` (guest runs after
+   `gate17-cycle.json`), then asks for "run P3" (reference `checkpoints\p2-20261004-030308`;
+   put P3 evidence under `evidence\gate17\checkpoints`). Then OWNER STOP #2: present the
+   rehearsed Gate 18 steps and wait for `RESUME_STAGE6_RECOVERY` (never requested).
+   Do not edit `tools/guest/*` once the discs are built: the disc record binds their hashes.
    P3 will reference `checkpoints\p2-20261004-030308`. Every VM start, including after
    restoring `FRESH-PREREQ`, goes through `step7-start-vm.cmd`. The owner runs every
    launcher in `D:\JARVIS-S6-FRESHVM\tools\` (ACL/VirtualBox work is owner-only); Claude
