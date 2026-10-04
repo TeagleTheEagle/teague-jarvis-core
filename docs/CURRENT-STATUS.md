@@ -1,7 +1,7 @@
 # JARVIS: current status (living document)
 
 **Read this first in every new Claude Code session, and update it at the end of each one.**
-Last updated: 2026-10-04 (Gates 16R, 17 and 19 and P3 passed on FINAL 1.0.11; at OWNER STOP #2: Claude prepares the Gate 18 restore tooling, then the owner decides on RESUME_STAGE6_RECOVERY).
+Last updated: 2026-10-04 (Gates 16R, 17 and 19 and P3 passed on FINAL 1.0.11; the owner issued RESUME_STAGE6_RECOVERY: Gate 18 in execution, waiting for the owner's backup copy).
 Newest handover summary for a fresh session: `docs/HANDOVER-20261004-2.md` (the earlier
 `HANDOVER-20261002.md` and `HANDOVER-20261004.md` are out of date).
 
@@ -10,10 +10,11 @@ only records where the work stands. Historical handover context: `docs/PROJECT-C
 
 ## Where we are
 
-- **Stage 6: INCOMPLETE.** Fresh-VM route active. **Gate pointer: OWNER STOP #2 (before
-  Gate 18), since 2026-10-04.** Passed on FINAL 1.0.11: Gate 16R, Gate 17, Gate 19 and
-  checkpoints P0 to P3. Not done: Gate 18, P4, Gate 20, P5. `RESUME_STAGE6_FRESH_VM` was
-  issued 2026-10-02; `RESUME_STAGE6_RECOVERY` is not issued. Details under "Next steps".
+- **Stage 6: INCOMPLETE.** Fresh-VM route active. **Gate pointer: GATE 18 in execution
+  (since the owner's `RESUME_STAGE6_RECOVERY`, 2026-10-04, first clock reading 05:41:52Z).**
+  Passed on FINAL 1.0.11: Gate 16R, Gate 17, Gate 19 and checkpoints P0 to P3. Not done:
+  Gate 18, P4, Gate 20, P5. `RESUME_STAGE6_FRESH_VM` was issued 2026-10-02. Details under
+  "Next steps".
   Earlier: P0 PASS (2026-09-30, sealed); owner created `jarvis-s6-val`. Experiment 5
   unconsumed, its budget frozen at 4/5 (that is the experiment budget, **not** a count of
   Stage 6 attempts). Stage 7 not started. Production cutover not authorized.
@@ -142,8 +143,12 @@ Owner only (Claude must stop and ask, never infer or pre-stage tokens):
    backup (`docs/release-rehearsal-20261004/README.md`): `tools/guest/Invoke-Gate18.ps1` +
    `gate18.cmd` (checks K0–K9), `tools/host/New-Gate18RecoveryDisc.ps1`,
    `Start-Gate18Vm.ps1`, `Invoke-Gate18Step.ps1` + `gate18-step.cmd`. The exact steps for
-   the owner are in `docs/stage6-freshvm/GATE18-STEPS.md`. **Waiting for the owner's
-   `RESUME_STAGE6_RECOVERY` (never requested or inferred).** When it arrives, Claude:
+   the owner are in `docs/stage6-freshvm/GATE18-STEPS.md`. **The owner issued
+   `RESUME_STAGE6_RECOVERY` on 2026-10-04 (first clock reading 05:41:52Z; record
+   `../governance/STAGE6-RESUME-RECOVERY-RECORD.json`). Gate 18 IN EXECUTION.** Steps 1 and 2
+   below done 05:42–05:43Z (tools copied, `gate18-authorized.json`, hashes in
+   `evidence\gate18\prep-tools-hashes.txt`; launcher dry run as jonny points to the owner's copy
+   command). Next: the owner's copy from E:. The plan on the token was:
    (1) writes `../governance/STAGE6-RESUME-RECOVERY-RECORD.json`; (2) copies
    `gate18-step.cmd`, `Invoke-Gate18Step.ps1`, `New-Gate18RecoveryDisc.ps1`,
    `Start-Gate18Vm.ps1` to `D:\JARVIS-S6-FRESHVM\tools\` and writes
