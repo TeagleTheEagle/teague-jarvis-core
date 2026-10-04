@@ -29,8 +29,7 @@ tried first in the disposable VM.
 | # | Where | What you do | What happens |
 |---|---|---|---|
 | 1 | this chat | send `RESUME_STAGE6_RECOVERY` | I record it and switch the Gate 18 launcher on |
-| 2a | everyday JARVIS, Settings > Backups | press "Create verified backup", wait; then "Test restore in temporary folder", wait. Both must succeed. Note the "Folder:" line | a fresh backup and its test receipt in the backup folder |
-| 2b | PC, jonny | paste the v2 copy command I give you into PowerShell | checks the newest backup (test passed, database present, no key file), copies it to `D:\JARVIS-S6-FRESHVM\media`, proves the backup was not changed |
+| 2 | PC, jonny | paste the backup command I give you into PowerShell (`New-OldJarvisBackup.ps1`; proposed after incident 02, needs your approval) | your everyday JARVIS's own backup code makes a fresh backup and tests its restore (the same code as the Settings buttons, run with the new build's Python because its own Python is gone); then the backup is checked (test passed, database present, no key file), copied to `D:\JARVIS-S6-FRESHVM\media`, and proven unchanged |
 | 3 | PC, jonny | double-click `gate18-step` in `D:\JARVIS-S6-FRESHVM\tools` | builds the recovery disc |
 | 4 | PC, jarvis-s6-val | double-click `gate18-step` | checks and attaches the disc, starts the VM |
 | 5 | inside the VM | sign in, open the `JARVIS_RECOVERY` disc, double-click `gate18` | the restore and its checks (a few minutes plus one install, about 5 minutes) |

@@ -34,6 +34,13 @@ Install and Uninstall code that ran is the code in the final file (sha256
 | `tools/guest/Invoke-Gate18.ps1` (sha256 `cf0fe657…`) | run against that disc folder with the sandbox left by the Gates 17/19 driver rehearsal standing in for the VM (FINAL installed and stopped, package extracted) | PASS, all ten checks K0 to K9 (`gate18-rehearsal.output.txt`, `gate18-records/`); a second start is refused |
 | `tools/host/Invoke-Gate18Step.ps1` decisions | fake folder tree, test mode (`test-gate18-step.ps1`) | 15 cases, each gives the intended step or message; refuses until the authorisation file exists; never touches the backup drive or VirtualBox outside the jarvis-s6-val session |
 
+**Added after Gate 18 incidents 01 and 02 (2026-10-04, Claude Opus 5.5):** the old everyday JARVIS's own backup
+code (repo baseline `e6fc40b`, `recovery.py create` and `rehearse`) run with FINAL's Python 3.12.10 on a made-up
+database created by the old `store.py` (`D:\JARVIS-release-work\gate18-oldbackup-rehearsal`): backup_verified,
+restore_rehearsal_passed; `Copy-BackupForGate18-v2.ps1` DONE (plus six refusal cases on the synthetic backup);
+`Invoke-Gate18.ps1` on that **old-format** backup with the Gates 17/19 sandbox standing in for the VM: **K0 to K9
+PASS** (`gate18-oldformat.output.txt`); helper `New-OldJarvisBackup.ps1` end to end PASS, refusals PASS.
+
 Not rehearsed for Gate 18: the owner's real backup (made by the old everyday JARVIS; whether FINAL accepts it
 is what the gate tests), the copy from the backup drive, `New-Gate18RecoveryDisc.ps1` and `Start-Gate18Vm.ps1`
 (disc build and VirtualBox), and double-clicking `gate18.cmd` from the disc.

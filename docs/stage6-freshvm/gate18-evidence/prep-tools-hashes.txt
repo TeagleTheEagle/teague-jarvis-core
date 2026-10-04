@@ -9,3 +9,5 @@ d456da091c335e74c2f057068409cb5fe1a44ef3dcc156d780a83f16868a59a2  Start-FreshVm.
 f4065b26a4abecf0bc71e6b219ee423832775ce822bde3588a764608bca3cad8  Take-FreshVmSnapshot.ps1
 # 2026-10-04T05:53:09Z after incident 01 (owner decision A): copy script v2 added; gate18-authorized.json suspended
 165c302f4e5b0e2a169353d7ee3a39a057d1612eb991507868b3b46176ce6225  Copy-BackupForGate18-v2.ps1
+# 2026-10-04T06:10:50Z after incident 02 (everyday JARVIS cannot start): backup helper added, pending owner approval
+a324f7a8f5a380f882e79e3b647f78ef0daae3e8ca4bbb2708a7059613c1d056  New-OldJarvisBackup.ps1

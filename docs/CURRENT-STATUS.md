@@ -160,8 +160,14 @@ Owner only (Claude must stop and ask, never infer or pre-stage tokens):
    found read-only from baseline e6fc40b). Copy script v2 (`tools/host/Copy-BackupForGate18-v2.ps1`,
    tested on the synthetic rehearsal backup incl. six refusal cases) placed in the D: tools folder;
    incident run's record renamed `backup-copy-run1-incident01.json`; `GATE18-STEPS.md` step 2 changed
-   to 2a/2b; `incident-01-addendum-1.json`. Launcher still suspended. **Next: the owner approves the
-   new step 2, makes the backup, runs v2; Claude checks the record and re-enables the launcher.**
+   to 2a/2b; `incident-01-addendum-1.json`. Launcher still suspended. **Incident 02 (06:11Z,
+   `incident-02-everyday-jarvis-cannot-start.json`): the everyday JARVIS cannot start: its `.venv`
+   is based on Codex's Python runtime (`C:\Users\jonny\.cache\codex-runtimes\...`), which no longer
+   exists.** Rehearsed alternative: the old JARVIS's own `recovery.py create/rehearse` run with
+   FINAL's Python; `Invoke-Gate18.ps1` on such an old-format backup K0–K9 PASS in a sandbox. New
+   helper `tools/host/New-OldJarvisBackup.ps1` (makes, tests, records, then runs copy v2), placed on
+   D:. **Next: owner approves the helper route; owner runs it; Claude checks the records and
+   re-enables the launcher.** Repairing the everyday JARVIS is a separate owner decision.
    The plan on the token was:
    (1) writes `../governance/STAGE6-RESUME-RECOVERY-RECORD.json`; (2) copies
    `gate18-step.cmd`, `Invoke-Gate18Step.ps1`, `New-Gate18RecoveryDisc.ps1`,
