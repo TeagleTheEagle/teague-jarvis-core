@@ -1,0 +1,41 @@
+{
+    "schema":  "stage6-fresh-vm-snapshot-v1",
+    "utc":  "2026-10-04T02:40:18.0017066Z",
+    "account":  "jarvis-s6-val",
+    "vm_name":  "JARVIS-S6-FRESH",
+    "vm_uuid":  "4ef16bdd-2a1b-46af-83db-ee69c2f868bb",
+    "snapshot_name":  "FRESH-CLEAN-BASELINE",
+    "snapshot_uuid":  "0da943df-12e5-4eac-93bf-727c03dd5d94",
+    "description":  "Gate 16R step 9: clean Windows 11 Home from the answer file, Guest Additions 7.2.18, Windows Update paused, nothing else installed; baseline checks passed in step 8",
+    "current_snapshot_name":  "FRESH-CLEAN-BASELINE",
+    "current_snapshot_uuid":  "0da943df-12e5-4eac-93bf-727c03dd5d94",
+    "before":  {
+                   "vbox_sha256":  "f4cbd27f2ff2afb712c4e073637fb0291b3a16e63fd2b92f415796fb6a9139b0",
+                   "nvram_sha256":  "a57321307a5296ab3a759bb1113726bdff35e7dbe7fe51ff85c886403dd027bc",
+                   "snapshots":  [
+
+                                 ]
+               },
+    "vbox_file":  "D:\\JARVIS-S6-FRESHVM\\machines\\JARVIS-S6-FRESH\\JARVIS-S6-FRESH.vbox",
+    "vbox_sha256_after":  "8647a9ec115e721920185419ff5e5bc6795408116d4258424cb89c8bd1a01b91",
+    "nvram_sha256_after":  "a57321307a5296ab3a759bb1113726bdff35e7dbe7fe51ff85c886403dd027bc",
+    "all_snapshots":  [
+                          {
+                              "name":  "FRESH-CLEAN-BASELINE",
+                              "uuid":  "0da943df-12e5-4eac-93bf-727c03dd5d94"
+                          }
+                      ],
+    "snapshots_folder":  [
+                             {
+                                 "name":  "2026-10-04T02-40-17-827151100Z.nvram",
+                                 "bytes":  547328,
+                                 "last_write_utc":  "2026-10-04T02:26:33.6341554Z"
+                             },
+                             {
+                                 "name":  "{0d8d6176-2b81-4fc8-90d9-e2007869cc58}.vdi",
+                                 "bytes":  2097152,
+                                 "last_write_utc":  "2026-10-04T02:40:17.8271511Z"
+                             }
+                         ],
+    "vm_state":  "poweroff"
+}

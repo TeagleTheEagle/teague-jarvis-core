@@ -1,7 +1,7 @@
 # JARVIS: current status (living document)
 
 **Read this first in every new Claude Code session, and update it at the end of each one.**
-Last updated: 2026-10-04 (Gate 16R steps 0–8 PASS; step 9 snapshot pending the owner's click).
+Last updated: 2026-10-04 (Gate 16R steps 0–9 PASS; step 10, P2, waits for the owner's "run P2").
 Newest handover summary for a fresh session: `docs/HANDOVER-20261004.md`.
 
 Rules and authority are in `CLAUDE.md` and `../governance/OWNER-DELEGATION.md`; this file
@@ -87,10 +87,17 @@ Owner only (Claude must stop and ask, never infer or pre-stage tokens):
    run 5 `guest-egress-01\gate17-20261004-022130`, tools disc v4, full §6(f) list; runs 1 and 3
    were harness false positives, kept; owner approved two dispositions: the two
    Windows-generated credential entries, and LocalhostReachable proven from VBox.log
-   instead of the `.vbox`). **Step 9 pending:** the VM is shut down cleanly (2026-10-04
-   13:26 local); the owner runs `step9-snapshot-clean-baseline.cmd` in the validation session
-   and says "step 9 done". Then P2 on "run P2", `step11-snapshot-prereq.cmd`, and the
-   step 12 qualification record. The owner runs every
+   instead of the `.vbox`). Step 9 **PASS** (2026-10-04T02:40:17Z: snapshot
+   `FRESH-CLEAN-BASELINE`, uuid 0da943df-12e5-4eac-93bf-727c03dd5d94, taken by the owner with
+   the VM powered off and not started since baseline run 5; `.vbox` sha256 8647a9ec… after
+   the snapshot; manifest `FRESH-CLEAN-BASELINE-manifest.json` written by
+   `tools/host/snapshot_manifest.py`; `step9-evaluation.json`). The saved settings still
+   hold NAT localhost-reachable "true" (the known defect), so every start after restoring a
+   snapshot also goes through `step7-start-vm.cmd`. **Step 10 pending:** P2 on the owner's
+   "run P2" (reference `checkpoints\p1-20261002-025102`). Then `step11-snapshot-prereq.cmd`
+   (owner, validation session, VM stays off; reuse `snapshot_manifest.py` with
+   `--snapshot FRESH-PREREQ` and the v3 D1 statement) and the step 12 qualification
+   record. The owner runs every
    launcher in `D:\JARVIS-S6-FRESHVM\tools\` (ACL/VirtualBox work is owner-only); Claude
    reads the JSON results from the evidence folder. Evidence:
    `D:\JARVIS-S6-FRESHVM\evidence\gate16r-20261002\`.
@@ -206,3 +213,9 @@ because creating them changes the owner's real Desktop/Startup folders). Check o
   computer names; never run the Baseline phase on the host; Windows applies staged updates
   at shutdown, so re-record before a snapshot. Next: step 9 snapshot, P2, step 11, step 12.
   Nothing pushed or synced.
+- **2026-10-04, Gate 16R step 9 (Fable 5.1, new session from the handover summary).**
+  Checked the step 9 launcher against its recorded hashes, the owner took snapshot
+  FRESH-CLEAN-BASELINE, Claude verified the record, the `.vbox` copy, the disk lineage and
+  the VM log, and wrote the section 6(h)1 manifest with a small reusable tool
+  (`tools/host/snapshot_manifest.py`). Next: P2 on "run P2", step 11, step 12. Nothing
+  pushed or synced.
