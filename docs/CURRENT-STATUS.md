@@ -17,12 +17,16 @@ Last updated: 2026-10-05 (about 02:00 local) (STAGE_6_COMPLETE, SWITCH-OVER COMP
   answered on an open keep-alive connection (reproduced; fixed in e038726, reviewed, new tests
   `desktop/test/shutdown-wait.test.cjs`; records `docs/release-rehearsal-20261005-1013/README.md`). Version 2 Stage 7
   scripts: the guest's last message now names the snapshot step before "stage 7 done"; decision tests 17 + 8 PASS with
-  the 1.0.14 label. **Next, owner:** approve the Stage 7 check of 1.0.14 (`docs/STAGE7-CHECK-1.0.14.md`, all
-  differences from `docs/STAGE7-PLAN.md` listed; approval wording there). **Then Claude:** record the approval, place the
-  tools in `D:\JARVIS-S6-FRESHVM\tools\stage7-1.0.14\` with `stage7-authorized.json` (schema v2, expected current
-  snapshot STAGE7-PASS, checked unchanged on 2026-10-05) and create the two record folders. **Then owner:** the VM pass
-  (before 2026-11-06, when the VM's Windows Update pause ends); then, separately, updating the everyday JARVIS (steps
-  not designed yet).
+  the 1.0.14 label. **Owner approved the check** ("I approve the Stage 7 check of 1.0.14", first clock reading
+  2026-10-04T14:59:02Z; record `../governance/STAGE7-1.0.14-APPROVAL-RECORD.json`, plan sha256 913988c1..., repo copy
+  `docs/stage7-1.0.14-evidence/`). Claude placed the tools in `D:\JARVIS-S6-FRESHVM\tools\stage7-1.0.14\` (six files,
+  each hash equal to the approval) with `stage7-authorized.json` (schema v2, expected current snapshot STAGE7-PASS) and
+  created `D:\JARVIS-stage7\1.0.14-e03872680e1d\evidence` (approval copy, `prep-tools-hashes.txt`) and the empty guest
+  folder `guest-egress-01\stage7-1.0.14-e03872680e1d`; launcher dry run: jonny -> build the disc, jarvis-s6-val -> "next
+  step is in jonny". **Next, owner:** step 1 (jonny: double-click `stage7-step.cmd` in that folder, "disc built"), then
+  the VM pass per the plan (before 2026-11-06, when the VM's Windows Update pause ends). **Then Claude:** check the disc
+  record (guest file hashes equal the approval, package equals 1.0.14), later every record of the pass, and write the
+  result. Updating the everyday JARVIS is a separate owner decision afterwards (steps not designed yet).
 - **Release 1.0.12 (2026-10-04, on the owner's "next move" / "now do the next move"; superseded, see above).** The fix list
   `docs/POST-CUTOVER-FIXES.md` items 1-6 fixed (status table at the end of that file; item 7 partly, 8 open,
   9 nothing to do). Each fix was designed and challenged by an independent check first, and the finished diff was
