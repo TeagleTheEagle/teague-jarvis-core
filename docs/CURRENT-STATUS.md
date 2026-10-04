@@ -20,7 +20,7 @@ only records where the work stands. Historical handover context: `docs/PROJECT-C
   **Phase 1 preparation done on the owner's "start this" (2026-10-04): switch-over plan
   `docs/CUTOVER-BLUEPRINT.md` READY FOR APPROVAL, launcher `tools/host/Invoke-Cutover.ps1` +
   `cutover-step.cmd` rehearsed in a sandbox (`docs/release-rehearsal-20261004/README.md`). Waiting for
-  the owner's approval of the plan; then Claude copies the launcher to `D:\JARVIS-cutover	ools\`,
+  the owner's approval of the plan; then Claude copies the launcher to `D:\JARVIS-cutover\tools\`,
   writes `cutover-authorized.json` and the hashes, and the owner runs step 1. `import-approved.json`
   and `retire-approved.json` (in `D:\JARVIS-cutover\evidence\`) are written by Claude only on the
   owner's OK at steps 4 and 7. Stage 7 only on the owner's word.** Known: the everyday JARVIS
