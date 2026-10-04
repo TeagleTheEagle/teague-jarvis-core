@@ -1,7 +1,7 @@
 # JARVIS: current status (living document)
 
 **Read this first in every new Claude Code session, and update it at the end of each one.**
-Last updated: 2026-10-04 (Gate 18 restore passed on the third guest run, snapshot GATE18-PASS taken; waiting for the owner's P4 checkpoint go-ahead; then Gate 20).
+Last updated: 2026-10-04 (Gate 18 complete: BACKUP_RESTORE_RECOVERY_PASS, snapshot GATE18-PASS, P4 PASS; next is Gate 20, then P5 on the owner's own word).
 Newest handover summary for a fresh session: `docs/HANDOVER-20261004-2.md` (the earlier
 `HANDOVER-20261002.md` and `HANDOVER-20261004.md` are out of date).
 
@@ -195,9 +195,15 @@ Owner only (Claude must stop and ask, never infer or pre-stage tokens):
    **`gate18-evaluation.json`: `BACKUP_RESTORE_RECOVERY_PASS`** for the restore, with six recorded
    deviations and owner decisions 01–04; findings for Gate 20 listed there (FINAL hangs on a
    backup on read-only media; `memory_items_visible` 3 vs 6 item rows to explain; guest script
-   fixes before reuse). **Next: checkpoint P4, only on the owner's own "run P4"** (reference
-   `evidence\gate17\checkpoints\p3-20261004-051026`; create `evidence\gate18\checkpoints` first),
-   then manifests for `evidence\gate18` and the new egress folders, then Gate 20. The VM and
+   fixes before reuse). **P4 PASS** (run `evidence\gate18\checkpoints\p4-20261004-075914`,
+   07:59:14Z, on the owner's "run p4": byte-identical to P3, VirtualBox 7.2.18.175117 unchanged,
+   empty census; `p4-evaluation.json`). Manifests: `evidence\gate18\MANIFEST.json` (31 files,
+   sha256 603605cf…) and `MANIFEST-guest-egress-01.json` (74 files, c42af0f1…). **Gate 18 is
+   complete: `BACKUP_RESTORE_RECOVERY_PASS`.** **Next: Gate 20** (Claude: read the V1 runbook
+   Gate 20 list and COMPLETE RULE in `../reference`, requirement table with PASS /
+   APPROVED_DISPOSITION / FAIL / NOT_APPLICABLE_WITH_EVIDENCE, D9 timing bound, the Gate 18
+   findings put to the owner; P5 only on the owner's own "run P5", reference the P4 folder;
+   verdict; `docs/EVIDENCE-INDEX.md`; STOP). The VM and
    `D:\JARVIS-S6-FRESHVM\media`, `D:\JARVIS-release-work\stage6-media\JARVIS-RECOVERY.iso` and
    `D:\JARVIS-release-work\recovery-payload` now hold the owner's personal data. Repairing the everyday JARVIS is a
    separate owner decision.
