@@ -1,0 +1,13 @@
+{
+    "status":  "PASS",
+    "file":  "bcc2753f736f43ba946ec3f342b35c3a.zip",
+    "bytes":  4659473,
+    "sha256":  "b81be404e1677c48cffc7d26a8d77998b54fa2fa588bd4eeb5614e841ce0bfe3",
+    "recorded_sha256":  "b81be404e1677c48cffc7d26a8d77998b54fa2fa588bd4eeb5614e841ce0bfe3",
+    "matches_record":  true,
+    "hash_seconds":  1.6,
+    "entries":  399,
+    "has_manifest":  true,
+    "has_database":  true,
+    "credential_file_entries":  0
+}

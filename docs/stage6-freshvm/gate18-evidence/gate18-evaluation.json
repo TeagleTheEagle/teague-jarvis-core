@@ -1,0 +1,44 @@
+{
+  "schema": "stage6-gate-evaluation-v1",
+  "gate": "Gate 18: backup, restore and recovery with the owner's real backup (AMENDMENT-v3 D8; approved Gates 17-20 plan, OWNER STOP #2 section; GATE18-STEPS.md)",
+  "recorded_utc": "2026-10-04T07:57:01Z",
+  "authority": "owner's RESUME_STAGE6_RECOVERY, 2026-10-04T05:41:52Z (governance\\STAGE6-RESUME-RECOVERY-RECORD.json)",
+  "final_release": "1.0.11-60d406fb6398",
+  "verdict": "BACKUP_RESTORE_RECOVERY_PASS for the restore itself: every criterion below is met on the third guest run. Checkpoint P4 is outstanding (only on the owner's own 'run P4') and is evaluated separately in p4-evaluation.json.",
+  "criteria": {
+    "backup_is_the_owners_real_data": "PASS (with deviation 1): backup bcc2753f736f43ba946ec3f342b35c3a.zip, 4,659,473 bytes, sha256 b81be404e1677c48cffc7d26a8d77998b54fa2fa588bd4eeb5614e841ce0bfe3, made 2026-10-04T06:20:25Z by the everyday JARVIS's own backup code (recovery.py sha256 5895c924..., equal to repo baseline e6fc40b), test restore passed; database counts e.g. messages 1133, audit 689, research 26, items 6, documents 6 (old-backup-made.json, backup-copy.json, backup-evaluation.json). Only counts were read, never content.",
+    "source_read_only_and_unchanged": "PASS: source hash before = after = copy (backup-copy.json); the backup drive E: is unchanged by the incident-01 copy (hash before = after) and was not used afterwards.",
+    "read_only_disc_into_the_vm": "PASS: JARVIS-RECOVERY.iso 5,898,240 bytes sha256 1189ac0196d7e33bbfda89fe4a901b517979935b64a68a25fd8a2e32ac39781d built by the owner (recovery-disc.json), attached on SATA port 2 and the VM started once through the launcher from snapshot GATE17-19-PASS with LocalhostReachable = 0 (vm\\gate18-disc-20261004-064727.json, vm\\start-20261004-064727.json).",
+    "no_keys_in_the_vm": "PASS: K1 credential_file_entries 0; the copy script refused archives with a .env.",
+    "guest_run": "guest-egress-01\\gate18-20261004-074554 (07:45:54Z to 07:52:14Z), script Invoke-Gate18.ps1 sha256 cf0fe6578c20d69163c9d7ff97fae0234e9ec8ae6a3c0683a08e190192c41746 unchanged, started from C:\\g18 (copy of the disc) with -RestoreHome C:\\g18home (deviation 4)",
+    "K0_not_elevated": "PASS: account JARVIS-S6-FRESH\\jarvis-s6-guest, process not elevated; the owner reports no UAC prompt on the PC or in the VM",
+    "K1_backup_identity": "PASS: the file used equals the recorded hash b81be404...; 399 entries; manifest and database present",
+    "K2_starting_point": "PASS: first install verified, release 1.0.11-60d406fb6398, 0 processes, restore target absent, extracted package present",
+    "K3_restore_target": "PASS: second, disposable install of the same build installed and verified (no shortcuts)",
+    "K4_dry_run": "PASS: FINAL's switch_over.py verified the old-format backup (every file hash, database integrity and counts): dry_run_only, backup_verified true, 176 files to import, nothing to move aside, 0 protected entries skipped; personality.txt same, desktop/preferences.json differs",
+    "K5_import": "PASS: switch_over_imported, 176 files, database counts equal to the backup's for all 18 tables, desktop/preferences.json written, 2.4 s, program files verified after the import",
+    "K6_startup": "PASS: Core ready on the restored data in 58.1 s, reports installed_release 1.0.11-60d406fb6398, second launch joined the same Core (pid 2484 before and after), first install had 0 processes",
+    "K7_shutdown": "PASS: Core stopped on request, 7 shell processes ended, 0 processes left",
+    "K8_separation": "PASS: both installs verify; the first install's database sha256 fa8c3588... and file count are identical before and after",
+    "K9_backup_unchanged": "PASS: the backup file hashes b81be404... after the run",
+    "snapshot": "PASS: GATE18-PASS uuid 5dcbb9f0-0d6c-4311-8b57-7ba329290edf taken by the owner 2026-10-04T07:55:13Z with the VM powered off after a clean shutdown; .vbox sha256 after 342781d1a28e55fb0bca04fe953301d72daf3ec0888823d85b95e918c6688d21, equal to the saved copy and to the file now (re-hashed by Claude); snapshots FRESH-CLEAN-BASELINE, FRESH-PREREQ, GATE17-19-PASS still present with their recorded uuids"
+  },
+  "deviations_and_owner_decisions": [
+    "1. Backup source. D8 and the steps expected a verified backup on the backup drive E:. E:\\JARVIS-BACKUP holds a file-by-file copy of the old project, not a JARVIS backup, and copy script v1 picked a report file (incident-01-backup-copy.json, addendum 1; run-1 record kept as backup-copy-run1-incident01.json). Owner decision 01 'A': a fresh backup from the everyday JARVIS. E: was read only by the owner's own command and is unchanged.",
+    "2. The everyday JARVIS cannot start (its Codex Python runtime is gone; incident-02-everyday-jarvis-cannot-start.json). Owner decision 02 'approved': the backup was made by the owner's command with the everyday JARVIS's own backup code run with FINAL's Python (New-OldJarvisBackup.ps1), then copied with Copy-BackupForGate18-v2.ps1. This wrote two new files (the backup and its test receipt) into the everyday JARVIS's jarvis-backups folder; nothing else there was changed.",
+    "3. Guest run 1 (incident-03-run1\\gate18-20261004-065046) stopped at K2: the first install was running because its Startup shortcut starts JARVIS at sign-in and the steps lacked 'quit JARVIS first' (incident-03-k2-jarvis-running.json). Owner decision 03 'approve': the owner quit JARVIS in the VM; rerun.",
+    "4. Guest run 2 (incident-04-run2\\gate18-20261004-072308) hung at K4: FINAL's recovery.verify() creates its temporary folder beside the archive and the archive was on the read-only disc (incident-04-k4-hang-read-only-disc.json). Owner decision 04 'approved': the owner closed the stuck window, copied the disc's six files to C:\\g18 and ran the unchanged script from there with -RestoreHome C:\\g18home. The restore therefore read the backup from a writable copy of the disc, proven equal by K1 and K9.",
+    "5. Left in the VM and in snapshot GATE18-PASS: an unused, verified third install at %LOCALAPPDATA%\\JARVIS-restore from run 2 (no data imported), the folder C:\\g18 (copy of the disc, including the backup) and the restore target C:\\g18home with the owner's personal data.",
+    "6. All three guest runs happened in one VM session (one start, 06:47Z; shut down about 07:54Z). The clean repeat from snapshot GATE17-19-PASS foreseen in the steps was not used because the cause of run 1 would have repeated after a restore; the owner approved each rerun."
+  ],
+  "findings_for_gate_20": [
+    "FINAL 1.0.11 limitation: verifying or importing a backup that lies on read-only media never returns (Python 3.12 tempfile retry loop on Windows) instead of failing with a message. Not relevant to a backup in a normal folder (the cutover case). Fix in the first release after cutover.",
+    "Observation, not a criterion: K6 reports memory_items_visible 3 from /api/state while the items table holds 6 rows; the script only records the number. To be explained (kinds of items shown in the state) before or at cutover, where the owner checks the memories by eye (cutover blueprint step 7).",
+    "The Gate 18 guest script and steps need 'quit JARVIS first' and 'restore from a writable copy' before any reuse; the built disc is evidence and is not changed.",
+    "Timings in the VM: second install about 3.5 min (K2 to K3), import 2.4 s, Core ready on the restored data 58.1 s, K8 verification of both installs about 53 s."
+  ],
+  "personal_data": "the VM (snapshot GATE18-PASS, under D:\\JARVIS-S6-FRESHVM) and D:\\JARVIS-S6-FRESHVM\\media (backup zip, JARVIS-RECOVERY.iso) , D:\\JARVIS-release-work\\stage6-media\\JARVIS-RECOVERY.iso and D:\\JARVIS-release-work\\recovery-payload now hold the owner's personal data. Retention is the owner's decision at Gate 20.",
+  "records": "evidence\\gate18\\*, evidence\\gate18\\vm\\*, evidence\\guest-egress-01\\{incident-03-run1, incident-04-run2, gate18-20261004-074554}; repo copy docs/stage6-freshvm/gate18-evidence/",
+  "next": "checkpoint P4 only on the owner's own 'run P4' (reference evidence\\gate17\\checkpoints\\p3-20261004-051026), then manifests, then Gate 20",
+  "recorded_by": "Claude Code (Claude Fable 5.1). Earlier Gate 18 records of this session were written under Claude Opus 5.5 (the owner switched the model during the session); each record names its model."
+}

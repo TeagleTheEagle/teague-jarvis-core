@@ -1,7 +1,7 @@
 # JARVIS: current status (living document)
 
 **Read this first in every new Claude Code session, and update it at the end of each one.**
-Last updated: 2026-10-04 (Gates 16R, 17 and 19 and P3 passed on FINAL 1.0.11; the owner issued RESUME_STAGE6_RECOVERY: Gate 18 in execution, waiting for the owner's backup copy).
+Last updated: 2026-10-04 (Gate 18 restore passed on the third guest run, snapshot GATE18-PASS taken; waiting for the owner's P4 checkpoint go-ahead; then Gate 20).
 Newest handover summary for a fresh session: `docs/HANDOVER-20261004-2.md` (the earlier
 `HANDOVER-20261002.md` and `HANDOVER-20261004.md` are out of date).
 
@@ -187,8 +187,19 @@ Owner only (Claude must stop and ask, never infer or pre-stage tokens):
    read-only media hangs; fix after cutover). Nothing imported. **Owner decision required for
    rerun 2:** close the stuck window, `xcopy E:\ C:\g18\`, run the unchanged script from `C:\g18`
    with `-RestoreHome C:\g18home`; Claude first moves the stuck run folder to
-   `guest-egress-01\incident-04-run2\`. VM is running, JARVIS quit, leftover install at
-   `%LOCALAPPDATA%\JARVIS-restore`. Repairing the everyday JARVIS is a
+   `guest-egress-01\incident-04-run2\`. Owner approved (`owner-decision-04.json`). **Run 3
+   `gate18-20261004-074554`: K0–K9 ALL PASS** (old-format real backup verified by FINAL, 176 files
+   imported, counts equal for all 18 tables, Core ready on the restored data in 58.1 s, clean stop,
+   both installs verify, first install's data and the backup unchanged). Snapshot **GATE18-PASS
+   `5dcbb9f0-0d6c-4311-8b57-7ba329290edf`** (07:55:13Z, VM off, `.vbox` sha256 342781d1…).
+   **`gate18-evaluation.json`: `BACKUP_RESTORE_RECOVERY_PASS`** for the restore, with six recorded
+   deviations and owner decisions 01–04; findings for Gate 20 listed there (FINAL hangs on a
+   backup on read-only media; `memory_items_visible` 3 vs 6 item rows to explain; guest script
+   fixes before reuse). **Next: checkpoint P4, only on the owner's own "run P4"** (reference
+   `evidence\gate17\checkpoints\p3-20261004-051026`; create `evidence\gate18\checkpoints` first),
+   then manifests for `evidence\gate18` and the new egress folders, then Gate 20. The VM and
+   `D:\JARVIS-S6-FRESHVM\media`, `D:\JARVIS-release-work\stage6-media\JARVIS-RECOVERY.iso` and
+   `D:\JARVIS-release-work\recovery-payload` now hold the owner's personal data. Repairing the everyday JARVIS is a
    separate owner decision.
    The plan on the token was:
    (1) writes `../governance/STAGE6-RESUME-RECOVERY-RECORD.json`; (2) copies

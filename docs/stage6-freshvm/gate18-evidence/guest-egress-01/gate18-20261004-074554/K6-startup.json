@@ -1,0 +1,13 @@
+{
+    "status":  "PASS",
+    "core_ready":  true,
+    "seconds_to_ready":  58.1,
+    "installed_release":  "1.0.11-60d406fb6398",
+    "identity_matches":  true,
+    "memory_items_visible":  3,
+    "core_pid_before":  2484,
+    "core_pid_after":  2484,
+    "second_launch_joined_same_core":  true,
+    "processes":  8,
+    "first_install_processes":  0
+}

@@ -1,0 +1,62 @@
+{
+    "schema":  "jarvis-gate18-run-v1",
+    "overall":  "PASS",
+    "phase":  "Restore",
+    "first_home":  "C:\\Users\\jarvis-s6-guest\\AppData\\Local\\JARVIS",
+    "restore_home":  "C:\\g18home",
+    "disc":  "C:\\g18",
+    "started_utc":  "2026-10-04T07:45:54.8130322Z",
+    "finished_utc":  "2026-10-04T07:52:14.7336026Z",
+    "steps":  [
+                  {
+                      "step":  "K0-not-elevated",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T07:45:54.9076124Z"
+                  },
+                  {
+                      "step":  "K1-backup-identity",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T07:45:55.1036398Z"
+                  },
+                  {
+                      "step":  "K2-starting-point",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T07:46:26.5725525Z"
+                  },
+                  {
+                      "step":  "K3-restore-target",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T07:49:54.0664527Z"
+                  },
+                  {
+                      "step":  "K4-dry-run",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T07:49:55.1406241Z"
+                  },
+                  {
+                      "step":  "K5-import",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T07:50:08.0939976Z"
+                  },
+                  {
+                      "step":  "K6-startup",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T07:51:11.2923226Z"
+                  },
+                  {
+                      "step":  "K7-shutdown",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T07:51:21.2081191Z"
+                  },
+                  {
+                      "step":  "K8-separation",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T07:52:14.7275458Z"
+                  },
+                  {
+                      "step":  "K9-backup-unchanged",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T07:52:14.7336026Z"
+                  }
+              ]
+}
