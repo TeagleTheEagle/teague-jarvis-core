@@ -46,6 +46,10 @@ function Finish($overall) {
 }
 function Fail($name, $data, $why) { $data.status = 'FAIL'; $data.reason = $why; Record $name $data; Finish 'FAIL'; exit 2 }
 function Sha256($path) { (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLower() }
+# True when a name refers to JARVIS itself. The acceptance VM's account (jarvis-s6-guest) and computer name
+# (JARVIS-S6-FRESH) contain the word, and Windows and Guest Additions name things after them (for example the pipe
+# VBoxTrayIPC-<account>), so both names are removed before testing.
+function MentionsJarvis([string] $text) { (($text -replace [regex]::Escape($env:USERNAME), '') -replace [regex]::Escape($env:COMPUTERNAME), '') -match 'jarvis' }
 function Processes { @(Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -like (Join-Path $InstallHome 'releases\*') }) }
 function Link { Get-Content -LiteralPath (Join-Path $InstallHome 'data\core-connection.json') -Raw | ConvertFrom-Json }
 function Session {
@@ -123,10 +127,11 @@ if (($Phase -eq 'Baseline' -or $Phase -eq 'All') -and -not $SkipBaseline) {
     $services = @(Get-Service | Select-Object Name, Status, StartType | Sort-Object Name)
     # AMENDMENT-v2 section 6(f), the remaining negatives: JARVIS services, scheduled tasks, named pipes and folders;
     # global package folders; default PATH; and the sign-in state (local account, no signed-in online account).
-    $jarvisServices = @(Get-Service | Where-Object { $_.Name -match 'jarvis' -or $_.DisplayName -match 'jarvis' } | ForEach-Object { $_.Name })
-    $jarvisTasks = @(Get-ScheduledTask -ErrorAction SilentlyContinue | Where-Object { $_.TaskName -match 'jarvis' -or $_.TaskPath -match 'jarvis' } | ForEach-Object { "$($_.TaskPath)$($_.TaskName)" })
+    $jarvisServices = @(Get-Service | Where-Object { (MentionsJarvis $_.Name) -or (MentionsJarvis $_.DisplayName) } | ForEach-Object { $_.Name })
+    $jarvisTasks = @(Get-ScheduledTask -ErrorAction SilentlyContinue | Where-Object { (MentionsJarvis $_.TaskName) -or (MentionsJarvis $_.TaskPath) } | ForEach-Object { "$($_.TaskPath)$($_.TaskName)" })
     $pipeNames = @(try { [IO.Directory]::GetFiles('\\.\pipe\') } catch { @(Get-ChildItem '\\.\pipe\' -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName }) })
-    $jarvisPipes = @($pipeNames | Where-Object { $_ -match 'jarvis' })
+    $jarvisPipes = @($pipeNames | Where-Object { MentionsJarvis $_ })
+    $accountNamedPipes = @($pipeNames | Where-Object { ($_ -match 'jarvis') -and -not (MentionsJarvis $_) })
     $jarvisDirs = @(foreach ($d in "$env:LOCALAPPDATA\JARVIS*", "$env:APPDATA\JARVIS*", "$env:ProgramData\JARVIS*", "$env:ProgramFiles\JARVIS*", "$env:USERPROFILE\JARVIS*") { Get-Item -Path $d -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName } })
     $globalPackages = @(foreach ($d in "$env:APPDATA\npm", "$env:APPDATA\Python", "$env:LOCALAPPDATA\pip", "$env:USERPROFILE\.cargo", "$env:USERPROFILE\.nuget") { if (Test-Path $d) { $d } })
     $nonDefaultPath = @($env:PATH -split ';' | Where-Object { $_ -and ($_ -notlike "$env:SystemRoot*") -and ($_.TrimEnd('\') -ne $aliasDir.TrimEnd('\')) })
@@ -136,7 +141,7 @@ if (($Phase -eq 'Baseline' -or $Phase -eq 'All') -and -not $SkipBaseline) {
     $os = Get-CimInstance Win32_OperatingSystem
     $credCount = ([regex]::Matches($cred, 'Target:')).Count
     $forOwner = @()
-    if ($credCount -gt 0 -and -not ($cred -match 'JARVIS')) { $forOwner += "credential-manager entries exist ($credCount); section 6(f) lists credential-manager entries under 'no secrets'; recorded for the owner's disposition, not failed by the script" }
+    if ($credCount -gt 0 -and -not (MentionsJarvis $cred)) { $forOwner += "credential-manager entries exist ($credCount); section 6(f) lists credential-manager entries under 'no secrets'; recorded for the owner's disposition, not failed by the script" }
     if ($principalSource -eq 'unknown') { $forOwner += 'the account principal source could not be read' }
     $data = [ordered]@{
         status = 'PASS'; at = (Now)
@@ -149,10 +154,12 @@ if (($Phase -eq 'Baseline' -or $Phase -eq 'All') -and -not $SkipBaseline) {
         path = $env:PATH
         development_tools_on_path = @($tools); store_app_execution_aliases = @($storeAliases); development_tool_folders = @($dirs)
         jarvis_install_present = (Test-Path -LiteralPath $InstallHome); jarvis_processes = (Processes).Count
-        env_files_in_profile = $envFiles; jarvis_credentials = ($cred -match 'JARVIS'); credential_entries = ([regex]::Matches($cred, 'Target:')).Count
+        env_files_in_profile = $envFiles; jarvis_credentials = (MentionsJarvis $cred); credential_entries = ([regex]::Matches($cred, 'Target:')).Count
         credential_targets = @([regex]::Matches($cred, 'Target:\s*(.+)') | ForEach-Object { $_.Groups[1].Value.Trim() })
         account_principal_source = $principalSource; onedrive_account_configured = [bool]($oneDrive -and $oneDrive.UserEmail)
         jarvis_services = $jarvisServices; jarvis_scheduled_tasks = $jarvisTasks; jarvis_named_pipes = $jarvisPipes; named_pipes_enumerated = $pipeNames.Count; jarvis_folders = $jarvisDirs
+        pipes_named_after_the_account = $accountNamedPipes
+        name_matching_note = "the account name '$env:USERNAME' and the computer name '$env:COMPUTERNAME' are removed from names before testing for 'jarvis'"
         global_package_folders = $globalPackages; non_default_path_entries = $nonDefaultPath
         owner_disposition_required = $forOwner
         installed_programs = $programs.Count; services = $services.Count
