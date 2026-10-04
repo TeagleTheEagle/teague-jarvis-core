@@ -1,6 +1,6 @@
 # Stage 7 plan: acceptance of the packaged JARVIS app
 
-Status: **DRAFT for your approval (2026-10-04, Claude Code). Nothing has run in the VM.** You said "start stage 7"
+Status: **READY FOR YOUR APPROVAL (2026-10-04, Claude Code). Rehearsed in a sandbox; nothing has run in the VM.** You said "start stage 7"
 and decided "A AND A" (`D:\JARVIS-stage7\evidence\owner-decision-01.json`): reuse the Stage 6 test VM from its
 clean snapshot, and test the existing builds 1.0.10 -> 1.0.11.
 
@@ -62,7 +62,15 @@ All met: **`STAGE_7_COMPLETE`**. Anything not met: `STAGE_7_INCOMPLETE` with the
 
 ## Rehearsed, and not rehearsed
 
-- **Rehearsed on this PC in a sandbox (2026-10-04):** results are filled in below when the run has finished.
+- **Rehearsed on this PC in a sandbox (2026-10-04, `docs/release-rehearsal-20261004/rehearse-stage7.ps1`):** the
+  whole pass with the real 1.0.11 and 1.0.10 packages, sandbox folders and no shortcuts. All five phases PASS
+  (13 minutes on this PC): Install (9 checks), the restart check refusing without a restart, AfterRestart,
+  Uninstall and reinstall, Update (update, rollback, update again), and the interrupted update: installer
+  killed after 3,726 of 10,645 files; the running 1.0.10 unharmed with both memories and still verified; no
+  half-installed 1.0.11; the update run again finished in 33 s, verified, started with both memories, stopped
+  cleanly. A first run stopped at the uninstall check because it looked at your real Desktop shortcut (which
+  exists since the switch-over); fixed for rehearsal mode only, the VM check is unchanged. Your real JARVIS kept
+  running untouched throughout. The PC-side launcher's decisions were tested in 16 situations.
 - **Not rehearsable by me:** everything VirtualBox (restoring the snapshot is a new command for this route:
   `VBoxManage snapshot ... restore FRESH-PREREQ`; attaching discs and starting are the same as at Gate 17), the
   disc build, the Windows restart inside the VM, the Desktop and Startup shortcuts.

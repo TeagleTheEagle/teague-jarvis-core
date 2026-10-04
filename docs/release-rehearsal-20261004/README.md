@@ -51,6 +51,19 @@ install 29.6 s, verified), dry run, import (refused without approval, then PASS,
 folder), both fixed; kept. Not rehearsed: the real install location, real Desktop/Startup shortcuts, the real
 backup on this PC, the key file, the "shortcut does not point at the old JARVIS" refusal.
 
+**Stage 7 tooling (2026-10-04, Claude Fable 5.1):** `tools/guest/Invoke-Stage7Pass.ps1` + `Invoke-Stage7.ps1` +
+`stage7.cmd` (copies of the Gate 17/19 scripts, Interrupt phase added, restart check by uptime) rehearsed with
+`rehearse-stage7.ps1`, packages `pkg-1.0.11` and `pkg-1.0.10`, sandbox home and staging, `-NoShortcuts`.
+Run 1 (`D:\JARVIS-release-work\stage7-local`): Install PASS, uptime check refuses without a restart, AfterRestart
+PASS, Uninstall FAIL at U1 because the shortcut-gone check saw the owner's real `JARVIS.lnk` (present since the
+switch-over); fixed for `-NoShortcuts` only; kept. Run 2 (`stage7-local-2`): ALL PASS in 13 minutes: Install
+I1-I8, R1, U1-U3, G1-G6, X0-X3 (installer killed at 3,726 of 10,645 files after 10.9 s; current still 1.0.10 and
+verified; 8 processes of 1.0.10, Core answering, both memories; no 1.0.11 folder; rerun installed in 32.6 s, no
+leftover incoming folder, verified, running with both memories, stopped with 0 processes); a third start does
+nothing. The owner's live JARVIS had 8 processes before and after. `tools/host/Invoke-Stage7Step.ps1`: 16
+decision cases as intended (`test-stage7-step.ps1`). Not rehearsed: `New-Stage7Disc.ps1` (disc build),
+`Start-Stage7Vm.ps1` (snapshot restore, attach, start), the snapshot, the Windows restart, shortcuts.
+
 Not rehearsed for Gate 18: the owner's real backup (made by the old everyday JARVIS; whether FINAL accepts it
 is what the gate tests), the copy from the backup drive, `New-Gate18RecoveryDisc.ps1` and `Start-Gate18Vm.ps1`
 (disc build and VirtualBox), and double-clicking `gate18.cmd` from the disc.

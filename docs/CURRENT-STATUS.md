@@ -1,7 +1,8 @@
 # JARVIS: current status (living document)
 
 **Read this first in every new Claude Code session, and update it at the end of each one.**
-Last updated: 2026-10-04 (STAGE_6_COMPLETE and SWITCH-OVER COMPLETE: the owner's everyday JARVIS is the installed 1.0.11 at `%LOCALAPPDATA%\JARVIS`; nothing in progress; Stage 7 and the first post-switch release wait for the owner's word; do not edit docs/CUTOVER-BLUEPRINT.md, its hash is in the approval record).
+Last updated: 2026-10-04 (STAGE_6_COMPLETE and SWITCH-OVER COMPLETE: the owner's everyday JARVIS is the installed 1.0.11 at `%LOCALAPPDATA%\JARVIS`; do not edit docs/CUTOVER-BLUEPRINT.md, its hash is in the approval record).
+**Stage 7 IN PREPARATION on the owner's "start stage 7" (decisions "A AND A": reuse the Stage 6 VM from snapshot FRESH-PREREQ; builds 1.0.10 -> 1.0.11):** plan `docs/STAGE7-PLAN.md` READY FOR APPROVAL; guest scripts `tools/guest/Invoke-Stage7Pass.ps1`, `Invoke-Stage7.ps1`, `stage7.cmd`; host tools `tools/host/New-Stage7Disc.ps1`, `Start-Stage7Vm.ps1`, `Invoke-Stage7Step.ps1`, `stage7-step.cmd`; sandbox rehearsal ALL PASS (`docs/release-rehearsal-20261004/README.md`). On approval Claude: records it (`../governance/STAGE7-APPROVAL-RECORD.json`), creates `D:\JARVIS-S6-FRESHVM\evidence\guest-egress-01\stage7`, copies the four host tools to `D:\JARVIS-S6-FRESHVM\tools`, writes `stage7-authorized.json` there (`{"final": "1.0.11-60d406fb6398", "previous": "1.0.10-915e906516dc"}`), records hashes in `D:\JARVIS-stage7\evidence\tools-hashes.txt`; the owner then runs `stage7-step` (jonny: disc; jarvis-s6-val: start). Do not edit `tools/guest/Invoke-Stage7*.ps1` or `stage7.cmd` once the disc is built.
 Newest handover summary for a fresh session: `docs/HANDOVER-20261004-2.md` (the earlier
 `HANDOVER-20261002.md` and `HANDOVER-20261004.md` are out of date).
 

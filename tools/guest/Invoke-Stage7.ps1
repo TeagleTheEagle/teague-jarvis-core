@@ -336,7 +336,10 @@ if ($Phase -eq 'Uninstall' -or $Phase -eq 'All') {
     $data = [ordered]@{ status = 'PASS'; result = $u.status; output = $u.output; program_files_removed = $u.program_files_removed; kept = $u.kept; leftover_program_files = $leftover; processes = (Processes).Count
                         data_kept = (Test-Path -LiteralPath (Join-Path $InstallHome 'data\jarvis.sqlite3')); config_kept = (Test-Path -LiteralPath (Join-Path $InstallHome 'config\personality.txt'))
                         desktop_shortcut_gone = -not (Test-Path -LiteralPath (Join-Path ([Environment]::GetFolderPath('Desktop')) 'JARVIS.lnk')); startup_shortcut_gone = -not (Test-Path -LiteralPath (Join-Path ([Environment]::GetFolderPath('Startup')) 'JARVIS.lnk')) }
-    if ($u.status -ne 'uninstalled' -or $leftover -or $data.processes -or -not $data.data_kept -or -not $data.desktop_shortcut_gone -or -not $data.startup_shortcut_gone) { Fail 'U1-uninstall' $data 'uninstall left program files, processes or shortcuts, or removed data' }
+    # With -NoShortcuts (local rehearsal) the installer neither creates nor removes shortcuts, and a JARVIS.lnk on
+    # that PC belongs to the owner's own installation: the shortcut checks apply only when shortcuts are in play.
+    $shortcutsLeft = (-not $NoShortcuts) -and (-not $data.desktop_shortcut_gone -or -not $data.startup_shortcut_gone)
+    if ($u.status -ne 'uninstalled' -or $leftover -or $data.processes -or -not $data.data_kept -or $shortcutsLeft) { Fail 'U1-uninstall' $data 'uninstall left program files, processes or shortcuts, or removed data' }
     Record 'U1-uninstall' $data
 
     $python = Join-Path $Staging 'release\python\python.exe'
