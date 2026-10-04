@@ -169,8 +169,11 @@ Owner only (Claude must stop and ask, never infer or pre-stage tokens):
    D:. Owner approved the helper route (06:20Z, `owner-decision-02.json`) and ran it: backup
    `bcc2753f736f43ba946ec3f342b35c3a.zip` (4,659,473 bytes, 398 files, real data, test restore
    passed, copied and hash-verified; the live `recovery.py` equals baseline e6fc40b);
-   `backup-evaluation.json` PASS (06:21Z); launcher re-enabled. **Next: owner double-clicks
-   `gate18-step` in the jonny account (recovery disc).** Repairing the everyday JARVIS is a
+   `backup-evaluation.json` PASS (06:21Z); launcher re-enabled. Recovery disc built by the owner
+   06:46Z (`recovery-disc.json`: `JARVIS-RECOVERY.iso` 5,898,240 bytes, sha256 1189ac01…, both
+   copies re-hashed equal, guest files equal the repo's, backup inside equals the copy record).
+   **Next: owner double-clicks `gate18-step` in the jarvis-s6-val account (attach disc, start
+   VM), then `gate18` on the disc inside the VM.** Repairing the everyday JARVIS is a
    separate owner decision.
    The plan on the token was:
    (1) writes `../governance/STAGE6-RESUME-RECOVERY-RECORD.json`; (2) copies

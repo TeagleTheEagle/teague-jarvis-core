@@ -1,0 +1,27 @@
+{
+    "schema":  "stage6-gate18-recovery-disc-v1",
+    "utc":  "2026-10-04T06:46:07.6373023Z",
+    "performed_by":  "THEGRIZZLYBEAR\\jonny",
+    "backup_file":  "bcc2753f736f43ba946ec3f342b35c3a.zip",
+    "backup_bytes":  4659473,
+    "backup_sha256":  "b81be404e1677c48cffc7d26a8d77998b54fa2fa588bd4eeb5614e841ce0bfe3",
+    "backup_equals_copy_record":  true,
+    "guest_files":  [
+                        {
+                            "name":  "Invoke-Gate18.ps1",
+                            "sha256":  "cf0fe6578c20d69163c9d7ff97fae0234e9ec8ae6a3c0683a08e190192c41746"
+                        },
+                        {
+                            "name":  "gate18.cmd",
+                            "sha256":  "1e9aad898e65163ac655ecfd90c1340617c1f0d5e0ad48ca7b946c0354ebb378"
+                        }
+                    ],
+    "iso":  "D:\\JARVIS-release-work\\stage6-media\\JARVIS-RECOVERY.iso",
+    "iso_sha256":  "1189ac0196d7e33bbfda89fe4a901b517979935b64a68a25fd8a2e32ac39781d",
+    "iso_bytes":  5898240,
+    "payload_files":  5,
+    "payload_manifest_sha256":  "3d50996974419da5a17440ce8f7191ef197a803babe14d5313bf661fb84f7652",
+    "readback":  "every payload file read back from the mounted ISO with its recorded SHA-256",
+    "copy":  "D:\\JARVIS-S6-FRESHVM\\media\\JARVIS-RECOVERY.iso",
+    "copy_sha256":  "1189ac0196d7e33bbfda89fe4a901b517979935b64a68a25fd8a2e32ac39781d"
+}
