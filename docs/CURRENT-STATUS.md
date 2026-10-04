@@ -154,7 +154,15 @@ Owner only (Claude must stop and ask, never infer or pre-stage tokens):
    report file; and `E:\JARVIS-BACKUP` turned out to hold a file-by-file copy of the old project
    (newest 2026-09-17), not a JARVIS data backup. E: unchanged (hash before = after). Launcher
    suspended (`gate18-authorized.json` renamed `.SUSPENDED-incident-01.json`). **Owner decision
-   required: where Gate 18's backup comes from** (options in the incident note). The plan on the token was:
+   required: where Gate 18's backup comes from** (options in the incident note). **Owner chose "A"
+   (05:50Z, `owner-decision-01.json`):** a fresh backup made by the everyday JARVIS (Settings >
+   Backups > Create verified backup + Test restore; saved by default in `...\outputs\jarvis-backups`,
+   found read-only from baseline e6fc40b). Copy script v2 (`tools/host/Copy-BackupForGate18-v2.ps1`,
+   tested on the synthetic rehearsal backup incl. six refusal cases) placed in the D: tools folder;
+   incident run's record renamed `backup-copy-run1-incident01.json`; `GATE18-STEPS.md` step 2 changed
+   to 2a/2b; `incident-01-addendum-1.json`. Launcher still suspended. **Next: the owner approves the
+   new step 2, makes the backup, runs v2; Claude checks the record and re-enables the launcher.**
+   The plan on the token was:
    (1) writes `../governance/STAGE6-RESUME-RECOVERY-RECORD.json`; (2) copies
    `gate18-step.cmd`, `Invoke-Gate18Step.ps1`, `New-Gate18RecoveryDisc.ps1`,
    `Start-Gate18Vm.ps1` to `D:\JARVIS-S6-FRESHVM\tools\` and writes

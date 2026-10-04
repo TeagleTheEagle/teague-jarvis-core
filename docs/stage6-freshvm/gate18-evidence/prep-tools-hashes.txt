@@ -7,3 +7,5 @@ f5e4ff3a5b420abb25f02e96a7d86b3e542170d8a572029d2c5438205e2727fa  Invoke-Gate18S
 d456da091c335e74c2f057068409cb5fe1a44ef3dcc156d780a83f16868a59a2  Start-FreshVm.ps1
 626a757dc51a5f8c7beb91c731d9d4a27e64a08c421aca7dac2a54258f0fe6f4  Start-Gate18Vm.ps1
 f4065b26a4abecf0bc71e6b219ee423832775ce822bde3588a764608bca3cad8  Take-FreshVmSnapshot.ps1
+# 2026-10-04T05:53:09Z after incident 01 (owner decision A): copy script v2 added; gate18-authorized.json suspended
+165c302f4e5b0e2a169353d7ee3a39a057d1612eb991507868b3b46176ce6225  Copy-BackupForGate18-v2.ps1

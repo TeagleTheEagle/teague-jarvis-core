@@ -1,6 +1,11 @@
 # Gate 18: restoring your real backup in the test VM (the exact steps)
 
 Status: **prepared 2026-10-04 by Claude Code for OWNER STOP #2. Nothing here has been run on your backup.**
+
+**Changed 2026-10-04 after incident 01 (owner decision "A"):** the backup drive E: turned out to hold a folder
+copy of the old project, not a JARVIS backup, and the first copy script picked a wrong file. Step 2 now uses a
+fresh backup made by your everyday JARVIS itself and the corrected copy script `Copy-BackupForGate18-v2.ps1`.
+E: is no longer used. Records: `evidence\gate18\incident-01-backup-copy.json`, `incident-01-addendum-1.json`.
 Gate 18 starts only when you issue `RESUME_STAGE6_RECOVERY`. This page is the "exact restore steps, already
 rehearsed" that the approved Gates 17 to 20 plan promised you before that decision.
 
@@ -12,8 +17,8 @@ tried first in the disposable VM.
 
 ## What happens to your backup
 
-- You copy it from the backup drive yourself, with one command. The backup drive is only read; the command
-  hashes the file before and after to show it did not change.
+- You make it in your everyday JARVIS and copy it yourself, with one command. The backup is only read; the
+  command hashes the file before and after to show it did not change.
 - The copy goes onto a read-only disc and into the VM. From then on **the VM holds your personal data**. It
   stays under `D:\JARVIS-S6-FRESHVM\`; keeping or destroying the VM is your decision at Gate 20.
 - The records I read contain only counts, hashes and pass/fail, never the content of your memories or
@@ -24,7 +29,8 @@ tried first in the disposable VM.
 | # | Where | What you do | What happens |
 |---|---|---|---|
 | 1 | this chat | send `RESUME_STAGE6_RECOVERY` | I record it and switch the Gate 18 launcher on |
-| 2 | PC, jonny, backup drive connected | paste the copy command I give you into PowerShell | lists the backups on the drive, copies the newest to `D:\JARVIS-S6-FRESHVM\media`, proves the drive was not changed |
+| 2a | everyday JARVIS, Settings > Backups | press "Create verified backup", wait; then "Test restore in temporary folder", wait. Both must succeed. Note the "Folder:" line | a fresh backup and its test receipt in the backup folder |
+| 2b | PC, jonny | paste the v2 copy command I give you into PowerShell | checks the newest backup (test passed, database present, no key file), copies it to `D:\JARVIS-S6-FRESHVM\media`, proves the backup was not changed |
 | 3 | PC, jonny | double-click `gate18-step` in `D:\JARVIS-S6-FRESHVM\tools` | builds the recovery disc |
 | 4 | PC, jarvis-s6-val | double-click `gate18-step` | checks and attaches the disc, starts the VM |
 | 5 | inside the VM | sign in, open the `JARVIS_RECOVERY` disc, double-click `gate18` | the restore and its checks (a few minutes plus one install, about 5 minutes) |
@@ -62,8 +68,9 @@ All met: `BACKUP_RESTORE_RECOVERY_PASS`, then P4.
 
 ## Things that would stop it early (and are fine to hit)
 
-- The copy command expects your backups as `.zip` files under `E:\JARVIS-BACKUP`. If yours are somewhere else or
-  in another form, it says so and changes nothing; tell me what it prints.
+- The v2 copy command expects the backups in `C:\Users\jonny\Documents\Codex\2026-09-07\cr\outputs\jarvis-backups`
+  (where the everyday JARVIS saves them by default). If the "Folder:" line in Settings names another folder,
+  tell me before running it. If anything is missing it says STOPPED and copies nothing.
 - The disc builder is only proven for discs up to about 600 MB. If your backup is larger it stops and I adjust
   it first.
 - Any failed check stops the gate. It is not repeated without your decision; the clean way to repeat is to go

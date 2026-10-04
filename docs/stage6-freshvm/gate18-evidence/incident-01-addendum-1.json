@@ -1,0 +1,22 @@
+{
+  "schema": "stage6-incident-addendum-v1",
+  "incident": "gate18-incident-01",
+  "recorded_utc": "2026-10-04T05:53:25Z",
+  "owner_decision": "owner-decision-01.json: 'A' (a fresh backup made by the everyday JARVIS's own backup feature)",
+  "research_read_only": {
+    "sources": "repo baseline commit e6fc40b (original working tree, approved files) and current repo files; not the original source folder, not the live installation, not the backup folder, not E:",
+    "findings": [
+      "The everyday JARVIS's Settings has a 'Backup & recovery' section (shown under 'Backups') with the buttons 'Create verified backup' and 'Test restore in temporary folder' (static/recovery.js).",
+      "With its default data folder, it saves backups as <id>.zip in the folder beside its program folder named 'jarvis-backups' (server.py line 886 at e6fc40b), i.e. C:\\Users\\jonny\\Documents\\Codex\\2026-09-07\\cr\\outputs\\jarvis-backups if the everyday JARVIS matches the baseline. The screen shows the folder after each action ('N backup(s). Folder: ...'), so the owner confirms it there.",
+      "'Test restore' writes <id>.restore-check.json beside the zip with status restore_rehearsal_passed.",
+      "Archive format: zip with manifest.json format 1, data/... and app/... entries, data/jarvis.sqlite3 snapshot, .env excluded. FINAL's switch_over.py reads format 1, imports only data/..., and takes the personality and desktop preferences from app/personality.txt and app/desktop/preferences.json, the same names the old backup uses. Real compatibility is what Gate 18 tests."
+    ]
+  },
+  "changes": {
+    "copy_script_v2": "tools/host/Copy-BackupForGate18-v2.ps1 (sha256 165c302f4e5b0e2a169353d7ee3a39a057d1612eb991507868b3b46176ce6225), placed in D:\\JARVIS-S6-FRESHVM\\tools; version 1 left unchanged as evidence. v2 looks only at .zip files directly in the backup folder, requires the Test restore receipt, manifest format 1 with matching id, data/jarvis.sqlite3, no .env, size <= 600 MB; hashes before/after; never overwrites backup-copy.json.",
+    "v2_tested": "on the Gate 18 rehearsal backup (synthetic, made by FINAL) in a scratch folder: copy PASS (hash before = copy = after); refusals PASS for: record already exists, folder missing, no zip, no receipt, receipt not passed, .env inside the archive (nothing copied in each case). Not tested: the owner's real backup folder (owner-only path).",
+    "evidence_renamed": "backup-copy.json of the incident run renamed to backup-copy-run1-incident01.json (content unchanged) so that the launcher and disc builder, which read backup-copy.json, use only the v2 record.",
+    "launcher": "still suspended (gate18-authorized.SUSPENDED-incident-01.json) until the owner approves the new steps and the v2 copy record has been checked by Claude."
+  },
+  "recorded_by": "Claude Code (Claude Opus 5.5)"
+}
