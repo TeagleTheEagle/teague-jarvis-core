@@ -1,0 +1,32 @@
+{
+    "schema":  "jarvis-stage7-disc-v1",
+    "utc":  "2026-10-04T09:17:57.4371350Z",
+    "performed_by":  "THEGRIZZLYBEAR\\jonny",
+    "release_id":  "1.0.11-60d406fb6398",
+    "commit":  "60d406fb6398b95345aa50bafead369dc0f41d25",
+    "zip":  "JARVIS-1.0.11-60d406fb6398.zip",
+    "zip_bytes":  525622280,
+    "zip_sha256":  "1923651176dd3095e84b0628a5c7a90608b6db57fe06986670e0ea8246225a58",
+    "guest_files":  [
+                        {
+                            "name":  "Invoke-Stage7.ps1",
+                            "sha256":  "bfb9c5d670dd1d33ad3ea285536b43674b1fb2a43fec279e40ac9437656efd4c"
+                        },
+                        {
+                            "name":  "Invoke-Stage7Pass.ps1",
+                            "sha256":  "843723646b3b6adaf21328f5d9ef42c2f16de7b9162ce777288ddecc45b755a5"
+                        },
+                        {
+                            "name":  "stage7.cmd",
+                            "sha256":  "7b992f854b9c35fd501880baf8cb6fb6a67ae0ba092639585c23cac7d290fd5a"
+                        }
+                    ],
+    "iso":  "D:\\JARVIS-release-work\\stage7-media\\JARVIS-STAGE7-1.0.11-60d406fb6398.iso",
+    "iso_sha256":  "b3e6d544ef3c9d60f5991e57ef1b95c5deed88f7f8cc78cf498397784898d281",
+    "iso_bytes":  526909440,
+    "payload_files":  6,
+    "payload_manifest_sha256":  "a5cebe42323b9a0adedc358746e3873a81120a2b8af8e79de26f3e941dd6286b",
+    "readback":  "every payload file read back from the mounted ISO with its recorded SHA-256",
+    "copy":  "D:\\JARVIS-S6-FRESHVM\\media\\JARVIS-STAGE7-1.0.11-60d406fb6398.iso",
+    "copy_sha256":  "b3e6d544ef3c9d60f5991e57ef1b95c5deed88f7f8cc78cf498397784898d281"
+}
