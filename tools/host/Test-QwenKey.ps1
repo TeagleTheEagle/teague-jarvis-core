@@ -9,7 +9,8 @@ chat request ("Reply with the single word OK.", at most 5 tokens) and prints WOR
 Changes nothing.
 #>
 param(
-    [string] $EnvFile = 'C:\Users\jonny\Documents\Codex\2026-09-07\cr\outputs\jarvis\.env'
+    [string] $EnvFile = 'C:\Users\jonny\Documents\Codex\2026-09-07\cr\outputs\jarvis\.env',
+    [string] $Model   # optional: try this model instead of QWEN_MODEL / the default, without editing the file
 )
 $ErrorActionPreference = 'Stop'
 function Done($m) { Write-Host ''; Write-Host $m; exit $(if ($m -like 'WORKS*') { 0 } else { 2 }) }
@@ -24,7 +25,7 @@ foreach ($line in [IO.File]::ReadAllLines($EnvFile)) {
 $key = $values['DASHSCOPE_API_KEY']
 if (-not $key) { Done 'STOPPED: the file has no DASHSCOPE_API_KEY line (it must read DASHSCOPE_API_KEY=<your key>, on one line).' }
 $base = if ($values['DASHSCOPE_BASE_URL']) { $values['DASHSCOPE_BASE_URL'].TrimEnd('/') } else { 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1' }
-$model = if ($values['QWEN_MODEL']) { $values['QWEN_MODEL'] } else { 'qwen3.8-max' }
+$model = if ($Model) { $Model } elseif ($values['QWEN_MODEL']) { $values['QWEN_MODEL'] } else { 'qwen3.8-max' }
 $uri = [Uri]$base
 if ($uri.Scheme -ne 'https' -or -not $uri.Host.EndsWith('.aliyuncs.com')) { Done "STOPPED: DASHSCOPE_BASE_URL is not an https://...aliyuncs.com Model Studio address: $base" }
 Write-Host "Key file : $EnvFile"
