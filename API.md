@@ -29,7 +29,7 @@ Base: `http://127.0.0.1:8765`. Load `/` first for a random process-scoped HttpOn
 
 Groq streams upstream; the browser receives deltas via cursor-based long polling, not SSE/WebSocket. Each event is `{id, run_id, event, data}`. IDs start at zero. Pass the last consumed ID as `after` to reconnect without replaying consumed events. Event history is in RAM and pruned after 30 minutes on new requests; a backend restart loses active runs.
 
-Events: `run.started`, `assistant.delta` (`{text}`), `tool.started` (`{name}`), `tool.completed` (`{name,result}`), `assistant.completed` (`{text}`), and terminal `run.completed`, `run.cancelled`, or `run.failed` (`{message}`). Tool results can contain an approval, file URL, search results, or video ID. No hidden reasoning is emitted.
+Events: `run.started`, `assistant.delta` (`{text}`), `tool.started` (`{name}`), `tool.completed` (`{name,result}`), `assistant.completed` (`{text}`), and terminal `run.completed`, `run.cancelled`, or `run.failed` (`{message, retry_after, provider, limit}`: `retry_after` is the seconds to pause voice commands after a temporary rate limit, otherwise 0; `limit` is `rate`, `billing` or null). Tool results can contain an approval, file URL, search results, or video ID. No hidden reasoning is emitted.
 
 Errors are JSON `{error}` with an appropriate non-2xx status. Render text as text nodes; do not inject untrusted HTML. File uploads accept PDFs, DOCX, UTF-8 text/MD/JSON/CSV, JPG/PNG/WEBP. Speech recording accepts WebM, Ogg, MP4 or WAV.
 

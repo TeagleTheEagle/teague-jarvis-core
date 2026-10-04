@@ -6,7 +6,7 @@ Say **“Hey Jarvis” during a reply** to interrupt and give another command. �
 
 The microphone stays open using one audio stream. Wake detection runs locally through openWakeWord; the loopback server processes audio in memory without recording it to disk. After activation, a short rolling buffer and the command are sent to Groq for transcription. Silent activation expires after seven seconds, and commands are capped at thirty seconds. The wake phrase is **Hey Jarvis**, rather than bare Jarvis. Detection and speaker echo cancellation depend on microphone placement, accent, and background sound.
 
-Only one JARVIS tab can own wake detection at a time. If another tab owns it, mute that tab first. Groq cooldowns block new command transcription while local wake listening remains available. An interrupted provider request may need time to finish cancelling before the new command can run.
+Only one JARVIS tab can own wake detection at a time. If another tab owns it, mute that tab first. A provider rate-limit cooldown blocks new voice commands while local wake listening remains available (a billing or credit refusal does not: waiting would not help). An interrupted provider request may need time to finish cancelling before the new command can run.
 
 ## Memory examples
 

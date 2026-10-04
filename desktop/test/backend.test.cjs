@@ -44,3 +44,30 @@ test('shared background Core: first app starts it, a second app joins it, closin
  assert.equal(await first.alive(),false);
  assert.equal(fs.existsSync(path.join(folder,'core-connection.json')),false);
 });
+function firstOf(promise,ms){return Promise.race([promise,new Promise(resolve=>setTimeout(()=>resolve('nothing within '+ms+' ms'),ms))]);}
+test('requested shutdown by another app: an attached app is told "stopped", never "crashed"',{timeout:180000},async()=>{
+ const {connectCore}=require('../backend.cjs');
+ const root=path.resolve(__dirname,'../..');
+ const folder=fs.mkdtempSync(path.join(os.tmpdir(),'jarvis-requested-stop-'));
+ const first=await connectCore(root,{dataDir:folder});
+ try{
+  const second=await connectCore(root,{dataDir:folder});
+  const ended=new Promise(resolve=>first.watch(resolve,{intervalMs:100}));
+  await second.shutdown();                   // e.g. "Quit JARVIS completely" in another app, or the installer
+  assert.equal(await firstOf(ended,20000),'stopped');
+ }finally{if(await first.alive())await first.shutdown();}
+});
+test('a Core that is ended abruptly is reported as "crashed" and leaves its connection file',{timeout:180000},async()=>{
+ const {connectCore}=require('../backend.cjs');
+ const root=path.resolve(__dirname,'../..');
+ const folder=fs.mkdtempSync(path.join(os.tmpdir(),'jarvis-crashed-core-'));
+ const app=await connectCore(root,{dataDir:folder});
+ const file=path.join(folder,'core-connection.json');
+ try{
+  const pid=JSON.parse(fs.readFileSync(file,'utf8')).pid;
+  const ended=new Promise(resolve=>app.watch(resolve,{intervalMs:100,probeMs:500,recheckMs:300}));
+  process.kill(pid);
+  assert.equal(await firstOf(ended,20000),'crashed');
+  assert.equal(fs.existsSync(file),true);
+ }finally{if(await app.alive())await app.shutdown();}
+});

@@ -146,6 +146,17 @@ class LocalTests(unittest.TestCase):
             self.assertEqual(run.events[-1]['event'], 'run.failed')
             self.assertEqual(len(self.app.store.history('test')), 1)
 
+    def test_billing_refusal_reaches_the_interface_without_a_pause(self):
+        error = providers.ProviderError('OpenAI chat: The OpenAI account has no API credits left. (HTTP 429, insufficient_quota)')
+        error.limit, error.service = 'billing', 'OpenAI'
+        with patch.dict(os.environ, {'GROQ_API_KEY': 'test-not-a-real-key'}), patch('providers.chat', side_effect=error) as chat:
+            run = Run('test')
+            self.app.work(run, 'Explain something', None)
+        self.assertEqual(chat.call_count, 1)  # no stream retry for a billing refusal
+        failed = run.events[-1]
+        self.assertEqual(failed['event'], 'run.failed')
+        self.assertEqual((failed['data']['retry_after'], failed['data']['provider'], failed['data']['limit']), (0, 'OpenAI', 'billing'))
+
     def test_attachment_is_data_and_does_not_launch(self):
         captured = []
         def chat(messages, *args):
@@ -302,10 +313,14 @@ class RateLimitTests(unittest.TestCase):
     def test_429_waits_without_repeating_provider_request(self):
         error = urllib.error.HTTPError('https://api.groq.com', 429, 'rate limited', {'retry-after': '12'}, io.BytesIO(b'{}'))
         with patch.dict(os.environ, {'OPENAI_API_KEY': '', 'JARVIS_PROVIDER': 'groq', 'GROQ_API_KEY': 'test-only', 'GROQ_MODEL': 'test-rate-model'}), patch('urllib.request.urlopen', side_effect=error) as call:
-            for _ in range(2):
+            for attempt in range(2):
                 with self.assertRaises(providers.ProviderError) as caught:
                     providers.chat([], [], lambda *args: None, threading.Event())
                 self.assertGreater(caught.exception.retry_after, 0)
+                self.assertEqual(caught.exception.service, 'Groq')  # the provider is named, first and during the cooldown
+                self.assertIn('Groq rate limit', str(caught.exception))
+                if attempt:
+                    self.assertIn('No request was sent', str(caught.exception))
             self.assertEqual(call.call_count, 1)
         providers._cooldowns.pop('test-rate-model', None)
 

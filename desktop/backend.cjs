@@ -87,10 +87,53 @@ async function connectCore(root,options={}){
    await request('/api/shutdown').catch(()=>{});
    for(const deadline=Date.now()+10000;Date.now()<deadline&&await coreAlive(link);)await new Promise(r=>setTimeout(r,200));
   },
-  watch(onLost,intervalMs=5000){                            // report a Core that stopped or crashed
-   let misses=0,timer=setInterval(async()=>{if(await coreAlive(link)){misses=0;return;}if(++misses>=3){clearInterval(timer);onLost();}},intervalMs);
-   return ()=>clearInterval(timer);
-  }
+  watch(onEnd,options){return watchCore(link,file,onEnd,options);} // tells a requested stop from a crash
  };
 }
-module.exports={startBackend,connectCore,readConnection};
+// How the Core ended, told from the connection file this app joined with: a requested stop
+// (another app's "Quit JARVIS completely", an update, an uninstall) removes the file as the
+// Core's last step; a new Core replaces it with another token; a crash leaves it unchanged.
+function connectionState(file,link){
+ let current;try{current=JSON.parse(fs.readFileSync(file,'utf8'));}catch(e){return e&&e.code==='ENOENT'?'missing':'unreadable';}
+ return current&&current.origin===link.origin&&current.token===link.token?'ours':'replaced';
+}
+function processAlive(pid){if(!Number.isInteger(pid)||pid<=0)return null;try{process.kill(pid,0);return true;}catch(e){return e.code==='EPERM';}}
+function watchCore(link,file,onEnd,{intervalMs=500,probeMs=5000,recheckMs=1000,crashMisses=2,unresponsiveMs=15000,probe=coreAlive,alive=processAlive}={}){
+ const now=()=>performance.now();  // a steady clock: the wall clock can jump (time sync, a VM)
+ let done=false,probing=false,lastProbe=now(),misses=0,firstMiss=0,answeredWith='ours';
+ const timer=setInterval(tick,intervalMs);timer.unref?.();
+ function end(reason){if(done)return;done=true;clearInterval(timer);onEnd(reason);}
+ async function check(state){
+  probing=true;lastProbe=now();
+  try{
+   const answered=await probe(link);if(done)return;
+   if(answered){misses=0;firstMiss=0;answeredWith=state;return;}  // e.g. the file was removed by hand: keep going
+   misses++;firstMiss||=now();
+   const current=connectionState(file,link);
+   if(current==='missing')return end('stopped');
+   if(current==='replaced')return end('replaced');
+   const exists=alive(link.pid);
+   if(exists===false&&misses>=crashMisses)return end('crashed');
+   if(misses>=3&&now()-firstMiss>=unresponsiveMs)end(exists===false?'crashed':'unresponsive');
+  }finally{probing=false;}
+ }
+ function tick(){
+  if(done||probing)return;
+  const state=connectionState(file,link);
+  const wait=misses>0||state!==answeredWith?recheckMs:probeMs;  // check at once when something changed
+  if(now()-lastProbe>=wait)void check(state);
+ }
+ return ()=>{done=true;clearInterval(timer);};
+}
+const UNEXPECTED_STOP='The JARVIS Core stopped unexpectedly. Open JARVIS again to restart it.';
+const NOT_RESPONDING='The JARVIS Core is not responding, so this window will close. If JARVIS does not open again, wait a minute or restart Windows.';
+// A requested stop closes this app quietly; only a crash or a Core that stopped answering is
+// reported. Never stops the Core: it is gone, it is a new one that must keep running, or it is
+// not responding (and could not be reached to stop it anyway).
+function coreEnded(reason,{quitting,showErrorBox,quit}){
+ if(quitting())return;
+ if(reason==='crashed')showErrorBox(UNEXPECTED_STOP);
+ else if(reason==='unresponsive')showErrorBox(NOT_RESPONDING);
+ quit();
+}
+module.exports={startBackend,connectCore,readConnection,connectionState,processAlive,watchCore,coreEnded};

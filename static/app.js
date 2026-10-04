@@ -256,7 +256,7 @@ async function send(text,screenAttachment=null,options={}){ if(window.JARVIS_INS
       if(event.event==='tool.failed'){coreWorking=Math.max(0,coreWorking-1);coreErrorUntil=performance.now()+700;log(event.data.name.replaceAll('_',' ')+' failed','FAILED');}
       if(event.event==='answer.evidence'){const note=document.createElement('p');note.className='reply-evidence';note.textContent=event.data.basis+' '+event.data.tools.map(t=>t.tool.replaceAll('_',' ')+': '+t.status+(t.checked_at?' · checked '+new Date(t.checked_at*1000).toLocaleString():'')+(t.scope?' · '+t.scope:'')).join('; ');output.el.append(note);}
       if(event.event==='assistant.completed'){JarvisLatency.mark('LLM_complete');completed=event.data.text;if(event.data.details){const details=document.createElement('details');const summary=document.createElement('summary');summary.textContent='Briefing sources and check times';const body=document.createElement('div');body.style.whiteSpace='pre-wrap';body.textContent=event.data.details;details.append(summary,body);output.el.append(details);}voiceDiagnostic('AI response','Completed · '+Math.round(performance.now()-responseStarted)+' ms');output.p.dataset.activity='';}
-      if(event.event==='run.failed'){state.interrupted=true;if(event.data.retry_after){state.rateUntil=Date.now()+event.data.retry_after*1000;toast('Groq cooldown: listening will resume after the rate limit resets.');}output.el.classList.add('error');output.p.textContent+='\n'+event.data.message;log(event.data.message,'FAILED');}
+      if(event.event==='run.failed'){state.interrupted=true;if(event.data.retry_after){state.rateUntil=Date.now()+event.data.retry_after*1000;state.rateProvider=event.data.provider||'The AI provider';toast(state.rateProvider+' rate limit: voice commands pause for about '+event.data.retry_after+' seconds.');}output.el.classList.add('error');output.p.textContent+='\n'+event.data.message;log(event.data.message,'FAILED');}
       if(event.event==='run.cancelled'){state.interrupted=true;output.p.textContent+='\nStopped.';log('Request stopped','CANCELLED');}
     }done=data.done;}
     if(completed){
@@ -375,7 +375,7 @@ const voice = new JarvisVoice({
   idle: async ()=>{if(!state.mic||state.busy||!voice.session)return;state.interrupted=false;try{await speak('Anything else, sir?');}finally{voice.resume();}},
   error: e=>{voiceDiagnostic('Microphone / wake',e.message);disableMic();toast('Wake-word listener: '+e.message,true);},
   command: async (blob,generation)=>{
-    if(state.rateUntil>Date.now()){toast('Groq is cooling down. Try again in '+Math.ceil((state.rateUntil-Date.now())/1000)+' seconds.');return;}
+    if(state.rateUntil>Date.now()){toast((state.rateProvider||'The AI provider')+' is rate-limited. Try again in '+Math.ceil((state.rateUntil-Date.now())/1000)+' seconds.');return;}
     if(state.transcribing)return;
     state.transcribing=true;
     JarvisLatency.mark('transcription_started');const transcriptionStarted=performance.now();voiceDiagnostic('Transcription','Local request started');

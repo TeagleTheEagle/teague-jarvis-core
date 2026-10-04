@@ -1,6 +1,8 @@
 """JARVIS per-user installer (docs/RELEASE-DESIGN.md). No administrator rights.
 
-Shipped beside the release and run with the release's own bundled Python:
+Shipped beside the release and run with the PACKAGE's bundled Python (release\\python\\python.exe
+next to this file), never an installed release's Python: stopping JARVIS ends every program in
+the installed releases, so install, rollback and uninstall refuse to run from there.
     install.cmd                                   install or update to this release
     python installer.py rollback                  switch back to the previous release
     python installer.py uninstall                 remove the program; data and keys are kept
@@ -54,6 +56,36 @@ class InstallError(Exception):
 def require(condition, message):
     if not condition:
         raise InstallError(message)
+
+
+class Laps:
+    """Measured phases for the update-timing evidence (Gate 19, Stage 7); a phase can be added to."""
+    def __init__(self):
+        self.seconds, self.clock = {}, time.perf_counter()
+
+    def __call__(self, phase):
+        now = time.perf_counter()
+        self.seconds[phase] = round(self.seconds.get(phase, 0) + now - self.clock, 3)
+        self.clock = now
+
+
+def running_from_installation(home):
+    """The Python running this installer, if it belongs to one of this home's installed releases."""
+    roots = {os.path.normcase(f(Path(home) / 'releases')) + os.sep for f in (os.path.abspath, os.path.realpath)}
+    for exe in (sys.executable, getattr(sys, '_base_executable', None)):
+        if exe and any(os.path.normcase(f(exe)).startswith(root) for f in (os.path.abspath, os.path.realpath) for root in roots):
+            return exe
+    return None
+
+
+def refuse_if_run_from_installation(home, action):
+    """Stopping JARVIS ends every program from its releases folder, this installer included, and
+    Windows cannot remove a running program: maintenance must use the package's own Python."""
+    exe = running_from_installation(home)
+    require(not exe, f"This installer is running with the installed JARVIS's own Python ({exe}), so it would stop "
+                     f"itself. Nothing was changed. Run it with the package's Python instead: "
+                     f'"<package>\\release\\python\\python.exe" "<package>\\installer.py" {action} '
+                     f'(extract the JARVIS package zip again if it is gone).')
 
 
 def file_sha256(path):
@@ -121,27 +153,38 @@ def write_current(home, release_id, previous):
                  json.dumps({'release': release_id, 'previous': previous, 'switched_at': time.time()}))
 
 
-def stop_running_jarvis(home, timeout=30):
-    """Ask the shared Core to shut down, then end any leftover JARVIS processes from this home."""
-    home = Path(home)
+def ask_core_to_stop(link_file):
+    """Ask the shared Core to shut down. Returns False when nothing listens at its address: the
+    connection file was then left by a Core that crashed or was ended, and never disappears."""
     try:
-        link = json.loads((home / 'data' / 'core-connection.json').read_text(encoding='utf-8'))
+        link = json.loads(Path(link_file).read_text(encoding='utf-8'))
         headers = {'X-Jarvis-Desktop': link['token']}
-        with urllib.request.urlopen(urllib.request.Request(link['origin'] + '/', headers=headers), timeout=5) as page:
+        local = urllib.request.build_opener(urllib.request.ProxyHandler({}))  # 127.0.0.1: never through a proxy
+        with local.open(urllib.request.Request(link['origin'] + '/', headers=headers), timeout=5) as page:
             cookie = (page.headers.get('Set-Cookie') or '').split(';')[0]
         request = urllib.request.Request(link['origin'] + '/api/shutdown', data=b'{}', method='POST',
                                          headers={**headers, 'Cookie': cookie, 'Content-Type': 'application/json'})
-        urllib.request.urlopen(request, timeout=10).close()
-    except (OSError, ValueError, KeyError):
-        pass  # no running Core, or it is already stopping
-    deadline = time.time() + timeout
-    while time.time() < deadline and (home / 'data' / 'core-connection.json').exists():
-        time.sleep(0.5)
+        local.open(request, timeout=10).close()
+    except (OSError, ValueError, KeyError) as exc:
+        # No file, a busy Core that timed out, or one already stopping: wait for the file as before.
+        return not isinstance(getattr(exc, 'reason', exc), ConnectionRefusedError)
+    return True
+
+
+def stop_running_jarvis(home, timeout=30):
+    """Ask the shared Core to shut down, then end any leftover JARVIS processes from this home
+    (never this installer's own process)."""
+    home = Path(home)
+    link_file = home / 'data' / 'core-connection.json'
+    if ask_core_to_stop(link_file):
+        deadline = time.monotonic() + timeout  # not the wall clock: a VM's clock can jump
+        while time.monotonic() < deadline and link_file.exists():
+            time.sleep(0.5)
     if os.name == 'nt' and (home / 'releases').is_dir():
         # Only processes whose executable lives inside this JARVIS home's releases.
         script = ("$root=[IO.Path]::GetFullPath(" + ps_quote(str(home / 'releases') + os.sep) + ");"
-                  "Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -and "
-                  "$_.ExecutablePath.StartsWith($root, [StringComparison]::OrdinalIgnoreCase) } | "
+                  "Get-CimInstance Win32_Process | Where-Object { $_.ProcessId -ne " + str(os.getpid()) + " -and "
+                  "$_.ExecutablePath -and $_.ExecutablePath.StartsWith($root, [StringComparison]::OrdinalIgnoreCase) } | "
                   "ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }")
         subprocess.run(['powershell', '-NoProfile', '-Command', script], capture_output=True, timeout=60)
 
@@ -164,14 +207,9 @@ def remove_shortcuts(name=SHORTCUT):
 
 def install(package, home, shortcuts=True, stop=stop_running_jarvis, replace_legacy_shortcuts=False):
     package, home = Path(package), Path(home)
+    refuse_if_run_from_installation(home, 'install --package "<package>"')
     source = package / 'release'
-    timings, clock = {}, time.perf_counter()
-
-    def lap(phase):  # measured phases for the update-timing evidence (Gate 19)
-        nonlocal clock
-        timings[phase] = round(time.perf_counter() - clock, 3)
-        clock = time.perf_counter()
-
+    lap = Laps()
     manifest = verify_release(source)  # refuse a damaged or tampered package before touching anything
     lap('verify_package')
     release_id = manifest['release_id']
@@ -185,9 +223,12 @@ def install(package, home, shortcuts=True, stop=stop_running_jarvis, replace_leg
     if target.exists():
         try:
             verify_release(target, manifest)
+            lap('verify_installed')  # already installed (update again, reinstall): checked, not copied
         except InstallError:  # damaged: replace it from the package instead of refusing forever
+            lap('verify_installed')
             if current and current['release'] == release_id:
                 stop(home)  # repairing the running release: its files must be free to move
+                lap('stop')
             damaged = releases / f'.damaged-{release_id}-{int(time.time())}'
             os.replace(target, damaged)
             shutil.rmtree(damaged, ignore_errors=True)
@@ -212,26 +253,35 @@ def install(package, home, shortcuts=True, stop=stop_running_jarvis, replace_leg
         write_shortcuts(home)
         if replace_legacy_shortcuts:  # owner switch-over: the old JARVIS no longer starts at login
             remove_shortcuts(LEGACY_SHORTCUT)
-    return {'status': 'installed', 'release': release_id, 'previous': previous, 'home': str(home), 'seconds': timings}
+    return {'status': 'installed', 'release': release_id, 'previous': previous, 'home': str(home), 'seconds': lap.seconds}
 
 
 def rollback(home, stop=stop_running_jarvis):
     home = Path(home)
+    refuse_if_run_from_installation(home, 'rollback')
+    lap = Laps()
     current = read_current(home)
     require(current and current.get('previous'), 'No previous release to roll back to.')
     target = home / 'releases' / current['previous']
     verify_release(target)
+    lap('verify_target')
     stop(home)
+    lap('stop')
     write_current(home, current['previous'], current['release'])
-    return {'status': 'rolled_back', 'release': current['previous'], 'previous': current['release']}
+    lap('switch')
+    return {'status': 'rolled_back', 'release': current['previous'], 'previous': current['release'], 'seconds': lap.seconds}
 
 
 def uninstall(home, remove_data=None, shortcuts=True, stop=stop_running_jarvis):
     home = Path(home)
+    refuse_if_run_from_installation(home, 'uninstall')
     require(remove_data in (None, CONFIRM_DATA_REMOVAL), f'To delete data too, pass --remove-data {CONFIRM_DATA_REMOVAL}')
+    lap = Laps()
     stop(home)
+    lap('stop')
     if shortcuts:
         remove_shortcuts()
+        lap('shortcuts')
     removed = 0
     releases = home / 'releases'
     if releases.is_dir():
@@ -262,12 +312,13 @@ def uninstall(home, remove_data=None, shortcuts=True, stop=stop_running_jarvis):
             pass
     for name in ('current.json', 'JARVIS.ps1'):
         (home / name).unlink(missing_ok=True)
+    lap('remove_program')
     kept = [name for name in ('data', 'config', 'profile') if (home / name).exists()]
     if remove_data == CONFIRM_DATA_REMOVAL:
         for name in kept:
             shutil.rmtree(home / name)
         kept = []
-    return {'status': 'uninstalled', 'program_files_removed': removed, 'kept': kept}
+    return {'status': 'uninstalled', 'program_files_removed': removed, 'kept': kept, 'seconds': lap.seconds}
 
 
 def status(home):

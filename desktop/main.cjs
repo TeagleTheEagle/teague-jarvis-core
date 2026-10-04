@@ -4,7 +4,7 @@ if (process.argv.includes('--stage4-test')) {
 const {app,BrowserWindow,Tray,Menu,nativeImage,dialog,shell,session,ipcMain,desktopCapturer,screen,globalShortcut}=require('electron');
 const path=require('node:path');
 const {trusted,external,desktopHeaders}=require('./policy.cjs');
-const {connectCore}=require('./backend.cjs');
+const {connectCore,coreEnded}=require('./backend.cjs');
 const {ScreenCapture}=require('./capture.cjs');
 const {watchUpdates}=require('./local-updates.cjs');
 let updates;
@@ -100,7 +100,7 @@ async function start(){
  win.webContents.on('render-process-gone',()=>{capture?.stop();backend.stop();dialog.showErrorBox('JARVIS desktop','The interface stopped. Voice requests were cancelled. Quit and relaunch JARVIS Desktop.');});
  win.on('close',event=>{if(!quitting){event.preventDefault();stopLocal();resumeMicOnShow=!!preferences.micOnLaunch;win.hide();}});
  win.on('show',()=>win.webContents.setAudioMuted(false));
- unwatchCore=backend.watch(()=>{if(!quitting){dialog.showErrorBox('JARVIS desktop','The JARVIS Core stopped. Open JARVIS again to restart it.');void quit();}});
+ unwatchCore=backend.watch(reason=>coreEnded(reason,{quitting:()=>quitting,showErrorBox:text=>dialog.showErrorBox('JARVIS desktop',text),quit:()=>void quit()}));
  tray=new Tray(nativeImage.createFromPath(path.join(__dirname,'tray.png')));
  tray.setToolTip('JARVIS · closing this window keeps JARVIS running');
  tray.setContextMenu(Menu.buildFromTemplate([{label:'Show JARVIS',click:show},{label:'Floating JARVIS',click:showCompanion},{label:'Stop activity',click:stop},{type:'separator'},{label:'Close desktop app (JARVIS keeps running)',click:()=>void quit()},{label:'Quit JARVIS completely',click:()=>void quit(true)}]));tray.on('double-click',show);

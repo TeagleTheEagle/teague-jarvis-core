@@ -1,6 +1,9 @@
 """switch_over.py against synthetic installations only (no real data)."""
+import contextlib
+import io
 import json
 import os
+import shutil
 import tempfile
 import unittest
 import zipfile
@@ -11,6 +14,7 @@ import core_lock
 import recovery
 import switch_over
 from store import Store
+from test_recovery import ReadOnlyMedia
 
 
 def snapshot(folder):
@@ -119,6 +123,64 @@ class SwitchOverTests(unittest.TestCase):
             switch_over.apply(self.archive, self.data, self.new)
         self.assertEqual(snapshot(self.new), before)
         self.assertEqual([m['body'] for m in Store(self.data).items('memory')], ['test-only memory'])
+
+    def on_disc(self):
+        disc = self.new.parent / 'disc'
+        disc.mkdir()
+        shutil.copyfile(self.archive, disc / self.archive.name)
+        return disc, disc / self.archive.name
+
+    def test_dry_run_from_a_writable_folder_creates_no_backup_folder(self):
+        switch_over.plan(self.archive, self.data, self.new)
+        self.assertFalse(recovery.default_folder(self.new, self.data).exists())
+
+    def test_dry_run_and_import_from_read_only_media(self):
+        # Gate 18 incident 04: the backup sat on a read-only disc and the check never returned.
+        disc, archive = self.on_disc()
+        before = snapshot(self.new)
+        with ReadOnlyMedia(disc):
+            switch_over.plan(archive, self.data, self.new)
+            self.assertEqual(snapshot(self.new), before)
+            result = switch_over.apply(archive, self.data, self.new)
+        self.assertEqual(result['database_counts'], self.counts)
+        self.assertIn('Favourite colour is blue', [m['body'] for m in Store(self.data).items('memory')])
+        fallback = recovery.default_folder(self.new, self.data)
+        self.assertEqual(list(fallback.iterdir()), [])  # used for the check, nothing left in it
+        self.assertEqual([p.name for p in disc.iterdir()], [archive.name])
+
+    def test_installed_layout_dry_run_from_a_disc_adds_only_an_empty_backup_folder(self):
+        disc, archive = self.on_disc()
+        home = self.new.parent / 'home'
+        app = home / 'releases' / '1.0.0-abc' / 'app'
+        app.mkdir(parents=True)
+        (app.parent / 'manifest.json').write_text('{"product": "JARVIS"}', encoding='utf-8')
+        Store(home / 'data').put('memory', 'test-only memory')
+        before = snapshot(home)
+        with ReadOnlyMedia(disc):
+            switch_over.plan(archive, home / 'data', app)
+        self.assertEqual(snapshot(home), before)
+        self.assertEqual(sorted(p.name for p in home.iterdir()), ['data', 'data-backups', 'releases'])
+        self.assertEqual(list((home / 'data-backups').iterdir()), [])
+
+    def test_data_folder_refusing_folders_fails_fast_and_changes_nothing(self):
+        before = snapshot(self.new)
+        with ReadOnlyMedia(self.data), self.assertRaises(recovery.NoWorkFolder) as caught:
+            switch_over.apply(self.archive, self.data, self.new)
+        self.assertEqual(str(caught.exception), switch_over.DATA_FOLDER_REFUSED)
+        self.assertEqual(snapshot(self.new), before)
+        core_lock.CoreLock(self.data).release()  # the Core lock was released
+
+    def test_command_line_answers_plainly_when_the_backup_cannot_be_checked(self):
+        disc, archive = self.on_disc()
+        out = io.StringIO()
+        # From the command line the fallback is the backup folder beside this data folder; refuse both
+        # (computed as switch_over computes it, so a short-name or junction TEMP gives the same path).
+        with ReadOnlyMedia(disc, recovery.default_folder(switch_over.ROOT, self.data)), contextlib.redirect_stdout(out):
+            code = switch_over.main(['--archive', str(archive), '--data', str(self.data)])
+        self.assertEqual(code, 2)
+        answer = json.loads(out.getvalue())
+        self.assertEqual(answer['status'], 'refused')
+        self.assertIn('Copy the backup .zip to an ordinary folder', answer['reason'])
 
 
 if __name__ == '__main__':

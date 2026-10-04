@@ -17,44 +17,115 @@ import ssl
 
 
 class ProviderError(Exception):
-    pass
+    retry_after = 0  # seconds to pause new voice commands (a temporary rate limit only)
+    status = None    # the provider's HTTP status, when it answered
+    limit = None     # 'rate' (temporary: waiting helps) or 'billing' (credits, quota or bill: it does not)
+    service = None   # which provider answered
 
 
 _cooldowns = {}
 _cooldown_lock = threading.Lock()
 
 
-def rate_limit(model, headers):
+def rate_limit(model, headers, service='Groq'):
     try:
-        seconds = max(1, min(86400, math.ceil(float(headers.get('retry-after', '60')))))
-    except (ValueError, TypeError, OverflowError):
+        seconds = max(1, min(86400, math.ceil(float((headers or {}).get('retry-after', '60')))))
+    except (ValueError, TypeError, OverflowError, AttributeError):
         seconds = 60
     with _cooldown_lock:
         _cooldowns[model] = time.time() + seconds
-    error = ProviderError(f'Groq is temporarily rate-limited. Try again in about {seconds} seconds. Local notes and timers still work. If this keeps happening, check your Groq account limits; Fish Audio credit is separate.')
-    error.retry_after = seconds
+    error = ProviderError(f'{service} rate limit reached (temporary). Try again in about {seconds} seconds. Local notes and timers still work. No keys were rotated. (HTTP 429)')
+    error.retry_after, error.status, error.limit, error.service = seconds, 429, 'rate', service
     return error
 
 
-def _qwen_error_code(exc):
-    """Model Studio's machine-readable error code, if present (bounded read)."""
+_ERROR_CODE = re.compile(r'[A-Za-z0-9_.-]{1,64}')
+
+
+def _error_fields(exc):
+    """The provider's machine-readable error code and type, if present: a bounded read, and only
+    values that look like codes. Best effort: a broken or cut-off body only loses the code."""
     try:
         body = json.loads(exc.read(4096) or b'{}')
-        code = (body.get('error') or body).get('code')
-        return code if isinstance(code, str) and len(code) <= 64 else None
-    except (ValueError, AttributeError, OSError):
-        return None
+        if isinstance(body, list):
+            body = body[0] if body and isinstance(body[0], dict) else {}
+        error = body.get('error') if isinstance(body, dict) and isinstance(body.get('error'), dict) else body
+        if not isinstance(error, dict):
+            return None, None
+        return tuple(value if isinstance(value, str) and _ERROR_CODE.fullmatch(value) else None
+                     for value in (error.get('code'), error.get('type')))
+    except Exception:
+        return None, None
+
+
+# HTTP 429 codes the providers document as quota, credit or billing problems (checked 2026-10-04).
+# The same word differs per provider: OpenAI's insufficient_quota means no credits; Qwen's is a
+# per-minute throttle. Groq and Gemini use 429 for rate limits only.
+_BILLING_429 = {
+    'OpenAI': {'insufficient_quota': 'The OpenAI account has no API credits left',
+               'credit_balance_exhausted': 'The OpenAI account has no API credits left',
+               'organization_spend_limit_exceeded': 'The OpenAI organisation reached its spend limit',
+               'project_spend_limit_exceeded': 'The OpenAI project reached its spend limit',
+               'organization_usage_limit_exceeded': 'The OpenAI organisation reached its usage limit'},
+    'Qwen': {'PrepaidBillOverdue': 'The Alibaba Cloud account has an overdue prepaid bill',
+             'PostpaidBillOverdue': 'The Alibaba Cloud account has an overdue bill',
+             'BudgetLimitExceeded': 'The Alibaba Cloud budget limit is used up',
+             'CommodityNotPurchased': 'The Alibaba Cloud workspace has not purchased this model'},
+}
+_BILLING_ACTION = {'OpenAI': 'add credits or raise the limit under Billing in the OpenAI dashboard, or choose another provider',
+                   'Qwen': 'resolve it in the Alibaba Cloud console, then retry'}
+_RATE_429 = {'OpenAI': {'rate_limit_exceeded', 'slow_down'},
+             'Qwen': {'Throttling', 'Throttling.RateQuota', 'LimitRequests', 'limit_requests', 'Throttling.BurstRate',
+                      'limit_burst_rate', 'Throttling.AllocationQuota', 'insufficient_quota',
+                      'Throttling.ServiceOverloaded', 'Throttling.ResourceExhausted'}}
+_PLAN_SERVICES = ('OpenAI', 'Qwen', 'SerpApi', 'Brave Search', 'Fish Audio', 'ElevenLabs')
+_STATUS_LABELS = {400: 'Request rejected. Check model and integration settings.', 401: 'Authentication failed. Check your local credentials.', 403: 'Access denied. Check account permissions and subscription.', 404: 'Resource or model not found.'}
+FISH_402 = 'Insufficient API credit. Fish Audio API credit is separate from website credit; add API credit in the Fish developer dashboard.'
+
+
+def _http_error(prefix, service, exc):
+    """The provider's refusal in our own words. Never the raw upstream body (it can contain
+    sensitive data): only documented, allow-listed codes are used or shown."""
+    status = exc.code
+    code, kind = _error_fields(exc) if service == 'Qwen' or (service == 'OpenAI' and status == 429) else (None, None)
+    label, limit, tail = _STATUS_LABELS.get(status, 'The provider could not complete the request.'), None, f'HTTP {status}'
+    if service == 'Qwen' and code == 'Arrearage':
+        label, limit = 'Alibaba Cloud refused access: the account balance is overdue or empty. Top up in Alibaba Cloud Billing, then retry.', 'billing'
+    elif status == 429:
+        billing = _BILLING_429.get(service, {})
+        if code in billing or (service == 'OpenAI' and kind == 'insufficient_quota'):
+            reason = billing.get(code, 'OpenAI reports a billing or quota limit on this account')
+            label = f'{reason}. This is a billing limit, not a short rate limit, so waiting will not help: {_BILLING_ACTION[service]}. No keys were rotated.'
+            limit, tail = 'billing', f'HTTP 429, {code}' if code in billing else 'HTTP 429, type insufficient_quota'
+        else:
+            limit = 'rate'
+            if service in ('Groq', 'Gemini') or code in _RATE_429.get(service, ()) or kind == 'rate_limit_error':
+                label = 'Rate limit reached (temporary). Wait a little, then retry. No keys were rotated.'
+                if service == 'Gemini':
+                    label += ' Gemini daily limits reset at midnight Pacific time.'
+            elif service in _PLAN_SERVICES:
+                label = f'Rate limit or usage quota reached. Wait a little, then retry; if it keeps happening, check the {service} plan, usage limits and billing. No keys were rotated.'
+            else:
+                label = 'Rate limit reached. Wait before retrying; no keys were rotated.'
+    elif status == 402:
+        limit = 'billing'
+        label = (FISH_402 if service == 'Fish Audio' else
+                 'Gemini Prepay credit balance is used up. Add credits or turn on auto-reload in Google AI Studio billing, then retry.' if service == 'Gemini' else
+                 'Payment required: the account has no credit for this request. Check its billing.')
+    error = ProviderError(f'{prefix}{label} ({tail})')
+    error.status, error.limit, error.service = status, limit, service
+    return error
 
 
 def request(url, data=None, headers=None, method=None, raw=False, timeout=35):
     host = urllib.parse.urlparse(url).hostname
-    service = {'api.openai.com': 'OpenAI', 'api.fish.audio': 'Fish Audio', 'api.groq.com': 'Groq', 'serpapi.com': 'SerpApi', 'api.search.brave.com': 'Brave Search'}.get(host, 'External service')
+    service = {'api.openai.com': 'OpenAI', 'api.fish.audio': 'Fish Audio', 'api.groq.com': 'Groq', 'serpapi.com': 'SerpApi', 'api.search.brave.com': 'Brave Search', 'api.elevenlabs.io': 'ElevenLabs'}.get(host, 'External service')
     if host == 'generativelanguage.googleapis.com':
         service = 'Gemini'
     elif (host or '').endswith('.aliyuncs.com'):
         service = 'Qwen'
     path = urllib.parse.urlparse(url).path
-    operation = 'transcription' if 'transcriptions' in path else 'voice synthesis' if 'tts' in path or 'text-to-speech' in path else 'chat' if 'completions' in path else 'request'
+    operation = 'transcription' if 'transcriptions' in path else 'voice synthesis' if 'tts' in path or 'text-to-speech' in path else 'chat' if 'completions' in path or path.endswith('/responses') else 'request'
     prefix = f'{service} {operation}: '
     payload = json.dumps(data).encode() if isinstance(data, dict) else data
     h = {'User-Agent': 'JarvisLocal/1.0', **(headers or {})}
@@ -66,12 +137,7 @@ def request(url, data=None, headers=None, method=None, raw=False, timeout=35):
             body = response.read(16 * 1024 * 1024)
             return body if raw else json.loads(body) if body else {}
     except urllib.error.HTTPError as exc:
-        # Never return raw upstream response bodies: they can contain sensitive data.
-        label = {400: 'Request rejected. Check model and integration settings.', 401: 'Authentication failed. Check your local credentials.', 402: 'Insufficient API credit. Fish Audio API credit is separate from website credit; add API credit in the Fish developer dashboard.', 403: 'Access denied. Check account permissions and subscription.', 404: 'Resource or model not found.', 429: 'Rate limit reached. Wait before retrying; no keys were rotated.'}.get(exc.code, 'The provider could not complete the request.')
-        if service == 'Qwen' and _qwen_error_code(exc) == 'Arrearage':
-            # Only the documented error code is used, never the response text.
-            label = 'Alibaba Cloud refused access: the account balance is overdue or empty. Top up in Alibaba Cloud Billing, then retry.'
-        raise ProviderError(f'{prefix}{label} (HTTP {exc.code})') from None
+        raise _http_error(prefix, service, exc) from None
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
         reason = getattr(exc, 'reason', exc)
         if isinstance(reason, ssl.SSLError):
@@ -95,7 +161,7 @@ def capabilities():
         result = _base_capabilities()
         configured = bool(os.getenv('GEMINI_API_KEY'))
         result.update(brain='Gemini configured' if configured else 'Gemini not configured',
-                      model=os.getenv('GEMINI_MODEL', 'gemini-2.5-flash'),
+                      model=os.getenv('GEMINI_MODEL') or GEMINI_DEFAULT_MODEL,
                       vision_provider='Gemini', vision=configured)
         return result
     if os.getenv('JARVIS_PROVIDER', '').lower() == 'qwen':
@@ -222,8 +288,9 @@ def chat(messages, tools, emit, cancel, vision=False):
     with _cooldown_lock:
         remaining = math.ceil(_cooldowns.get(model, 0) - time.time())
     if remaining > 0:
-        error = ProviderError(f'Groq is cooling down. Try again in {remaining} seconds.')
-        error.retry_after = remaining
+        name = 'OpenAI' if use_openai else 'Groq'
+        error = ProviderError(f'{name} rate limit: still waiting after HTTP 429. Try again in {remaining} seconds. No request was sent.')
+        error.retry_after, error.status, error.limit, error.service = remaining, 429, 'rate', name
         raise error
     body = {'model': model, 'messages': messages, 'stream': True, 'max_completion_tokens': 1024}
     if use_openai and model.startswith('gpt-6'):
@@ -261,7 +328,7 @@ def chat(messages, tools, emit, cancel, vision=False):
                     return None
                 result = attempt()
         except ProviderError as exc:
-            if 'HTTP 429' in str(exc):
+            if 'HTTP 429' in str(exc) and exc.limit != 'billing':  # no credits: waiting will not help
                 exc.retry_after = 30
             raise
         if cancel.is_set():
@@ -306,7 +373,7 @@ def chat(messages, tools, emit, cancel, vision=False):
                             item['function'][field] += call.get('function', {}).get(field, '')
     except urllib.error.HTTPError as exc:
         if exc.code == 429 and not use_openai:
-            raise rate_limit(model, exc.headers) from None
+            raise rate_limit(model, exc.headers, 'Groq') from None
         provider = 'OpenAI' if use_openai else 'Groq'
         raise ProviderError(f'{provider} returned HTTP {exc.code}. Check your key, model access, and quota in Settings. No fallback answer was fabricated.') from None
     except (urllib.error.URLError, TimeoutError, OSError, ValueError):
@@ -319,13 +386,19 @@ def chat(messages, tools, emit, cancel, vision=False):
     return result
 
 
+# Google's current stable Flash model (ai.google.dev/gemini-api/docs/models, checked 2026-10-04):
+# since 2026-09-18 Google serves gemini-2.5 models only to projects that used them before. A
+# specific stable id, not the hot-swapped gemini-flash-latest alias. A GEMINI_MODEL line wins.
+GEMINI_DEFAULT_MODEL = 'gemini-3.8-flash'
+
+
 def gemini_chat(messages, tools, emit, cancel, vision=False):
     """Optional Gemini adapter; results still pass through server evidence/action guards."""
     key = os.getenv('GEMINI_API_KEY')
     if not key:
         raise ProviderError('Gemini is selected. Add GEMINI_API_KEY locally and restart JARVIS.')
     return _compatible_chat('Gemini', 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-                            key, os.getenv('GEMINI_MODEL', 'gemini-2.5-flash'), messages, tools, emit, cancel, vision)
+                            key, os.getenv('GEMINI_MODEL') or GEMINI_DEFAULT_MODEL, messages, tools, emit, cancel, vision)
 
 
 # Alibaba Cloud Model Studio (DashScope), OpenAI-compatible mode. The address depends on

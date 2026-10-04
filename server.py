@@ -586,7 +586,8 @@ class App:
                 run.emit('run.completed', {})
         except (ValueError, providers.ProviderError) as exc:
             if self.stage4:self.stage4.fail_response(run)
-            else:run.emit('run.cancelled' if run.cancel.is_set() else 'run.failed', {'message': str(exc), 'retry_after': getattr(exc, 'retry_after', 0)})
+            else:run.emit('run.cancelled' if run.cancel.is_set() else 'run.failed', {'message': str(exc), 'retry_after': getattr(exc, 'retry_after', 0),
+                                                                                      'provider': getattr(exc, 'service', None), 'limit': getattr(exc, 'limit', None)})
         except Exception:
             try:
                 self.store.audit('run', 'internal error')

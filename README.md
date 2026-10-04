@@ -100,7 +100,7 @@ This app binds only to localhost and is intended for one local user. Do not publ
 
 Provider references: [Groq API](https://console.groq.com/docs/api-reference), [Groq vision](https://console.groq.com/docs/model/qwen/qwen3.8-27b), [Fish Audio](https://docs.fish.audio/api-reference/endpoint/openapi-v1/text-to-speech), [Spotify PKCE](https://developer.spotify.com/documentation/web-api/tutorials/code-pkce-flow).
 
-Groq 429 handling: respect Retry-After (60-second fallback when missing), block new model calls during cooldown, and pause automatic listening until cooldown ends. Identical tool calls cannot repeat within one run. This does not increase your provider quota.
+Provider 429 handling: a temporary rate limit is reported as temporary. For Groq it pauses voice commands for the Retry-After time (60-second fallback) and blocks new model calls during the cooldown; for OpenAI Chat Completions models it pauses voice commands for 30 seconds; OpenAI Responses-API models (gpt-6-*), Gemini and Qwen set no pause (wait, then retry). A billing or credit refusal (for example OpenAI insufficient_quota) is reported as such, names the provider and sets no pause, because waiting will not help. Identical tool calls cannot repeat within one run. This does not increase your provider quota.
 # Backup and recovery
 
 Use **Settings → Backup & recovery** for verified local backups and restoration into a separate folder. This preserves the complete saved database and saved data folders; the older export/import flow is not a full recovery mechanism. See [RECOVERY.md](RECOVERY.md) for exclusions, CLI recovery and validation limits.

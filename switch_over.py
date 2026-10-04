@@ -20,7 +20,6 @@ import os
 from pathlib import Path
 import shutil
 import sqlite3
-import tempfile
 import time
 import zipfile
 
@@ -29,6 +28,8 @@ import recovery
 import runtime_paths
 
 ROOT = Path(__file__).resolve().parent
+DATA_FOLDER_REFUSED = ('The JARVIS data folder does not allow creating folders, so nothing was imported. '
+                       'Check that the drive is not write-protected, then try again.')
 # Present only in this installation; an import never replaces them.
 PROTECTED = {core_lock.LOCK_NAME, core_lock.OWNER_NAME, core_lock.CONNECTION_NAME, 'speech-models',
              'wake-models', 'logs', 'dev-electron-profile'}
@@ -46,8 +47,10 @@ def personal_config_targets(root):
 
 
 def plan(archive, data_dir, root=ROOT):
-    manifest = recovery.verify(archive)  # checksums, safe paths, database integrity and counts
     data_dir = Path(data_dir)
+    # Checksums, safe paths, database integrity and counts. A backup on read-only media (a disc)
+    # is checked in this installation's own backup folder, which is then created if needed.
+    manifest = recovery.verify(archive, fallback=recovery.default_folder(root, data_dir))
     imported, skipped = {}, []
     for name, entry in manifest['files'].items():
         parts = recovery.safe_name(name).parts
@@ -75,8 +78,7 @@ def apply(archive, data_dir, root=ROOT, include_personal_config=False):
     aside = data_dir / ('pre-switchover-' + time.strftime('%Y%m%d-%H%M%S'))
     moved, placed = [], []
     try:
-        with tempfile.TemporaryDirectory(prefix='.switchover-', dir=data_dir) as temp:
-            stage = Path(temp)
+        with recovery.work_folder('.switchover-', [data_dir], DATA_FOLDER_REFUSED) as stage:
             with zipfile.ZipFile(archive) as z:
                 for name, entry in imported.items():
                     target = stage.joinpath(*recovery.safe_name(name).parts[1:])
@@ -121,7 +123,7 @@ def apply(archive, data_dir, root=ROOT, include_personal_config=False):
             'skipped_protected': skipped, 'personal_config_written': written}
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--archive', required=True, help='Verified backup .zip created by recovery.py in the old installation')
     parser.add_argument('--data', default=str(runtime_paths.data_dir()),
@@ -129,16 +131,21 @@ def main():
     parser.add_argument('--apply', action='store_true', help='Import (default is a dry run that changes nothing)')
     parser.add_argument('--include-personal-config', action='store_true',
                         help='Also take personality.txt and desktop/preferences.json from the backup where they differ')
-    args = parser.parse_args()
-    if args.apply:
-        result = apply(Path(args.archive), Path(args.data), include_personal_config=args.include_personal_config)
-    else:
-        manifest, imported, skipped, replaced, config = plan(Path(args.archive), Path(args.data))
-        result = {'status': 'dry_run_only', 'backup_id': manifest['id'], 'backup_verified': True,
-                  'files_to_import': len(imported), 'database_counts': manifest['database_counts'],
-                  'would_move_aside': replaced, 'skipped_protected': skipped, 'personal_config': config}
+    args = parser.parse_args(argv)
+    try:
+        if args.apply:
+            result = apply(Path(args.archive), Path(args.data), include_personal_config=args.include_personal_config)
+        else:
+            manifest, imported, skipped, replaced, config = plan(Path(args.archive), Path(args.data))
+            result = {'status': 'dry_run_only', 'backup_id': manifest['id'], 'backup_verified': True,
+                      'files_to_import': len(imported), 'database_counts': manifest['database_counts'],
+                      'would_move_aside': replaced, 'skipped_protected': skipped, 'personal_config': config}
+    except recovery.NoWorkFolder as exc:  # a plain answer instead of a traceback, as the installer gives
+        print(json.dumps({'status': 'refused', 'reason': str(exc)}, indent=2))
+        return 2
     print(json.dumps(result, indent=2))
+    return 0
 
 
 if __name__ == '__main__':
-    main()
+    raise SystemExit(main())

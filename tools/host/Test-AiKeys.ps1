@@ -22,6 +22,7 @@ $qwenBase = (Pick 'DASHSCOPE_BASE_URL' 'https://dashscope-intl.aliyuncs.com/comp
 $providers = @(
     @{ name = 'openai'; key = 'OPENAI_API_KEY'; url = 'https://api.openai.com/v1/chat/completions'; model = (Pick 'OPENAI_MODEL' 'gpt-4o-mini') },
     @{ name = 'groq'; key = 'GROQ_API_KEY'; url = 'https://api.groq.com/openai/v1/chat/completions'; model = (Pick 'GROQ_MODEL' 'openai/gpt-oss-120b') },
+    # The Gemini fallback is the INSTALLED build's default: 1.0.11 uses gemini-2.5-flash; from 1.0.12 it is gemini-3.8-flash.
     @{ name = 'gemini'; key = 'GEMINI_API_KEY'; url = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'; model = (Pick 'GEMINI_MODEL' 'gemini-2.5-flash') },
     @{ name = 'qwen'; key = 'DASHSCOPE_API_KEY'; url = ($qwenBase + '/chat/completions'); model = (Pick 'QWEN_MODEL' 'qwen3.8-max') }
 )
@@ -50,6 +51,9 @@ foreach ($p in $providers) {
         $detail = [regex]::Replace($detail, '(?i)(provided:\s*)\S+', '$1(hidden)'); $detail = [regex]::Replace($detail, '(?i)\b(sk|gsk|AIza)[-_A-Za-z0-9*]{6,}', '(hidden)')
         if ($detail.Length -gt 300) { $detail = $detail.Substring(0, 300) + '...' }
         Write-Host ("{0,-7} REJECTED: HTTP {1} {2} (model {3})" -f $p.name, $status, $detail, $p.model)
+        if ($p.name -eq 'gemini' -and $p.model -like 'gemini-2*') {
+            Write-Host '        Hint: since 2026-09-18 Google serves gemini-2 models only to projects that used them before. Put the line GEMINI_MODEL=gemini-3.8-flash in the key file, then run this check again.'
+        }
     }
 }
 Write-Host ''

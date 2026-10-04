@@ -17,4 +17,23 @@ regression, and reaches the everyday JARVIS as an update (owner's word).
 | 9 | `tools/host/Copy-BackupForGate18.ps1` (v1) lists every file because PowerShell 5.1 ignores `-Include` with `-LiteralPath`; v2 replaces it. Keep v1 only as evidence. | Gate 18 incident 01 |
 
 Roadmap items that follow (`docs/ROADMAP.md`): lean Stage 7, code clean-up and provider pruning, automatic
-backups, device pairing and the phone client, glasses.
+backups, device pairing and the phone client, glasses. (Note added 2026-10-04: lean Stage 7 is done,
+`STAGE_7_COMPLETE`.)
+
+## Status in 1.0.12 (2026-10-04)
+
+Started on the owner's "next move" / "now do the next move". Each fix was designed, challenged by an
+independent check, then written with tests (root-level tests, so the release regression runs them).
+The table above is kept as it was recorded; corrections are noted here.
+
+| # | Status | Tests |
+|---|---|---|
+| 1 | Fixed. Working folders are made by a bounded helper (`recovery.work_folder`), never `tempfile`; a backup on read-only media is checked in the installation's own backup folder, or refused at once with a plain message. | `test_recovery.ReadOnlyMediaTests`, `test_switch_over` (read-only media, data folder refusing, command line) |
+| 2 | Fixed in part. Finding: most of the ~95 s recorded as `stop` at Gate 19 G6 / Stage 7 G6 was re-verification of an already installed release, counted under the wrong label (a missing lap); clean stops measured 4.9-6.1 s in the VM and 1.1 s on the PC. Now: a separate `verify_installed` phase, rollback and uninstall report phase seconds, no 30 s wait on a connection file left by a crashed Core, the local shutdown request ignores proxy settings, the process-ending step never ends the installer itself, and install, rollback and uninstall refuse to run with an installed release's own Python. Not done: a faster process-ending step (still PowerShell; a larger rewrite was judged not worth the risk). | `test_installer` (8 new) |
+| 3 | Fixed. The desktop app tells a requested stop (the Core removes its connection file), a new Core (another token) and a crash (file left, process gone) apart; only a crash ("stopped unexpectedly") or a Core that stops answering ("not responding"; Claude's wording, the owner may change it) shows a box. Timing uses a steady clock, not the wall clock. The first update 1.0.11 -> 1.0.12 still runs 1.0.11's desktop code, so the old box can appear during that one update. | `desktop/test/core-watch.test.cjs`, two new tests in `desktop/test/backend.test.cjs` |
+| 4 | Fixed. Settings > About shows "Version <release id> (installed)" or the development revision. | `test_settings_version.cjs` |
+| 5 | Fixed. 429s are classified per provider from documented codes only: OpenAI no credits / spend or usage limits and Qwen bill problems say "billing limit, waiting will not help" and set no pause; rate limits name the provider; the interface no longer says "Groq" for every provider; Gemini 402 is no longer worded as Fish Audio. | `test_provider_errors.py`, `test_jarvis.LocalTests.test_billing_refusal_reaches_the_interface_without_a_pause` |
+| 6 | Fixed. Default `gemini-3.8-flash` (Google's stable Flash model). Correction: Google did not retire gemini-2.5-flash; since 2026-09-18 it serves 2.5 models only to projects that used them before. The replacement id comes from Google's documentation, not from a saved Test-AiKeys record. A `GEMINI_MODEL` line in the key file still wins; `Test-AiKeys.ps1` now prints a hint when a gemini-2 model is refused. | `test_gemini_provider` (5 new) |
+| 7 | Restart check by uptime and "quit JARVIS first" are in the Stage 7 scripts; the Stage 6 gate drivers stay unchanged as evidence. Recording build.UBR in Stage 7 and making the Stage 7 scripts work for a second release are part of preparing the 1.0.12 Stage 7 check (owner approval). | - |
+| 8 | Still untested; no code needing administrator rights was found. A real test needs a standard account in the VM (owner). | - |
+| 9 | Nothing to do in code (v1 is kept as evidence; v2 is the copy in use). | - |

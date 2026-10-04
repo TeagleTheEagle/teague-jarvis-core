@@ -1,15 +1,17 @@
 """Local, verified backups and non-destructive restore rehearsals. Never run archives."""
-from contextlib import closing
+from contextlib import closing, contextmanager
 import argparse
+import errno
 import hashlib
 import json
 import os
 from pathlib import Path, PurePosixPath
 import re
+import secrets
 import shutil
 import sqlite3
 import stat
-import tempfile
+import sys
 import threading
 import time
 import uuid
@@ -25,6 +27,74 @@ RUNTIME_FILES = {core_lock.LOCK_NAME, core_lock.OWNER_NAME, core_lock.CONNECTION
 MAX_BYTES = 2 * 1024**3
 MAX_FILES = 20000
 EXCLUSIONS = ['API credentials (.env); keep/reconfigure separately', 'Python/Node runtimes and installed dependencies; reinstall from requirements/lockfile', 'Downloaded speech/wake model caches; recreate with setup scripts', 'Temporary captures, logs, live Core state, the desktop session token and review/test artifacts','Windows shortcuts and Electron/browser cache; recreate on recovery']
+# Working folders: a few tries per place, never tempfile's. On Windows tempfile.mkdtemp treats a
+# refused folder like a name clash and retries up to 2**31 times, so a backup on a CD or a
+# write-protected drive never returned (Stage 6 Gate 18 incident 04).
+WORK_ATTEMPTS = 4
+UNCHECKABLE = ('This backup cannot be checked where it is: its folder does not allow writing (for example a CD, DVD '
+               'or write-protected drive). Copy the backup .zip to an ordinary folder and try again.')
+BACKUP_FOLDER_REFUSED = ('The backup folder does not allow creating folders, so the backup operation stopped. '
+                         'Check that the drive is not write-protected. Nothing was changed.')
+
+
+class NoWorkFolder(ValueError):
+    """No place accepted a temporary working folder; the message says what to do."""
+
+
+def _refused(exc):
+    return isinstance(exc, PermissionError) or getattr(exc, 'errno', None) == errno.EROFS
+
+
+def _make_work_folder(prefix, places):
+    """A new owner-only folder in the first place that accepts one, or (None, last refusal).
+    Only a refusal moves on to the next place; any other error is raised unchanged."""
+    refusal = None
+    for place in dict.fromkeys(Path(os.path.abspath(p)) for p in places):
+        try:
+            if not place.is_dir():
+                place.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            refusal = exc
+            continue
+        for _ in range(WORK_ATTEMPTS):
+            path = place / (prefix + secrets.token_hex(4))  # 8 characters, like tempfile's names
+            try:
+                os.mkdir(path, 0o700)  # owner-only on Windows, as TemporaryDirectory
+                return path, None
+            except FileExistsError:
+                continue
+            except OSError as exc:
+                if not _refused(exc):
+                    raise
+                refusal = exc
+                break
+    return None, refusal
+
+
+def _remove_work_folder(path):
+    def retry(function, name, exc):
+        if isinstance(exc, FileNotFoundError):
+            return
+        if isinstance(exc, PermissionError):  # a read-only file inside, as TemporaryDirectory handles it
+            try:
+                os.chmod(name, stat.S_IWRITE)
+                function(name)
+                return
+            except OSError:
+                pass
+        raise exc
+    shutil.rmtree(path, onexc=retry)
+
+
+@contextmanager
+def work_folder(prefix, places, message):
+    path, refusal = _make_work_folder(prefix, places)
+    if path is None:
+        raise NoWorkFolder(message) from refusal
+    try:
+        yield path
+    finally:
+        _remove_work_folder(path)
 
 
 def digest(path):
@@ -35,14 +105,14 @@ def digest(path):
 
 
 def publish_backup(source,destination):
-    # TemporaryDirectory is owner-only on Windows. Moving its ZIP preserves
+    # The working folder is owner-only on Windows. Moving its ZIP preserves
     # that ACL, preventing the desktop user from reading sandbox-made backups.
     # Create a NEW sibling file with the backup folder's inherited permissions.
     pending=destination.with_name(destination.name+'.publishing-'+uuid.uuid4().hex)
     try:
         with source.open('rb') as src,pending.open('xb') as dst:
             shutil.copyfileobj(src,dst)
-        verify(pending)
+        verify(pending,message=BACKUP_FOLDER_REFUSED)
         pending.rename(destination)
     finally:
         if pending.exists():pending.unlink()
@@ -126,7 +196,10 @@ def check_database(path):
     return counts
 
 
-def verify(archive):
+def verify(archive,fallback=None,message=UNCHECKABLE):
+    """Check every file and the database snapshot. The snapshot is opened in a working folder
+    beside the archive; if that folder refuses writes (read-only media), in `fallback` instead."""
+    places=[Path(archive).parent]+([Path(fallback)] if fallback else [])
     with zipfile.ZipFile(archive) as z:
         infos=z.infolist()
         names=[i.filename for i in infos]
@@ -144,8 +217,8 @@ def verify(archive):
                 for chunk in iter(lambda:f.read(1024*1024),b''):h.update(chunk)
             expected=manifest['files'][info.filename]
             if h.hexdigest()!=expected['sha256'] or info.file_size!=expected['bytes']:raise ValueError('Backup checksum mismatch.')
-        with tempfile.TemporaryDirectory(prefix='jarvis-db-check-',dir=Path(archive).parent) as temp:
-            dbpath=Path(temp)/'snapshot.sqlite3'
+        with work_folder('jarvis-db-check-',places,message) as temp:
+            dbpath=temp/'snapshot.sqlite3'
             with z.open('data/jarvis.sqlite3') as src,dbpath.open('wb') as dest:shutil.copyfileobj(src,dest)
             counts=check_database(dbpath)
             if counts!=manifest['database_counts']:raise ValueError('Database counts mismatch.')
@@ -175,8 +248,8 @@ class Recovery:
         if not LOCK.acquire(False):raise ValueError('A recovery operation is already running.')
         ident=uuid.uuid4().hex
         try:
-            with tempfile.TemporaryDirectory(prefix='.building-',dir=self.folder) as temp:
-                temp=Path(temp);dbpath=temp/'jarvis.sqlite3'
+            with work_folder('.building-',[self.folder],BACKUP_FOLDER_REFUSED) as temp:
+                dbpath=temp/'jarvis.sqlite3'
                 # A separate write reservation blocks SQLite mutations while the read
                 # connection makes its snapshot. No write is made to the live database.
                 gate=sqlite3.connect(self.data/'jarvis.sqlite3',timeout=2)
@@ -203,7 +276,7 @@ class Recovery:
                         z.writestr('manifest.json',json.dumps(manifest,indent=2))
                 finally:
                     gate.rollback();gate.close()
-                verify(pending)
+                verify(pending,message=BACKUP_FOLDER_REFUSED)
                 publish_backup(pending,self.archive(ident))
             return {'status':'backup_verified','id':ident,'files':len(manifest['files']),'bytes':self.archive(ident).stat().st_size,'database_counts':manifest['database_counts'],'exclusions':EXCLUSIONS}
         finally:LOCK.release()
@@ -212,10 +285,9 @@ class Recovery:
         if not LOCK.acquire(False):raise ValueError('A recovery operation is already running.')
         stage='verify archive and database snapshot'
         try:
-            archive=self.archive(ident);manifest=verify(archive)
+            archive=self.archive(ident);manifest=verify(archive,message=BACKUP_FOLDER_REFUSED)
             stage='create temporary restore folder'
-            with tempfile.TemporaryDirectory(prefix='.restore-test-',dir=self.folder) as temp:
-                target=Path(temp)
+            with work_folder('.restore-test-',[self.folder],BACKUP_FOLDER_REFUSED) as target:
                 stage='extract and check saved files'
                 with zipfile.ZipFile(archive) as z:
                     for name in manifest['files']:
@@ -239,11 +311,11 @@ class Recovery:
         """Recover into a NEW directory. No live replacement or execution."""
         if not LOCK.acquire(False):raise ValueError('A recovery operation is already running.')
         try:
-            archive=self.archive(ident);manifest=verify(archive)
+            archive=self.archive(ident);manifest=verify(archive,message=BACKUP_FOLDER_REFUSED)
             destination=self.folder/('recovered-'+ident)
             if destination.exists():raise ValueError('Recovered directory already exists; it will not be overwritten.')
-            with tempfile.TemporaryDirectory(prefix='.restore-copy-',dir=self.folder) as temp:
-                stage=Path(temp)/'jarvis';stage.mkdir()
+            with work_folder('.restore-copy-',[self.folder],BACKUP_FOLDER_REFUSED) as temp:
+                stage=temp/'jarvis';stage.mkdir()
                 with zipfile.ZipFile(archive) as z:
                     for name,entry in manifest['files'].items():
                         parts=safe_name(name).parts
@@ -266,10 +338,13 @@ if __name__=='__main__':
     import runtime_paths
     data=Path(args.data).resolve() if args.data else (runtime_paths.data_dir() if runtime_paths.installed() else root/'data')
     recovery=Recovery(root,data,default_folder(root,data))
-    if args.action=='create':result=recovery.create()
-    elif args.action=='list':result=recovery.listing()
-    elif args.action=='rehearse':result=recovery.rehearse(args.id)
-    elif args.action=='restore':result=recovery.restore_copy(args.id)
-    else:
-        m=verify(recovery.archive(args.id));result={'status':'backup_verified','id':m['id'],'files':len(m['files'])}
+    try:
+        if args.action=='create':result=recovery.create()
+        elif args.action=='list':result=recovery.listing()
+        elif args.action=='rehearse':result=recovery.rehearse(args.id)
+        elif args.action=='restore':result=recovery.restore_copy(args.id)
+        else:
+            m=verify(recovery.archive(args.id),message=BACKUP_FOLDER_REFUSED);result={'status':'backup_verified','id':m['id'],'files':len(m['files'])}
+    except NoWorkFolder as exc:
+        print(json.dumps({'status':'refused','reason':str(exc)},indent=2));sys.exit(2)
     print(json.dumps(result,indent=2))

@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parent
 def save_config(key):
     path = ROOT / '.env'
     text = path.read_text(encoding='utf-8-sig') if path.exists() else ''
-    updates = {'GEMINI_API_KEY': key, 'GEMINI_MODEL': 'gemini-2.5-flash', 'JARVIS_PROVIDER': 'gemini'}
+    updates = {'GEMINI_API_KEY': key, 'GEMINI_MODEL': providers.GEMINI_DEFAULT_MODEL, 'JARVIS_PROVIDER': 'gemini'}
     lines = [line for line in text.splitlines()
              if line.partition('=')[0].strip() not in updates]
     lines.extend(f'{name}={value}' for name, value in updates.items())
@@ -41,7 +41,7 @@ def main():
     frame.pack(fill='both', expand=True)
     ttk.Label(frame, text='Connect Gemini to JARVIS', font=('Segoe UI', 16)).pack(anchor='w')
     ttk.Label(frame, wraplength=585, text='Paste your key below. It stays in the local .env file. The test sends only “Reply with only READY.” to Google. Your existing voice settings are preserved.').pack(anchor='w', pady=12)
-    ttk.Label(frame, wraplength=585, text='Model: gemini-2.5-flash. Confirm your project shows Free tier in AI Studio. Free-tier content may be used to improve Google products; normal JARVIS chats include relevant memory/context.').pack(anchor='w')
+    ttk.Label(frame, wraplength=585, text=f'Model: {providers.GEMINI_DEFAULT_MODEL}. Confirm your project shows Free tier in AI Studio. Free-tier content may be used to improve Google products; normal JARVIS chats include relevant memory/context.').pack(anchor='w')
     entry = ttk.Entry(frame, show='*', width=70)
     entry.pack(fill='x', pady=14)
     status = tk.StringVar(value='Not tested. No configuration changed.')
@@ -59,14 +59,14 @@ def main():
             try:
                 result = providers.request(
                     'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-                    {'model': 'gemini-2.5-flash', 'messages': [{'role': 'user', 'content': 'Reply with only READY.'}], 'max_completion_tokens': 8192},
+                    {'model': providers.GEMINI_DEFAULT_MODEL, 'messages': [{'role': 'user', 'content': 'Reply with only READY.'}], 'max_completion_tokens': 8192},
                     {'Authorization': 'Bearer ' + key}, timeout=45)
                 choice = (result.get('choices') or [{}])[0]
                 if choice.get('finish_reason') != 'stop' or (choice.get('message') or {}).get('content', '').strip().rstrip('.') != 'READY':
                     raise providers.ProviderError('The expected test reply was not returned. Configuration unchanged.')
                 save_config(key)
                 (ROOT / 'review').mkdir(exist_ok=True)
-                (ROOT / 'review' / 'gemini-connection.json').write_text(json.dumps({'checked_at': datetime.datetime.now(datetime.timezone.utc).isoformat(), 'generation': 'passed', 'model': 'gemini-2.5-flash', 'tools': 'not tested', 'voice': 'not tested'}), encoding='utf-8')
+                (ROOT / 'review' / 'gemini-connection.json').write_text(json.dumps({'checked_at': datetime.datetime.now(datetime.timezone.utc).isoformat(), 'generation': 'passed', 'model': providers.GEMINI_DEFAULT_MODEL, 'tools': 'not tested', 'voice': 'not tested'}), encoding='utf-8')
                 mailbox.put('Connection passed. Gemini saved. Restart JARVIS to load it. Tool use and voice still need testing.')
             except providers.ProviderError as exc:
                 mailbox.put(str(exc))

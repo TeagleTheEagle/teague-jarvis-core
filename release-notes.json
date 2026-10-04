@@ -1,5 +1,11 @@
 [
   {
+    "date": "2026-10-04",
+    "title": "Release 1.0.12: fixes found during acceptance and the switch-over",
+    "summary": "Checking or importing a backup on a read-only disc no longer waits forever: it is checked in this installation's backup folder or refused at once with a plain message. Update timings now separate re-checking an installed release from stopping JARVIS; the installer no longer waits 30 seconds for a Core that crashed, never ends its own process, and refuses to run with an installed release's Python. The desktop app closes quietly when JARVIS is stopped on purpose (another app, an update or an uninstall) and shows a message only after a crash. Settings > About shows the installed version. Provider refusals say which provider refused and tell a missing-credit or billing limit (waiting will not help, no pause) from a temporary rate limit. The default Gemini model is gemini-3.8-flash; a GEMINI_MODEL line in the key file still wins.",
+    "validation": "Development suites passed at the release commit: 365 Python tests, 50 desktop tests, 18 Intelligence tests and 17 interface scripts. The built package goes through the release regression, a zip install and a local update and rollback rehearsal. The check in the test VM (Stage 7), the update of the everyday JARVIS and live provider replies are not tested in this entry."
+  },
+  {
     "date": "2026-09-09",
     "title": "Optional Gemini conversation provider",
     "summary": "Adds Gemini 2.5 Flash through Google's compatibility endpoint. Existing context, tools, evidence guards and voice settings are retained. Local masked setup tests a generic reply before saving the provider selection. No automatic provider fallback. Initial adapter waits for a complete response; streaming optimisation remains separate.",
