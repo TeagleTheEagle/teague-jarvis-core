@@ -1,0 +1,18 @@
+{
+    "schema":  "stage6-gate17-snapshot-check-v1",
+    "written_utc":  "2026-10-04T05:08:03Z",
+    "snapshot":  "GATE17-19-PASS",
+    "uuid":  "3023e9a7-0f60-42ed-bac0-8b7f0ff06368",
+    "taken_utc":  "2026-10-04T05:05:41.1978437Z",
+    "parent":  "FRESH-PREREQ (9f1d7bec-e410-4ed0-bc2f-4966125329ad)",
+    "vbox_sha256":  "be48cc89d9e80ed5bc31c1416ee786425a432d252154e41f054120e5edd2baf9",
+    "record_sha256":  "ecf72fd3aa791307dbb44a48d603557a179a8f0f83f2345304e7825af198b7ec",
+    "checks":  {
+                   "vm_powered_off":  "PASS: VBox.log RUNNING -\u003e POWERING_OFF at 01:18:41 after log start (about 05:05:22Z) with no host power-off request before it; record vm_state poweroff",
+                   "taken_after_all_guest_phases_passed":  "PASS: Update phase finished 05:03Z, snapshot 05:05:41Z, by next-step.cmd in the jarvis-s6-val session",
+                   "lineage":  "PASS: FRESH-CLEAN-BASELINE -\u003e FRESH-PREREQ -\u003e GATE17-19-PASS; disk chain 6daf9ccf -\u003e 0d8d6176 -\u003e 979ac965 (8,969,519,104 bytes written by the gates) -\u003e 7e72e0b9 (current state)",
+                   "live_vbox_equals_copy":  "PASS: both be48cc89d9e80ed5bc31c1416ee786425a432d252154e41f054120e5edd2baf9",
+                   "saved_nat_value":  "as before: localhost-reachable true in the saved settings; every start goes through the start launcher"
+               },
+    "recorded_by":  "Claude Code (Claude Fable 5.1), owner account"
+}

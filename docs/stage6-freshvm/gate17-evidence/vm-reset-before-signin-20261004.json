@@ -1,0 +1,23 @@
+{
+    "schema":  "stage6-gate17-incident-v1",
+    "subject":  "Gate 17: the VM was reset once by the owner before sign-in",
+    "written_utc":  "2026-10-04T04:02:14Z",
+    "facts":  {
+                  "vm_started":  "vm/start-20261004-034636.json (VBox.log opened 2026-10-04T03:46:45Z, LocalhostReachable = 0)",
+                  "reset":  "VBox.log: RUNNING -\u003e RESETTING at 00:04:20.505 after log start, about 2026-10-04T03:51:00Z; RUNNING again 2 seconds later; Windows booted normally (Guest Additions service log opened at 00:05:13)",
+                  "owner_account_of_it":  "Owner\u0027s message in the Claude Code chat: \"the blue log in page was just stuck so i restarted the thing by : pressed ctrl on my keyboard then went to machine and pressed restart\". The owner had sent a photograph of the lock-screen picture without a password box about three minutes after the start.",
+                  "state_at_reset":  "Windows at the lock screen, nobody signed in, no gate step started: gate17-cycle.json was written afterwards (guest clock 03:53:18Z) and the first gate record at 03:54:55Z host time.",
+                  "vm_log_state_changes":  [
+                                               "00:00:06.985283 Changing the VM state from \u0027CREATING\u0027 to \u0027CREATED\u0027",
+                                               "00:00:06.987618 Changing the VM state from \u0027CREATED\u0027 to \u0027POWERING_ON\u0027",
+                                               "00:00:06.988321 Changing the VM state from \u0027POWERING_ON\u0027 to \u0027RUNNING\u0027",
+                                               "00:04:20.505719 Changing the VM state from \u0027RUNNING\u0027 to \u0027RESETTING\u0027",
+                                               "00:04:22.379970 Changing the VM state from \u0027RESETTING\u0027 to \u0027RUNNING\u0027"
+                                           ],
+                  "localhost_reachable_lines_in_the_log":  [
+                                                               "00:00:05.585561   LocalhostReachable \u003cinteger\u003e = 0x0000000000000000 (0)"
+                                                           ]
+              },
+    "assessment":  "A reset from the VM window before the 15-minute hang rule applied (about 4 minutes after start). It is not a rerun of any gate step, because none had started. The reset happened inside the same VM process, whose configuration is fixed at power-on, so the localhost setting proven at start still applies; the VM was not started a second time. Whether the reset left any trace in Windows is covered by the checks that follow: the Cleanliness phase records the build number, programs and services again.",
+    "recorded_by":  "Claude Code (Claude Fable 5.1), owner account"
+}

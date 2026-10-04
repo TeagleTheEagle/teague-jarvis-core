@@ -1,0 +1,31 @@
+{
+    "schema":  "jarvis-gate17-run-v1",
+    "overall":  "PASS",
+    "phase":  "Uninstall",
+    "home":  "C:\\Users\\jarvis-s6-guest\\AppData\\Local\\JARVIS",
+    "package":  "E:\\",
+    "started_utc":  "2026-10-04T04:27:34.1186202Z",
+    "finished_utc":  "2026-10-04T04:32:09.4496883Z",
+    "steps":  [
+                  {
+                      "step":  "E0-not-elevated",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T04:27:34.4829277Z"
+                  },
+                  {
+                      "step":  "U1-uninstall",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T04:28:02.1309479Z"
+                  },
+                  {
+                      "step":  "U2-reinstall",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T04:32:04.2789098Z"
+                  },
+                  {
+                      "step":  "U3-final-stop",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T04:32:09.4450097Z"
+                  }
+              ]
+}

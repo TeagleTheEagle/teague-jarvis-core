@@ -1,0 +1,9 @@
+{
+    "status":  "PASS",
+    "last_boot":  "2026-10-04T04:15:24.5000000Z",
+    "started_by_login_launch":  true,
+    "seconds_waited":  1.3,
+    "installed_release":  "1.0.11-60d406fb6398",
+    "memory_persisted":  true,
+    "processes":  8
+}

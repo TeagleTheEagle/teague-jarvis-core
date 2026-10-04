@@ -1,0 +1,46 @@
+{
+    "schema":  "jarvis-gate17-run-v1",
+    "overall":  "PASS",
+    "phase":  "Update",
+    "home":  "C:\\Users\\jarvis-s6-guest\\AppData\\Local\\JARVIS",
+    "package":  "E:\\",
+    "started_utc":  "2026-10-04T04:32:10.8524654Z",
+    "finished_utc":  "2026-10-04T05:03:04.6222810Z",
+    "steps":  [
+                  {
+                      "step":  "E0-not-elevated",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T04:32:10.9861339Z"
+                  },
+                  {
+                      "step":  "G1-packages",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T04:32:15.6048433Z"
+                  },
+                  {
+                      "step":  "G2-extract-previous",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T04:49:19.4466632Z"
+                  },
+                  {
+                      "step":  "G3-previous-installed",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T04:51:57.4259096Z"
+                  },
+                  {
+                      "step":  "G4-update",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T04:57:25.6113092Z"
+                  },
+                  {
+                      "step":  "G5-rollback",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T04:59:37.7168819Z"
+                  },
+                  {
+                      "step":  "G6-update-again",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T05:03:04.6180331Z"
+                  }
+              ]
+}

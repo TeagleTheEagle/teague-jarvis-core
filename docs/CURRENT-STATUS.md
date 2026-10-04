@@ -1,7 +1,7 @@
 # JARVIS: current status (living document)
 
 **Read this first in every new Claude Code session, and update it at the end of each one.**
-Last updated: 2026-10-04 (Gate 16R complete; FINAL = 1.0.11 and the Gates 17–20 plan approved; Gate 17 waits for the owner's first click: next-step.cmd in the jonny account).
+Last updated: 2026-10-04 (Gates 16R, 17 and 19 passed on FINAL 1.0.11; waiting for the owner's "run P3"; then OWNER STOP #2 before Gate 18).
 Newest handover summary for a fresh session: `docs/HANDOVER-20261004.md`.
 
 Rules and authority are in `CLAUDE.md` and `../governance/OWNER-DELEGATION.md`; this file
@@ -119,16 +119,23 @@ Owner only (Claude must stop and ask, never infer or pre-stage tokens):
    which lists what could not be rehearsed: everything VirtualBox, the 526 MB disc build,
    the in-VM restart step) and installed in `D:\JARVIS-S6-FRESHVM\tools\` with
    `gate17-plan.json` (hashes appended to `evidence\gate17\prep-tools-hashes.txt`).
-   **Gate 17 in execution, waiting for the owner's clicks:** (1) jonny: `next-step.cmd`
-   builds both package discs; (2) jarvis-s6-val: `next-step.cmd` attaches them and starts
-   the VM; (3) in the VM: `gate` on the JARVIS_PKG disc, twice (quit JARVIS and restart
-   Windows in between), one photo of the JARVIS window; (4) shut down, `next-step.cmd` in
-   jarvis-s6-val takes snapshot GATE17-19-PASS; (5) owner says "gate 17 done"; Claude
-   evaluates `evidence\gate17\` (host) and `evidence\guest-egress-01\` (guest runs after
-   `gate17-cycle.json`), then asks for "run P3" (reference `checkpoints\p2-20261004-030308`;
-   put P3 evidence under `evidence\gate17\checkpoints`). Then OWNER STOP #2: present the
-   rehearsed Gate 18 steps and wait for `RESUME_STAGE6_RECOVERY` (never requested).
-   Do not edit `tools/guest/*` once the discs are built: the disc record binds their hashes.
+   **Gate 17: `CLEAN_WINDOWS_DEPLOYMENT_PASS`; Gate 19: `UPDATE_ROLLBACK_RECONCILED`**
+   (2026-10-04; `evidence\gate17\gate17-evaluation.json`, `gate19-evaluation.json`; repo copy
+   `docs/stage6-freshvm/gate17-evidence/`). Both discs built by the owner, VM started once
+   (LocalhostReachable 0), all guest phases PASS (Install, AfterRestart, Cleanliness,
+   Uninstall, Update), snapshot `GATE17-19-PASS` 3023e9a7-0f60-42ed-bac0-8b7f0ff06368 taken
+   05:05:41Z. Recorded deviations: the owner reset the VM once before sign-in; the driver's
+   restart check gave a false negative (guest clock about 3 min slow after boot), continued
+   with `E:\gate -NoRestartCheck`; one Windows credential entry fewer than at the baseline.
+   VM stop times were slow in the VM (about 95 s). **Next: P3 on the owner's "run P3"**
+   (`-Checkpoint P3 -Evidence D:\JARVIS-S6-FRESHVM\evidence\gate17\checkpoints -Reference
+   ...\gate16r-20261002\checkpoints\p2-20261004-030308`), then the evidence manifest for
+   Gates 17/19, then **OWNER STOP #2**: build and rehearse the Gate 18 tooling (recovery
+   disc with the owner's backup copied by the owner from E:, a guest restore script; local
+   rehearsal exists as `gate18_rehearsal.py`), present the exact steps, and wait for
+   `RESUME_STAGE6_RECOVERY` (never requested). Before reuse, fix `Invoke-Gate.ps1`'s restart
+   check (use uptime, not wall-clock) on a NEW disc; the discs already built are evidence.
+   A cutover blueprint draft exists (`docs/CUTOVER-BLUEPRINT.md`; not approved).
    P3 will reference `checkpoints\p2-20261004-030308`. Every VM start, including after
    restoring `FRESH-PREREQ`, goes through `step7-start-vm.cmd`. The owner runs every
    launcher in `D:\JARVIS-S6-FRESHVM\tools\` (ACL/VirtualBox work is owner-only); Claude
