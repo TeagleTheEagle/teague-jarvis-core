@@ -1,8 +1,32 @@
 # JARVIS: current status (living document)
 
 **Read this first in every new Claude Code session, and update it at the end of each one.**
-Last updated: 2026-10-04 11:00Z (STAGE_6_COMPLETE, SWITCH-OVER COMPLETE and **STAGE_7_COMPLETE**; nothing in progress; next acts are the owner's).
+Last updated: 2026-10-05 (just after midnight, local) (STAGE_6_COMPLETE, SWITCH-OVER COMPLETE, STAGE_7_COMPLETE;
+**release 1.0.12 built, then superseded by a fix found in its sandbox Stage 7 rehearsal; 1.0.13 is next**).
 
+- **Release 1.0.12 (2026-10-04, on the owner's "next move" / "now do the next move").** The fix list
+  `docs/POST-CUTOVER-FIXES.md` items 1-6 fixed (status table at the end of that file; item 7 partly, 8 open,
+  9 nothing to do). Each fix was designed and challenged by an independent check first, and the finished diff was
+  reviewed by independent checks (9 findings, all applied). Commit d28016b. **Build `1.0.12-d28016b12efe`**
+  (`D:\JARVIS-release-work\release\`, zip sha256 `74405650...c991`, 525,629,601 bytes): same 10,645 files as 1.0.11,
+  pinned inputs identical (`docs/release-rehearsal-20261004-1012/compare_manifests.py`); release regression PASS
+  (365 Python, 50 desktop, 18 Intelligence, 17 interface scripts). Sandbox results:
+  `docs/release-rehearsal-20261004-1012/README.md`. **Found while preparing the VM check:** the 1.0.11 Stage 7
+  scripts work for one pass only (records in fixed places), so the sentence below "a new release needs a new disc
+  and a new approval file" was wrong; version 2 copies (`tools/guest/stage7-v2/`, `tools/host/stage7-v2/`, the
+  1.0.11 scripts unchanged as evidence) give each check its own label, folders and snapshot (decision tests: 17
+  launcher cases, 8 guest cases, all PASS). **Found by the sandbox Stage 7 rehearsal of 1.0.12:** an uninstall run
+  while JARVIS was open could start deleting program files while a closing JARVIS window still ran (it stopped at
+  `electron\electron.exe`, leaving a half-removed release). Fixed in `tools/installer.py` (the process-ending step
+  waits until programs have exited, looks again and refuses before any change; uninstall removes the launcher
+  first and retries a file in use for 10 s); 23 installer tests pass, one ending real stand-in programs (copies of
+  PING.EXE) in a test folder. An independent review of that fix was interrupted when the session restarted and is
+  being run again. **1.0.12 is superseded** (never offered to the everyday JARVIS). **Next, Claude:** after that
+  review, build **1.0.13**, run the regression, the zip install and the sandbox Stage 7 pass again, and rewrite
+  the plan for 1.0.13 (`docs/STAGE7-CHECK-1.0.12.md` is a superseded draft). **Then, owner:** approve the Stage 7
+  check of 1.0.13 (then Claude places the tools in a new `D:\JARVIS-S6-FRESHVM\tools\stage7-<release>\` folder,
+  writes `stage7-authorized.json` (schema v2) and creates the two record folders); then the VM pass; then,
+  separately, updating the everyday JARVIS.
 - **Stage 7: `STAGE_7_COMPLETE` (2026-10-04T11:00Z).** On the owner's "start stage 7", decisions "A AND A"
   and "I approve the Stage 7 plan" (`../governance/STAGE7-APPROVAL-RECORD.json`; plan `docs/STAGE7-PLAN.md`,
   hash recorded, do not edit). One pass in the Stage 6 VM restored to FRESH-PREREQ (no personal data, no
@@ -16,7 +40,8 @@ Last updated: 2026-10-04 11:00Z (STAGE_6_COMPLETE, SWITCH-OVER COMPLETE and **ST
   `docs/stage7-evidence/`. The Stage 7 disc method and scripts (`tools/guest/Invoke-Stage7*.ps1`,
   `stage7.cmd`, `tools/host/*Stage7*`) are the standard check for every later release before it is offered
   to the everyday JARVIS; a new release needs a new disc (`New-Stage7Disc.ps1 -ReleaseId`) and a new approval
-  file naming both builds. **Next, each on the owner's word:** 1.0.12 with `docs/POST-CUTOVER-FIXES.md`
+  file naming both builds. (Corrected 2026-10-04: that is not enough, the scripts work for one pass only; later
+  checks use the version 2 copies, see the 1.0.12 bullet above.) **Next, each on the owner's word:** 1.0.12 with `docs/POST-CUTOVER-FIXES.md`
   (then the Stage 7 check 1.0.11 -> 1.0.12, then an update of the everyday JARVIS); after a trouble-free
   period, deleting the test VM and data copies and retiring the old folder and Codex.
 
@@ -42,7 +67,8 @@ only records where the work stands. Historical handover context: `docs/PROJECT-C
   switch-over (`docs/POST-CUTOVER-FIXES.md`); after a trouble-free period, deleting the test VM
   and data copies and retiring the old folder and Codex. Source changes are no longer frozen,
   but nothing has been changed yet.
-- **Stage 6: `STAGE_6_COMPLETE` (2026-10-04T08:10Z, Gate 20).** `STAGE_7_NOT_STARTED`. Passed on FINAL 1.0.11: Gates 16R, 17, 19, 18, 20 and checkpoints P0 to
+- **Stage 6: `STAGE_6_COMPLETE` (2026-10-04T08:10Z, Gate 20).** (At that time `STAGE_7_NOT_STARTED`; Stage 7
+  is now complete, see above.) Passed on FINAL 1.0.11: Gates 16R, 17, 19, 18, 20 and checkpoints P0 to
   P5 (P5 `evidence\gate20\checkpoints\p5-20261004-080906`, on the owner's "run P5"; VirtualBox
   version equal to P0). Verdict and limitations: `evidence\gate20\gate20-evaluation.json`; owner's
   four Gate 20 decisions: `gate20-owner-decisions.json` ("accept all"); index of everything:
@@ -54,7 +80,8 @@ only records where the work stands. Historical handover context: `docs/PROJECT-C
   The long "Next steps" item 2 below is the history of how Stage 6 got here.
   Earlier: P0 PASS (2026-09-30, sealed); owner created `jarvis-s6-val`. Experiment 5
   unconsumed, its budget frozen at 4/5 (that is the experiment budget, **not** a count of
-  Stage 6 attempts). Stage 7 not started. Production cutover not authorized.
+  Stage 6 attempts). (History: at that point Stage 7 was not started and production cutover was not authorized;
+  both have since happened, see the bullets above.)
 - **Owner chose option B and approved amendment v3 on 2026-10-01** ("i approve everything"):
   the two unprovable isolation cases are dispositioned with a stated limitation, D1–D9 are
   settled at their recommended selections, Claude Code is the executor. Record:
@@ -271,16 +298,16 @@ Owner only (Claude must stop and ask, never infer or pre-stage tokens):
    launcher in `D:\JARVIS-S6-FRESHVM\tools\` (ACL/VirtualBox work is owner-only); Claude
    reads the JSON results from the evidence folder. Evidence:
    `D:\JARVIS-S6-FRESHVM\evidence\gate16r-20261002\`.
-3. `RESUME_STAGE6_RECOVERY` before Gate 18 (**this is where the work stands**).
+3. `RESUME_STAGE6_RECOVERY` before Gate 18 (done 2026-10-04; this list is history).
 4. After Stage 6 passes: switching the everyday JARVIS over (cutover), then Stage 7. (FINAL
-   selection is done: 1.0.11, 2026-10-04.)
-   The owner's freeze from P0 still applies: keep VirtualBox closed under the owner account
-   and do not install, upgrade or repair it until Gate 20.
+   selection is done: 1.0.11, 2026-10-04. Cutover and Stage 7 are done, 2026-10-04.)
+   The owner's freeze from P0 (keep VirtualBox closed under the owner account and do not install, upgrade or
+   repair it until Gate 20) ended with Gate 20; VirtualBox work stays owner-only.
 
 Claude's local preparation (no approval needed) is listed in section 9 of that plan.
 
-Not yet tested anywhere: Desktop and Startup shortcuts (all rehearsals used `--no-shortcuts`,
-because creating them changes the owner's real Desktop/Startup folders). Check on the VM.
+Desktop and Startup shortcuts: never tested on this PC (rehearsals use `--no-shortcuts`, because creating them
+changes the owner's real folders); tested in the VM at Gate 17 and Stage 7 (automatic start after a restart).
 
 ## What exists (built 2026-10-01)
 
@@ -292,7 +319,8 @@ because creating them changes the owner's real Desktop/Startup folders). Check o
   `tools/build_release.py` (pinned inputs, manifest of every file),
   `tools/installer.py` (per-user install, update, rollback, uninstall, verify; crash-safe),
   `tools/release_regression.py` (all suites against a built release with its own runtimes).
-- Test totals on the packaged release: 316 Python, 34 desktop, 18 Intelligence, 16 JS scripts.
+- Test totals on the packaged release: 316 Python, 34 desktop, 18 Intelligence, 16 JS scripts (2026-10-01);
+  1.0.11: 325/36/18/16; 1.0.12: 365/50/18/17.
 
 ## This PC: disks and folders
 
@@ -319,6 +347,16 @@ because creating them changes the owner's real Desktop/Startup folders). Check o
 
 - Bash heredocs and inline Python mangle backslashes (`\r`, `\b`, `\n` in Windows paths and
   strings). Use the Edit/Write tools for any text containing backslashes.
+- The Edit tool rewrites a file with MIXED line endings to one style (whole-file diff). Mixed files include
+  `static/app.js`, `static/teague.js`, `README.md`, `release-notes.json`, `desktop/test/backend.test.cjs`
+  (`git ls-files --eol` shows `i/mixed`). Change those with a small byte-exact script (old bytes -> new bytes,
+  anchor must match once) and check `git diff --stat` after every edit.
+- Never edit `tools/guest/*` (or a host tool whose hash an approval records) once a disc or approval carries it:
+  make a new version beside it (precedent: Stage 7 copies of the Gate 17 scripts; `tools/*/stage7-v2/`).
+- Passing a list to a script started with `powershell -File` gives one string, not a list (`-SkipPhases a,b`
+  arrives as "a,b"); use `-Command "& 'script' -SkipPhases a,b"` when a list matters.
+- `git commit -F -` with a PowerShell here-string does not read stdin; write the message to a file and use
+  `git commit -F <file>`.
 - Releases ship unchecked-hash bytecode: editing a `.py` inside a built or installed release
   has no effect unless its `__pycache__` file is removed. Debug in the repo instead.
 - A test "fresh account" must use a realistic layout (profile, `AppData\Local`,

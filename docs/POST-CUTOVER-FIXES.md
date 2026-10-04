@@ -20,16 +20,19 @@ Roadmap items that follow (`docs/ROADMAP.md`): lean Stage 7, code clean-up and p
 backups, device pairing and the phone client, glasses. (Note added 2026-10-04: lean Stage 7 is done,
 `STAGE_7_COMPLETE`.)
 
-## Status in 1.0.12 (2026-10-04)
+## Status in 1.0.12 / 1.0.13 (2026-10-04/05)
 
 Started on the owner's "next move" / "now do the next move". Each fix was designed, challenged by an
 independent check, then written with tests (root-level tests, so the release regression runs them).
-The table above is kept as it was recorded; corrections are noted here.
+The table above is kept as it was recorded; corrections are noted here. Build 1.0.12-d28016b12efe passed the
+regression and the zip install, but the sandbox Stage 7 rehearsal found that an uninstall could start removing
+program files while a closing JARVIS window still ran (item 2 below); 1.0.12 was never offered and is superseded
+by 1.0.13 with that fixed.
 
 | # | Status | Tests |
 |---|---|---|
 | 1 | Fixed. Working folders are made by a bounded helper (`recovery.work_folder`), never `tempfile`; a backup on read-only media is checked in the installation's own backup folder, or refused at once with a plain message. | `test_recovery.ReadOnlyMediaTests`, `test_switch_over` (read-only media, data folder refusing, command line) |
-| 2 | Fixed in part. Finding: most of the ~95 s recorded as `stop` at Gate 19 G6 / Stage 7 G6 was re-verification of an already installed release, counted under the wrong label (a missing lap); clean stops measured 4.9-6.1 s in the VM and 1.1 s on the PC. Now: a separate `verify_installed` phase, rollback and uninstall report phase seconds, no 30 s wait on a connection file left by a crashed Core, the local shutdown request ignores proxy settings, the process-ending step never ends the installer itself, and install, rollback and uninstall refuse to run with an installed release's own Python. Not done: a faster process-ending step (still PowerShell; a larger rewrite was judged not worth the risk). | `test_installer` (8 new) |
+| 2 | Fixed in part. Finding: most of the ~95 s recorded as `stop` at Gate 19 G6 / Stage 7 G6 was re-verification of an already installed release, counted under the wrong label (a missing lap); clean stops measured 4.9-6.1 s in the VM and 1.1 s on the PC. Now: a separate `verify_installed` phase, rollback and uninstall report phase seconds, no 30 s wait on a connection file left by a crashed Core, the local shutdown request ignores proxy settings, the process-ending step never ends the installer itself, and install, rollback and uninstall refuse to run with an installed release's own Python. In 1.0.13: the process-ending step waits until the ended programs have really exited, looks again (up to 5 rounds) and refuses before any switch or deletion if one is still running; uninstall removes the launcher first and retries a file still in use for 10 s, so a rare failure leaves JARVIS not installed rather than half-removed (found in the 1.0.12 sandbox Stage 7 rehearsal: an uninstall reached `electron.exe` while a closing window still ran). Not done: a faster process-ending step (still PowerShell; a larger rewrite was judged not worth the risk). | `test_installer` (11 new, one ends copies of Windows' PING.EXE in a test folder) |
 | 3 | Fixed. The desktop app tells a requested stop (the Core removes its connection file), a new Core (another token) and a crash (file left, process gone) apart; only a crash ("stopped unexpectedly") or a Core that stops answering ("not responding"; Claude's wording, the owner may change it) shows a box. Timing uses a steady clock, not the wall clock. The first update 1.0.11 -> 1.0.12 still runs 1.0.11's desktop code, so the old box can appear during that one update. | `desktop/test/core-watch.test.cjs`, two new tests in `desktop/test/backend.test.cjs` |
 | 4 | Fixed. Settings > About shows "Version <release id> (installed)" or the development revision. | `test_settings_version.cjs` |
 | 5 | Fixed. 429s are classified per provider from documented codes only: OpenAI no credits / spend or usage limits and Qwen bill problems say "billing limit, waiting will not help" and set no pause; rate limits name the provider; the interface no longer says "Groq" for every provider; Gemini 402 is no longer worded as Fish Audio. | `test_provider_errors.py`, `test_jarvis.LocalTests.test_billing_refusal_reaches_the_interface_without_a_pause` |

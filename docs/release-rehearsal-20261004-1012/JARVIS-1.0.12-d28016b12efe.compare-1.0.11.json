@@ -1,0 +1,31 @@
+{
+  "old": "1.0.11-60d406fb6398",
+  "new": "1.0.12-d28016b12efe",
+  "files_old": 10645,
+  "files_new": 10645,
+  "changed": 4016,
+  "added": 0,
+  "removed": 0,
+  "app_source_changed": [
+    "app/API.md",
+    "app/README.md",
+    "app/RECOVERY.md",
+    "app/VOICE-AND-MEMORY.md",
+    "app/configure_gemini.py",
+    "app/desktop/backend.cjs",
+    "app/desktop/main.cjs",
+    "app/providers.py",
+    "app/recovery.py",
+    "app/release-notes.json",
+    "app/server.py",
+    "app/static/app.js",
+    "app/static/teague.js",
+    "app/switch_over.py"
+  ],
+  "app_source_added": [],
+  "app_source_removed": [],
+  "bytecode_changed": 3973,
+  "launchers_and_records_changed": 29,
+  "pinned_inputs_changed": [],
+  "pinned_inputs_identical": true
+}

@@ -272,11 +272,75 @@ class InstallerTests(unittest.TestCase):
 
     def test_stop_never_ends_the_installers_own_process(self):
         (self.home / 'releases').mkdir(parents=True)
-        with patch.object(installer.os, 'name', 'nt'), patch.object(installer.subprocess, 'run') as run:
+        done = installer.subprocess.CompletedProcess([], 0, stdout='remaining=0\n')
+        with patch.object(installer.os, 'name', 'nt'), patch.object(installer.subprocess, 'run', return_value=done) as run:
             installer.stop_running_jarvis(self.home)
         script = run.call_args[0][0][-1]
-        self.assertIn(f'$_.ProcessId -ne {os.getpid()}', script)
+        self.assertIn(f'$own={os.getpid()};', script)
+        self.assertIn('$_.ProcessId -ne $own', script)
         self.assertIn(str(self.home / 'releases'), script)
+
+    def test_stop_refuses_when_jarvis_is_still_running_afterwards(self):
+        # Nothing may be switched or deleted while a program file is in use (Stage 7 rehearsal of 1.0.12:
+        # an uninstall reached electron.exe while a closing JARVIS window still ran).
+        (self.home / 'releases').mkdir(parents=True)
+        for stdout in ('remaining=2\n', 'garbage\n', ''):
+            done = installer.subprocess.CompletedProcess([], 0, stdout=stdout)
+            with self.subTest(stdout=stdout), patch.object(installer.os, 'name', 'nt'), \
+                    patch.object(installer.subprocess, 'run', return_value=done), self.assertRaises(installer.InstallError) as caught:
+                installer.stop_running_jarvis(self.home)
+            self.assertIn('still running', str(caught.exception))
+
+    @unittest.skipUnless(os.name == 'nt', 'Windows process handling')
+    def test_stop_ends_every_program_of_this_home_and_waits_until_they_are_gone(self):
+        # Stand-ins for JARVIS programs: copies of Windows' own PING.EXE running from this test home's releases.
+        # Only processes whose executable lives there can be ended; nothing else on the PC is touched.
+        folder = self.home / 'releases' / '1.0.0-abc' / 'electron'
+        folder.mkdir(parents=True)
+        ping = folder / 'ping.exe'
+        shutil.copyfile(Path(os.environ['SYSTEMROOT']) / 'System32' / 'PING.EXE', ping)
+        outside = self.base / 'elsewhere'
+        outside.mkdir()
+        shutil.copyfile(ping, outside / 'ping.exe')
+        flags = getattr(installer.subprocess, 'CREATE_NO_WINDOW', 0)
+        inside = [installer.subprocess.Popen([str(ping), '-n', '120', '127.0.0.1'], stdout=installer.subprocess.DEVNULL, creationflags=flags) for _ in range(3)]
+        other = installer.subprocess.Popen([str(outside / 'ping.exe'), '-n', '120', '127.0.0.1'], stdout=installer.subprocess.DEVNULL, creationflags=flags)
+        try:
+            installer.stop_running_jarvis(self.home)
+            self.assertTrue(all(p.poll() is not None for p in inside))  # gone, not just asked to go
+            self.assertIsNone(other.poll())  # a look-alike outside this home's releases keeps running
+            ping.unlink()  # the program file is free at once
+        finally:
+            for p in inside + [other]:
+                if p.poll() is None:
+                    p.kill()
+                p.wait(10)
+
+    def test_uninstall_waits_briefly_for_a_file_still_in_use_and_otherwise_leaves_jarvis_not_installed(self):
+        self.install(self.v1)
+        real_unlink, refusals = Path.unlink, []
+
+        def locked(times):
+            def unlink(path, missing_ok=False):
+                if path.name == 'electron.exe' and len(refusals) < times:
+                    refusals.append(path)
+                    raise PermissionError(13, 'in use', str(path))
+                return real_unlink(path, missing_ok=missing_ok)
+            return unlink
+
+        with patch.object(Path, 'unlink', locked(3)):  # released after a moment: the uninstall completes
+            self.assertEqual(installer.uninstall(self.home, shortcuts=False, stop=self.stop)['status'], 'uninstalled')
+        self.assertEqual(len(refusals), 3)
+        self.install(self.v1)
+        refusals.clear()
+        with patch.object(Path, 'unlink', locked(10 ** 6)), patch.object(installer.time, 'sleep'), \
+                patch.object(installer.time, 'monotonic', side_effect=iter(range(0, 10 ** 6, 5))), \
+                self.assertRaises(installer.InstallError) as caught:
+            installer.uninstall(self.home, shortcuts=False, stop=self.stop)
+        self.assertIn('still in use', str(caught.exception))
+        self.assertFalse((self.home / 'current.json').exists())  # nothing points at a half-removed release
+        self.assertEqual(installer.uninstall(self.home, shortcuts=False, stop=self.stop)['status'], 'uninstalled')  # a rerun finishes
+        self.assertEqual([p for p in (self.home / 'releases').rglob('*') if p.is_file()] if (self.home / 'releases').exists() else [], [])
 
     def test_a_left_over_connection_file_costs_no_wait(self):
         # A Core that crashed or was ended leaves core-connection.json; nothing listens there.

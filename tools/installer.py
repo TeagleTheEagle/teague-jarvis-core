@@ -171,9 +171,23 @@ def ask_core_to_stop(link_file):
     return True
 
 
+def end_processes_script(releases, own_pid):
+    """PowerShell that ends every process whose executable lives inside `releases` (never `own_pid`), waits
+    until they have really exited (ending a process is asynchronous, and a program file is locked until
+    then), looks again (a closing app can still start a helper process), and prints how many remain."""
+    return ("$root=[IO.Path]::GetFullPath(" + ps_quote(str(releases) + os.sep) + ");$own=" + str(own_pid) + ";"
+            "function Mine { @(Get-CimInstance Win32_Process | Where-Object { $_.ProcessId -ne $own -and $_.ExecutablePath -and "
+            "$_.ExecutablePath.StartsWith($root, [StringComparison]::OrdinalIgnoreCase) }) };"
+            "for ($round = 0; $round -lt 5; $round++) { $found = Mine; if (-not $found) { break };"
+            "$found | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue };"
+            "Wait-Process -Id @($found | ForEach-Object { $_.ProcessId }) -Timeout 10 -ErrorAction SilentlyContinue };"
+            "Write-Output ('remaining=' + (Mine).Count)")
+
+
 def stop_running_jarvis(home, timeout=30):
     """Ask the shared Core to shut down, then end any leftover JARVIS processes from this home
-    (never this installer's own process)."""
+    (never this installer's own process). Refuses if one is still running afterwards, so nothing is
+    switched or deleted while a program file is in use."""
     home = Path(home)
     link_file = home / 'data' / 'core-connection.json'
     if ask_core_to_stop(link_file):
@@ -181,12 +195,12 @@ def stop_running_jarvis(home, timeout=30):
         while time.monotonic() < deadline and link_file.exists():
             time.sleep(0.5)
     if os.name == 'nt' and (home / 'releases').is_dir():
-        # Only processes whose executable lives inside this JARVIS home's releases.
-        script = ("$root=[IO.Path]::GetFullPath(" + ps_quote(str(home / 'releases') + os.sep) + ");"
-                  "Get-CimInstance Win32_Process | Where-Object { $_.ProcessId -ne " + str(os.getpid()) + " -and "
-                  "$_.ExecutablePath -and $_.ExecutablePath.StartsWith($root, [StringComparison]::OrdinalIgnoreCase) } | "
-                  "ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }")
-        subprocess.run(['powershell', '-NoProfile', '-Command', script], capture_output=True, timeout=60)
+        done = subprocess.run(['powershell', '-NoProfile', '-Command', end_processes_script(home / 'releases', os.getpid())],
+                              capture_output=True, text=True, timeout=180)
+        remaining = [line for line in (done.stdout or '').splitlines() if line.startswith('remaining=')]
+        require(remaining and remaining[-1] == 'remaining=0',
+                'JARVIS is still running from this installation and could not be stopped. Nothing was changed. '
+                'Quit JARVIS completely (its icon near the clock), then run this again.')
 
 
 def write_shortcuts(home):
@@ -272,6 +286,21 @@ def rollback(home, stop=stop_running_jarvis):
     return {'status': 'rolled_back', 'release': current['previous'], 'previous': current['release'], 'seconds': lap.seconds}
 
 
+def remove_program_file(path, wait=10):
+    """Delete one program file. Windows keeps a file locked for a moment after its process has ended,
+    so a refusal is retried briefly before the uninstall stops with a plain message."""
+    deadline = time.monotonic() + wait
+    while True:
+        try:
+            Path(path).unlink(missing_ok=True)
+            return
+        except PermissionError:
+            if time.monotonic() >= deadline:
+                raise InstallError(f'A program file is still in use: {path}. JARVIS is no longer installed; quit any '
+                                   'JARVIS window still open, then run the uninstall again to finish removing it.') from None
+            time.sleep(0.2)
+
+
 def uninstall(home, remove_data=None, shortcuts=True, stop=stop_running_jarvis):
     home = Path(home)
     refuse_if_run_from_installation(home, 'uninstall')
@@ -282,6 +311,10 @@ def uninstall(home, remove_data=None, shortcuts=True, stop=stop_running_jarvis):
     if shortcuts:
         remove_shortcuts()
         lap('shortcuts')
+    # The launcher goes first: if a program file then cannot be removed, JARVIS is left not installed
+    # (nothing points at a half-removed release) and running uninstall again finishes the job.
+    for name in ('current.json', 'JARVIS.ps1'):
+        (home / name).unlink(missing_ok=True)
     removed = 0
     releases = home / 'releases'
     if releases.is_dir():
@@ -294,7 +327,7 @@ def uninstall(home, remove_data=None, shortcuts=True, stop=stop_running_jarvis):
             except (OSError, ValueError, InstallError):
                 continue  # not ours: leave it
             for entry in manifest['files']:  # only files this installer placed
-                (release / entry['path']).unlink(missing_ok=True)
+                remove_program_file(release / entry['path'])
                 removed += 1
             (release / 'manifest.json').unlink(missing_ok=True)
             for folder in sorted((p for p in release.rglob('*') if p.is_dir()), key=lambda p: len(p.parts), reverse=True):
@@ -310,8 +343,6 @@ def uninstall(home, remove_data=None, shortcuts=True, stop=stop_running_jarvis):
             releases.rmdir()
         except OSError:
             pass
-    for name in ('current.json', 'JARVIS.ps1'):
-        (home / name).unlink(missing_ok=True)
     lap('remove_program')
     kept = [name for name in ('data', 'config', 'profile') if (home / name).exists()]
     if remove_data == CONFIRM_DATA_REMOVAL:
