@@ -1,10 +1,27 @@
 # JARVIS: current status (living document)
 
 **Read this first in every new Claude Code session, and update it at the end of each one.**
-Last updated: 2026-10-04 (STAGE_6_COMPLETE and SWITCH-OVER COMPLETE: the owner's everyday JARVIS is the installed 1.0.11 at `%LOCALAPPDATA%\JARVIS`; do not edit docs/CUTOVER-BLUEPRINT.md, its hash is in the approval record).
-**Stage 7 IN PREPARATION on the owner's "start stage 7" (decisions "A AND A": reuse the Stage 6 VM from snapshot FRESH-PREREQ; builds 1.0.10 -> 1.0.11):** plan `docs/STAGE7-PLAN.md` **APPROVED by the owner 2026-10-04T09:16Z** (`../governance/STAGE7-APPROVAL-RECORD.json`; do not edit the plan, its hash is recorded); the approval steps listed below are DONE (egress folder, tools, `stage7-authorized.json`, hashes); **waiting for the owner's step 1 (`stage7-step` in jonny: disc), then Claude checks `D:\JARVIS-stage7\evidence\stage7-disc-1.0.11-60d406fb6398.json`**; guest scripts `tools/guest/Invoke-Stage7Pass.ps1`, `Invoke-Stage7.ps1`, `stage7.cmd`; host tools `tools/host/New-Stage7Disc.ps1`, `Start-Stage7Vm.ps1`, `Invoke-Stage7Step.ps1`, `stage7-step.cmd`; sandbox rehearsal ALL PASS (`docs/release-rehearsal-20261004/README.md`). On approval Claude: records it (`../governance/STAGE7-APPROVAL-RECORD.json`), creates `D:\JARVIS-S6-FRESHVM\evidence\guest-egress-01\stage7`, copies the four host tools to `D:\JARVIS-S6-FRESHVM\tools`, writes `stage7-authorized.json` there (`{"final": "1.0.11-60d406fb6398", "previous": "1.0.10-915e906516dc"}`), records hashes in `D:\JARVIS-stage7\evidence\tools-hashes.txt`; the owner then runs `stage7-step` (jonny: disc; jarvis-s6-val: start). Do not edit `tools/guest/Invoke-Stage7*.ps1` or `stage7.cmd` once the disc is built.
-Newest handover summary for a fresh session: `docs/HANDOVER-20261004-2.md` (the earlier
-`HANDOVER-20261002.md` and `HANDOVER-20261004.md` are out of date).
+Last updated: 2026-10-04 11:00Z (STAGE_6_COMPLETE, SWITCH-OVER COMPLETE and **STAGE_7_COMPLETE**; nothing in progress; next acts are the owner's).
+
+- **Stage 7: `STAGE_7_COMPLETE` (2026-10-04T11:00Z).** On the owner's "start stage 7", decisions "A AND A"
+  and "I approve the Stage 7 plan" (`../governance/STAGE7-APPROVAL-RECORD.json`; plan `docs/STAGE7-PLAN.md`,
+  hash recorded, do not edit). One pass in the Stage 6 VM restored to FRESH-PREREQ (no personal data, no
+  keys), builds 1.0.10 -> 1.0.11: install, first launch, second launch joins, offline speech, stop/start,
+  Windows restart with automatic start, uninstall, reinstall, update, rollback, update again, and an update
+  killed after 3,512 of 10,645 files then run again: every check PASS, data kept throughout, all timings
+  inside the Gate 20 bounds. Snapshot **STAGE7-PASS `2503a110-bd71-49d8-8ff1-3193c2c20cd3`** (child of
+  FRESH-PREREQ; GATE18-PASS with the owner's data kept). Result `D:\JARVIS-stage7\evidence\stage7-evaluation.json`;
+  manifests `D:\JARVIS-stage7\evidence\MANIFEST.json` (69f04661…) and
+  `D:\JARVIS-S6-FRESHVM\evidence\guest-egress-01\stage7\MANIFEST.json` (06627a14…); repo copy
+  `docs/stage7-evidence/`. The Stage 7 disc method and scripts (`tools/guest/Invoke-Stage7*.ps1`,
+  `stage7.cmd`, `tools/host/*Stage7*`) are the standard check for every later release before it is offered
+  to the everyday JARVIS; a new release needs a new disc (`New-Stage7Disc.ps1 -ReleaseId`) and a new approval
+  file naming both builds. **Next, each on the owner's word:** 1.0.12 with `docs/POST-CUTOVER-FIXES.md`
+  (then the Stage 7 check 1.0.11 -> 1.0.12, then an update of the everyday JARVIS); after a trouble-free
+  period, deleting the test VM and data copies and retiring the old folder and Codex.
+
+Handover summaries `docs/HANDOVER-20261002.md`, `HANDOVER-20261004.md` and `HANDOVER-20261004-2.md` are
+out of date (the newest stops before Gate 18); this file is the current record.
 
 Rules and authority are in `CLAUDE.md` and `../governance/OWNER-DELEGATION.md`; this file
 only records where the work stands. Historical handover context: `docs/PROJECT-CONTEXT.md`.
@@ -424,3 +441,13 @@ because creating them changes the owner's real Desktop/Startup folders). Check o
   session's safety check and not built. Mistake to avoid: I told the owner the version shows in
   Settings; it does not (now item 4 of docs/POST-CUTOVER-FIXES.md). Shell heredocs and sed mangled
   backslash paths in this file twice; use the Edit tool for any path. Nothing pushed or synced.
+- **2026-10-04, Stage 7 (Fable 5.1 for the preparation, Opus 5.5 for the VM pass and the result).**
+  Owner: "start stage 7"; Claude reported the conflict between AMENDMENT-v2 6(j) (VM Stage 6 only) and the
+  roadmap (Stage 7 on the same VM); owner chose "A AND A" (reuse the VM from FRESH-PREREQ; builds 1.0.10 ->
+  1.0.11). Stage 7 scripts are copies of the Gate 17/19 scripts with an Interrupt phase (installer killed
+  mid-copy, then rerun) and an uptime-based restart check; the Stage 6 originals stay unchanged as evidence.
+  Sandbox rehearsal run 1 stopped on the uninstall shortcut check (it saw the owner's real JARVIS.lnk);
+  fixed for local runs only; run 2 ALL PASS. Owner approved the plan, built the disc, started the VM, ran the
+  pass: every phase PASS, snapshot STAGE7-PASS, STAGE_7_COMPLETE. The uptime-based restart check proved
+  itself: the guest clock fell about 9.5 minutes behind after the restart. Lesson: when a launcher path has
+  to be typed by the owner, give the exact name (they typed stage-7-step). Nothing pushed or synced.

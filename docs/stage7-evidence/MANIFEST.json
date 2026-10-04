@@ -1,0 +1,68 @@
+{
+  "schema": "stage6-evidence-manifest-v1",
+  "generated_utc": "2026-10-04T11:00:08Z",
+  "root": "D:\\JARVIS-stage7",
+  "folders": [
+    "evidence"
+  ],
+  "not_listed": "this manifest itself; the sealed P0 folder is never read",
+  "files": 11,
+  "bytes": 2413616,
+  "entries": [
+    {
+      "file": "evidence/all-steps-passed-photo-20261004-1051.jpg",
+      "bytes": 1243530,
+      "sha256": "b94857f1f1d481dc97e7379d99b621ea095ca2cac68d4139a8a34434f481e931"
+    },
+    {
+      "file": "evidence/jarvis-window-photo-20261004-0952.jpg",
+      "bytes": 1103008,
+      "sha256": "19d245dc1b84c0b49112d87566a602bd0fe7ff0c6dc5b9a80178f605e109dd11"
+    },
+    {
+      "file": "evidence/owner-decision-01.json",
+      "bytes": 1306,
+      "sha256": "d05245285ffeb96d54af9ffe9feaefa4be715505b3a4f9ce0bde77a96ae48fd0"
+    },
+    {
+      "file": "evidence/owner-statements.jsonl",
+      "bytes": 559,
+      "sha256": "930aae3cf9803f73d6122448a5f7d508a9cb482b28e19496fce92299d12c1808"
+    },
+    {
+      "file": "evidence/stage7-disc-1.0.11-60d406fb6398.json",
+      "bytes": 1719,
+      "sha256": "91c0f11acbc1a956c0eebbce41bf1e159ce59713c01634025be777f27fabfbb9"
+    },
+    {
+      "file": "evidence/stage7-evaluation.json",
+      "bytes": 8330,
+      "sha256": "8c69cdee07ea37dc75399bde639e5ea1767256b3d3a1c8597c18ce609cf76e02"
+    },
+    {
+      "file": "evidence/tools-hashes.txt",
+      "bytes": 706,
+      "sha256": "bef89b19529e67fe82c87fb8d39f07afd34c82e27d42df64fabb9c195a3b1d77"
+    },
+    {
+      "file": "evidence/vm/JARVIS-S6-FRESH.vbox.STAGE7-PASS-copy",
+      "bytes": 44763,
+      "sha256": "fc9e483f61a22a20d6df030e17a96f308e3346a3bef10d8cbd17f8030bbafdbd"
+    },
+    {
+      "file": "evidence/vm/snapshot-STAGE7-PASS-20261004-105804.json",
+      "bytes": 5460,
+      "sha256": "5972295ff4a0325539fd9139f382182be1ae5ca1e4ece784731b2983b3f7de31"
+    },
+    {
+      "file": "evidence/vm/stage7-start-20261004-091955.json",
+      "bytes": 2866,
+      "sha256": "5798e18d0af821da659347eef6fe67cc0013cd5b058484bb9578fb0683f4fd84"
+    },
+    {
+      "file": "evidence/vm/start-20261004-091955.json",
+      "bytes": 1369,
+      "sha256": "db10bba66b2e91d800a1c680e61ea5df78066cf5d51d90de57b130d9aff42e79"
+    }
+  ]
+}

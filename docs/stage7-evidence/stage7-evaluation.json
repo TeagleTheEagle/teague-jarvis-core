@@ -1,0 +1,55 @@
+{
+  "schema": "jarvis-stage7-evaluation-v1",
+  "stage": "Stage 7: acceptance of the packaged JARVIS Windows application",
+  "written_utc": "2026-10-04T11:00:08Z",
+  "authority": "owner's 'start stage 7', decisions 'A AND A' (owner-decision-01.json) and 'I approve the Stage 7 plan' (governance\\STAGE7-APPROVAL-RECORD.json; plan docs/STAGE7-PLAN.md sha256 95d1ecab1ee168cfce4b3475f50c3e38459f89eb1c35b2b737c74f15708c16c1)",
+  "definition": "owner's master document section 10: install, first launch, update A to B, interruption recovery, rollback, uninstall, reinstall and state preservation; release artifacts hash-verified, provenance and evidence retained",
+  "builds": {
+    "under_acceptance": "1.0.11-60d406fb6398 (zip sha256 1923651176dd3095e84b0628a5c7a90608b6db57fe06986670e0ea8246225a58; the owner's everyday JARVIS since the switch-over)",
+    "previous": "1.0.10-915e906516dc (zip sha256 a945b38a3aff733d3228d617812c8ab7f85f0f8b09c66b2aaed5212c2ec771d4)"
+  },
+  "machine_and_media": {
+    "vm": "JARVIS-S6-FRESH (uuid 4ef16bdd-2a1b-46af-83db-ee69c2f868bb), restored to the clean snapshot FRESH-PREREQ by the owner's launcher in the jarvis-s6-val account (snapshot before: GATE18-PASS, kept), started once, LocalhostReachable = 0 confirmed in VBox.log (vm\\stage7-start-20261004-091955.json, vm\\start-20261004-091955.json). No personal data and no provider keys in the VM.",
+    "stage7_disc": "JARVIS-STAGE7-1.0.11-60d406fb6398.iso, sha256 b3e6d544ef3c9d60f5991e57ef1b95c5deed88f7f8cc78cf498397784898d281, built by the owner (stage7-disc-1.0.11-60d406fb6398.json); its guest scripts equal the approved hashes (Invoke-Stage7.ps1 bfb9c5d6..., Invoke-Stage7Pass.ps1 84372364..., stage7.cmd 7b992f85...)",
+    "previous_disc": "JARVIS-PACKAGE-1.0.10-915e906516dc.iso, sha256 d3830e3e5334530d39f6d41a4b11ee5b4e0c256de3be1cc2abcd4d24d786873d (Stage 6, unchanged; re-hashed before attaching)",
+    "snapshot": "STAGE7-PASS uuid 2503a110-bd71-49d8-8ff1-3193c2c20cd3, taken by the owner 2026-10-04T10:58:04Z with the VM powered off after a clean shutdown; child of FRESH-PREREQ; GATE17-19-PASS and GATE18-PASS (personal data) unchanged in the tree; .vbox sha256 fc9e483f61a22a20d6df030e17a96f308e3346a3bef10d8cbd17f8030bbafdbd, equal to the saved copy and to the file now (re-hashed by Claude)"
+  },
+  "guest_runs": "D:\\JARVIS-S6-FRESHVM\\evidence\\guest-egress-01\\stage7\\ (cycle 1.0.11-60d406fb6398, account JARVIS-S6-FRESH\\jarvis-s6-guest): Install stage7-20261004-092308, AfterRestart -095247, Uninstall -095253, Update -100326, Interrupt -103917; every phase PASS; driver log: no stop, no rerun",
+  "criteria": {
+    "hash-verified artifacts": "PASS: I1 zip sha256 = release record, 6 payload files = disc manifest; G1 previous zip = its record, 3 payload files = disc manifest; both discs re-hashed on the PC before attaching",
+    "no administrator rights": "PASS: E0-not-elevated in all five phases; no UAC prompt was reported by the owner",
+    "install": "PASS: I2 unpacked 10,648 files; I3 install.cmd installed 1.0.11-60d406fb6398 in 211.6 s (verify package 79.7, copy 45.8, verify copy 80.9); I4 files verified, Desktop and Startup shortcuts present",
+    "first launch": "PASS: I5 from the Desktop shortcut, Core ready in 85.6 s, reports 1.0.11-60d406fb6398, memory saved, database in the install's data folder, 8 processes; the owner's photo shows the JARVIS window online on the shared Core (jarvis-window-photo-20261004-0952.jpg)",
+    "one JARVIS only": "PASS: I6 a second launch joined the running Core (pid 3264 unchanged, same address)",
+    "voice (offline speech recognition)": "PASS: I7 bundled model transcribed 'The meeting starts at 9 tomorrow morning.' locally in 20.9 s",
+    "stop and start, state kept": "PASS: I8 stopped on request, files verified after use, restarted in 6.3 s with the memory and the same version",
+    "Windows restart, automatic start": "PASS: the owner restarted Windows inside the VM (VBox.log guest reset at 00:36:04 VM time); R1 JARVIS was already running from the Startup shortcut after sign-in, 1.0.11, memory kept, 8 processes",
+    "uninstall": "PASS: U1 10,645 program files removed, 0 left, 0 processes, both shortcuts removed, data, config and profile kept",
+    "reinstall": "PASS: U2 reinstalled 1.0.11, Core ready, memory restored, files verified; U3 stopped with 0 processes",
+    "update A to B": "PASS: G3 1.0.10 installed over the kept data and running, a second memory written under it; G4 update to 1.0.11 while running in 246.3 s (verify package 83.4, copy 54.3, verify copy 100.9, stop 5.1), 0 processes left, verified, running 1.0.11 with both memories, nothing from the old release",
+    "rollback": "PASS: G5 back to 1.0.10 while running in 90.4 s, 0 processes left, verified, both memories",
+    "update again": "PASS: G6 to 1.0.11 in 167.4 s (stop 91.8 s), verified, both memories, then stopped with 0 processes",
+    "interruption recovery": "PASS: X1 program removed (data kept), 1.0.10 installed fresh and running with both memories, no 1.0.11 on the machine; X2 update started and the installer killed after 89.2 s with 3,512 of 10,645 files copied: current still 1.0.10 and verified, no 1.0.11 release folder, 8 processes of 1.0.10 only, Core answering, both memories; X3 the update run again finished in 181.4 s (verify package 50.5, copy 33.4, verify copy 87.9, stop 6.1), the partial copy cleared, 0 processes left, verified, running 1.0.11 with both memories, then stopped with 0 processes",
+    "state preservation": "PASS: the Install-phase memory survived restart, Windows restart, uninstall and reinstall, update, rollback, update again, the interrupted update and its rerun; the Update-phase memory survived every later step",
+    "timing bounds (Stage 6 Gate 20 owner decision 2: install, update, rollback within 600 s; stopping JARVIS within 120 s)": "PASS: install 211.6 s, updates 246.3 s, 167.4 s and 181.4 s, rollback 90.4 s; longest stop 91.8 s",
+    "evidence retained": "PASS: guest records in guest-egress-01\\stage7 with MANIFEST.json, host records in D:\\JARVIS-stage7\\evidence with MANIFEST.json, repo copies in docs/stage7-evidence/"
+  },
+  "observations": [
+    "Guest clock: after the restart inside the VM the guest clock ran about 9.5 minutes behind the host (VBox.log TM catch-up line: 572 s lag), so guest timestamps after the restart are early by that much (the AfterRestart driver-log line is stamped before the Install line). The restart check now compares uptimes and was unaffected; the wall-clock check used at Gate 17 would have given a false negative again.",
+    "Unpacking the package with the test harness took 1,440.9 s in the VM (843.7 s at Gate 17). This is the harness's Expand-Archive step, not the JARVIS installer, and is not a criterion.",
+    "Stopping a running JARVIS took 91.8 s at G6 (5.1 s at G4, 6.1 s at X3): inside the bound; still listed in docs/POST-CUTOVER-FIXES.md item 2."
+  ],
+  "not_tested_as_stated_in_the_plan": [
+    "an AI conversation (no provider keys in the VM; confirmed by the owner on the real PC at the switch-over)",
+    "a real microphone (the VM has no audio device; speech recognition checked offline)",
+    "installing under a non-administrator Windows account",
+    "the Stage 6 cleanliness re-check and preservation checkpoints (Stage 6 requirements, passed there)"
+  ],
+  "deviations": [
+    "None from the approved plan. Before the plan was approved, rehearsal run 1 stopped on the uninstall shortcut check in local mode; the check was limited to runs with shortcuts before the disc was built, so the VM ran the approved script with the full check."
+  ],
+  "verdict": "STAGE_7_COMPLETE",
+  "result_statement": "The packaged JARVIS 1.0.11 installs, starts, survives a Windows restart, uninstalls and reinstalls, updates from 1.0.10, rolls back, updates again, and recovers from an update killed in the middle of copying, with its data kept throughout, on a clean Windows 11 machine without administrator rights.",
+  "next": "The same disc method and script are the standard check for every later release before it is offered to the everyday JARVIS (first: 1.0.12 with the fixes in docs/POST-CUTOVER-FIXES.md), each on the owner's word.",
+  "recorded_by": "Claude Code (Claude Opus 5.5; the owner switched from Fable 5.1 during the pass), owner account"
+}

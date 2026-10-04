@@ -57,6 +57,15 @@ until the switch-over has run well, then delete on the owner's word.
 `D:\JARVIS-S6-FRESHVM\media\` (Windows ISO, answer-file, tools, package and recovery discs, each with a hash record).
 Rehearsals: `docs/release-rehearsal-20261001/`, `docs/release-rehearsal-20261004/`.
 
+## After Stage 6
+
+| What | Result | Records | Manifest (SHA-256) |
+|---|---|---|---|
+| Switch-over of the everyday JARVIS to 1.0.11 | `SWITCH_OVER_COMPLETE` (2026-10-04) | `../governance/CUTOVER-APPROVAL-RECORD.json`; `D:\JARVIS-cutover\evidence\cutover-evaluation.json`; repo `docs/cutover-evidence/` | `D:\JARVIS-cutover\evidence\MANIFEST.json` 82ff8be6… |
+| Stage 7 (packaged-app acceptance, 1.0.10 -> 1.0.11) | `STAGE_7_COMPLETE` (2026-10-04) | `../governance/STAGE7-APPROVAL-RECORD.json`; `D:\JARVIS-stage7\evidence\stage7-evaluation.json`; guest `D:\JARVIS-S6-FRESHVM\evidence\guest-egress-01\stage7\`; repo `docs/stage7-evidence/` | `D:\JARVIS-stage7\evidence\MANIFEST.json` 69f04661…; guest `stage7\MANIFEST.json` 06627a14… |
+
+The VM now also holds snapshot STAGE7-PASS `2503a110-bd71-49d8-8ff1-3193c2c20cd3` (child of FRESH-PREREQ; current).
+
 ## Limitations carried forward
 
 Listed in `gate20-evaluation.json` (`stated_limitations_carried_forward`).
