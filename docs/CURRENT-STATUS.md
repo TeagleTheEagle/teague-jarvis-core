@@ -219,3 +219,8 @@ because creating them changes the owner's real Desktop/Startup folders). Check o
   the VM log, and wrote the section 6(h)1 manifest with a small reusable tool
   (`tools/host/snapshot_manifest.py`). Next: P2 on "run P2", step 11, step 12. Nothing
   pushed or synced.
+- **2026-10-04, skill drafts (side task, requested through another Claude session).** Three
+  Claude Code skills drafted in `docs/skill-drafts/` (jarvis-verify, jarvis-owner-gate,
+  jarvis-codex-review-brief). **Not active**: nothing in `.claude/skills/`, no hook, no
+  settings change. Activation is an owner decision; `docs/skill-drafts/README.md` lists what
+  to approve and what was not confirmed. Stage 6 state untouched.
