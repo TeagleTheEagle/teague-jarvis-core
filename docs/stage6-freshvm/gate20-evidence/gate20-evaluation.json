@@ -1,0 +1,61 @@
+{
+  "schema": "stage6-gate-evaluation-v1",
+  "gate": "Gate 20: final Stage 6 acceptance review (runbook V1 L1894-1981; AMENDMENT-v2 sections 8 and 9(e); approved Gates 17-20 plan)",
+  "written_utc": "2026-10-04T08:10:17Z",
+  "requirement_table": "gate20-requirements-draft.json (written 2026-10-04T08:06:10Z, kept unchanged): every item of the V1 Gate 20 review list and of the amendments, each with a class and its record. That draft marked five things PENDING; they are closed below. No item is FAIL.",
+  "pending_items_closed": {
+    "owner item 1 (section 6(g) build/UBR at Gate 18)": "APPROVED_DISPOSITION (gate20-owner-decisions.json, 1)",
+    "owner item 2 (section 9(g) deadlines; v3 D9 bound)": "APPROVED_DISPOSITION (gate20-owner-decisions.json, 2): install, update and rollback each within 600 s, stopping JARVIS within 120 s; every measured run inside the bound; the four collector-harness deadlines had no occasion to apply",
+    "owner item 3 (FINAL hangs on a backup on read-only media)": "APPROVED_DISPOSITION (gate20-owner-decisions.json, 3): known limitation, fix after cutover",
+    "owner item 4 (VM and personal-data copies)": "decided: keep until the switch-over has run well, then delete on the owner's word (gate20-owner-decisions.json, 4)",
+    "P5": "PASS (p5-evaluation.json; run checkpoints\\p5-20261004-080906): protected baseline condition (Gate 15 disposition), preservation, sections 7(f) and 7(g) (version at P0 = version at P5) and the cleanup census are thereby closed"
+  },
+  "summary_by_class": {
+    "PASS": ["final source hashes", "final binaries", "package hashes", "toolchain provenance", "host orchestration binding (historical, per AMENDMENT-v2 section 2; not re-verified by Claude)", "isolation / Gate 16R (with approved dispositions)", "clean Windows deployment / Gate 17", "backup, restore, recovery / Gate 18 (with approved dispositions)", "update, interruption, rollback / Gate 19", "cleanup", "archival", "preservation P0-P5", "rollback readiness", "zero silent retries", "no UAC, no secrets emitted, no production cutover, no Stage 7", "owner-account and installation freeze", "historical evidence preserved"],
+    "APPROVED_DISPOSITION": ["Gate 3 runtime/search closure", "Gate 4 preservation binder", "Gates 5-7 observer qualification", "Gate 8 delay-import diagnostic", "Gate 9 GetCapabilitySidsEx", "Gate 10 paired builds", "Gate 11 ETW discrimination", "Experiment 5 (unconsumed, budget frozen 4/5)", "v3 A1, A3, A4", "16R: LocalhostReachable proven per start, baseline credential entries, guest account in Administrators, default machine folder", "Gate 18: owner decisions 01-04", "Gate 20: owner items 1-3"],
+    "NOT_APPLICABLE_WITH_EVIDENCE": ["Gates 12-13 small and medium validation", "Gate 14 59.7 GB validation", "Gate 15 protected baseline (continuous condition met through P5)", "v3 A2 short-name case"],
+    "FAIL": []
+  },
+  "complete_rule": {
+    "every mandatory gate passes or has an explicit owner-approved disposition": "MET",
+    "source/package/binary identities are bound": "MET (FINAL 1.0.11-60d406fb6398: commit 60d406fb6398b95345aa50bafead369dc0f41d25, manifest c835cef51375720529dd507be5ebeb26504c29109f6d52ebe894b937e1a4acb9, zip 1923651176dd3095e84b0628a5c7a90608b6db57fe06986670e0ea8246225a58)",
+    "preservation passes": "MET (P0-P5 PASS)",
+    "protected original remains unchanged": "MET as judged under AMENDMENT-v2 section 8",
+    "deployment acceptance passes": "MET (CLEAN_WINDOWS_DEPLOYMENT_PASS)",
+    "recovery passes": "MET (BACKUP_RESTORE_RECOVERY_PASS)",
+    "rollback readiness passes": "MET (UPDATE_ROLLBACK_RECONCILED; Gate 18 K8)",
+    "zero mandatory unresolved issues remain": "MET"
+  },
+  "verdict": "STAGE_6_COMPLETE",
+  "and": ["PRODUCTION_CUTOVER_NOT_AUTHORIZED", "STAGE_7_NOT_STARTED"],
+  "stated_limitations_carried_forward": [
+    "Preservation evidence is metadata/control-plane, not full-content proof (AMENDMENT-v2 8(e)).",
+    "VirtualBox broker case not proven (v3 A1); evidence integrity on D: rests on hash manifests and repo copies, not on permissions.",
+    "Install under a non-administrator Windows account not tested; no AI conversation tested in the VM (no provider keys).",
+    "FINAL 1.0.11 hangs when a backup lies on read-only media; slow stop of a running JARVIS in the VM (up to about 95 s); desktop shell shows a 'Core stopped' notice after shutdown. To fix in the first release after cutover.",
+    "Gates 0/0A/1/2 are historical PASS per AMENDMENT-v2 and were not re-verified by Claude.",
+    "The Gate 17 and Gate 18 guest drivers need three fixes before reuse (restart check by uptime; quit JARVIS first; restore from a writable copy)."
+  ],
+  "master_stop_report": {
+    "current_gate": "Gate 20 (complete)",
+    "last_fully_completed_gate": "Gate 20",
+    "reason_for_stop": "Stage 6 complete; cutover and Stage 7 are owner-only and not authorised",
+    "stage_6": "COMPLETE",
+    "gates_completed_on_this_route": "16R, 17, 19, 18, 20 (Gates 0/0A/1/2 historical PASS; Gates 3-15 dispositioned by AMENDMENT-v2 section 4)",
+    "gates_not_reached": "none",
+    "final_candidate_identity": "1.0.11-60d406fb6398",
+    "archive_hashes": "gate16r-20261002\\MANIFEST.json 38d487a6... (+ addendum 1); gate17\\MANIFEST.json 53ac88ff..., MANIFEST-guest-egress-01.json aa3e8a30...; gate18\\MANIFEST.json 603605cf540c4caa5e7bc7c1df096f0ee04789bf1724a1d394002d668db88e15, MANIFEST-guest-egress-01.json c42af0f152ddfb509fc8d664980fd9f2d6e40625589e4b193a15d3df81fa3716; gate20\\MANIFEST.json written after this record",
+    "preservation_status": "P0-P5 PASS",
+    "owned_processes_remaining": "none (no JARVIS, rehearsal or VirtualBox process on the host; VM powered off)",
+    "trace_sessions_remaining": "none used on this route",
+    "debug_attachments_remaining": "none used on this route",
+    "uac_used": "no",
+    "protected_vm_touched": "no (only the section 8(c) reads at P0-P5)",
+    "production_touched": "no cutover and no change by Claude. On 2026-10-04 the owner's own commands read the everyday JARVIS's data to make a backup (two new files in its jarvis-backups folder), stopped its stuck desktop shell, and the owner edited the Qwen key line of its .env; the everyday JARVIS cannot start at present for an unrelated reason (its Codex Python runtime is gone).",
+    "retries_performed": "no silent retry; recorded, owner-decided repeats listed in gate20-requirements-draft.json (section 9(g) item)",
+    "historical_etw_cause": "UNCONFIRMED (Gate 11 not executed; historical UNKNOWN per AMENDMENT-v2)",
+    "historical_stage_1_cause": "UNCONFIRMED (not examined on this route)"
+  },
+  "next": "none for Stage 6. Cutover (docs/CUTOVER-BLUEPRINT.md, draft) and Stage 7 only on the owner's word.",
+  "recorded_by": "Claude Code (Claude Fable 5.1), owner account. The verdict follows the V1 COMPLETE RULE from the records cited; it authorises nothing."
+}

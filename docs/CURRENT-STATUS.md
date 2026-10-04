@@ -1,7 +1,7 @@
 # JARVIS: current status (living document)
 
 **Read this first in every new Claude Code session, and update it at the end of each one.**
-Last updated: 2026-10-04 (Gate 18 complete and P4 PASS; Gate 20 in progress: draft table written, waiting for the owner's four decisions, then P5 on the owner's own word, then the verdict).
+Last updated: 2026-10-04 (STAGE_6_COMPLETE at Gate 20: Gates 16R, 17, 19, 18, 20 and P0 to P5 passed on FINAL 1.0.11; no cutover, no Stage 7; next acts are the owner's).
 Newest handover summary for a fresh session: `docs/HANDOVER-20261004-2.md` (the earlier
 `HANDOVER-20261002.md` and `HANDOVER-20261004.md` are out of date).
 
@@ -10,11 +10,18 @@ only records where the work stands. Historical handover context: `docs/PROJECT-C
 
 ## Where we are
 
-- **Stage 6: INCOMPLETE.** Fresh-VM route active. **Gate pointer: GATE 18 in execution
-  (since the owner's `RESUME_STAGE6_RECOVERY`, 2026-10-04, first clock reading 05:41:52Z).**
-  Passed on FINAL 1.0.11: Gate 16R, Gate 17, Gate 19 and checkpoints P0 to P3. Not done:
-  Gate 18, P4, Gate 20, P5. `RESUME_STAGE6_FRESH_VM` was issued 2026-10-02. Details under
-  "Next steps".
+- **Stage 6: `STAGE_6_COMPLETE` (2026-10-04T08:10Z, Gate 20).** `PRODUCTION_CUTOVER_NOT_AUTHORIZED`,
+  `STAGE_7_NOT_STARTED`. Passed on FINAL 1.0.11: Gates 16R, 17, 19, 18, 20 and checkpoints P0 to
+  P5 (P5 `evidence\gate20\checkpoints\p5-20261004-080906`, on the owner's "run P5"; VirtualBox
+  version equal to P0). Verdict and limitations: `evidence\gate20\gate20-evaluation.json`; owner's
+  four Gate 20 decisions: `gate20-owner-decisions.json` ("accept all"); index of everything:
+  `docs/EVIDENCE-INDEX.md`. The VM (snapshot GATE18-PASS) and the backup copies on D: hold the
+  owner's personal data and are kept until the switch-over has run well (owner decision).
+  **Nothing is in progress. Next is the owner's: cutover (`docs/CUTOVER-BLUEPRINT.md`, draft, open
+  points listed there) and Stage 7, each only on the owner's word.** Known: the everyday JARVIS
+  cannot start (its Codex Python runtime is gone, Gate 18 incident 02); the owner's new Alibaba
+  account is refused `qwen3.8-max` until its identity check completes (`tools/host/Test-QwenKey.ps1`).
+  The long "Next steps" item 2 below is the history of how Stage 6 got here.
   Earlier: P0 PASS (2026-09-30, sealed); owner created `jarvis-s6-val`. Experiment 5
   unconsumed, its budget frozen at 4/5 (that is the experiment budget, **not** a count of
   Stage 6 attempts). Stage 7 not started. Production cutover not authorized.
@@ -380,3 +387,16 @@ because creating them changes the owner's real Desktop/Startup folders). Check o
   jarvis-codex-review-brief). **Not active**: nothing in `.claude/skills/`, no hook, no
   settings change. Activation is an owner decision; `docs/skill-drafts/README.md` lists what
   to approve and what was not confirmed. Stage 6 state untouched.
+- **2026-10-04, Gate 18, P4, Gate 20, P5: STAGE_6_COMPLETE (Opus 5.5, then Fable 5.1; new session
+  from the second handover summary).** Owner issued `RESUME_STAGE6_RECOVERY`. Four incidents on the
+  way, each recorded with an owner decision: the backup drive held a folder copy, not a backup, and
+  copy script v1 picked a wrong file (PowerShell 5.1 ignores `-Include` with `-LiteralPath`); the
+  everyday JARVIS cannot start (Codex Python gone), so its own `recovery.py` was run with FINAL's
+  Python; the guest run stopped at K2 because the installed JARVIS auto-starts at sign-in; the dry
+  run hung because FINAL verifies a backup with a temp folder beside the archive and the archive was
+  on the read-only disc. Third guest run from a writable copy: K0 to K9 PASS on the real backup
+  (1,133 messages, counts equal). Snapshot GATE18-PASS, P4 PASS, Gate 20 table, four owner decisions,
+  P5 PASS, verdict. Lessons: rehearse with a real read-only disc image and with the Startup shortcut
+  present; never filter files with `-Include` on `-LiteralPath`; an owner-run tool that reads an
+  untested location needs refusal checks for what it expects to find. Also written: an owner-run
+  Qwen key check (`tools/host/Test-QwenKey.ps1`). Nothing pushed or synced.

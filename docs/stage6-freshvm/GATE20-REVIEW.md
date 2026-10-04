@@ -1,4 +1,4 @@
-# Gate 20: the final Stage 6 review (DRAFT, waiting for your four decisions and P5)
+# Gate 20: the final Stage 6 review (CLOSED 2026-10-04: all four decisions accepted, P5 PASS, verdict STAGE_6_COMPLETE)
 
 Prepared 2026-10-04 by Claude Code. The full table with every requirement and its record is
 `D:\JARVIS-S6-FRESHVM\evidence\gate20\gate20-requirements-draft.json` (repo copy in `gate20-evidence/`).

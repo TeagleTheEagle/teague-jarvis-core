@@ -1,0 +1,62 @@
+[
+    {
+        "path":  "JARVIS-CLEAN-WIN11.nvram",
+        "bytes":  540672,
+        "last_write_utc":  "2026-09-17T14:03:08.4345645Z"
+    },
+    {
+        "path":  "JARVIS-CLEAN-WIN11.vbox",
+        "bytes":  16652,
+        "last_write_utc":  "2026-09-18T01:43:26.7981683Z"
+    },
+    {
+        "path":  "JARVIS-CLEAN-WIN11.vbox-prev",
+        "bytes":  18992,
+        "last_write_utc":  "2026-09-17T14:03:08.4418050Z"
+    },
+    {
+        "path":  "JARVIS-CLEAN-WIN11.vdi",
+        "bytes":  27547140096,
+        "last_write_utc":  "2026-09-17T10:09:57.6214431Z"
+    },
+    {
+        "path":  "Logs\\VBox.log",
+        "bytes":  406498,
+        "last_write_utc":  "2026-09-17T13:59:52.0942282Z"
+    },
+    {
+        "path":  "Logs\\VBox.log.1",
+        "bytes":  434163,
+        "last_write_utc":  "2026-09-17T10:09:58.8639583Z"
+    },
+    {
+        "path":  "Logs\\VBox.log.2",
+        "bytes":  288703,
+        "last_write_utc":  "2026-09-17T06:47:23.8178303Z"
+    },
+    {
+        "path":  "Logs\\VBoxHardening.log",
+        "bytes":  724514,
+        "last_write_utc":  "2026-09-17T13:59:52.7126823Z"
+    },
+    {
+        "path":  "Snapshots\\{15d99129-676a-4547-bfe1-1dcc0e21d254}.vdi",
+        "bytes":  2097152,
+        "last_write_utc":  "2026-09-17T14:03:08.4248185Z"
+    },
+    {
+        "path":  "Snapshots\\{a1f53c89-fb23-4d20-b290-b8152252bfdc}.vdi",
+        "bytes":  32112640000,
+        "last_write_utc":  "2026-09-17T13:59:50.3330013Z"
+    },
+    {
+        "path":  "Snapshots\\2026-09-17T10-18-09-391051200Z.nvram",
+        "bytes":  547328,
+        "last_write_utc":  "2026-09-17T10:09:57.6390629Z"
+    },
+    {
+        "path":  "Snapshots\\2026-09-17T14-03-08-424818500Z.nvram",
+        "bytes":  547328,
+        "last_write_utc":  "2026-09-17T13:59:50.3516942Z"
+    }
+]
