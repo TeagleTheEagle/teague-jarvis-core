@@ -11,25 +11,32 @@ folder and the evidence folder. There are no secrets on the machine; none are cr
 
 .PARAMETER Package   Folder holding JARVIS-<id>.zip and JARVIS-<id>.release.json (the mounted ISO root).
 .PARAMETER Evidence  Folder for the records (the single declared egress folder on the VM).
-.PARAMETER Phase     Baseline | Install | AfterRestart | Uninstall | All (All = Baseline, Install, Uninstall).
+.PARAMETER Phase     Baseline | Install | AfterRestart | Cleanliness | Uninstall | Update | All (All = Baseline, Install, Uninstall).
+                     Cleanliness = the Baseline checks repeated with JARVIS installed (nothing else may have appeared).
+                     Update = Gate 19: previous build installed, updated to this package's build, rolled back, updated again.
+.PARAMETER PreviousPackage  Update phase: folder holding the previous build's zip and release record (the second package disc).
 .PARAMETER InstallHome  Install folder. VM: default %LOCALAPPDATA%\JARVIS. Local rehearsal: a sandbox on D:.
+.PARAMETER Staging      Where the package is extracted. VM: default %LOCALAPPDATA%\JARVIS-package. Local rehearsal: a folder on D:.
 .PARAMETER NoShortcuts  Local rehearsal only (never touch the owner's real Desktop/Startup folders).
 .PARAMETER SkipBaseline Local rehearsal only (this PC is a development machine and would fail the cleanliness checks).
 #>
 param(
     [Parameter(Mandatory)] [string] $Package,
     [Parameter(Mandatory)] [string] $Evidence,
-    [ValidateSet('Baseline', 'Install', 'AfterRestart', 'Uninstall', 'All')] [string] $Phase = 'All',
+    [ValidateSet('Baseline', 'Install', 'AfterRestart', 'Cleanliness', 'Uninstall', 'Update', 'All')] [string] $Phase = 'All',
+    [string] $PreviousPackage,
     [string] $InstallHome = (Join-Path $env:LOCALAPPDATA 'JARVIS'),
+    [string] $Staging = (Join-Path $env:LOCALAPPDATA 'JARVIS-package'),
     [switch] $NoShortcuts,
     [switch] $SkipBaseline
 )
 $ErrorActionPreference = 'Stop'
 $script:Started = Get-Date
-$script:EvidenceDir = Join-Path $Evidence ('gate17-' + $script:Started.ToUniversalTime().ToString('yyyyMMdd-HHmmss'))
+$Gate = if ($Phase -eq 'Update') { 'gate19' } else { 'gate17' }
+$script:EvidenceDir = Join-Path $Evidence ("$Gate-" + $script:Started.ToUniversalTime().ToString('yyyyMMdd-HHmmss'))
 New-Item -ItemType Directory -Path $script:EvidenceDir -Force | Out-Null
 $script:Summary = New-Object Collections.ArrayList
-$Staging = Join-Path $env:LOCALAPPDATA 'JARVIS-package'
+$PreviousStaging = "$Staging-previous"
 $Utf8 = New-Object Text.UTF8Encoding $false
 
 function Now { (Get-Date).ToUniversalTime().ToString('o') }
@@ -42,7 +49,7 @@ function Finish($overall) {
     $summary = [ordered]@{ schema = 'jarvis-gate17-run-v1'; overall = $overall; phase = $Phase; home = $InstallHome; package = $Package
                            started_utc = $script:Started.ToUniversalTime().ToString('o'); finished_utc = (Now); steps = @($script:Summary) }
     [IO.File]::WriteAllText((Join-Path $script:EvidenceDir 'SUMMARY.json'), ($summary | ConvertTo-Json -Depth 6), $Utf8)
-    Write-Host "Gate 17 $Phase : $overall  ($script:EvidenceDir)"
+    Write-Host "$Gate $Phase : $overall  ($script:EvidenceDir)"
 }
 function Fail($name, $data, $why) { $data.status = 'FAIL'; $data.reason = $why; Record $name $data; Finish 'FAIL'; exit 2 }
 function Sha256($path) { (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLower() }
@@ -103,8 +110,22 @@ function Installer([string[]] $arguments) {
     try { $out | ConvertFrom-Json } catch { @{ status = 'error'; output = $out.Substring(0, [Math]::Min(1500, $out.Length)) } }
 }
 
-# ---------------------------------------------------------------- Baseline (FRESH-CLEAN-BASELINE negative checks)
-if (($Phase -eq 'Baseline' -or $Phase -eq 'All') -and -not $SkipBaseline) {
+# ---------------------------------------------------------------- No elevation (owner decision 2026-10-04)
+# JARVIS installs and runs per user. The acceptance account is in the Administrators group, so every phase that
+# installs or runs JARVIS first records that this process has no administrator rights and stops if it has.
+if ($Phase -ne 'Baseline') {
+    $elevated = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    $data = [ordered]@{ status = 'PASS'; account = "$env:USERDOMAIN\$env:USERNAME"; process_elevated = $elevated; note = 'the installer and JARVIS are started from this process and inherit its rights; a UAC prompt at any point is a STOP reported by the owner' }
+    if ($elevated) { Fail 'E0-not-elevated' $data 'this window has administrator rights; close it and start the gate from a normal window' }
+    Record 'E0-not-elevated' $data
+}
+
+# ---------------------------------------------------------------- Baseline (FRESH-CLEAN-BASELINE negative checks) and
+# Cleanliness (the same checks with JARVIS installed: nothing except JARVIS itself may have appeared)
+if ((($Phase -eq 'Baseline' -or $Phase -eq 'All') -and -not $SkipBaseline) -or $Phase -eq 'Cleanliness') {
+    $jarvisExpected = ($Phase -eq 'Cleanliness')
+    $ownFolders = @($InstallHome, $Staging, $PreviousStaging) | ForEach-Object { $_.TrimEnd('\') }
+    function InOwnFolders([string] $path) { [bool]($ownFolders | Where-Object { $path -eq $_ -or $path.StartsWith($_ + '\', [StringComparison]::OrdinalIgnoreCase) }) }
     $cv = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'
     # A fresh Windows 11 ships Microsoft Store "app execution aliases" (zero-byte reparse-point stubs under
     # %LOCALAPPDATA%\Microsoft\WindowsApps, e.g. python.exe) that only open the Store: nothing is installed.
@@ -119,7 +140,7 @@ if (($Phase -eq 'Baseline' -or $Phase -eq 'All') -and -not $SkipBaseline) {
         if ($isStoreAlias) { $storeAliases += "$t -> $($c.Source) (Microsoft Store app execution alias, $($item.Length) bytes; nothing installed)" } else { $tools += "$t -> $($c.Source)" }
     }
     $dirs = foreach ($d in "$env:ProgramFiles\Python*", "${env:ProgramFiles(x86)}\Python*", "$env:ProgramFiles\nodejs", "$env:ProgramFiles\Git", "$env:ProgramFiles\Microsoft Visual Studio", "$env:LOCALAPPDATA\Programs\Python", "$env:LOCALAPPDATA\Programs\Microsoft VS Code", "$env:APPDATA\npm") { if (Test-Path $d) { $d } }
-    $envFiles = @(Get-ChildItem -LiteralPath $env:USERPROFILE -Recurse -Force -Filter '.env*' -ErrorAction SilentlyContinue | Select-Object -First 20 -ExpandProperty FullName)
+    $envFiles = @(Get-ChildItem -LiteralPath $env:USERPROFILE -Recurse -Force -Filter '.env*' -ErrorAction SilentlyContinue | Where-Object { -not ($jarvisExpected -and (InOwnFolders $_.FullName)) } | Select-Object -First 20 -ExpandProperty FullName)
     $cred = (cmdkey /list 2>$null | Out-String)
     $lic = Get-CimInstance SoftwareLicensingProduct -Filter "ApplicationID='55c92734-d682-4d71-983e-d6ec3f16059f' and PartialProductKey is not null" | Select-Object -First 1
     $wu = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings' -ErrorAction SilentlyContinue
@@ -164,25 +185,37 @@ if (($Phase -eq 'Baseline' -or $Phase -eq 'All') -and -not $SkipBaseline) {
         owner_disposition_required = $forOwner
         installed_programs = $programs.Count; services = $services.Count
     }
-    [IO.File]::WriteAllText((Join-Path $script:EvidenceDir 'baseline-programs.json'), ($programs | ConvertTo-Json -Depth 3), $Utf8)
-    [IO.File]::WriteAllText((Join-Path $script:EvidenceDir 'baseline-services.json'), ($services | ConvertTo-Json -Depth 3), $Utf8)
+    $recordName = if ($jarvisExpected) { 'C1-cleanliness' } else { 'B1-baseline' }
+    $filePrefix = if ($jarvisExpected) { 'cleanliness' } else { 'baseline' }
+    [IO.File]::WriteAllText((Join-Path $script:EvidenceDir "$filePrefix-programs.json"), ($programs | ConvertTo-Json -Depth 3), $Utf8)
+    [IO.File]::WriteAllText((Join-Path $script:EvidenceDir "$filePrefix-services.json"), ($services | ConvertTo-Json -Depth 3), $Utf8)
+    $jarvisDirsElsewhere = @($jarvisDirs | Where-Object { -not (InOwnFolders $_.TrimEnd('\')) })
+    if ($jarvisExpected) {
+        $data.jarvis_expected = $true; $data.jarvis_own_folders = $ownFolders; $data.jarvis_folders_elsewhere = $jarvisDirsElsewhere
+        $data.note = 'JARVIS is installed: its install folder, package folder, processes and pipes are recorded and not counted; everything else is judged as at the baseline'
+    }
     $problems = @()
     if ($tools) { $problems += 'development tools on PATH' }
     if ($dirs) { $problems += 'development tool folders present' }
-    if ($data.jarvis_install_present) { $problems += 'JARVIS already installed' }
-    if ($data.jarvis_processes) { $problems += 'JARVIS processes running' }
+    if ($jarvisExpected) {
+        if (-not $data.jarvis_install_present) { $problems += 'JARVIS is not installed (the Cleanliness phase runs after the Install phase)' }
+        if ($jarvisDirsElsewhere) { $problems += 'JARVIS folders outside the install and package folders' }
+    } else {
+        if ($data.jarvis_install_present) { $problems += 'JARVIS already installed' }
+        if ($data.jarvis_processes) { $problems += 'JARVIS processes running' }
+        if ($jarvisPipes) { $problems += 'JARVIS named pipes present' }
+        if ($jarvisDirs) { $problems += 'JARVIS folders present' }
+    }
     if ($envFiles) { $problems += '.env files in the profile' }
     if ($data.jarvis_credentials) { $problems += 'JARVIS credential entries' }
     if ($jarvisServices) { $problems += 'JARVIS services present' }
     if ($jarvisTasks) { $problems += 'JARVIS scheduled tasks present' }
-    if ($jarvisPipes) { $problems += 'JARVIS named pipes present' }
-    if ($jarvisDirs) { $problems += 'JARVIS folders present' }
     if ($globalPackages) { $problems += 'global package folders present' }
     if ($nonDefaultPath) { $problems += 'non-default PATH entries' }
     if ($principalSource -in 'MicrosoftAccount', 'AzureAD', 'ActiveDirectory') { $problems += "the account is not a local account ($principalSource)" }
     if ($data.onedrive_account_configured) { $problems += 'OneDrive is signed in to an online account' }
-    if ($problems) { Fail 'B1-baseline' $data ($problems -join '; ') }
-    Record 'B1-baseline' $data
+    if ($problems) { Fail $recordName $data ($problems -join '; ') }
+    Record $recordName $data
 }
 
 # ---------------------------------------------------------------- Install
@@ -279,7 +312,7 @@ if ($Phase -eq 'Install' -or $Phase -eq 'All') {
                         memory_persisted = [bool]($state.memory | Where-Object { $_.body -eq $memo }); identity_same = ($state.updates.installed_release -eq $rel.release_id) }
     if (-not $stop.core_stopped_on_request -or $v.status -ne 'verified' -or -not $up -or -not $data.memory_persisted -or -not $data.identity_same) { Fail 'I8-restart' $data 'restart did not pass every check' }
     Record 'I8-restart' $data
-    Write-Host 'JARVIS is running. VM: quit it from the tray ("Quit JARVIS completely"), restart Windows, then run -Phase AfterRestart.'
+    Write-Host 'JARVIS is running. On the VM the next phase is AfterRestart, after quitting JARVIS from the tray and restarting Windows.'
 }
 
 # ---------------------------------------------------------------- After a Windows restart (Startup shortcut)
@@ -316,6 +349,119 @@ if ($Phase -eq 'Uninstall' -or $Phase -eq 'All') {
     Record 'U2-reinstall' $data
     $data = [ordered]@{ status = 'PASS'; stop = (StopJarvis) }
     Record 'U3-final-stop' $data
+}
+
+# ---------------------------------------------------------------- Gate 19: previous build, update, rollback, update again
+# Runs after the Uninstall phase, in the same Windows session: -Package is the build under acceptance (already
+# extracted to the staging folder by the Install phase), -PreviousPackage the build before it. Each installer call
+# reports its own per-phase seconds (AMENDMENT-v3 D9: the timing bound is set from these measurements).
+if ($Phase -eq 'Update') {
+    function PackageRecord($folder) {
+        $record = Get-ChildItem -LiteralPath $folder -Filter 'JARVIS-*.release.json' | Select-Object -First 1
+        if ($record) { Get-Content -LiteralPath $record.FullName -Raw | ConvertFrom-Json }
+    }
+    function RunInstaller($stagingFolder, [string[]] $arguments) {
+        # installer.py of the named extracted package, run with that package's own Python (never the installed one).
+        $out = & (Join-Path $stagingFolder 'release\python\python.exe') (Join-Path $stagingFolder 'installer.py') @arguments --home $InstallHome $(if ($NoShortcuts) { '--no-shortcuts' }) 2>&1 | Out-String
+        try { $out | ConvertFrom-Json } catch { @{ status = 'error'; output = $out.Substring(0, [Math]::Min(1500, $out.Length)) } }
+    }
+    function RunningState($expectedId) {
+        # Start JARVIS, wait for the Core, and report identity, data and which release folder the processes run from.
+        $t = [Diagnostics.Stopwatch]::StartNew(); $null = Launch; $up = WaitForCore 180
+        $state = $(if ($up) { Start-Sleep -Seconds 3; Api '/api/state' } else { $null })
+        $paths = @(Processes | Select-Object -ExpandProperty ExecutablePath)
+        $prefix = Join-Path $InstallHome "releases\$expectedId\"
+        [ordered]@{
+            core_ready = $up; seconds_to_ready = [Math]::Round($t.Elapsed.TotalSeconds, 1)
+            installed_release = $state.updates.installed_release; identity_matches = ($state.updates.installed_release -eq $expectedId)
+            gate17_memory = [bool]($state.memory | Where-Object { $_.body -like 'Gate 17 memory:*' })
+            gate19_memory = [bool]($state.memory | Where-Object { $_.body -like 'Gate 19 memory:*' })
+            processes = $paths.Count; processes_from_other_releases = @($paths | Where-Object { -not $_.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase) })
+        }
+    }
+    function Healthy($run) { $run.core_ready -and $run.identity_matches -and $run.gate19_memory -and -not $run.processes_from_other_releases }
+    function ProcessesLeft {
+        # The installer ends leftover JARVIS processes as it returns; give Windows up to 15 s to remove them before counting.
+        $deadline = (Get-Date).AddSeconds(15)
+        while ((Processes).Count -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 500 }
+        (Processes).Count
+    }
+
+    # G1 both packages identified; the build under acceptance is the installed one and its extracted package is present.
+    $data = [ordered]@{ status = 'PASS' }
+    if (-not $PreviousPackage -or -not (Test-Path -LiteralPath $PreviousPackage)) { Fail 'G1-packages' $data 'the folder of the previous build was not given or does not exist' }
+    $final = PackageRecord $Package; $prev = PackageRecord $PreviousPackage
+    if (-not $final -or -not $prev) { Fail 'G1-packages' $data 'a package folder has no JARVIS-<id>.release.json' }
+    $prevZip = Join-Path $PreviousPackage $prev.zip
+    $t = [Diagnostics.Stopwatch]::StartNew(); $prevHash = Sha256 $prevZip
+    $stagedId = $null; try { $stagedId = (Get-Content -LiteralPath (Join-Path $Staging 'release\manifest.json') -Raw | ConvertFrom-Json).release_id } catch {}
+    $current = $null; try { $current = (Get-Content -LiteralPath (Join-Path $InstallHome 'current.json') -Raw | ConvertFrom-Json).release } catch {}
+    $data = [ordered]@{ status = 'PASS'; release_under_acceptance = $final.release_id; previous_release = $prev.release_id; previous_zip = $prev.zip; previous_zip_bytes = (Get-Item -LiteralPath $prevZip).Length
+                        previous_zip_sha256 = $prevHash; previous_zip_matches_record = ($prevHash -eq $prev.zip_sha256); hash_seconds = [Math]::Round($t.Elapsed.TotalSeconds, 1)
+                        extracted_package = $stagedId; installed_before = $current; processes_before = (Processes).Count }
+    $manifestPath = Join-Path $PreviousPackage 'PAYLOAD-MANIFEST.json'
+    if (Test-Path -LiteralPath $manifestPath) {
+        $pm = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+        $bad = @(foreach ($f in $pm.files) { if ((Sha256 (Join-Path $PreviousPackage $f.path)) -ne $f.sha256) { $f.path } })
+        $data.payload_manifest_files = $pm.files.Count; $data.payload_mismatches = $bad
+        if ($bad) { Fail 'G1-packages' $data 'payload file hash mismatch on the previous build''s disc' }
+    }
+    if (-not $data.previous_zip_matches_record) { Fail 'G1-packages' $data 'the previous build''s zip does not match its release record' }
+    if ($final.release_id -eq $prev.release_id) { Fail 'G1-packages' $data 'both package folders hold the same build' }
+    if ($stagedId -ne $final.release_id) { Fail 'G1-packages' $data 'the package extracted by the Install phase is missing or is a different build' }
+    if ($current -ne $final.release_id) { Fail 'G1-packages' $data 'the build under acceptance is not the installed one; this phase runs after the Uninstall phase' }
+    Record 'G1-packages' $data
+
+    # G2 extract the previous build next to the first package.
+    if (Test-Path -LiteralPath $PreviousStaging) { Remove-Item -LiteralPath $PreviousStaging -Recurse -Force }
+    $t = [Diagnostics.Stopwatch]::StartNew()
+    Expand-Archive -LiteralPath $prevZip -DestinationPath $PreviousStaging
+    $inner = Get-ChildItem -LiteralPath $PreviousStaging -Directory | Select-Object -First 1
+    Get-ChildItem -LiteralPath $inner.FullName -Force | Move-Item -Destination $PreviousStaging
+    Remove-Item -LiteralPath $inner.FullName -Recurse -Force
+    $data = [ordered]@{ status = 'PASS'; staging = $PreviousStaging; seconds = [Math]::Round($t.Elapsed.TotalSeconds, 1); files = (Get-ChildItem -LiteralPath $PreviousStaging -Recurse -File).Count; has_installer = (Test-Path -LiteralPath (Join-Path $PreviousStaging 'installer.py')) }
+    if (-not $data.has_installer) { Fail 'G2-extract-previous' $data 'installer.py missing after extraction' }
+    Record 'G2-extract-previous' $data
+
+    # G3 starting point: the previous build installed over the kept data, running, with a new memory written under it.
+    $u = RunInstaller $Staging @('uninstall')
+    $in = RunInstaller $PreviousStaging @('install', '--package', $PreviousStaging)
+    $run = RunningState $prev.release_id
+    $memo = "Gate 19 memory: written under $($prev.release_id)"
+    if ($run.core_ready) { $null = Api '/api/item' @{ kind = 'memory'; body = $memo }; $run.gate19_memory = [bool]((Api '/api/state').memory | Where-Object { $_.body -eq $memo }) }
+    $data = [ordered]@{ status = 'PASS'; uninstall = $u.status; install = $in.status; release = $in.release; installer_seconds = $in.seconds; output = $in.output; running = $run }
+    if ($u.status -ne 'uninstalled' -or $in.status -ne 'installed' -or $in.release -ne $prev.release_id -or -not (Healthy $run)) { Fail 'G3-previous-installed' $data 'the previous build did not install and run over the kept data' }
+    Record 'G3-previous-installed' $data
+
+    # G4 update to the build under acceptance while the previous build is running.
+    $t = [Diagnostics.Stopwatch]::StartNew(); $up = RunInstaller $Staging @('install', '--package', $Staging); $wall = [Math]::Round($t.Elapsed.TotalSeconds, 1)
+    $left = ProcessesLeft; $v = RunInstaller $Staging @('verify'); $st = RunInstaller $Staging @('status')
+    $run = RunningState $final.release_id
+    $data = [ordered]@{ status = 'PASS'; result = $up.status; release = $up.release; previous = $up.previous; installer_seconds = $up.seconds; wall_seconds = $wall; output = $up.output
+                        processes_left_after_update = $left; verify = $v.status; verified_release = $v.release; current = $st.current; releases = $st.releases; running = $run }
+    if ($up.status -ne 'installed' -or $up.release -ne $final.release_id -or $up.previous -ne $prev.release_id -or $left -or $v.status -ne 'verified' -or $v.release -ne $final.release_id -or $st.current.release -ne $final.release_id -or -not (Healthy $run)) { Fail 'G4-update' $data 'the update did not pass every check' }
+    Record 'G4-update' $data
+
+    # G5 roll back to the previous build while the updated build is running.
+    $t = [Diagnostics.Stopwatch]::StartNew(); $rb = RunInstaller $Staging @('rollback'); $wall = [Math]::Round($t.Elapsed.TotalSeconds, 1)
+    $left = ProcessesLeft; $v = RunInstaller $Staging @('verify')
+    $run = RunningState $prev.release_id
+    $data = [ordered]@{ status = 'PASS'; result = $rb.status; release = $rb.release; previous = $rb.previous; wall_seconds = $wall; output = $rb.output
+                        processes_left_after_rollback = $left; verify = $v.status; verified_release = $v.release; running = $run }
+    if ($rb.status -ne 'rolled_back' -or $rb.release -ne $prev.release_id -or $left -or $v.status -ne 'verified' -or $v.release -ne $prev.release_id -or -not (Healthy $run)) { Fail 'G5-rollback' $data 'the rollback did not pass every check' }
+    Record 'G5-rollback' $data
+
+    # G6 update again (both builds are now present), so the machine ends on the build under acceptance, stopped.
+    $t = [Diagnostics.Stopwatch]::StartNew(); $up = RunInstaller $Staging @('install', '--package', $Staging); $wall = [Math]::Round($t.Elapsed.TotalSeconds, 1)
+    $left = ProcessesLeft; $v = RunInstaller $Staging @('verify')
+    $run = RunningState $final.release_id
+    $stop = StopJarvis; $st = RunInstaller $Staging @('status')
+    $logs = Join-Path $InstallHome 'data\logs'
+    if (Test-Path -LiteralPath $logs) { Copy-Item -LiteralPath $logs -Destination (Join-Path $script:EvidenceDir 'core-logs') -Recurse -Force }
+    $data = [ordered]@{ status = 'PASS'; result = $up.status; release = $up.release; previous = $up.previous; installer_seconds = $up.seconds; wall_seconds = $wall; output = $up.output
+                        processes_left_after_update = $left; verify = $v.status; verified_release = $v.release; running = $run; final_stop = $stop; current = $st.current; releases = $st.releases }
+    if ($up.status -ne 'installed' -or $up.release -ne $final.release_id -or $left -or $v.status -ne 'verified' -or $v.release -ne $final.release_id -or -not (Healthy $run) -or -not $stop.core_stopped_on_request -or $stop.processes_now -or $st.current.release -ne $final.release_id) { Fail 'G6-update-again' $data 'the second update or the final stop did not pass every check' }
+    Record 'G6-update-again' $data
 }
 
 Finish 'PASS'

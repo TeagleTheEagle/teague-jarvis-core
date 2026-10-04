@@ -1,0 +1,53 @@
+{
+    "schema":  "stage6-record-correction-v1",
+    "subject":  "Gate 16R: the utc field typed into seven records of 2026-10-04 is an estimate, not a clock reading",
+    "written_utc":  "2026-10-04T03:23:26Z",
+    "what_is_wrong":  "Claude typed the utc field of these records by estimate instead of reading the clock. Five of them state a time 10 to 22 minutes later than the moment the file was written; two are within 90 seconds. No other content of the records is affected.",
+    "true_times":  "The file-system write time of each file is listed below. The repo copies were committed at 2026-10-04T02:45:53Z (613129b, step 9), 03:04:01Z (5f22a7b, step 10), 03:10:07Z (9796d61, step 11 and the open items) and 03:13:40Z (ca0f6bb, step 12). The owner\u0027s acceptance of the two step 12 items was received between 03:10:07Z and 03:12:16Z, not at the 03:30:00Z stated in step12-owner-dispositions.json; the result in step12-evaluation.json was written at 03:13:04Z, not 03:35:00Z.",
+    "records":  [
+                    {
+                        "file":  "step9-evaluation.json",
+                        "utc_stated_in_the_file":  "2026-10-04T02:46:00Z",
+                        "file_actually_written_utc":  "2026-10-04T02:45:33Z",
+                        "sha256":  "a86d9feb990e02de6b799236ae5b4df3d0b66014dea05f784a833b8b5dabdb27"
+                    },
+                    {
+                        "file":  "step10-evaluation.json",
+                        "utc_stated_in_the_file":  "2026-10-04T03:05:00Z",
+                        "file_actually_written_utc":  "2026-10-04T03:03:35Z",
+                        "sha256":  "d140f1682e703f560bad656c2d345569069456146c881574f4d1546c94e673fa"
+                    },
+                    {
+                        "file":  "step11-evaluation.json",
+                        "utc_stated_in_the_file":  "2026-10-04T03:20:00Z",
+                        "file_actually_written_utc":  "2026-10-04T03:09:48Z",
+                        "sha256":  "77e67b157409d7f4bffdfb1ac0d7ae183b1d519a7f41616851b2ba1e37159ad1"
+                    },
+                    {
+                        "file":  "fresh-vm-identity.json",
+                        "utc_stated_in_the_file":  "2026-10-04T03:20:00Z",
+                        "file_actually_written_utc":  "2026-10-04T03:09:48Z",
+                        "sha256":  "1d9aa85e190bd66af845be3ca37219d6cd9e1bc40e6473bc0f88785ee428377b"
+                    },
+                    {
+                        "file":  "step12-open-items.json",
+                        "utc_stated_in_the_file":  "2026-10-04T03:22:00Z",
+                        "file_actually_written_utc":  "2026-10-04T03:09:48Z",
+                        "sha256":  "19138e882dc6ff86603214508f49b1c30c9733abb62806d73f2ab4d9a5992098"
+                    },
+                    {
+                        "file":  "step12-owner-dispositions.json",
+                        "utc_stated_in_the_file":  "2026-10-04T03:30:00Z",
+                        "file_actually_written_utc":  "2026-10-04T03:12:16Z",
+                        "sha256":  "7137873892c9a729ba6611c281098c9a6432d9634d92e6b3f50a69739240ca66"
+                    },
+                    {
+                        "file":  "step12-evaluation.json",
+                        "utc_stated_in_the_file":  "2026-10-04T03:35:00Z",
+                        "file_actually_written_utc":  "2026-10-04T03:13:04Z",
+                        "sha256":  "c27161c550bf5674dae60b004a7adcfa924d196cc6318c43af132506883037b1"
+                    }
+                ],
+    "handling":  "The seven files are left exactly as written so that the SHA-256 values in MANIFEST.json (sha256 38d487a6bdda2e8e0f89bd8c3b9ebf23eacec466c9967b595b64659ad501fd60) stay valid. This correction is listed in MANIFEST-addendum-1.json.",
+    "recorded_by":  "Claude Code (Claude Fable 5.1), owner account"
+}

@@ -110,6 +110,16 @@ writes `regression-report.json` in the work folder and checks the release is unc
 - `tools\guest\Invoke-Gate17.ps1`: the Gate 17 run inside the acceptance machine (PowerShell
   5.1 only, nothing installed). Local rehearsal on this PC:
   `-Package <folder with the zip and its .release.json> -Evidence <folder> -InstallHome D:\...\sandbox -NoShortcuts -SkipBaseline`.
+- Gates 17 and 19 (see `docs/stage6-freshvm/GATES17-20-EXECUTION-PROMPT.md`): the owner double-clicks
+  `tools\host\next-step.cmd` (`Invoke-NextStep.ps1`: builds the two package discs with
+  `New-Gate17PackageDisc.ps1`, attaches them and starts the VM with `Start-Gate17Vm.ps1`, takes the
+  snapshot afterwards) and, inside the VM, `gate.cmd` on the package disc (`tools\guest\Invoke-Gate.ps1`
+  runs the next phase of `Invoke-Gate17.ps1`: Install, AfterRestart, Cleanliness, Uninstall, Update).
+  Local rehearsal of the whole chain on D: (never the Baseline or Cleanliness phase against the real
+  profile): `Invoke-Gate.ps1 -Evidence <dir> -Package <pkg> -PreviousPackage <pkg> -InstallHome <dir>
+  -Staging <dir> -NoShortcuts -NoRestartCheck -SkipPhases AfterRestart,Cleanliness`, run twice.
+- `tools\host\snapshot_manifest.py`, `tools\host\evidence_manifest.py`: section 6(h) snapshot manifests
+  and the evidence MANIFEST.json (run with `.venv\Scripts\python.exe`; they read evidence only).
 - `tools\host\Invoke-PreservationCheckpoint.ps1`: checkpoints P0–P5 under the owner account.
   Without `-OwnerAuthorized` it only prints what it would read. Never run it on Claude's own
   initiative: each checkpoint is an owner authorization.

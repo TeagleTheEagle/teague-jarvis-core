@@ -110,8 +110,21 @@ Owner only (Claude must stop and ask, never infer or pre-stage tokens):
    VirtualBox's default-machine-folder property left at its default. Evidence
    `MANIFEST.json`: 116 files, sha256 38d487a6… (`tools/host/evidence_manifest.py`; covers
    gate16r-20261002 and guest-egress-01, never the sealed `evidence\P0`). **Gate 16R is
-   complete; STOPPED before Gate 17.** Next are the owner's batched decisions (FINAL
-   selection; approval of a plain-language Gates 17–20 prompt), then the package discs.
+   complete; STOPPED before Gate 17.** **Waiting for the owner:** FINAL selection
+   (proposed 1.0.11-60d406fb6398; previous build for Gate 19: 1.0.10-915e906516dc) and
+   approval of `docs/stage6-freshvm/GATES17-20-EXECUTION-PROMPT.md` (rewritten 2026-10-04 in
+   plain words; its last section lists where it differs from earlier approved wording).
+   Tooling is written and rehearsed (`docs/release-rehearsal-20261004/README.md`, which also
+   lists what could not be rehearsed: everything VirtualBox, the 526 MB disc build, the
+   in-VM restart step). **On approval Claude must:** (1) write the two governance records
+   (FINAL selection; prompt approval with the frozen text hash); (2) write
+   `D:\JARVIS-S6-FRESHVM\tools\gate17-plan.json` = `{"final": "<id>", "previous": "<id>"}`;
+   (3) copy to `D:\JARVIS-S6-FRESHVM\tools\`: `next-step.cmd`, `Invoke-NextStep.ps1`,
+   `New-Gate17PackageDisc.ps1`, `Start-Gate17Vm.ps1` (the disc builder takes the guest
+   scripts from the repo, so the tree must be committed first), and append their hashes to
+   `evidence\gate17\prep-tools-hashes.txt`; (4) tell the owner: jonny account,
+   double-click `next-step`. Gate 17 evidence lives in `evidence\gate17\` (host) and
+   `evidence\guest-egress-01\` (guest, after `gate17-cycle.json`).
    P3 will reference `checkpoints\p2-20261004-030308`. Every VM start, including after
    restoring `FRESH-PREREQ`, goes through `step7-start-vm.cmd`. The owner runs every
    launcher in `D:\JARVIS-S6-FRESHVM\tools\` (ACL/VirtualBox work is owner-only); Claude
@@ -178,6 +191,16 @@ because creating them changes the owner's real Desktop/Startup folders). Check o
   every process running from the install folder, including that interpreter.
 - `$Home` and `$args` are PowerShell automatic variables: never use them as parameter or
   variable names in scripts (`$HOME` is read-only).
+- Timestamps written into evidence records come from the clock (`Get-Date` in the same
+  command), never from an estimate. Seven Gate 16R records of 2026-10-04 carry estimated
+  `utc` fields; `gate16r-evidence/timestamp-correction-20261004.json` lists the true times.
+- When something is built from an approved text, compare the two at build time and put any
+  difference to the owner then. Two differences (guest account group, default machine folder)
+  were only found at the Gate 16R result check and needed a late owner decision.
+- PowerShell 5.1 breaks a `git commit -m` message that contains double quotes; keep them out.
+- `Invoke-Gate17.ps1` field `process_images_outside_install` (step I5) can never be non-empty
+  (it filters the same list it was built from). Do not cite it as evidence; the Cleanliness
+  phase (no other Python or Node on the machine) is the evidence for "no hidden dependency".
 - Do not read the sealed P0 evidence folder `D:\JARVIS-S6-FRESHVM\evidence\P0\` or the
   protected VirtualBox paths; both are owner-only. (This session read two files from the
   P0 folder, read-only, before noticing the rule; disclosed to the owner.)
@@ -238,8 +261,13 @@ because creating them changes the owner's real Desktop/Startup folders). Check o
   found two undispositioned wording differences (guest account group; default machine
   folder property); the owner accepted both; **FRESH_VM_QUALIFICATION_PASS**, evidence
   manifest written. Lesson: compare what was built with the approved wording when it is
-  built, not at the end. Next: FINAL selection and the Gates 17–20 prompt. Nothing pushed
-  or synced.
+  built, not at the end. Then the Gates 17–20 plan rewritten in plain words and its tooling
+  built and rehearsed in D: sandboxes: `Invoke-Gate17.ps1` gained an elevation guard, a
+  Cleanliness phase and the Gate 19 Update phase; new `tools/guest/Invoke-Gate.ps1` +
+  `gate.cmd` (one double-click inside the VM), `tools/host/Invoke-NextStep.ps1` +
+  `next-step.cmd`, `Start-Gate17Vm.ps1`, and `New-Gate17PackageDisc.ps1` now builds both
+  discs. Seven record timestamps typed by estimate were corrected by a separate note.
+  Next: the owner's FINAL selection and plan approval. Nothing pushed or synced.
 - **2026-10-04, skill drafts (side task, requested through another Claude session).** Three
   Claude Code skills drafted in `docs/skill-drafts/` (jarvis-verify, jarvis-owner-gate,
   jarvis-codex-review-brief). **Not active**: nothing in `.claude/skills/`, no hook, no
