@@ -1,0 +1,33 @@
+{
+    "schema":  "stage6-gate17-package-disc-v1",
+    "utc":  "2026-10-04T03:44:40.8084478Z",
+    "performed_by":  "THEGRIZZLYBEAR\\jonny",
+    "role":  "Final",
+    "release_id":  "1.0.11-60d406fb6398",
+    "commit":  "60d406fb6398b95345aa50bafead369dc0f41d25",
+    "zip":  "JARVIS-1.0.11-60d406fb6398.zip",
+    "zip_bytes":  525622280,
+    "zip_sha256":  "1923651176dd3095e84b0628a5c7a90608b6db57fe06986670e0ea8246225a58",
+    "guest_files":  [
+                        {
+                            "name":  "Invoke-Gate17.ps1",
+                            "sha256":  "fd2c34e288aa426b69a1fbb7aca3105e0656eea7a13d869165c5e74a3341b2a9"
+                        },
+                        {
+                            "name":  "Invoke-Gate.ps1",
+                            "sha256":  "93e0f4dc4ebf24f4d58940f1d273fc1dcb026a0e8b1a7fe496975abaa5ca6c87"
+                        },
+                        {
+                            "name":  "gate.cmd",
+                            "sha256":  "8c93463aac6e289da928959d81858b62e6c8850776a85575d149a047c82f99f9"
+                        }
+                    ],
+    "iso":  "D:\\JARVIS-release-work\\stage6-media\\JARVIS-PACKAGE-1.0.11-60d406fb6398.iso",
+    "iso_sha256":  "02e6a79176b3738511144ad1e5b598690f43cfba8d401b2c66d6b00eebc82af3",
+    "iso_bytes":  526843904,
+    "payload_files":  6,
+    "payload_manifest_sha256":  "5c51d74469aa3a0e0607a11dd2d2901f83a1b10200fd74e56bc8b51a97adb4c6",
+    "readback":  "every payload file read back from the mounted ISO with its recorded SHA-256",
+    "copy":  "D:\\JARVIS-S6-FRESHVM\\media\\JARVIS-PACKAGE-1.0.11-60d406fb6398.iso",
+    "copy_sha256":  "02e6a79176b3738511144ad1e5b598690f43cfba8d401b2c66d6b00eebc82af3"
+}
