@@ -178,7 +178,17 @@ Owner only (Claude must stop and ask, never infer or pre-stage tokens):
    Startup shortcut starts JARVIS at sign-in, and the prepared steps lacked "quit JARVIS first".
    Nothing was changed in the VM by Gate 18. **Owner decision required to repeat:** quit JARVIS in
    the VM (tray > Quit JARVIS completely), Claude moves the failed run folder unchanged to
-   `guest-egress-01\incident-03-run1\`, owner double-clicks `gate18` again (rerun). VM is running. Repairing the everyday JARVIS is a
+   `guest-egress-01\incident-03-run1\`, owner double-clicks `gate18` again (rerun). Owner approved
+   ("approve", `owner-decision-03.json`); rerun `gate18-20261004-072308`: K0–K3 PASS, then
+   **incident 04 (`incident-04-k4-hang-read-only-disc.json`): K4 hangs.** FINAL's
+   `recovery.verify()` makes its temporary folder beside the archive; on the read-only disc
+   Python 3.12's `mkdtemp` retries forever on Windows (shown on the host with FINAL's Python).
+   Tooling gap (restore from a writable copy) and a FINAL limitation to list at Gate 20 (backup on
+   read-only media hangs; fix after cutover). Nothing imported. **Owner decision required for
+   rerun 2:** close the stuck window, `xcopy E:\ C:\g18\`, run the unchanged script from `C:\g18`
+   with `-RestoreHome C:\g18home`; Claude first moves the stuck run folder to
+   `guest-egress-01\incident-04-run2\`. VM is running, JARVIS quit, leftover install at
+   `%LOCALAPPDATA%\JARVIS-restore`. Repairing the everyday JARVIS is a
    separate owner decision.
    The plan on the token was:
    (1) writes `../governance/STAGE6-RESUME-RECOVERY-RECORD.json`; (2) copies
