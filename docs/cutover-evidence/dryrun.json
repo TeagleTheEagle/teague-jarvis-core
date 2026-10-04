@@ -1,0 +1,39 @@
+{
+    "schema":  "jarvis-cutover-dryrun-v1",
+    "utc":  "2026-10-04T08:29:53.9710779Z",
+    "backup_copy":  "D:\\JARVIS-cutover\\backup\\bcc2753f736f43ba946ec3f342b35c3a.zip",
+    "backup_copy_sha256":  "b81be404e1677c48cffc7d26a8d77998b54fa2fa588bd4eeb5614e841ce0bfe3",
+    "source_sha256_before":  "b81be404e1677c48cffc7d26a8d77998b54fa2fa588bd4eeb5614e841ce0bfe3",
+    "source_sha256_after":  "b81be404e1677c48cffc7d26a8d77998b54fa2fa588bd4eeb5614e841ce0bfe3",
+    "result":  "dry_run_only",
+    "backup_id":  "bcc2753f736f43ba946ec3f342b35c3a",
+    "files_to_import":  176,
+    "database_counts":  {
+                            "items":  6,
+                            "messages":  1133,
+                            "reminders":  0,
+                            "settings":  12,
+                            "audit":  689,
+                            "feedback":  8,
+                            "documents":  6,
+                            "task_meta":  0,
+                            "research":  26,
+                            "workspaces":  2,
+                            "workspace_links":  3,
+                            "turn_evidence":  13,
+                            "inspection_records":  1,
+                            "inspection_findings":  9,
+                            "inspection_finding_sources":  9,
+                            "inspection_finding_events":  9,
+                            "project_budget_limits":  0,
+                            "project_budget_reservations":  0
+                        },
+    "would_move_aside":  [
+
+                         ],
+    "skipped_protected":  0,
+    "personal_config":  {
+                            "personality.txt":  "same",
+                            "desktop/preferences.json":  "differs"
+                        }
+}

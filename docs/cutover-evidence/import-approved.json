@@ -1,0 +1,9 @@
+{
+  "schema": "jarvis-cutover-import-approved-v1",
+  "recorded_utc": "2026-10-04T08:30:33Z",
+  "owner_text": "ok, import",
+  "source": "direct human message in the Claude Code chat, 2026-10-04 (local), in reply to Claude's report of the dry-run list",
+  "list_reported": "dryrun.json: backup bcc2753f736f43ba946ec3f342b35c3a, 176 data files, messages 1133, items 6, documents 6, research 26, settings 12, audit 689, feedback 8, workspaces 2; nothing to move aside; preferences differ and are imported; personality same; equal to Gate 18 K4",
+  "authorizes": "cutover-step step 4 (import with personality and preferences) once",
+  "recorded_by": "Claude Code (Claude Fable 5.1)"
+}

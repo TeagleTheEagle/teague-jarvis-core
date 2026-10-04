@@ -1,0 +1,26 @@
+{
+    "schema":  "jarvis-cutover-install-v1",
+    "utc":  "2026-10-04T08:28:56.7763554Z",
+    "unpack_seconds":  15.5,
+    "install_seconds":  42.3,
+    "installer":  {
+                      "status":  "installed",
+                      "release":  "1.0.11-60d406fb6398",
+                      "previous":  null,
+                      "home":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS",
+                      "seconds":  {
+                                      "verify_package":  7.358,
+                                      "copy":  25.645,
+                                      "verify_copy":  7.862,
+                                      "switch":  0.12
+                                  }
+                  },
+    "verify":  "verified",
+    "install_home":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS",
+    "shortcuts_requested":  true,
+    "new_shortcuts":  {
+                          "desktop":  true,
+                          "startup":  true
+                      },
+    "old_shortcuts_untouched":  true
+}
