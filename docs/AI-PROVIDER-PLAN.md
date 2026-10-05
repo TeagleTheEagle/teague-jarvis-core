@@ -66,6 +66,13 @@ month** in Alibaba Cloud billing; raise it once you know your real use.
   Cursor, Claude Code, and Windsurf). Using the API Key for production automated services, batch scripts, scheduled
   background tasks, or other non-interactive scenarios is not allowed." It also needs its own `sk-sp-` key and
   address. JARVIS uses ordinary pay-as-you-go with the existing key.
+- **Other ways to pay (checked 2026-10-05, owner asked for a subscription):** none is worth it for JARVIS. The AI
+  General-purpose Savings Plan (10-32% off, usable for API calls) starts at a USD 150 monthly commitment for 3 to 24
+  months, above JARVIS's expected cost; the smaller "Other Model Savings Plans" (USD 10, 50, 100, ...; 3-6 months)
+  give no discount (standard prices, prepaid). Source: Alibaba Cloud help, "savings-plan-and-resource-package".
+  Cheaper model for a later side-by-side test, only on the owner's word (the owner does not want JARVIS made less):
+  Qwen3.7-Plus, $0.40 in / $1.60 out per million up to 256K tokens (limited-time 20% off; not in the key's current
+  permission list).
 
 ## Your steps (Alibaba Cloud console, your own account)
 
