@@ -2,7 +2,10 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const path=require('node:path'),fs=require('node:fs'),os=require('node:os');
 const {startBackend}=require('../backend.cjs');
-test('one authenticated job captures the actual 13 panels with no external submission', {timeout:120000},async()=>{
+// The job takes about 9 seconds a panel in an installed release (measured in the release regressions: 98 s for
+// 1.0.12, 89 s for 1.0.14, 113 s for 1.0.15 with its heavier pages; about 60 s in the development tree). The
+// wait was 100 s, which the 1.0.15 regression overran although the job ended correctly; it is 240 s now.
+test('one authenticated job captures the actual 13 panels with no external submission', {timeout:280000},async()=>{
  const dataDir=fs.mkdtempSync(path.join(os.tmpdir(),'jarvis-inspection-job-'));
  const backend=startBackend(path.resolve(__dirname,'../..'),{dataDir});
  try{
@@ -13,7 +16,7 @@ test('one authenticated job captures the actual 13 panels with no external submi
   const started=await post({operation:'start',request:{panel:'all',scope:'viewport'},transmit:false});
   assert.equal(started.panels.length,13);
   let result;
-  const deadline=Date.now()+100000;
+  const deadline=Date.now()+240000;
   do{await new Promise(r=>setTimeout(r,300));result=await post({operation:'status',job_id:started.job_id});}while(result.status==='running'&&Date.now()<deadline);
   assert.equal(result.status,'partial','Local-only capture must not claim visual analysis');
   assert.equal(result.results.length,13);
