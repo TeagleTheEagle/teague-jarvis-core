@@ -48,3 +48,34 @@ Out of scope for 1.0.15: phone and glasses clients, network and graphics telemet
   errors, no horizontal overflow, the core canvas centred within 1 px, navigation to Communications and back keeps
   one canvas. Screenshots: `command-dashboard-preview-1920x1080.png`, `command-dashboard-preview-1280x900.png`.
   369 Python tests and the 17 interface scripts pass.
+- After the owner's "get rid of this" (f7776df): the centre "JARVIS / CORE ONLINE" title is gone; the live mode
+  shows under the activity bar.
+
+## Independent review of 39901c5 and 5d0c96d: findings, NOT YET APPLIED
+
+Recorded 2026-10-05 from the session handover summary (the reviewer's own text was not carried over, so these are
+the summarised findings). Waiting for the owner's choice: apply these, start the new look, or both.
+
+1. Stale data shows as ready when the Core is unreachable: show unknown, and "CONNECTING" before the first state.
+2. "READY" overstates: the Voice row is always green, the ring can only read 5/6 or 6/6, and the note is hidden at
+   960 px high or less. Check the voice profile against capabilities; say "CONFIGURED" or keep the note visible.
+3. The expired simulated wearable shows "Offline": check simulated first.
+4. The waveform compares `performance.now()` with `frameAt`, which is set from `Date.now()`, so it keeps drawing
+   when the microphone is off.
+5. "Last reply" includes failed runs: record the outcome in timings and use completed runs only.
+6. `inspection_runtime` STATIC lacks the dashboard files and metrics: add them, plus a test that keeps STATIC in
+   step with the tags in `index.html`.
+7. `pro.css` limits the navigation height to 45 px at 1150 px wide or less, clipping the tiles: set `.cd-tiles`
+   `height:auto`.
+8. The live region re-announces every 1.5 s: put `aria-live` on the mode only and update it only on change.
+9. Conversations are capped at 100: show "100+". Deleted linked tasks are counted: count only tasks that exist.
+10. Push-to-talk still shows wake-word text; `teague.css` `padding:0!important` overrides the dashboard padding.
+
+## New look shown by the owner (2026-10-05): seen, not started
+
+The owner showed four images ("I want it to have this look"; "just look and tell me youve seen it"). The images
+are not saved in the repo. As described in the handover: a dashboard version 2 (Earth horizon, greeting, ask bar,
+suggestion chips, recent activity, performance rings, world map, missions, schedule, quick tools); a Teague
+Industries brand scene with the chrome T; a JARVIS logo (chrome T in a ring, "AI / Assistant", "Observe |
+Understand | Assist | Innovate"); a "One core, many capabilities" globe. The real-data rule above still applies:
+weather, the world map and emails need real sources or are left out.
