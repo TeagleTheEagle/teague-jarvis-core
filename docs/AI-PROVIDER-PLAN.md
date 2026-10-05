@@ -84,7 +84,9 @@ month** in Alibaba Cloud billing; raise it once you know your real use.
   prepaid credits, separate from a Claude Pro/Max subscription. Prices per million tokens in / out (cache reads):
   Claude Sonnet 5.5 $2 / $10 ($0.20), Claude Opus 5.5 $4 / $20 ($0.20), Claude Haiku 4.5 $1 / $5. All read images and
   use tools. JARVIS has no Claude provider: it needs a new provider in a release (Anthropic Messages API, explicit
-  `cache_control` for caching). Also reachable through OpenRouter. Not started; the owner decides.
+  `cache_control` for caching). Also reachable through OpenRouter. Not started; the owner decides. The owner created a
+  key (scope: default workspace, expires 2027-10-05) and placed it in the key file as `ANTHROPIC_API_KEY` ("KEY
+  SAVED", 2026-10-05); no credits yet (Evaluation access plan). Claude never reads it.
 - **Voice (owner, 2026-10-05): "i want to use qwen now not fish auido".** Already built, no release needed: the key
   file needs `QWEN_TTS_VOICE=<cloned voice ID>` (and `QWEN_TTS_MODEL` only if the voice was enrolled for a model other
   than `qwen3-tts-vc-2026-01-22`), then Settings > VOICE PREVIEW > "Qwen — cloned JARVIS voice" > USE THIS VOICE. A
