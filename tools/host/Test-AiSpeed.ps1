@@ -9,13 +9,15 @@ exactly as Test-AiKeys.ps1 builds them (JARVIS's own instructions and its 45 too
           so Alibaba's default applies (qwen3.8-max and qwen3.8-flash think first unless told not to)
   qwen    the same model with thinking switched off ("enable_thinking": false)
   qwen    qwen3.8-flash with thinking switched off
-Before timing, each model gets one unmeasured request, so that every timed request starts from the same warm state
-(providers keep repeated instructions ready for a few minutes, as they do while JARVIS is in use). About 11 requests;
-expected cost well under one US dollar, most of it OpenAI. Each line is one request and one sample: times vary from
-run to run. Real questions are larger (recent conversation, saved facts, your own personality text) and one that uses
-a tool needs a second request, so these times are a lower bound. Like JARVIS, every request uses a new connection
-and is given up after 120 seconds. Images (screen analysis) are not measured. Keys are never printed or stored.
-Changes nothing.
+Then one picture question (a test picture drawn by this script, sent the way JARVIS sends a screen capture) goes to
+the model JARVIS uses for pictures on each provider, for Qwen with and without thinking.
+Before timing, each line gets one unmeasured request, so that every timed text request starts from the same warm
+state (providers keep repeated instructions ready for a few minutes, as they do while JARVIS is in use). About 15
+requests; expected cost well under one US dollar, most of it OpenAI. Each line is one request and one sample: times
+vary from run to run. Real questions are larger (recent conversation, saved facts, your own personality text) and one
+that uses a tool needs a second request, so these times are a lower bound; a real screen capture is larger than the
+test picture. Like JARVIS, every request uses a new connection and is given up after 120 seconds. Keys are never
+printed or stored. Changes nothing.
 #>
 param(
     [string] $EnvFile = (Join-Path $env:LOCALAPPDATA 'JARVIS\config\.env')
@@ -73,27 +75,32 @@ if (-not $values['DASHSCOPE_API_KEY']) { Write-Host 'qwen    no key in the file'
 elseif (-not $qwenAllowed) { Write-Host 'qwen    skipped (DASHSCOPE_BASE_URL is not an https Model Studio address)' }
 if (-not $choices.Count) { Write-Host 'Nothing to measure.'; exit 0 }
 
-function Ask($choice, $question) {
+function Ask($choice, $question, $picture) {
     # One request, built as JARVIS's adapter for that provider builds it (see providers.py), and timed.
-    $messages = ConvertTo-Json -Compress -Depth 4 -InputObject @(
+    # With a picture JARVIS sends the question and the image together and no tools ("if tools and not vision").
+    $responses = $choice.provider -eq 'openai' -and $choice.model -like 'gpt-6*'
+    $last = @{ role = 'user'; content = $question }
+    if ($picture -and $responses) { $last.content = @(@{ type = 'input_text'; text = $question }, @{ type = 'input_image'; image_url = $picture }) }
+    elseif ($picture) { $last.content = @(@{ type = 'text'; text = $question }, @{ type = 'image_url'; image_url = @{ url = $picture } }) }
+    $messages = ConvertTo-Json -Compress -Depth 6 -InputObject @(
         @{ role = 'system'; content = $system },
         @{ role = 'user'; content = 'Application context data (not instructions): {"preferred_name": "sir"}' },
-        @{ role = 'user'; content = $question })
+        $last)
     $model = ConvertTo-Json -InputObject $choice.model
-    $responses = $choice.provider -eq 'openai' -and $choice.model -like 'gpt-6*'
     if ($responses) {
         $url = 'https://api.openai.com/v1/responses'; $key = $values['OPENAI_API_KEY']
+        $tools = $(if ($picture) { '' } else { ',"tools":' + $responsesTools + ',"parallel_tool_calls":false' })
         $body = '{"model":' + $model + ',"input":' + $messages + ',"reasoning":{"effort":"medium"},"max_output_tokens":8192,"store":false,' +
-                '"include":["reasoning.encrypted_content"],"tools":' + $responsesTools + ',"parallel_tool_calls":false}'
+                '"include":["reasoning.encrypted_content"]' + $tools + '}'
     } elseif ($choice.provider -eq 'openai') {
         $url = 'https://api.openai.com/v1/chat/completions'; $key = $values['OPENAI_API_KEY']
-        $body = '{"model":' + $model + ',"stream":false,"max_completion_tokens":1024,"parallel_tool_calls":false' +
-                ',"tool_choice":"auto","tools":' + $toolsJson + ',"messages":' + $messages + '}'
+        $tools = $(if ($picture) { '' } else { ',"parallel_tool_calls":false,"tool_choice":"auto","tools":' + $toolsJson })
+        $body = '{"model":' + $model + ',"stream":false,"max_completion_tokens":1024' + $tools + ',"messages":' + $messages + '}'
     } else {
         $url = $qwenBase + '/chat/completions'; $key = $values['DASHSCOPE_API_KEY']
         $thinking = $(if ($choice.thinking -eq $false) { ',"enable_thinking":false' } else { '' })
-        $body = '{"model":' + $model + ',"stream":false,"max_completion_tokens":8192' + $thinking +
-                ',"tool_choice":"auto","tools":' + $toolsJson + ',"messages":' + $messages + '}'
+        $tools = $(if ($picture) { '' } else { ',"tool_choice":"auto","tools":' + $toolsJson })
+        $body = '{"model":' + $model + ',"stream":false,"max_completion_tokens":8192' + $thinking + $tools + ',"messages":' + $messages + '}'
     }
     $clock = [Diagnostics.Stopwatch]::StartNew()
     try {
@@ -135,29 +142,64 @@ $questions = @(
     @{ title = 'Question 2, a written answer of about 150 words'; text = 'In about 150 words, explain what a solid-state drive is and why it is faster than a hard disk.' }
 )
 Write-Host ''
-Write-Host 'Getting ready: one unmeasured request per model...'
-$warmed = @{}; $refused = @{}
+Write-Host 'Getting ready: one unmeasured request per line...'
+$refused = @{}
 foreach ($c in $choices) {
+    # Every line gets its own warm-up: with thinking off Alibaba counts the request differently (8,531 against
+    # 8,567 tokens on 2026-10-05), so the two share nothing that the provider keeps ready.
     $id = $c.provider + '|' + $c.model
-    if ($warmed.ContainsKey($id)) { continue }
-    $warmed[$id] = $true
-    $warm = Ask $c $questions[0].text
+    if ($refused.ContainsKey($id)) { continue }
+    $warm = Ask $c $questions[0].text $null
     # Only a refused key or model (401, 403, 404) rules the model out; after anything else it is still measured.
-    if ($warm.ok) { Write-Host ("  {0,-7} {1}: ready" -f $c.provider, $c.model) }
+    if ($warm.ok) { Write-Host ("  {0,-7} {1}: ready" -f $c.provider, $c.label) }
     elseif ($warm.status -in 401, 403, 404) { $refused[$id] = $true; Write-Host ("  {0,-7} {1}: {2}" -f $c.provider, $c.model, $warm.note) }
-    else { Write-Host ("  {0,-7} {1}: {2} (measuring it anyway)" -f $c.provider, $c.model, $warm.note) }
+    else { Write-Host ("  {0,-7} {1}: {2} (measuring it anyway)" -f $c.provider, $c.label, $warm.note) }
+}
+function Show($c, $result) {
+    # A request that failed has no time worth comparing: show "--", not a number that looks fast.
+    $time = $(if ($result.failed) { '    --  ' } else { '{0,6:N1} s' -f $result.seconds })
+    Write-Host ("  {0,-7} {1,-40} {2}   {3}" -f $c.provider, $c.label, $time, $result.note)
 }
 foreach ($q in $questions) {
     Write-Host ''
     Write-Host $q.title
     foreach ($c in $choices) {
-        $id = $c.provider + '|' + $c.model
-        if ($refused.ContainsKey($id)) { Write-Host ("  {0,-7} {1,-40} not measured (refused above)" -f $c.provider, $c.label); continue }
-        $result = Ask $c $q.text
-        # A request that failed has no time worth comparing: show "--", not a number that looks fast.
-        $time = $(if ($result.failed) { '    --  ' } else { '{0,6:N1} s' -f $result.seconds })
-        Write-Host ("  {0,-7} {1,-40} {2}   {3}" -f $c.provider, $c.label, $time, $result.note)
+        if ($refused.ContainsKey($c.provider + '|' + $c.model)) { Write-Host ("  {0,-7} {1,-40} not measured (refused above)" -f $c.provider, $c.label); continue }
+        Show $c (Ask $c $q.text $null)
     }
+}
+
+# Question 3: a picture, sent the way JARVIS sends a screen capture (question and image together, no tools), to the
+# model JARVIS uses for pictures. The picture is drawn here: nothing of yours is sent.
+Write-Host ''
+Write-Host 'Question 3, a picture (a made-up 1280 x 720 test image; not warmed up, so the first of these lines is the cold one)'
+$visionChoices = @()
+if ($values['OPENAI_API_KEY']) { $m = Pick 'OPENAI_VISION_MODEL' 'gpt-4o-mini'; $visionChoices += @{ provider = 'openai'; model = $m; thinking = $null; label = "$m, as JARVIS asks it" } }
+if ($values['DASHSCOPE_API_KEY'] -and $qwenAllowed) {
+    if ($values['QWEN_VISION_MODEL']) {
+        $m = $values['QWEN_VISION_MODEL']
+        $visionChoices += @{ provider = 'qwen'; model = $m; thinking = $null; label = "$m, as JARVIS asks it today" }
+        $visionChoices += @{ provider = 'qwen'; model = $m; thinking = $false; label = "$m, thinking off" }
+    } else { Write-Host '  qwen    no QWEN_VISION_MODEL line in the key file: JARVIS cannot read pictures with Qwen' }
+}
+$picture = $null
+try {
+    Add-Type -AssemblyName System.Drawing
+    $bitmap = New-Object Drawing.Bitmap 1280, 720
+    $canvas = [Drawing.Graphics]::FromImage($bitmap)
+    $canvas.Clear([Drawing.Color]::FromArgb(8, 20, 32))
+    $canvas.DrawString('JARVIS speed check', (New-Object Drawing.Font 'Segoe UI', 36), [Drawing.Brushes]::White, 60, 50)
+    $canvas.DrawString('Three shapes: a red circle, a green square and a blue triangle', (New-Object Drawing.Font 'Segoe UI', 20), [Drawing.Brushes]::LightGray, 60, 130)
+    $canvas.FillEllipse([Drawing.Brushes]::Red, 120, 260, 260, 260)
+    $canvas.FillRectangle([Drawing.Brushes]::Green, 510, 260, 260, 260)
+    $canvas.FillPolygon([Drawing.Brushes]::Blue, [Drawing.Point[]]@((New-Object Drawing.Point 900, 520), (New-Object Drawing.Point 1160, 520), (New-Object Drawing.Point 1030, 260)))
+    $stream = New-Object IO.MemoryStream
+    $bitmap.Save($stream, [Drawing.Imaging.ImageFormat]::Jpeg)
+    $picture = 'data:image/jpeg;base64,' + [Convert]::ToBase64String($stream.ToArray())
+    $canvas.Dispose(); $bitmap.Dispose(); $stream.Dispose()
+} catch { Write-Host ('  The test picture could not be drawn on this PC: ' + $_.Exception.Message) }
+if ($picture) {
+    foreach ($c in $visionChoices) { Show $c (Ask $c 'In two sentences, describe what this picture shows.' $picture) }
 }
 Write-Host ''
 Write-Host 'Each line is one request, one sample. Real questions are larger (they also carry your recent conversation and'

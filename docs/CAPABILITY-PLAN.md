@@ -60,11 +60,14 @@ What is true today (code and Alibaba's pages, read 2026-10-05):
   answer), and a question that uses a tool is two requests.
 - Prices per million tokens, Singapore: `qwen3.8-max` 2.00 in / 6.00 out; `qwen3.8-flash` 0.15 in / 0.47 out
   (about a thirteenth), also with tools, pictures and a 1 million token window.
-- Not known yet: how many seconds each choice takes on this PC and account. **Measured, not guessed:**
-  `tools/host/Test-AiSpeed.ps1` (owner-run like Test-AiKeys, keys never shown) sends the same full JARVIS question
-  to OpenAI, to Qwen as JARVIS asks today, to Qwen with thinking off, and to `qwen3.8-flash`, and prints seconds.
+- **Measured by the owner on 2026-10-05** with `tools/host/Test-AiSpeed.ps1` (owner-run like Test-AiKeys, keys never
+  shown; the same full JARVIS question to each choice; one sample each). A 150-word answer: `gpt-6-astra` 7.2 s;
+  `qwen3.8-max` as JARVIS asks it today 11.9 s, of whose 485 output tokens 297 were thinking; `qwen3.8-max` with
+  thinking off 5.8 s; `qwen3.8-flash` with thinking off 5.8 s. A question that needs a tool: 2.3, 3.1, 3.4 (a cold
+  request) and 2.0 s. So the wait is mostly the default thinking, and `qwen3.8-flash` is cheaper but not faster.
 
-Proposed, to be settled with those numbers (**Decision D3**):
+Proposed (**Decision D3**). Built in the repo for 1.0.15 on 2026-10-05 as Settings > Answer speed, with Auto as the
+default; the owner may change the default or the wording:
 
 | Job | Proposed |
 |---|---|
@@ -75,9 +78,12 @@ Proposed, to be settled with those numbers (**Decision D3**):
 | Listening | stays on this PC (offline Whisper); Qwen speech recognition as a cloud backup later |
 | When Qwen refuses or is down (as on 2026-10-05) | OpenAI answers that question, and the screen says so |
 
-How JARVIS chooses: one visible setting, Response: Fast / Auto / Deep, and "think hard about ..." forces Deep for
-one question. Auto follows written, tested rules; it becomes the default only when the stage 1 question set shows
-it loses nothing against Deep on everyday questions ("let's not minimise or make jarvis less"). Not proposed:
+How JARVIS chooses, as built: one visible setting, Answer speed: Auto / Deep / Economy. Auto keeps the main model
+and answers without thinking first; "think hard about ..." (or "take your time", "think it through") gets a
+thinking answer for that one question in every mode. Deep is exactly what 1.0.14 does. Economy uses
+`qwen3.8-flash` for everyday answers. Auto is the default on the strength of the measurement above; whether it
+loses anything against Deep on everyday questions is what the stage 1 question set will show ("let's not minimise
+or make jarvis less"), and Deep is one click away until then. Not proposed:
 asking both companies at once (double cost, no better answer) or OpenAI for everyday questions (about ten times
 Qwen's price). A later step for speed: showing a reply while it is being written; it needs the checks that guard
 JARVIS's claims to work on partial text, so it is not part of 1.0.15.
