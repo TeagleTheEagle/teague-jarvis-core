@@ -1,0 +1,7 @@
+{
+    "status":  "PASS",
+    "verify":  "verified",
+    "desktop_shortcut":  true,
+    "startup_shortcut":  true,
+    "shortcuts_expected":  true
+}

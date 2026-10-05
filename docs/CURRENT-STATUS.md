@@ -23,10 +23,19 @@ Last updated: 2026-10-05 (about 02:00 local) (STAGE_6_COMPLETE, SWITCH-OVER COMP
   each hash equal to the approval) with `stage7-authorized.json` (schema v2, expected current snapshot STAGE7-PASS) and
   created `D:\JARVIS-stage7\1.0.14-e03872680e1d\evidence` (approval copy, `prep-tools-hashes.txt`) and the empty guest
   folder `guest-egress-01\stage7-1.0.14-e03872680e1d`; launcher dry run: jonny -> build the disc, jarvis-s6-val -> "next
-  step is in jonny". **Next, owner:** step 1 (jonny: double-click `stage7-step.cmd` in that folder, "disc built"), then
-  the VM pass per the plan (before 2026-11-06, when the VM's Windows Update pause ends). **Then Claude:** check the disc
-  record (guest file hashes equal the approval, package equals 1.0.14), later every record of the pass, and write the
-  result. Updating the everyday JARVIS is a separate owner decision afterwards (steps not designed yet).
+  step is in jonny". **Stage 7 check of 1.0.14: `STAGE_7_COMPLETE` (2026-10-05T03:35Z; 27 of 27 checks)** — disc built by
+  the owner and checked (iso 92b58b9a…); VM pass Install, AfterRestart, Uninstall, Update, Interrupt all PASS; timings
+  inside the Gate 20 bounds (max 352 s, stops about 3 s); snapshot STAGE7-PASS-1.0.14-e03872680e1d `0b7c12fa…`
+  (current, every older snapshot kept). Two script defects of the version 2 guest driver, each recorded with the
+  owner's way forward: incident 01 (Z: used before it is mounted; owner decision A: `net use` by hand before each
+  start) and incident 02 (uptime restart check refused a real restart made 77 minutes earlier; restarted again and
+  started at once). The VM was also suspended overnight by the host's sleep between Install and the restart step (no
+  effect). Result `D:\JARVIS-stage7\1.0.14-e03872680e1d\evidence\stage7-evaluation.json`, manifests 93a71864… (PC) and
+  df9e417d… (guest), repo copy `docs/stage7-1.0.14-evidence/`. Fix both defects in a version 3 copy before the next
+  release check. **Next:** the update of the everyday JARVIS to 1.0.14, plan `docs/UPDATE-EVERYDAY-1.0.14.md` with
+  launcher `tools/host/Invoke-EverydayUpdate.ps1` + `update-step.cmd` (check, backup with its own backup code, update,
+  rollback only on the owner's word); sandbox rehearsal in progress; then the owner's approval. Owner: will use the
+  everyday JARVIS again once it is on 1.0.14.
 - **Release 1.0.12 (2026-10-04, on the owner's "next move" / "now do the next move"; superseded, see above).** The fix list
   `docs/POST-CUTOVER-FIXES.md` items 1-6 fixed (status table at the end of that file; item 7 partly, 8 open,
   9 nothing to do). Each fix was designed and challenged by an independent check first, and the finished diff was

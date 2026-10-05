@@ -1,0 +1,35 @@
+{
+  "schema": "jarvis-stage7-evaluation-v2",
+  "check": "1.0.14-e03872680e1d",
+  "verdict": "STAGE_7_COMPLETE",
+  "evaluated_utc": "2026-10-05T03:35:42Z",
+  "builds": { "final": "1.0.14-e03872680e1d", "final_zip_sha256": "ceb7d9e1922cebbf650753c4028473c5962c558ed70ec9f4be20f9fdc740d8d3", "previous": "1.0.11-60d406fb6398" },
+  "approval": { "owner_text": "I approve the Stage 7 check of 1.0.14", "record": "C:\\Users\\jonny\\JARVIS-claude-workspace\\governance\\STAGE7-1.0.14-APPROVAL-RECORD.json", "plan": "docs/STAGE7-CHECK-1.0.14.md", "plan_sha256": "913988c1123e1a296a1b89672aadabf3977b8abfb680000aaba5cc60e4fa91a8" },
+  "disc": { "iso": "D:\\JARVIS-S6-FRESHVM\\media\\JARVIS-STAGE7-1.0.14-e03872680e1d.iso", "sha256": "92b58b9a704856bb07302729a74bd903e4a1b54a17d47b9f55ce44a35752f6d7", "guest_files_equal_approval": true, "package_equals_release": true, "record": "stage7-disc-1.0.14-e03872680e1d.json" },
+  "vm": {
+    "start": "vm\\stage7-start-20261004-154116.json: restored FRESH-PREREQ from STAGE7-PASS (currentStateModified false), every snapshot kept, both discs hash-checked; vm\\start-20261004-154116.json: LocalhostReachable 0 from VBox.log",
+    "final_snapshot": { "name": "STAGE7-PASS-1.0.14-e03872680e1d", "uuid": "0b7c12fa-5067-4f3d-b24f-ee43b6c42257", "record": "vm\\snapshot-STAGE7-PASS-1.0.14-e03872680e1d-20261005-033323.json", "taken_after_clean_shutdown": true, "vbox_sha256_after": "7b53698c30a939e46c16e7438d6eda506ca913829c4268fb6db01308c3fd0ae6", "snapshots_kept": ["FRESH-CLEAN-BASELINE", "FRESH-PREREQ", "GATE17-19-PASS", "GATE18-PASS", "STAGE7-PASS"] },
+    "guest": "jarvis-s6-guest, not elevated in every phase (E0), Administrators member recorded, Windows build 26300.9457"
+  },
+  "phases": [
+    { "phase": "Install", "run": "stage7-20261004-155611", "overall": "PASS", "checks": 9, "notes": "install 352.2 s (copy 180.4 s, verify 129.3 s); first launch from the Desktop shortcut, Core ready in 98.1 s, identity matches the package, memory saved, database in the install home, 8 processes, none outside the install; second launch joins; offline speech recognition; stop and start" },
+    { "phase": "AfterRestart", "run": "stage7-20261005-023855", "overall": "PASS", "checks": 2, "notes": "JARVIS started by itself at sign-in (login launch) after a real Windows restart; 1.0.14; memory kept" },
+    { "phase": "Uninstall", "run": "stage7-20261005-023903", "overall": "PASS", "checks": 4, "notes": "10,645 program files removed, none left, 0 processes, data and config kept, Desktop and Startup shortcuts removed; reinstall PASS; final stop PASS" },
+    { "phase": "Update", "run": "stage7-20261005-024906", "overall": "PASS", "checks": 7, "notes": "1.0.11 installed over the kept data; update while running 257.4 s (stop 3.2 s); rollback 98.2 s; update again 159.0 s (verify_installed 85.3 s, stop 3.2 s); both memories, 8 processes and nothing left from the other release each time" },
+    { "phase": "Interrupt", "run": "stage7-20261005-031945", "overall": "PASS", "checks": 5, "notes": "installer killed after 78.9 s with 3,344 of 10,645 files copied; 1.0.11 still current, verified, running with both memories, no 1.0.14 folder in place; the update run again finished in 157.5 s (stop 2.8 s), verified, no incoming folder left" }
+  ],
+  "checks_total": 27,
+  "checks_passed": 27,
+  "timing_bounds": { "source": "Gate 20 owner decision: install/update/rollback <= 600 s, stopping JARVIS <= 120 s", "max_install_update_rollback_seconds": 352.2, "max_stop_seconds": 3.2, "within": true, "note": "stop times are no longer comparable with 1.0.11's 95 s: re-verifying an installed release is timed separately (verify_installed)" },
+  "deviations": [
+    { "id": "incident-01-z-drive.json", "what": "the version 2 guest driver built its evidence path with Join-Path on Z: before mounting Z:; the first start of stage7 ended at once, nothing ran", "disposition": "owner decision 01 (A): Z: connected by hand (net use, non-persistent) before each start of stage7 after a sign-in; the disc and scripts unchanged" },
+    { "id": "incident-02-restart-check.json", "what": "the uptime-based restart check refused although Windows had been restarted (VBox.log: guest-initiated reset about 01:15:30Z), because stage7 was started 77 minutes after the restart; nothing ran", "disposition": "Windows restarted again in the VM (VBox.log: guest-initiated reset about 02:39:37Z) and stage7 started within minutes, as the driver instructs; AfterRestart then passed" },
+    { "id": "host-sleep", "what": "the VM was suspended from about 2026-10-04T16:23Z to 2026-10-05T01:01Z (VBox.log), after the Install phase had passed and before the restart step", "disposition": "no effect on any check: the Install records were complete, the next step was a full restart, the guest clock was resynchronised by Guest Additions" },
+    { "id": "host-net-use", "what": "the owner once typed the net use command in a Command Prompt of the host's jarvis-s6-val account instead of inside the VM (System error 67, network name not found)", "disposition": "no change anywhere; repeated inside the VM" }
+  ],
+  "not_covered": ["an AI conversation (no keys in the VM)", "a real microphone (no audio device in the VM; speech recognition checked offline)", "install under a non-administrator Windows account"],
+  "follow_up": ["version 3 of the Stage 7 guest driver: mount Z: before using it (or a string path as version 1), and a restart check by boot identity instead of uptime; decision tests for both (incidents 01 and 02)"],
+  "live_jarvis": "the owner's installed JARVIS (%LOCALAPPDATA%\\JARVIS, 1.0.11) was not addressed by this check",
+  "next": "updating the everyday JARVIS to 1.0.14 is a separate owner decision (plan docs/UPDATE-EVERYDAY-1.0.14.md)",
+  "evaluated_by": "Claude Code (Claude Opus 5.5)"
+}
