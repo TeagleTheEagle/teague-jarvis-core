@@ -34,7 +34,7 @@ Last updated: 2026-10-05 (about 02:00 local) (STAGE_6_COMPLETE, SWITCH-OVER COMP
   df9e417d… (guest), repo copy `docs/stage7-1.0.14-evidence/`. Fix both defects in a version 3 copy before the next
   release check. **Next:** the update of the everyday JARVIS to 1.0.14, plan `docs/UPDATE-EVERYDAY-1.0.14.md` with
   launcher `tools/host/Invoke-EverydayUpdate.ps1` + `update-step.cmd` (check, backup with its own backup code, update,
-  rollback only on the owner's word); sandbox rehearsal 13 of 13 PASS (`docs/release-rehearsal-20261005-1014/update-rehearsal/`); plan READY FOR the owner's approval. Owner: will use the
+  rollback only on the owner's word); sandbox rehearsal 13 of 13 PASS (`docs/release-rehearsal-20261005-1014/update-rehearsal/`); plan **approved by the owner** ("I approve the update of my everyday JARVIS to 1.0.14", first clock reading 2026-10-05T03:39:06Z; record `../governance/UPDATE-1.0.14-APPROVAL-RECORD.json`, plan sha256 9eddc20c…); launcher placed in `D:\JARVIS-update-1.0.14\tools\` with `update-authorized.json` (hashes equal the approval; repo copy `docs/update-1.0.14-evidence/`). **Next, owner (jonny, JARVIS quit):** `update-step` step 1 (check), step 2 (backup), step 3 (update), Claude checking each record; then the owner's check of JARVIS and one PC restart. Owner: will use the
   everyday JARVIS again once it is on 1.0.14.
 - **Release 1.0.12 (2026-10-04, on the owner's "next move" / "now do the next move"; superseded, see above).** The fix list
   `docs/POST-CUTOVER-FIXES.md` items 1-6 fixed (status table at the end of that file; item 7 partly, 8 open,

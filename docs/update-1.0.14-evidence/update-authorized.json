@@ -1,0 +1,13 @@
+{
+    "schema":  "jarvis-everyday-update-authorized-v1",
+    "final":  "1.0.14-e03872680e1d",
+    "previous":  "1.0.11-60d406fb6398",
+    "final_zip":  "D:\\JARVIS-release-work\\release\\JARVIS-1.0.14-e03872680e1d.zip",
+    "final_zip_sha256":  "ceb7d9e1922cebbf650753c4028473c5962c558ed70ec9f4be20f9fdc740d8d3",
+    "owner_text":  "I approve the update of my everyday JARVIS to 1.0.14",
+    "issued_utc":  "2026-10-05T03:39:06Z",
+    "recorded_utc":  "2026-10-05T03:39:22Z",
+    "record":  "C:\\Users\\jonny\\JARVIS-claude-workspace\\governance\\UPDATE-1.0.14-APPROVAL-RECORD.json",
+    "plan_sha256":  "9eddc20c9c7d358225a9161f3574a90557afbd50c8745888803ae1d68097a801",
+    "written_by":  "Claude Code (Claude Opus 5.5) on the owner\u0027s approval"
+}
