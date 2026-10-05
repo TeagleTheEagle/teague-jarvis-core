@@ -6,7 +6,8 @@ What it may do is decided here, on every request, from what the owner allows for
 
   - a question may call only the tools marked for other devices in permissions.py (reads);
   - a picture needs the camera to be allowed, a transcription the microphone, a spoken reply the speakers;
-  - any paired device may stop everything (the emergency stop); none can resume;
+  - any paired device may stop everything (the emergency stop), and that is never turned away for another
+    reason; none can resume;
   - a revoked device is refused from its next request on, and what it was running is cancelled.
 
 The Core still listens on 127.0.0.1 only. Reaching it from another machine is the owner's networking
@@ -16,17 +17,28 @@ import json
 import threading
 import time
 
-from devices import DeviceError
+import permissions
+from devices import DeviceError, DeviceRefused
 
 OPS = ('hello', 'status', 'start', 'events', 'cancel', 'transcribe', 'speech', 'stop', 'bye')
 NEEDS = {'transcribe': 'microphone', 'speech': 'speakers'}
 PAIR_CALLS_A_MINUTE = 10
+SEEN_EVERY_SECONDS = 60
+# What a device is told word for word. Anything else that goes wrong gets one general line: no raw Python
+# message, no path and nothing from a provider crosses to a device.
+SHOWABLE = frozenset((
+    permissions.STOPPED_MESSAGE, 'Operation unavailable.', 'Supply only code and capabilities.', 'Supply only capabilities.',
+    'Too many pairing attempts. Wait one minute.', 'Wearable request limit reached. Wait one minute.', 'Wearable service busy.',
+    'Wearable conversation required.', 'Unknown wearable run.', 'Run expired.', 'Unknown fields.', 'Image too large.', 'Unsupported image.',
+    'Invalid speech text.', 'Expected PCM data.', 'A request is already running. Stop it or wait for completion.'))
+GENERAL = 'Invalid, busy, expired or unavailable device request.'
 
 
 class Gateway:
     def __init__(self, app):
         self.app = app
-        self.sessions = {}  # device id -> its own Service: its runs, its rate limit
+        self.sessions = {}   # device id -> its own Service: its questions, its limit of requests a minute
+        self.seen_at = {}    # device id -> when "last seen" was last written down
         self.lock = threading.Lock()
         self.pair_calls = []
 
@@ -44,6 +56,7 @@ class Gateway:
             if len(self.pair_calls) >= PAIR_CALLS_A_MINUTE:
                 raise ValueError('Too many pairing attempts. Wait one minute.')
             self.pair_calls.append(now)
+        self.app.require_running()  # no new device joins while the emergency stop holds; the code stays good
         paired = self.book.finish_pairing(body['code'], body['capabilities'])
         self.app.audit('device paired: ' + paired['name'], paired['kind'], device=paired['device_id'])
         return paired
@@ -53,12 +66,27 @@ class Gateway:
         with self.lock:
             session = self.sessions.get(device_id)
             if session is None:
-                session = self.sessions[device_id] = Service(self.app, device_id, simulated=False, prefix='device-', register=False)
+                # Every conversation of a device starts with its own id: no device writes into another's.
+                session = self.sessions[device_id] = Service(self.app, device_id, simulated=False, prefix='device-' + device_id + '-', register=False)
             return session
 
     def present(self, device):
         """Presence in the Core's registry: what the device declares, and of that what the owner allows."""
         self.app.devices.register(device['device_id'], device['declared'], ready=device['allowed'], ttl=120, simulated=False)
+
+    def seen(self, device_id):
+        """"Last seen" for the owner's panel: written at most once a minute, and never worth failing a request for
+        (the database may be busy, for example during a backup)."""
+        now = time.monotonic()
+        with self.lock:
+            if now - self.seen_at.get(device_id, -SEEN_EVERY_SECONDS) < SEEN_EVERY_SECONDS:
+                return
+            self.seen_at[device_id] = now
+        try:
+            self.book.seen(device_id)
+        except Exception:
+            with self.lock:
+                self.seen_at.pop(device_id, None)
 
     @staticmethod
     def describe(device, stopped):
@@ -67,11 +95,20 @@ class Gateway:
                 'scope': 'Questions and reading. Saved things are changed only on the PC.'}
 
     def dispatch(self, credential, op, body):
-        device = self.book.authenticate(credential)  # PermissionError: unknown device, wrong key or revoked
+        device = self.book.authenticate(credential)  # DeviceRefused: unknown device, wrong key or revoked
         if op not in OPS or not isinstance(body, dict):
             raise ValueError('Operation unavailable.')
         ident = device['device_id']
-        self.book.seen(ident)
+        # The emergency stop comes before everything else about the request: it is not turned away because the
+        # database is busy, because a picture came with it or because a capability is not allowed.
+        if op == 'stop':
+            return {'stopped': self.app.emergency_stop(ident, 'Stop from ' + device['name'])['stopped']}
+        if op == 'start' and self.app.stopped is None and permissions.stop_phrase(body.get('text')):
+            words = {'text': body['text']}
+            if isinstance(body.get('conversation'), str):
+                words['conversation'] = body['conversation']
+            return self.session(ident).dispatch('start', words)
+        self.seen(ident)
         if op == 'hello':
             if set(body) - {'capabilities'}:
                 raise ValueError('Supply only capabilities.')
@@ -79,33 +116,44 @@ class Gateway:
                 self.book.declare(ident, body['capabilities'])
                 device = self.book.get(ident)
         self.present(device)
+        if not self.book.usable(ident):
+            # Revoked while this request was on its way in: nothing more happens for it.
+            self.revoked(ident)
+            raise DeviceRefused()
         stopped = self.app.stopped is not None
         if op in ('hello', 'status'):
             return self.describe(device, stopped)
-        if op == 'stop':
-            # Stopping is safe from anywhere; resuming is the owner's, on the PC.
-            return {'stopped': self.app.emergency_stop(ident, 'Stop from ' + device['name'])['stopped']}
         if op == 'bye':
             self.app.devices.disconnect(ident)
             return {'disconnected': True}
         need = NEEDS.get(op) or ('camera' if op == 'start' and body.get('image') else None)
         if need and need not in device['allowed']:
             raise DeviceError(f'The {need} of this device is not allowed. The owner allows it in Settings > Devices on the PC.')
-        return self.session(ident).dispatch(op, body)
+        result = self.session(ident).dispatch(op, body)
+        if op == 'start' and not self.book.usable(ident):
+            # Revoked while the question was being started: it is cancelled like everything else of that device.
+            run = self.app.runs.get(result.get('run_id'))
+            if run:
+                run.cancel.set()
+            self.revoked(ident)
+            raise DeviceRefused()
+        return result
 
     def revoked(self, device_id):
-        """The owner revoked the device: stop what it was running and forget its session."""
+        """The owner revoked (or removed) the device: stop what it was running and forget its session."""
         with self.lock:
             session = self.sessions.pop(device_id, None)
+            self.seen_at.pop(device_id, None)
         for run_id in list(session.runs) if session else []:
             run = self.app.runs.get(run_id)
             if run:
                 run.cancel.set()
-        self.app.devices.disconnect(device_id)
+        self.app.devices.forget(device_id)
 
 
 def handle(handler):
-    """POST /api/device/<op>. Same loopback and same-origin checks as every route; the credential is the device's own key."""
+    """POST /api/device/<op>. The same loopback and same-origin checks as every route. The proof is the device's
+    own key: these routes ask neither for the owner's session nor for the desktop app's token."""
     gateway = getattr(handler.server.app, 'device_gateway', None)
     host = f'127.0.0.1:{handler.server.server_port}'
     if (gateway is None or handler.headers.get('Host') != host or handler.headers.get('Origin') not in (None, 'http://' + host)
@@ -125,14 +173,12 @@ def handle(handler):
         if op == 'pair':
             return handler.send(200, gateway.pair(body))
         return handler.send(200, gateway.dispatch(handler.headers.get('X-Jarvis-Device', ''), op, body))
-    except PermissionError:
+    except DeviceRefused:
         return handler.send(401, {'error': 'Device key invalid or revoked. Pair this device again on the PC.'})
     except DeviceError as exc:
         return handler.send(403, {'error': str(exc)})
     except (ValueError, TypeError, KeyError) as exc:
-        # Messages raised on purpose are fit to show; anything else gets the general line.
-        text = str(exc) if isinstance(exc, ValueError) and str(exc) and len(str(exc)) <= 200 else 'Invalid, busy, expired or unavailable device request.'
-        return handler.send(400, {'error': text})
+        return handler.send(400, {'error': str(exc) if str(exc) in SHOWABLE else GENERAL})
     except Exception:
-        # No provider credentials or raw exceptions cross to a device.
+        # No provider credentials, raw exceptions or file errors cross to a device.
         return handler.send(503, {'error': 'JARVIS service unavailable.'})

@@ -14,7 +14,7 @@ class EncodedAudio:
     data: bytes
     mime: str
     def validate(self):
-        if self.mime!='audio/mpeg' or not isinstance(self.data,bytes) or not 100<=len(self.data)<=16*1024*1024:
+        if self.mime not in ('audio/mpeg','audio/wav') or not isinstance(self.data,bytes) or not 100<=len(self.data)<=16*1024*1024:
             raise WearableError('INVALID_OUTPUT_AUDIO')
         return self
 
@@ -28,10 +28,11 @@ async def play_mp3(audio, started=None):
         if ctypes.windll.winmm.mciSendStringW(text,buffer,256,0):raise WearableError('AUDIO_PLAYBACK_FAILED')
         return buffer.value
     with tempfile.TemporaryDirectory(prefix='jarvis-voice-') as folder:
-        path=Path(folder)/'reply.mp3';path.write_bytes(audio.data)
+        wav=audio.mime=='audio/wav'
+        path=Path(folder)/('reply.wav' if wav else 'reply.mp3');path.write_bytes(audio.data)
         opened=False
         try:
-            command(f'open "{path}" type mpegvideo alias {alias}');opened=True
+            command(f'open "{path}" type {"waveaudio" if wav else "mpegvideo"} alias {alias}');opened=True
             command(f'play {alias}')
             if started:started()
             while command(f'status {alias} mode')=='playing':await asyncio.sleep(.05)

@@ -129,13 +129,18 @@ Still decided where they were: the owner's-own-words checks of four tools (in `A
   among the program files.
 - **Proposals are kept with the data** (`<data>/development/`), not in the program folder.
 - **A proposed style sheet sets only how things look.** In `owner-style.css` JARVIS may propose plain rules that
-  set colours, fonts, text size (not below a readable size), spacing (no negative or very large values), borders
-  and shadows. Refused when the change is proposed: everything else (display, visibility, opacity, position,
-  transform, sizes, generated text, `::before` and the like, @-rules, anything loaded from outside, a backslash),
-  and any rule that names the emergency stop, the approval cards or the Permissions switches. The AI model is told
-  this. **This limits a style change; it is not a guarantee.** Text coloured like its background is still text
-  nobody can read. What protects the owner is the difference shown before approval, Undo, and the ways to stop
-  that no style sheet reaches: the tray, the shortcut, the spoken and the typed stop words.
+  set colours, fonts, text size (in px, pt or rem, 8 to 96 px), line height (0.8 to 3), spacing (no negative or
+  large values), borders and shadows. Every number must be in a known unit (px, pt, em, rem, %) and a sane range;
+  a variable of the owner's own may hold a colour only. Refused when the change is proposed: everything else
+  (display, visibility, opacity, position, transform, sizes, generated text, `::before` and the like, @-rules,
+  selectors by attribute, numbers with an exponent, anything loaded from outside, a backslash, a transparent text
+  colour, also through a variable), and any rule that names the emergency stop, the approval cards, the
+  Permissions switches or the Devices panel. The AI model is told this. Undo is never refused: the owner can
+  always go back to what was there before, also to a sheet written by hand. **This limits a style change; it is
+  not a guarantee.** Text coloured like its background is still text nobody can read. What protects the owner is
+  the difference shown before approval, Undo, and the ways to stop that no style sheet reaches: the tray, the
+  shortcut, the spoken and the typed stop words. (The first version of this check was tightened after the review
+  of scope item 4 found ways around it: `docs/DEVICES.md` section 8, finding 4.)
 - Undoing a personality change back to a text that a release shipped (the running one's or an earlier one's) keeps
   no private copy: the wording of the running release applies, now and after later updates. When that is not the
   text being restored (an undo made after an update), the approval card says so. An empty style sheet removes the

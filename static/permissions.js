@@ -43,7 +43,7 @@ const JarvisPermissions = {
     const since = typeof control.since === 'number' ? new Date(control.since * 1000) : null;
     const sameDay = since && now && since.toDateString() === now.toDateString();
     const when = !since ? '' : ' Stopped ' + (sameDay ? 'at ' : 'on ' + since.toLocaleDateString() + ' at ') + since.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
-    const where = !control.device ? '' : control.device === 'pc' ? ' on this PC' : ' from ' + String(control.device).replaceAll('-', ' ');
+    const where = !control.device ? '' : control.device === 'pc' ? ' on this PC' : ' from ' + (control.device_name || String(control.device).replaceAll('-', ' '));
     return 'JARVIS answers nothing and does nothing until you resume.' + when + (when ? where + '.' : '') +
       (control.saved === false ? ' The stop could not be saved to disk: it holds until JARVIS is restarted.' : '');
   },

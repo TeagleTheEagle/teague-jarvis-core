@@ -48,6 +48,20 @@ const places=m.devices('online',{devices:[{device_id:'pc',connected:true},{devic
 assert.deepEqual(places.map(p=>p.state+':'+p.text),['ok:Online','offline:Offline','simulated:Simulated only']);
 assert.equal(m.devices('online',{devices:[]})[1].text,'Not paired');
 assert.equal(m.systems('online',{devices:[{device_id:'mock-glasses',connected:true,simulated:true}]})[5][2],'0 ONLINE');
+// Paired devices (1.0.15) are found by what they are, not by a word in their id. A place shows its best device:
+// a real connected one before a real one before the simulated test client; a revoked one is not shown.
+const pc={device_id:'pc',kind:'pc',builtin:true,connected:true,simulated:false};
+const testClient={device_id:'local-wearable-client',kind:'glasses',connected:true,simulated:true};
+const phone={device_id:'a1b2c3d4e5f60718',kind:'phone',name:'My phone',connected:true,simulated:false};
+const show=list=>m.devices('online',{devices:list}).map(p=>p.state+':'+p.text);
+assert.deepEqual(show([pc,testClient,phone]),['ok:Online','ok:Online','simulated:Simulated only']);
+assert.deepEqual(show([pc,{...phone,connected:false}]),['ok:Online','offline:Offline','none:Not paired']);
+assert.deepEqual(show([pc,{...phone,connected:false,revoked:1790000000}]),['ok:Online','none:Not paired','none:Not paired'],'a revoked device is not a paired device');
+const halo={device_id:'0f0e0d0c0b0a0908',kind:'glasses',name:'Halo',connected:false,simulated:false};
+assert.deepEqual(show([pc,testClient,halo])[2],'offline:Offline','a real pair of glasses is shown before the test client');
+assert.deepEqual(show([pc,testClient,{...halo,connected:true}])[2],'ok:Online');
+assert.deepEqual(show([pc,{...phone,connected:false},{...phone,device_id:'ffff',connected:true}])[1],'ok:Online','the connected phone of two');
+assert.equal(m.systems('online',{devices:[pc,testClient,phone,{...halo,revoked:1}]})[5][2],'2 ONLINE');
 // Voice line.
 assert.equal(m.voiceLine({micOn:false}),'Microphone off. Press F4 to turn it on.');
 assert.equal(m.voiceLine({micOn:true,armed:true,manual:true}),'Listening while you hold to talk.');

@@ -1,4 +1,7 @@
-"""Narrow same-PC bridge into the already-running App. Never starts another brain."""
+"""Narrow same-PC bridge into the already-running App. Never starts another brain.
+
+One Service is one device's session: its questions, its limit of requests a minute. The same-PC test client
+(/api/wearable/, one shared token) has one; each paired device (device_gateway.py, its own key) has its own."""
 import base64
 import io
 import json
@@ -9,17 +12,23 @@ import time
 import uuid
 
 import permissions
+import providers
 
 
 class Service:
-    def __init__(self, app):
+    def __init__(self, app, device_id='local-wearable-client', *, simulated=True, prefix='wearable-', register=True):
         self.app = app
         self.token = secrets.token_urlsafe(32)
         self.runs = set()
         self.lock = threading.Lock()
         self.calls = []
-        self.device_id = 'local-wearable-client'
-        self.app.devices.register(self.device_id,{'camera','microphone','speakers'},simulated=True)
+        self.device_id = device_id
+        self.prefix = prefix      # every conversation of this device starts with it
+        self.paired = not simulated
+        # The same-PC test client announces itself. It is always listed as simulated: only a device the owner
+        # paired (devices.py) can be a real one, and its presence is registered by device_gateway.py.
+        if register:
+            self.app.devices.register(self.device_id,{'camera','microphone','speakers'},simulated=True)
 
     def dispatch(self, op, body):
         if not isinstance(body,dict): raise ValueError('Expected object.')
@@ -29,19 +38,21 @@ class Service:
             # stopped, repeating the words is an ordinary request again, with the bridge's usual limits.
             self.runs={r for r in self.runs if r in self.app.runs}
             conversation=body.get('conversation')
-            if not isinstance(conversation,str) or not conversation.startswith('wearable-'):conversation='wearable-local'
-            result=self.app.start_run({'text':body['text'],'conversation':conversation},wearable=True)
+            if not isinstance(conversation,str) or not conversation.startswith(self.prefix):conversation=self.prefix+'local'
+            result=self.app.start_run({'text':body['text'],'conversation':conversation},wearable=True,device=self.device_id)
             self.runs.add(result['run_id']);return result
         if not self.lock.acquire(blocking=False): raise ValueError('Wearable service busy.')
         try:
             self.app.devices.heartbeat('pc')
             if op not in ('disconnect','registry'):self.app.devices.heartbeat(self.device_id)
+            if self.paired and op in ('register','registry','disconnect'):raise ValueError('Operation unavailable.')
             if op=='register':
                 if set(body)!={'capabilities','ready','simulated'} or type(body['simulated']) is not bool:raise ValueError('Invalid registration.')
                 if not isinstance(body['capabilities'],list) or not isinstance(body['ready'],list):raise ValueError('Invalid capabilities.')
                 allowed={'microphone','camera','speakers','display'}
                 if not set(body['capabilities'])<=allowed:raise ValueError('Unsupported device capabilities.')
-                self.app.devices.register(self.device_id,body['capabilities'],ready=body['ready'],simulated=body['simulated'])
+                # Whatever the client says about itself, this route is the same-PC test client: listed as simulated.
+                self.app.devices.register(self.device_id,body['capabilities'],ready=body['ready'],simulated=True)
                 return {'device_id':self.device_id}
             if op=='registry':
                 self.app.devices.heartbeat('pc')
@@ -54,23 +65,26 @@ class Service:
                 self.calls.append(now)
             if op=='start':
                 if set(body)-{'text','image','conversation'}: raise ValueError('Unknown fields.')
-                text=body.get('text'); conversation=body.get('conversation','wearable-local')
-                if not isinstance(conversation,str) or not conversation.startswith('wearable-'): raise ValueError('Wearable conversation required.')
+                text=body.get('text'); conversation=body.get('conversation',self.prefix+'local')
+                if not isinstance(conversation,str) or not conversation.startswith(self.prefix): raise ValueError('Wearable conversation required.')
                 attachment=None
                 if body.get('image'):
                     raw=base64.b64decode(body['image'],validate=True)
                     if len(raw)>2*1024*1024: raise ValueError('Image too large.')
                     from PIL import Image
                     # Decode, check dimensions and re-encode, dropping embedded metadata.
-                    with Image.open(io.BytesIO(raw)) as picture:
-                        if picture.width*picture.height>16_000_000 or picture.format not in ('PNG','JPEG'): raise ValueError('Unsupported image.')
-                        picture.load();out=io.BytesIO();picture.convert('RGB').save(out,format='JPEG',quality=85)
+                    try:
+                        with Image.open(io.BytesIO(raw)) as picture:
+                            if picture.width*picture.height>16_000_000 or picture.format not in ('PNG','JPEG'): raise ValueError('Unsupported image.')
+                            picture.load();out=io.BytesIO();picture.convert('RGB').save(out,format='JPEG',quality=85)
+                    except Exception:
+                        raise ValueError('Unsupported image.') from None  # not a picture, damaged, or far too large
                     ident=uuid.uuid4().hex
                     attachment={'id':ident,'type':'image','name':'wearable-capture.jpg','data':'data:image/jpeg;base64,'+base64.b64encode(out.getvalue()).decode()}
                 with self.app.lock:
                     if attachment:self.app.attachments[attachment['id']]=attachment
                     try:
-                        result=self.app.start_run({'text':text,'conversation':conversation,**({'attachment':attachment['id']} if attachment else {})},wearable=True)
+                        result=self.app.start_run({'text':text,'conversation':conversation,**({'attachment':attachment['id']} if attachment else {})},wearable=True,device=self.device_id)
                     finally:
                         if attachment:self.app.attachments.pop(attachment['id'],None)
                 self.runs={r for r in self.runs if r in self.app.runs}
@@ -90,7 +104,8 @@ class Service:
                 self.app.require_running()  # while the emergency stop holds, nothing is spoken for a device
                 started=time.perf_counter()
                 audio=self.app.voice_engine.synthesize(body['text'],self.app.store.settings().get('voice_profile','auto'))
-                return {'audio':base64.b64encode(audio).decode(),'mime':'audio/mpeg','tts_ms':round((time.perf_counter()-started)*1000)}
+                # The voice in use decides the format (the Qwen voice returns WAV): say what it really is.
+                return {'audio':base64.b64encode(audio).decode(),'mime':providers.audio_mime(audio),'tts_ms':round((time.perf_counter()-started)*1000)}
             if op=='status':return {'available':True,'protocol':1,'scope':'same-PC wearable analysis','voice_profile':self.app.store.settings().get('voice_profile','auto')}
             raise ValueError('Operation unavailable.')
         finally:self.lock.release()

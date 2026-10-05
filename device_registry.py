@@ -22,6 +22,12 @@ class DeviceRegistry:
             if device_id in self.devices:self.devices[device_id]['expires']=0
             self.requests={k:v for k,v in self.requests.items() if v!=device_id}
 
+    def forget(self, device_id):
+        """A device that was revoked: gone from presence altogether, not merely disconnected."""
+        with self.lock:
+            self.devices.pop(device_id,None)
+            self.requests={k:v for k,v in self.requests.items() if v!=device_id}
+
     def snapshot(self):
         with self.lock:
             return [{'device_id':ident,'connected':d['expires']>self.clock(),'capabilities':sorted(d['capabilities']),

@@ -42,6 +42,8 @@ const today=p.stopText({stopped:true,since:new Date(2026,9,6,14,2).getTime()/100
 assert.match(today,/^JARVIS answers nothing and does nothing until you resume\. Stopped at .*02.* on this PC\.$/);
 const earlier=p.stopText({stopped:true,since:new Date(2026,9,5,23,59).getTime()/1000,device:'local-wearable-client'},now);
 assert.match(earlier,/Stopped on .* at .*59.* from local wearable client\.$/);
+// A paired device is named by the name the owner gave it, when the Core sends one.
+assert.match(p.stopText({stopped:true,since:new Date(2026,9,6,14,2).getTime()/1000,device:'a1b2c3d4e5f60718',device_name:'My phone'},now),/ from My phone\.$/);
 // A stop record that could not be read has no time: say only what is known.
 assert.equal(p.stopText({stopped:true,since:null,device:null},now),'JARVIS answers nothing and does nothing until you resume.');
 assert.match(p.stopText({stopped:true,since:now.getTime()/1000,device:'pc',saved:false},now),/could not be saved to disk: it holds until JARVIS is restarted\.$/);

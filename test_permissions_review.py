@@ -296,12 +296,24 @@ class SelfChangeTests(unittest.TestCase):
             'p{font-size:0.01em}', 'p{font-size:1px}', 'p{font-size:var(--tiny)}', 'p{font-size:calc(1px - 1px)}',
             'p{color:transparent}', 'p{color:#ffffff00}', 'p{color:rgba(0,0,0,0)}', 'p{color:rgb(0 0 0 / 0%)}',
             '@media (min-width:1px){p{color:red}}', '@font-face{font-family:x}', 'p{color:red} /* unfinished',
+            # found by the review of this check: numbers written to slip past it, units it did not know,
+            # a colour hidden in a variable, the program's own layout variables, names reached by attribute
+            'p{font-size:1e-9px}', 'p{font-size:1q}', 'p{font-size:1mm}', '*{font-size:.5em}', 'p{font-size:50%}', 'p{line-height:0}',
+            'p{line-height:9999}', 'p{padding:9e9px}', 'p{margin:999pc}', 'p{padding:500dvh}', 'p{margin:300vi}', 'p{margin-left:400%}',
+            ':root{--x:transparent}', 'p{color:var(--x)}', 'p{color:rgba(0,0,0,0e0)}', ':root{--cd-side:0px}', ':root{--dock-width:0 !important}',
+            '[class^="es"]{color:red}', '[class*="pproval"]{color:red}', '[class^="perm"]{color:red}', '[id^="emergency"]{color:red}',
+            '[role\n=alert]{color:red}', '[role/**/=alert]{color:red}', '.devices-panel{color:#000}', 'button.device-revoke{color:#000}',
+            'p{letter-spacing:-300px}', 'p{letter-spacing:3em}', 'p{margin:5}', 'p{border-width:-1px}', 'p{color:red;transform:none}',
             'p{color:red !important !important}', 'p{color}', 'p{background:element(#x)}', 'color:red', 'p{color:red}}',
         )
         for css in refused:
             with self.assertRaises(ValueError, msg=css):
                 development.prepare(where, 'owner-style.css', css, 'test')
-        accepted = ('body{font-size:18px}', 'body { font-size: 1.2em; line-height: 150% }', '/* bigger text */\n.message p{font-size:110%;color:#e8f4ff!important}',
+        accepted = ('body{font-size:18px}', 'body { font-size: 1.2rem; line-height: 150% }', '/* bigger text */\n.message p{font-size:17px;color:#e8f4ff!important}',
+                    # harmless things the first version of the check refused by mistake
+                    'button{border-radius:999px}', 'p{box-shadow:-2px -2px 4px #000;letter-spacing:-0.5px}', 'div{background:linear-gradient(-45deg,#123,#456)}',
+                    'p{border-top-color:#fff;border-top-left-radius:4px;border-bottom-width:2px}', '/* the approval of colours */ p{color:#fff}',
+                    'p{line-height:1.5;margin:0 auto 1.5em;padding:4px 8px 4px 8px}', ':root{--ti-amber:rgb(255, 179, 71)}', 'h1{font-size:2rem;font-weight:700}',
                     ':root{--ti-amber:#ffb347}', '.nav{letter-spacing:.08em;padding:6px 12px;border-radius:8px}',
                     'button:hover{background:linear-gradient(180deg,#123,#456);box-shadow:0 0 8px rgba(0,0,0,.5)}',
                     'h2{color:hsl(200, 50%, 80%);font-family:"Segoe UI",sans-serif;font-weight:600}',
@@ -316,6 +328,20 @@ class SelfChangeTests(unittest.TestCase):
         (self.root / 'static').mkdir()
         (self.root / 'static' / 'pro.css').write_text('p{display:block}', encoding='utf-8')
         self.assertTrue(development.prepare(source, 'static/pro.css', 'p{display:flex;position:relative}', 'test')['requires_approval'])
+
+    def test_undo_always_works_also_back_to_a_sheet_todays_rules_would_refuse(self):  # review of item 4, L6
+        where = development.layout(self.root, self.data, self.config, True)
+        by_hand = 'p{display:block;font-size:1.1em}'  # the owner's own hand-written sheet: not something JARVIS may propose
+        (self.config / 'owner-style.css').write_text(by_hand, encoding='utf-8')
+        with self.assertRaises(ValueError):
+            development.prepare(where, 'owner-style.css', by_hand + ' a{color:#fff}', 'test')
+        change = development.prepare(where, 'owner-style.css', 'p{font-size:18px}', 'bigger text')
+        development.apply(where, change['proposal'])
+        self.assertTrue(next(row for row in development.history(where)['changes'] if row['proposal'] == change['proposal'])['can_undo'])
+        undo = development.rollback(where, change['proposal'])
+        self.assertTrue(undo['requires_approval'])
+        development.apply(where, undo['proposal'])
+        self.assertEqual((self.config / 'owner-style.css').read_text(encoding='utf-8'), by_hand)
 
     def test_undoing_back_to_an_earlier_releases_wording_says_what_will_apply(self):  # second review, L3
         where = development.layout(self.root, self.data, self.config, True)

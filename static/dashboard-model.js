@@ -54,8 +54,11 @@ const JarvisDashboardModel = (() => {
   // The three device places of the one Core, from the device registry.
   function devices(state, data) {
     const known = live(state) && Array.isArray(data && data.devices), list = known ? data.devices : [];
-    const find = re => list.find(x => re.test(x.device_id || ''));
-    return [['workstation', 'This PC', find(/^pc$/)], ['mobile', 'Phone', find(/phone|mobile/i)], ['glasses', 'Glasses', find(/glass|wear/i)]].map(([kind, name, device]) => (
+    // A place shows its best device: a real one that is connected, then a real one, then a simulated test client.
+    // A revoked device is not shown. Older rows without a kind are told apart by their id, as before.
+    const rank = x => (x.simulated ? 0 : 2) + (x.connected ? 1 : 0);
+    const find = (kind, re) => list.filter(x => !x.revoked && (x.kind ? x.kind === kind : re.test(x.device_id || ''))).sort((a, b) => rank(b) - rank(a))[0];
+    return [['workstation', 'This PC', find('pc', /^pc$/)], ['mobile', 'Phone', find('phone', /phone|mobile/i)], ['glasses', 'Glasses', find('glasses', /glass|wear/i)]].map(([kind, name, device]) => (
       {kind, name, state: !known ? 'unknown' : !device ? 'none' : device.simulated ? 'simulated' : device.connected ? 'ok' : 'offline',
         text: !known ? 'Unknown' : !device ? 'Not paired' : device.simulated ? 'Simulated only' : device.connected ? 'Online' : 'Offline'}));
   }

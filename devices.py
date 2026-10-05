@@ -11,6 +11,9 @@ memory, in device_registry.DeviceRegistry, as before.
 A device's key is never stored: only a keyed hash of it, made with a secret that lives in the config folder
 beside the key file. A backup carries the database but not that secret, so data restored into another
 installation brings no working device keys with it: those devices pair again.
+
+Revoking is remembered twice: in the database, and in a small list beside the secret. So an older copy of the
+database put back into the same installation (a restore) does not bring a revoked device back to life.
 """
 import hashlib
 import hmac
@@ -26,12 +29,21 @@ CAPABILITIES = ('microphone', 'camera', 'speakers', 'display')
 PAIRING_SECONDS = 300
 PAIRING_ATTEMPTS = 5
 MAX_DEVICES = 20
-SECRET_FILE = '.env.device-secret'  # .env-prefixed: never in a backup, never in git
+SECRET_FILE = '.env.device-secret'    # .env-prefixed: never in a backup, never in git
+REVOKED_FILE = '.env.device-revoked'  # the ids of revoked devices, beside the secret (see above)
 _CREDENTIAL = re.compile(r'([a-f0-9]{16})\.([A-Za-z0-9_-]{43})')
 
 
 class DeviceError(ValueError):
     """A request about devices that cannot be carried out; the message is fit to show."""
+
+
+class DeviceRefused(PermissionError):
+    """The key is not one this Core accepts: unknown device, wrong key, revoked, or made for another
+    installation. Deliberately says nothing about which."""
+
+    def __init__(self):
+        super().__init__('Device key invalid or revoked.')
 
 
 def _clean_name(name):
@@ -58,19 +70,58 @@ class DeviceBook:
 
     # ---- the secret that binds device keys to this installation ----
     def _secret(self, create=False):
+        """The secret, or None when there is none that can be used. create: make one, but only when no file is
+        there at all. A file that is there and cannot be read is never written over: every paired device's key
+        depends on it."""
         path = self.config / SECRET_FILE
         try:
             value = path.read_text(encoding='ascii').strip()
             if re.fullmatch(r'[a-f0-9]{64}', value):
                 return bytes.fromhex(value)
+            present = True
+        except FileNotFoundError:
+            present = False
         except (OSError, ValueError):
-            pass
+            present = True
         if not create:
             return None
+        if present:
+            raise DeviceError('The device key file in the config folder cannot be read, so no device can be paired. '
+                              'It was not replaced, because every paired device depends on it.')
         value = secrets.token_hex(32)
-        self.config.mkdir(parents=True, exist_ok=True)
-        path.write_text(value + '\n', encoding='ascii')
+        try:
+            self.config.mkdir(parents=True, exist_ok=True)
+            with open(path, 'x', encoding='ascii') as handle:  # never over a file that appeared meanwhile
+                handle.write(value + '\n')
+        except FileExistsError:
+            return self._secret()
+        except OSError:
+            raise DeviceError('The device key file could not be written in the config folder, so no device can be paired.') from None
         return bytes.fromhex(value)
+
+    # ---- revoked devices, remembered beside the secret ----
+    def _revoked_ids(self):
+        try:
+            value = json.loads((self.config / REVOKED_FILE).read_text(encoding='ascii'))
+            return {k: v for k, v in value.items() if isinstance(k, str)} if isinstance(value, dict) else {}
+        except (OSError, ValueError):
+            return {}
+
+    def _remember_revoked(self, device_id, when):
+        ids = self._revoked_ids()
+        if device_id in ids:
+            return
+        ids[device_id] = when
+        path = self.config / REVOKED_FILE
+        partial = path.with_name(path.name + '.new')
+        self.config.mkdir(parents=True, exist_ok=True)
+        partial.write_text(json.dumps(ids), encoding='ascii')
+        partial.replace(path)
+
+    def _revoked(self, row, ids=None):
+        """When this device was revoked (a time), or None. The database or the list beside the secret may say so."""
+        ids = self._revoked_ids() if ids is None else ids
+        return row['revoked'] or ids.get(row['id'])
 
     @staticmethod
     def _secret_id(secret):
@@ -89,6 +140,7 @@ class DeviceBook:
         with self.lock:
             if len([d for d in self.list() if not d['revoked']]) >= MAX_DEVICES:
                 raise DeviceError(f'At most {MAX_DEVICES} devices can be paired. Remove one first.')
+            self._secret(create=True)  # made here, on the owner's own click, so a problem is said on the PC
             code = f'{secrets.randbelow(10 ** 8):08d}'
             self.pending = {'code_hash': hashlib.sha256(code.encode()).hexdigest(), 'name': name, 'kind': kind,
                             'expires': self.clock() + PAIRING_SECONDS, 'attempts': 0}
@@ -114,6 +166,9 @@ class DeviceBook:
             if not pending or pending['expires'] <= self.clock():
                 self.pending = None
                 raise DeviceError('No pairing is waiting. Start pairing on the PC and use the new code.')
+            secret = self._secret()
+            if secret is None:  # the file went missing since the owner started: nothing is used up
+                raise DeviceError('The PC is not ready to pair. Start pairing again on the PC.')
             pending['attempts'] += 1
             matches = bool(re.fullmatch(r'\d{8}', digits)) and hmac.compare_digest(hashlib.sha256(digits.encode()).hexdigest(), pending['code_hash'])
             if not matches:
@@ -121,7 +176,6 @@ class DeviceBook:
                     self.pending = None  # a wrong code five times ends this pairing; the owner starts a new one
                 raise DeviceError('That code is not right. Check the code on the PC.')
             self.pending = None  # single use
-            secret = self._secret(create=True)
             device_id, key = secrets.token_hex(8), secrets.token_urlsafe(32)
             now = self.clock()
             with self.store.connect() as db:
@@ -138,15 +192,21 @@ class DeviceBook:
         match = _CREDENTIAL.fullmatch(credential) if isinstance(credential, str) else None
         secret = self._secret()
         if not match or secret is None:
-            raise PermissionError('Device key invalid or revoked.')
+            raise DeviceRefused()
         with self.store.connect() as db:
             row = db.execute('SELECT * FROM devices WHERE id=?', (match[1],)).fetchone()
         expected = self._key_hash(secret, match[2])
         # Compare even when the device is unknown, so an unknown id takes as long as a wrong key.
         valid = hmac.compare_digest(expected, row['key_hash'] if row else '0' * 64)
-        if not row or not valid or row['revoked'] or row['secret_id'] != self._secret_id(secret):
-            raise PermissionError('Device key invalid or revoked.')
+        if not row or not valid or self._revoked(row) or row['secret_id'] != self._secret_id(secret):
+            raise DeviceRefused()
         return self._public(row, secret)
+
+    def usable(self, device_id):
+        """Is this device still paired and not revoked, right now? For the checks made again during a request."""
+        with self.store.connect() as db:
+            row = db.execute('SELECT id, revoked FROM devices WHERE id=?', (device_id,)).fetchone()
+        return bool(row) and not self._revoked(row)
 
     def seen(self, device_id):
         with self.store.connect() as db:
@@ -158,25 +218,26 @@ class DeviceBook:
         declared = _clean_capabilities(declared)
         with self.lock, self.store.connect() as db:
             row = db.execute('SELECT allowed FROM devices WHERE id=? AND revoked IS NULL', (device_id,)).fetchone()
-            if not row:
-                raise PermissionError('Device key invalid or revoked.')
+            if not row or device_id in self._revoked_ids():
+                raise DeviceRefused()
             allowed = [c for c in json.loads(row['allowed']) if c in declared]
-            db.execute('UPDATE devices SET declared=?, allowed=?, last_seen=? WHERE id=?', (json.dumps(declared), json.dumps(allowed), self.clock(), device_id))
+            db.execute('UPDATE devices SET declared=?, allowed=?, last_seen=? WHERE id=? AND revoked IS NULL', (json.dumps(declared), json.dumps(allowed), self.clock(), device_id))
         return {'declared': declared, 'allowed': allowed}
 
     # ---- the owner's panel ----
-    def _public(self, row, secret=None):
+    def _public(self, row, secret=None, ids=None):
         secret = self._secret() if secret is None else secret
-        usable = not row['revoked'] and secret is not None and row['secret_id'] == self._secret_id(secret)
+        revoked = self._revoked(row, ids)
+        usable = not revoked and secret is not None and row['secret_id'] == self._secret_id(secret)
         return {'device_id': row['id'], 'name': row['name'], 'kind': row['kind'], 'declared': json.loads(row['declared']),
-                'allowed': json.loads(row['allowed']), 'created': row['created'], 'last_seen': row['last_seen'], 'revoked': row['revoked'],
+                'allowed': [] if revoked else json.loads(row['allowed']), 'created': row['created'], 'last_seen': row['last_seen'], 'revoked': revoked,
                 # False: the key was made for another installation (restored data); the device pairs again.
                 'key_valid': usable}
 
     def list(self):
-        secret = self._secret()
+        secret, ids = self._secret(), self._revoked_ids()
         with self.store.connect() as db:
-            return [self._public(row, secret) for row in db.execute('SELECT * FROM devices ORDER BY created')]
+            return [self._public(row, secret, ids) for row in db.execute('SELECT * FROM devices ORDER BY created')]
 
     def get(self, device_id):
         with self.store.connect() as db:
@@ -196,10 +257,10 @@ class DeviceBook:
         """The owner's choice of what this device may use. Only what the device declares can be allowed."""
         capabilities = _clean_capabilities(capabilities)
         with self.lock, self.store.connect() as db:
-            row = db.execute('SELECT declared, revoked FROM devices WHERE id=?', (device_id,)).fetchone()
+            row = db.execute('SELECT id, declared, revoked FROM devices WHERE id=?', (device_id,)).fetchone()
             if not row:
                 raise DeviceError('Device not found.')
-            if row['revoked']:
+            if self._revoked(row):
                 raise DeviceError('This device is revoked. Pair it again to use it.')
             if any(c not in json.loads(row['declared']) for c in capabilities):
                 raise DeviceError('Only a capability the device declares can be allowed.')
@@ -208,19 +269,24 @@ class DeviceBook:
 
     def revoke(self, device_id):
         """From now on the device's key is refused. The row stays, so the activity log keeps its name."""
+        now = self.clock()
         with self.store.connect() as db:
-            changed = db.execute('UPDATE devices SET revoked=?, allowed=? WHERE id=? AND revoked IS NULL', (self.clock(), '[]', device_id)).rowcount
+            changed = db.execute('UPDATE devices SET revoked=?, allowed=? WHERE id=? AND revoked IS NULL', (now, '[]', device_id)).rowcount
             if not changed and not db.execute('SELECT 1 FROM devices WHERE id=?', (device_id,)).fetchone():
                 raise DeviceError('Device not found.')
+        try:
+            self._remember_revoked(device_id, now)  # so an older copy of the database cannot bring it back
+        except OSError:
+            pass  # the database already refuses the key; only the protection against an old copy is missing
         return self.get(device_id)
 
     def forget(self, device_id):
         """Remove a revoked device from the list."""
         with self.store.connect() as db:
-            row = db.execute('SELECT revoked FROM devices WHERE id=?', (device_id,)).fetchone()
+            row = db.execute('SELECT id, revoked FROM devices WHERE id=?', (device_id,)).fetchone()
             if not row:
                 raise DeviceError('Device not found.')
-            if not row['revoked']:
+            if not self._revoked(row):
                 raise DeviceError('Revoke the device first.')
             db.execute('DELETE FROM devices WHERE id=?', (device_id,))
         return {'forgotten': device_id}

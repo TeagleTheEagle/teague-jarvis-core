@@ -226,7 +226,7 @@ class AppCase(unittest.TestCase):
 
 class StopTests(AppCase):
     def test_the_stop_holds_until_the_owner_resumes(self):
-        self.assertEqual(self.app.control(), {'stopped': False, 'since': None, 'device': None, 'reason': None, 'saved': True})
+        self.assertEqual(self.app.control(), {'stopped': False, 'since': None, 'device': None, 'reason': None, 'device_name': None, 'saved': True})
         waiting = self.app.tool('preview_action', {'action': 'save_item', 'arguments_json': json.dumps({'kind': 'note', 'body': 'x'})})
         busy = Run('busy'); self.app.runs[busy.id] = busy
         before = time.time()

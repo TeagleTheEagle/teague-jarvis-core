@@ -45,6 +45,8 @@ else:
     load_env()
 import development
 import permissions
+import device_gateway
+from devices import DeviceBook, KINDS as DEVICE_KINDS
 import assistant_capabilities as companion_tools
 import update_history
 import recovery
@@ -106,6 +108,15 @@ class App:
         from device_registry import DeviceRegistry
         self.devices = DeviceRegistry()
         self.devices.register('pc', {'display','microphone','speakers','files','applications','desktop_control'}, ready={'files'}, ttl=3600)
+        # Who the devices are (devices.py): kept in the database, so pairing survives a restart. A device's key is
+        # bound to this installation by a secret in the config folder; an isolated instance (a test, a rehearsal)
+        # keeps that secret with its own data. device_gateway.py is the door a paired device comes through.
+        if self.stage4:
+            self.device_book = self.device_gateway = None
+        else:
+            live = self.store.root == runtime_paths.data_dir().resolve()
+            self.device_book = DeviceBook(self.store, runtime_paths.config_dir_for(ROOT) if live else self.store.root)
+            self.device_gateway = device_gateway.Gateway(self)
         self.session = secrets.token_urlsafe(32)
         workspaces.setup(self.store)
         self.runs = {}
@@ -146,7 +157,7 @@ class App:
         caps['ollama_shadow'] = self.ollama_shadow.snapshot()
         caps['spotify_connected'] = bool(self.spotify.access)
         self.store.due()
-        return {'control': self.control(), 'permissions': permissions.changed(self.store.tool_modes()), 'updates': {k:v for k,v in self.update_record.items() if k not in ('releases','observations')}, 'capabilities': caps, 'settings': self.store.settings(), 'memory': self.store.items('memory'), 'projects': self.store.items('project'), 'notes': self.store.items('note'), 'tasks': self.store.tasks(), 'documents': self.store.documents(), 'reminders': self.store.reminders(), 'logs': self.store.logs(), 'uptime': int(time.time() - self.started), 'conversations': self.store.conversations(), 'devices': self.devices.snapshot()}
+        return {'control': self.control(), 'permissions': permissions.changed(self.store.tool_modes()), 'updates': {k:v for k,v in self.update_record.items() if k not in ('releases','observations')}, 'capabilities': caps, 'settings': self.store.settings(), 'memory': self.store.items('memory'), 'projects': self.store.items('project'), 'notes': self.store.items('note'), 'tasks': self.store.tasks(), 'documents': self.store.documents(), 'reminders': self.store.reminders(), 'logs': self.store.logs(), 'uptime': int(time.time() - self.started), 'conversations': self.store.conversations(), 'devices': self.device_rows()}
 
     def health(self):
         logs = self.store.logs()
@@ -205,6 +216,7 @@ class App:
         """What the interface shows about the emergency stop."""
         stop = self.stopped
         return {'stopped': stop is not None, 'since': (stop or {}).get('since'), 'device': (stop or {}).get('device'), 'reason': (stop or {}).get('reason'),
+                'device_name': self.device_name((stop or {}).get('device')),
                 # False: the stop holds now but could not be written down, so it would not survive a restart of the Core.
                 'saved': (stop or {}).get('saved', True)}
 
@@ -257,6 +269,78 @@ class App:
 
     def tool_mode(self, name):
         return self.store.tool_modes().get(name, permissions.DEFAULT)
+
+    def device_name(self, device_id):
+        """A paired device's name for the screen; None for this PC, an unknown id or no id."""
+        if not device_id or device_id == 'pc' or self.device_book is None:
+            return None
+        if device_id == 'local-wearable-client':
+            return 'the glasses test client'
+        try:
+            return self.device_book.names().get(device_id)
+        except Exception:
+            return None  # a name is never worth failing a stop or a state reading for
+
+    def device_rows(self):
+        """Every device of this Core as the interface and the AI model see it: this PC, a same-PC test client,
+        and each paired device with what it declares and what the owner allows. Never a key. Only a paired
+        device can be a real one: whatever else announces itself is listed as simulated."""
+        present = {d['device_id']: d for d in self.devices.snapshot()}
+        paired = [] if self.device_book is None else self.device_book.list()
+        known = {d['device_id'] for d in paired}
+        rows = []
+        for ident, d in present.items():
+            if ident == 'pc':
+                rows.append({**d, 'name': 'This PC', 'kind': 'pc', 'builtin': True, 'simulated': False})
+            elif ident not in known:
+                rows.append({**d, 'name': 'Glasses test client' if ident == 'local-wearable-client' else ident, 'kind': 'glasses' if ident == 'local-wearable-client' else 'other', 'simulated': True})
+        for d in paired:
+            live = present.get(d['device_id'])
+            connected = bool(live and live['connected'] and not d['revoked'] and d['key_valid'])
+            rows.append({**d, 'connected': connected, 'capabilities': d['declared'], 'ready': d['allowed'] if connected else [], 'simulated': False})
+        return rows
+
+    def devices_listing(self):
+        if self.device_book is None:
+            raise ValueError('Devices are not available here.')
+        return {'devices': self.device_rows(), 'pairing': self.device_book.pairing(), 'kinds': list(DEVICE_KINDS)}
+
+    def devices_action(self, body):
+        """The owner's clicks in Settings > Devices. Only the signed-in interface on the PC reaches this."""
+        if self.device_book is None:
+            raise ValueError('Devices are not available here.')
+        book, action = self.device_book, body.get('action')
+        if action == 'pair':
+            if set(body) - {'action', 'name', 'kind'}:
+                raise ValueError('Supply only a name and a kind.')
+            self.require_running()  # no new device joins while the emergency stop holds
+            started = book.begin_pairing(body.get('name'), body.get('kind'))
+            self.audit('device pairing started: ' + started['name'], started['kind'])
+            return started  # the code, shown this once
+        if action == 'cancel_pairing':
+            book.cancel_pairing()
+            return self.devices_listing()
+        ident = body.get('id')
+        if not isinstance(ident, str) or not ident:
+            raise ValueError('Device not found.')
+        if action == 'allow':
+            device = book.allow(ident, body.get('capabilities'))
+            self.audit('device allowed: ' + device['name'], ', '.join(device['allowed']) or 'nothing')
+        elif action == 'rename':
+            device = book.rename(ident, body.get('name'))
+            self.audit('device renamed: ' + device['name'], 'completed')
+        elif action == 'revoke':
+            device = book.revoke(ident)
+            self.device_gateway.revoked(ident)  # what it was running is cancelled; its next request is refused
+            self.audit('device revoked: ' + device['name'], 'revoked')
+        elif action == 'forget':
+            name = book.get(ident)['name']
+            book.forget(ident)
+            self.device_gateway.revoked(ident)
+            self.audit('device removed from the list: ' + name, 'completed')
+        else:
+            raise ValueError('Unknown device action.')
+        return self.devices_listing()
 
     def permissions_listing(self):
         return {'tools': permissions.listing(self.store.tool_modes()), 'control': self.control(),
@@ -316,12 +400,12 @@ class App:
             self.audit(row, 'completed' if self.store.items('memory') != before else 'nothing changed', run)
         return answer
 
-    def start_run(self, body, *, wearable=False):
+    def start_run(self, body, *, wearable=False, device=None):
         if self.stage4:
             raise ValueError('Stage 4 requests require authenticated owner dispatch.')
         text = body.get('text', '')
         conversation = body.get('conversation', '')
-        device = 'local-wearable-client' if wearable else 'pc'
+        device = device or ('local-wearable-client' if wearable else 'pc')
         if permissions.stop_phrase(text):
             # "Emergency stop", typed or spoken on any device, also while another question is being answered.
             # Looked at before anything else about the request, so a stop is never turned away for another
@@ -412,7 +496,7 @@ class App:
             if verdict == 'ask':
                 result = self.ask_first(name, args, run)
             elif name == 'device_registry':
-                result = {'devices':self.devices.snapshot(), 'interaction_device':self.devices.interaction(run.id) if run else None, 'limits':'Capabilities describe adapters; actions require separate authorization. Simulated devices are not physical hardware.'}
+                result = {'devices':self.device_rows(), 'interaction_device':self.devices.interaction(run.id) if run else None, 'limits':'Capabilities describe adapters; actions require separate authorization. Simulated devices are not physical hardware.'}
             elif name == 'assistant_control':
                 result = self.controls.request(args['action'], run)
             elif name == 'inspection_reports':
@@ -1007,6 +1091,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, self.app.state())
             if path == '/api/permissions':
                 return self.send(200, self.app.permissions_listing())
+            if path == '/api/devices':
+                return self.send(200, self.app.devices_listing())
             if path == '/api/metrics':
                 with self.app.lock:
                     timings = list(self.app.timings)
@@ -1049,7 +1135,7 @@ class Handler(BaseHTTPRequestHandler):
                 # a style change has been approved; the program's own style files are never changed.
                 file = runtime_paths.config_dir_for(ROOT) / 'owner-style.css'
                 return self.send(200, file.read_bytes() if file.is_file() else b'', 'text/css; charset=utf-8')
-            mapping = {'/permissions.js':'permissions.js','/permissions.css':'permissions.css','/latency.js':'latency.js','/voice-core.js':'voice-core.js','/teague.js':'teague.js','/teague.css':'teague.css','/command-dashboard.js':'command-dashboard.js','/command-dashboard.css':'command-dashboard.css','/horizon.js':'horizon.js','/horizon.css':'horizon.css','/world-map.js':'world-map.js','/dashboard-model.js':'dashboard-model.js','/markdown-view.js':'markdown-view.js','/assets/branding/teague/jarvis-mark.svg':'assets/branding/teague/jarvis-mark.svg','/recovery.js':'recovery.js', '/assistant-controls.js':'assistant-controls.js', '/desktop-updates.js':'desktop-updates.js', '/inspection-client.js':'inspection-client.js', '/voice-lab.html': 'voice-lab.html', '/voice-lab.js': 'voice-lab.js', '/voice-lab.css': 'voice-lab.css', '/': 'index.html', '/app.js': 'app.js', '/diagrams.js': 'diagrams.js', '/workspaces.js': 'workspaces.js', '/voice-preview.js': 'voice-preview.js', '/maps.js': 'maps.js', '/reliability.js': 'reliability.js', '/reliability.css': 'reliability.css', '/maps.css': 'maps.css', '/map-canvas.html': 'map-canvas.html', '/map-canvas.js': 'map-canvas.js', '/map-canvas.css': 'map-canvas.css', '/style.css': 'style.css', '/gallery.css': 'gallery.css', '/pro.css': 'pro.css', '/voice.js': 'voice.js', '/mic-worklet.js': 'mic-worklet.js', '/assets/branding/teague/teague-mark.svg': 'assets/branding/teague/teague-mark.svg', '/assets/branding/teague/command-background.png': 'assets/branding/teague/command-background.png'}
+            mapping = {'/permissions.js':'permissions.js','/permissions.css':'permissions.css','/devices.js':'devices.js','/devices.css':'devices.css','/latency.js':'latency.js','/voice-core.js':'voice-core.js','/teague.js':'teague.js','/teague.css':'teague.css','/command-dashboard.js':'command-dashboard.js','/command-dashboard.css':'command-dashboard.css','/horizon.js':'horizon.js','/horizon.css':'horizon.css','/world-map.js':'world-map.js','/dashboard-model.js':'dashboard-model.js','/markdown-view.js':'markdown-view.js','/assets/branding/teague/jarvis-mark.svg':'assets/branding/teague/jarvis-mark.svg','/recovery.js':'recovery.js', '/assistant-controls.js':'assistant-controls.js', '/desktop-updates.js':'desktop-updates.js', '/inspection-client.js':'inspection-client.js', '/voice-lab.html': 'voice-lab.html', '/voice-lab.js': 'voice-lab.js', '/voice-lab.css': 'voice-lab.css', '/': 'index.html', '/app.js': 'app.js', '/diagrams.js': 'diagrams.js', '/workspaces.js': 'workspaces.js', '/voice-preview.js': 'voice-preview.js', '/maps.js': 'maps.js', '/reliability.js': 'reliability.js', '/reliability.css': 'reliability.css', '/maps.css': 'maps.css', '/map-canvas.html': 'map-canvas.html', '/map-canvas.js': 'map-canvas.js', '/map-canvas.css': 'map-canvas.css', '/style.css': 'style.css', '/gallery.css': 'gallery.css', '/pro.css': 'pro.css', '/voice.js': 'voice.js', '/mic-worklet.js': 'mic-worklet.js', '/assets/branding/teague/teague-mark.svg': 'assets/branding/teague/teague-mark.svg', '/assets/branding/teague/command-background.png': 'assets/branding/teague/command-background.png'}
             if path not in mapping:
                 return self.send(404, {'error': 'Not found.'})
             file = ROOT / 'static' / mapping[path]
@@ -1071,6 +1157,9 @@ class Handler(BaseHTTPRequestHandler):
         if self.path.startswith('/api/wearable/'):
             from wearables.service import handle
             return handle(self)
+        if self.path.startswith('/api/device/'):
+            # A paired device: it proves who it is with its own key, not with the owner's session (device_gateway.py).
+            return device_gateway.handle(self)
         if not self.allowed():
             # Unread POST bytes must not become another request on this connection.
             self.close_connection = True
@@ -1171,6 +1260,8 @@ class Handler(BaseHTTPRequestHandler):
                 result = self.app.resume('pc')
             elif path == '/api/permissions':
                 result = self.app.set_permission(body.get('tool'), body.get('mode'))
+            elif path == '/api/devices':
+                result = self.app.devices_action(body)
             elif path == '/api/settings':
                 result = self.app.store.save_settings(body)
             elif path == '/api/item':

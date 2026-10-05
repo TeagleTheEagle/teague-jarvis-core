@@ -148,6 +148,11 @@ def tree_files(folder):
             if not name.startswith('.env') and p.suffix not in ('.pyc',): yield p
 
 
+# devices.SECRET_FILE and devices.REVOKED_FILE: what binds device keys to one installation. Never in a backup, so
+# data restored elsewhere brings no working device keys (a test holds these names equal to devices.py).
+DEVICE_KEY_FILES = ('.env.device-secret', '.env.device-revoked', '.env.device-revoked.new')
+
+
 def owner_config(root):
     """The owner's personality, own style sheet and desktop preferences when they live outside the
     program (installed release, config folder). In development they are already under root."""
@@ -177,7 +182,7 @@ def inventory(root, data):
     excluded=[]
     for p in data.iterdir():
         if p.name in ('jarvis.sqlite3','jarvis.sqlite3-wal','jarvis.sqlite3-shm'): continue
-        if p.name in ('speech-models','wake-models','logs') or p.name in RUNTIME_FILES:
+        if p.name in ('speech-models','wake-models','logs') or p.name in RUNTIME_FILES or p.name in DEVICE_KEY_FILES:
             excluded.append(p.name);continue
         if p.is_symlink() or (hasattr(p,'is_junction') and p.is_junction()): raise ValueError('Linked data path.')
         paths=tree_files(p) if p.is_dir() else [p]
