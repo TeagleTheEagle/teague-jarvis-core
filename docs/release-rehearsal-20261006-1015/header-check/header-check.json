@@ -1,0 +1,1338 @@
+[
+ {
+  "window": [
+   1280,
+   900
+  ],
+  "picture": {
+   "width": 1280,
+   "height": 900
+  },
+  "htmlClass": "hz desktop-integrated-titlebar",
+  "innerWidth": 1280,
+  "innerHeight": 900,
+  "pageScrollWidth": 1280,
+  "topbar": {
+   "x": 22,
+   "y": 0,
+   "w": 1236,
+   "h": 62,
+   "region": "drag",
+   "paddingRight": "150px"
+  },
+  "brand": {
+   "x": 26,
+   "y": 12,
+   "w": 182,
+   "h": 38,
+   "region": "no-drag"
+  },
+  "actions": {
+   "x": 923,
+   "y": 14,
+   "w": 185,
+   "h": 34,
+   "region": "drag",
+   "parts": [
+    {
+     "tag": "BUTTON",
+     "x": 923,
+     "y": 14,
+     "w": 37,
+     "h": 34,
+     "region": "no-drag"
+    },
+    {
+     "tag": "SPAN",
+     "x": 974,
+     "y": 25,
+     "w": 134,
+     "h": 12,
+     "region": "drag"
+    }
+   ]
+  },
+  "nav": {
+   "x": 224,
+   "y": 0,
+   "w": 683,
+   "h": 62,
+   "region": "drag",
+   "scrollWidth": 683,
+   "clientWidth": 683
+  },
+  "items": [
+   {
+    "text": "DASHBOARD",
+    "x": 224,
+    "y": 0,
+    "w": 90,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "CHAT",
+    "x": 318,
+    "y": 0,
+    "w": 46,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "TASKS",
+    "x": 368,
+    "y": 0,
+    "w": 51,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "PROJECTS",
+    "x": 423,
+    "y": 0,
+    "w": 73,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "MEMORY",
+    "x": 500,
+    "y": 0,
+    "w": 68,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "FILES",
+    "x": 572,
+    "y": 0,
+    "w": 45,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "WEB",
+    "x": 622,
+    "y": 0,
+    "w": 40,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "MAPS",
+    "x": 666,
+    "y": 0,
+    "w": 48,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "MORESYSTEM STATU",
+    "x": 718,
+    "y": 0,
+    "w": 64,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "SETTINGS",
+    "x": 787,
+    "y": 0,
+    "w": 72,
+    "h": 62,
+    "region": "no-drag"
+   }
+  ],
+  "windowButtonsArea": {
+   "x": 0,
+   "y": 0,
+   "w": 1143,
+   "h": 36
+  },
+  "overlayVisible": true
+ },
+ {
+  "window": [
+   1501,
+   900
+  ],
+  "picture": {
+   "width": 1501,
+   "height": 900
+  },
+  "htmlClass": "hz desktop-integrated-titlebar",
+  "innerWidth": 1501,
+  "innerHeight": 900,
+  "pageScrollWidth": 1501,
+  "topbar": {
+   "x": 22,
+   "y": 0,
+   "w": 1457,
+   "h": 62,
+   "region": "drag",
+   "paddingRight": "150px"
+  },
+  "brand": {
+   "x": 26,
+   "y": 12,
+   "w": 182,
+   "h": 38,
+   "region": "no-drag"
+  },
+  "actions": {
+   "x": 1144,
+   "y": 14,
+   "w": 185,
+   "h": 34,
+   "region": "drag",
+   "parts": [
+    {
+     "tag": "BUTTON",
+     "x": 1144,
+     "y": 14,
+     "w": 37,
+     "h": 34,
+     "region": "no-drag"
+    },
+    {
+     "tag": "SPAN",
+     "x": 1195,
+     "y": 25,
+     "w": 134,
+     "h": 12,
+     "region": "drag"
+    }
+   ]
+  },
+  "nav": {
+   "x": 224,
+   "y": 0,
+   "w": 904,
+   "h": 62,
+   "region": "drag",
+   "scrollWidth": 904,
+   "clientWidth": 904
+  },
+  "items": [
+   {
+    "text": "DASHBOARD",
+    "x": 224,
+    "y": 0,
+    "w": 92,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "CHAT",
+    "x": 320,
+    "y": 0,
+    "w": 48,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "TASKS",
+    "x": 372,
+    "y": 0,
+    "w": 53,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "PROJECTS",
+    "x": 429,
+    "y": 0,
+    "w": 75,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "MEMORY",
+    "x": 508,
+    "y": 0,
+    "w": 70,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "FILES",
+    "x": 582,
+    "y": 0,
+    "w": 47,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "WEB",
+    "x": 634,
+    "y": 0,
+    "w": 42,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "MAPS",
+    "x": 680,
+    "y": 0,
+    "w": 50,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "MORESYSTEM STATU",
+    "x": 734,
+    "y": 0,
+    "w": 66,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "SETTINGS",
+    "x": 805,
+    "y": 0,
+    "w": 74,
+    "h": 62,
+    "region": "no-drag"
+   }
+  ],
+  "windowButtonsArea": {
+   "x": 0,
+   "y": 0,
+   "w": 1364,
+   "h": 36
+  },
+  "overlayVisible": true
+ },
+ {
+  "window": [
+   1600,
+   900
+  ],
+  "picture": {
+   "width": 1600,
+   "height": 900
+  },
+  "htmlClass": "hz desktop-integrated-titlebar",
+  "innerWidth": 1600,
+  "innerHeight": 900,
+  "pageScrollWidth": 1600,
+  "topbar": {
+   "x": 22,
+   "y": 0,
+   "w": 1556,
+   "h": 62,
+   "region": "drag",
+   "paddingRight": "150px"
+  },
+  "brand": {
+   "x": 26,
+   "y": 12,
+   "w": 182,
+   "h": 38,
+   "region": "no-drag"
+  },
+  "actions": {
+   "x": 1243,
+   "y": 14,
+   "w": 185,
+   "h": 34,
+   "region": "drag",
+   "parts": [
+    {
+     "tag": "BUTTON",
+     "x": 1243,
+     "y": 14,
+     "w": 37,
+     "h": 34,
+     "region": "no-drag"
+    },
+    {
+     "tag": "SPAN",
+     "x": 1294,
+     "y": 25,
+     "w": 134,
+     "h": 12,
+     "region": "drag"
+    }
+   ]
+  },
+  "nav": {
+   "x": 224,
+   "y": 0,
+   "w": 1003,
+   "h": 62,
+   "region": "drag",
+   "scrollWidth": 1003,
+   "clientWidth": 1003
+  },
+  "items": [
+   {
+    "text": "DASHBOARD",
+    "x": 224,
+    "y": 0,
+    "w": 92,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "CHAT",
+    "x": 320,
+    "y": 0,
+    "w": 48,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "TASKS",
+    "x": 372,
+    "y": 0,
+    "w": 53,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "PROJECTS",
+    "x": 429,
+    "y": 0,
+    "w": 75,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "MEMORY",
+    "x": 508,
+    "y": 0,
+    "w": 70,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "FILES",
+    "x": 582,
+    "y": 0,
+    "w": 47,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "WEB",
+    "x": 634,
+    "y": 0,
+    "w": 42,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "MAPS",
+    "x": 680,
+    "y": 0,
+    "w": 50,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "MORESYSTEM STATU",
+    "x": 734,
+    "y": 0,
+    "w": 66,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "SETTINGS",
+    "x": 805,
+    "y": 0,
+    "w": 74,
+    "h": 62,
+    "region": "no-drag"
+   }
+  ],
+  "windowButtonsArea": {
+   "x": 0,
+   "y": 0,
+   "w": 1463,
+   "h": 36
+  },
+  "overlayVisible": true
+ },
+ {
+  "window": [
+   1650,
+   900
+  ],
+  "picture": {
+   "width": 1650,
+   "height": 900
+  },
+  "htmlClass": "hz desktop-integrated-titlebar",
+  "innerWidth": 1650,
+  "innerHeight": 900,
+  "pageScrollWidth": 1650,
+  "topbar": {
+   "x": 22,
+   "y": 0,
+   "w": 1606,
+   "h": 62,
+   "region": "drag",
+   "paddingRight": "150px"
+  },
+  "brand": {
+   "x": 26,
+   "y": 12,
+   "w": 182,
+   "h": 38,
+   "region": "no-drag"
+  },
+  "actions": {
+   "x": 1293,
+   "y": 14,
+   "w": 185,
+   "h": 34,
+   "region": "drag",
+   "parts": [
+    {
+     "tag": "BUTTON",
+     "x": 1293,
+     "y": 14,
+     "w": 37,
+     "h": 34,
+     "region": "no-drag"
+    },
+    {
+     "tag": "SPAN",
+     "x": 1344,
+     "y": 25,
+     "w": 134,
+     "h": 12,
+     "region": "drag"
+    }
+   ]
+  },
+  "nav": {
+   "x": 224,
+   "y": 0,
+   "w": 1053,
+   "h": 62,
+   "region": "drag",
+   "scrollWidth": 1053,
+   "clientWidth": 1053
+  },
+  "items": [
+   {
+    "text": "DASHBOARD",
+    "x": 224,
+    "y": 0,
+    "w": 92,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "CHAT",
+    "x": 320,
+    "y": 0,
+    "w": 48,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "TASKS",
+    "x": 372,
+    "y": 0,
+    "w": 53,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "PROJECTS",
+    "x": 429,
+    "y": 0,
+    "w": 75,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "MEMORY",
+    "x": 508,
+    "y": 0,
+    "w": 70,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "FILES",
+    "x": 582,
+    "y": 0,
+    "w": 47,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "WEB",
+    "x": 634,
+    "y": 0,
+    "w": 42,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "MAPS",
+    "x": 680,
+    "y": 0,
+    "w": 50,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "MORESYSTEM STATU",
+    "x": 734,
+    "y": 0,
+    "w": 66,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "SETTINGS",
+    "x": 805,
+    "y": 0,
+    "w": 74,
+    "h": 62,
+    "region": "no-drag"
+   }
+  ],
+  "windowButtonsArea": {
+   "x": 0,
+   "y": 0,
+   "w": 1513,
+   "h": 36
+  },
+  "overlayVisible": true
+ },
+ {
+  "window": [
+   1651,
+   900
+  ],
+  "picture": {
+   "width": 1651,
+   "height": 900
+  },
+  "htmlClass": "hz desktop-integrated-titlebar",
+  "innerWidth": 1651,
+  "innerHeight": 900,
+  "pageScrollWidth": 1651,
+  "topbar": {
+   "x": 22,
+   "y": 0,
+   "w": 1607,
+   "h": 62,
+   "region": "drag",
+   "paddingRight": "150px"
+  },
+  "brand": {
+   "x": 26,
+   "y": 12,
+   "w": 182,
+   "h": 38,
+   "region": "no-drag"
+  },
+  "actions": {
+   "x": 1055,
+   "y": 14,
+   "w": 424,
+   "h": 34,
+   "region": "drag",
+   "parts": [
+    {
+     "tag": "BUTTON",
+     "x": 1055,
+     "y": 14,
+     "w": 202,
+     "h": 34,
+     "region": "no-drag"
+    },
+    {
+     "tag": "SPAN",
+     "x": 1271,
+     "y": 25,
+     "w": 134,
+     "h": 12,
+     "region": "drag"
+    },
+    {
+     "tag": "TIME",
+     "x": 1419,
+     "y": 24,
+     "w": 60,
+     "h": 14,
+     "region": "drag"
+    }
+   ]
+  },
+  "nav": {
+   "x": 234,
+   "y": 0,
+   "w": 794,
+   "h": 62,
+   "region": "drag",
+   "scrollWidth": 794,
+   "clientWidth": 794
+  },
+  "items": [
+   {
+    "text": "DASHBOARD",
+    "x": 234,
+    "y": 0,
+    "w": 106,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "CHAT",
+    "x": 344,
+    "y": 0,
+    "w": 57,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "TASKS",
+    "x": 405,
+    "y": 0,
+    "w": 63,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "PROJECTS",
+    "x": 472,
+    "y": 0,
+    "w": 88,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "MEMORY",
+    "x": 564,
+    "y": 0,
+    "w": 81,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "FILES",
+    "x": 649,
+    "y": 0,
+    "w": 57,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "WEB",
+    "x": 710,
+    "y": 0,
+    "w": 51,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "MAPS",
+    "x": 765,
+    "y": 0,
+    "w": 60,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "MORESYSTEM STATU",
+    "x": 829,
+    "y": 0,
+    "w": 76,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "SETTINGS",
+    "x": 908,
+    "y": 0,
+    "w": 87,
+    "h": 62,
+    "region": "no-drag"
+   }
+  ],
+  "windowButtonsArea": {
+   "x": 0,
+   "y": 0,
+   "w": 1514,
+   "h": 36
+  },
+  "overlayVisible": true
+ },
+ {
+  "window": [
+   1700,
+   900
+  ],
+  "picture": {
+   "width": 1700,
+   "height": 900
+  },
+  "htmlClass": "hz desktop-integrated-titlebar",
+  "innerWidth": 1700,
+  "innerHeight": 900,
+  "pageScrollWidth": 1700,
+  "topbar": {
+   "x": 22,
+   "y": 0,
+   "w": 1656,
+   "h": 62,
+   "region": "drag",
+   "paddingRight": "150px"
+  },
+  "brand": {
+   "x": 26,
+   "y": 12,
+   "w": 182,
+   "h": 38,
+   "region": "no-drag"
+  },
+  "actions": {
+   "x": 1104,
+   "y": 14,
+   "w": 424,
+   "h": 34,
+   "region": "drag",
+   "parts": [
+    {
+     "tag": "BUTTON",
+     "x": 1104,
+     "y": 14,
+     "w": 202,
+     "h": 34,
+     "region": "no-drag"
+    },
+    {
+     "tag": "SPAN",
+     "x": 1320,
+     "y": 25,
+     "w": 134,
+     "h": 12,
+     "region": "drag"
+    },
+    {
+     "tag": "TIME",
+     "x": 1468,
+     "y": 24,
+     "w": 60,
+     "h": 14,
+     "region": "drag"
+    }
+   ]
+  },
+  "nav": {
+   "x": 234,
+   "y": 0,
+   "w": 843,
+   "h": 62,
+   "region": "drag",
+   "scrollWidth": 843,
+   "clientWidth": 843
+  },
+  "items": [
+   {
+    "text": "DASHBOARD",
+    "x": 234,
+    "y": 0,
+    "w": 106,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "CHAT",
+    "x": 344,
+    "y": 0,
+    "w": 57,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "TASKS",
+    "x": 405,
+    "y": 0,
+    "w": 63,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "PROJECTS",
+    "x": 472,
+    "y": 0,
+    "w": 88,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "MEMORY",
+    "x": 564,
+    "y": 0,
+    "w": 81,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "FILES",
+    "x": 649,
+    "y": 0,
+    "w": 57,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "WEB",
+    "x": 710,
+    "y": 0,
+    "w": 51,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "MAPS",
+    "x": 765,
+    "y": 0,
+    "w": 60,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "MORESYSTEM STATU",
+    "x": 829,
+    "y": 0,
+    "w": 76,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "SETTINGS",
+    "x": 908,
+    "y": 0,
+    "w": 87,
+    "h": 62,
+    "region": "no-drag"
+   }
+  ],
+  "windowButtonsArea": {
+   "x": 0,
+   "y": 0,
+   "w": 1563,
+   "h": 36
+  },
+  "overlayVisible": true
+ },
+ {
+  "window": [
+   1920,
+   1040
+  ],
+  "picture": {
+   "width": 1920,
+   "height": 1032
+  },
+  "htmlClass": "hz desktop-integrated-titlebar",
+  "innerWidth": 1920,
+  "innerHeight": 1032,
+  "pageScrollWidth": 1920,
+  "topbar": {
+   "x": 22,
+   "y": 0,
+   "w": 1876,
+   "h": 62,
+   "region": "drag",
+   "paddingRight": "150px"
+  },
+  "brand": {
+   "x": 26,
+   "y": 12,
+   "w": 182,
+   "h": 38,
+   "region": "no-drag"
+  },
+  "actions": {
+   "x": 1324,
+   "y": 14,
+   "w": 424,
+   "h": 34,
+   "region": "drag",
+   "parts": [
+    {
+     "tag": "BUTTON",
+     "x": 1324,
+     "y": 14,
+     "w": 202,
+     "h": 34,
+     "region": "no-drag"
+    },
+    {
+     "tag": "SPAN",
+     "x": 1540,
+     "y": 25,
+     "w": 134,
+     "h": 12,
+     "region": "drag"
+    },
+    {
+     "tag": "TIME",
+     "x": 1688,
+     "y": 24,
+     "w": 60,
+     "h": 14,
+     "region": "drag"
+    }
+   ]
+  },
+  "nav": {
+   "x": 234,
+   "y": 0,
+   "w": 1063,
+   "h": 62,
+   "region": "drag",
+   "scrollWidth": 1063,
+   "clientWidth": 1063
+  },
+  "items": [
+   {
+    "text": "DASHBOARD",
+    "x": 234,
+    "y": 0,
+    "w": 106,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "CHAT",
+    "x": 344,
+    "y": 0,
+    "w": 57,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "TASKS",
+    "x": 405,
+    "y": 0,
+    "w": 63,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "PROJECTS",
+    "x": 472,
+    "y": 0,
+    "w": 88,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "MEMORY",
+    "x": 564,
+    "y": 0,
+    "w": 81,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "FILES",
+    "x": 649,
+    "y": 0,
+    "w": 57,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "WEB",
+    "x": 710,
+    "y": 0,
+    "w": 51,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "MAPS",
+    "x": 765,
+    "y": 0,
+    "w": 60,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "MORESYSTEM STATU",
+    "x": 829,
+    "y": 0,
+    "w": 76,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "SETTINGS",
+    "x": 908,
+    "y": 0,
+    "w": 87,
+    "h": 62,
+    "region": "no-drag"
+   }
+  ],
+  "windowButtonsArea": {
+   "x": 0,
+   "y": 0,
+   "w": 1783,
+   "h": 36
+  },
+  "overlayVisible": true
+ },
+ {
+  "window": [
+   1024,
+   768
+  ],
+  "picture": {
+   "width": 1024,
+   "height": 768
+  },
+  "htmlClass": "hz desktop-integrated-titlebar",
+  "innerWidth": 1024,
+  "innerHeight": 768,
+  "pageScrollWidth": 1024,
+  "topbar": {
+   "x": 22,
+   "y": 0,
+   "w": 980,
+   "h": 62,
+   "region": "drag",
+   "paddingRight": "150px"
+  },
+  "brand": {
+   "x": 26,
+   "y": 12,
+   "w": 142,
+   "h": 38,
+   "region": "no-drag"
+  },
+  "actions": {
+   "x": 794,
+   "y": 14,
+   "w": 58,
+   "h": 34,
+   "region": "drag",
+   "parts": [
+    {
+     "tag": "BUTTON",
+     "x": 794,
+     "y": 14,
+     "w": 37,
+     "h": 34,
+     "region": "no-drag"
+    },
+    {
+     "tag": "SPAN",
+     "x": 845,
+     "y": 28,
+     "w": 7,
+     "h": 7,
+     "region": "drag"
+    }
+   ]
+  },
+  "nav": {
+   "x": 184,
+   "y": 0,
+   "w": 594,
+   "h": 62,
+   "region": "drag",
+   "scrollWidth": 594,
+   "clientWidth": 594
+  },
+  "items": [
+   {
+    "text": "DASHBOARD",
+    "x": 184,
+    "y": 0,
+    "w": 90,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "CHAT",
+    "x": 278,
+    "y": 0,
+    "w": 46,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "TASKS",
+    "x": 328,
+    "y": 0,
+    "w": 51,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "PROJECTS",
+    "x": 383,
+    "y": 0,
+    "w": 73,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "MEMORY",
+    "x": 460,
+    "y": 0,
+    "w": 68,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "FILES",
+    "x": 532,
+    "y": 0,
+    "w": 45,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "WEB",
+    "x": 581,
+    "y": 0,
+    "w": 40,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "MOREMAPSSYSTEM S",
+    "x": 626,
+    "y": 0,
+    "w": 64,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "SETTINGS",
+    "x": 694,
+    "y": 0,
+    "w": 72,
+    "h": 62,
+    "region": "no-drag"
+   }
+  ],
+  "windowButtonsArea": {
+   "x": 0,
+   "y": 0,
+   "w": 887,
+   "h": 36
+  },
+  "overlayVisible": true
+ },
+ {
+  "window": [
+   720,
+   540
+  ],
+  "picture": {
+   "width": 720,
+   "height": 540
+  },
+  "htmlClass": "hz desktop-integrated-titlebar",
+  "innerWidth": 720,
+  "innerHeight": 540,
+  "pageScrollWidth": 720,
+  "topbar": {
+   "x": 10,
+   "y": 0,
+   "w": 700,
+   "h": 62,
+   "region": "drag",
+   "paddingRight": "150px"
+  },
+  "brand": {
+   "x": 14,
+   "y": 12,
+   "w": 142,
+   "h": 38,
+   "region": "no-drag"
+  },
+  "actions": {
+   "x": 502,
+   "y": 14,
+   "w": 58,
+   "h": 34,
+   "region": "drag",
+   "parts": [
+    {
+     "tag": "BUTTON",
+     "x": 502,
+     "y": 14,
+     "w": 37,
+     "h": 34,
+     "region": "no-drag"
+    },
+    {
+     "tag": "SPAN",
+     "x": 553,
+     "y": 28,
+     "w": 7,
+     "h": 7,
+     "region": "drag"
+    }
+   ]
+  },
+  "nav": {
+   "x": 172,
+   "y": 0,
+   "w": 314,
+   "h": 62,
+   "region": "drag",
+   "scrollWidth": 314,
+   "clientWidth": 314
+  },
+  "items": [
+   {
+    "text": "DASHBOARD",
+    "x": 172,
+    "y": 0,
+    "w": 90,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "CHAT",
+    "x": 266,
+    "y": 0,
+    "w": 46,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "MORETASKSPROJECT",
+    "x": 316,
+    "y": 0,
+    "w": 64,
+    "h": 62,
+    "region": "no-drag"
+   },
+   {
+    "text": "SETTINGS",
+    "x": 385,
+    "y": 0,
+    "w": 72,
+    "h": 62,
+    "region": "no-drag"
+   }
+  ],
+  "windowButtonsArea": {
+   "x": 0,
+   "y": 0,
+   "w": 583,
+   "h": 36
+  },
+  "overlayVisible": true
+ }
+]

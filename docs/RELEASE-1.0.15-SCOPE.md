@@ -52,14 +52,23 @@ silently win if the two ever differ; whether the key file should win instead is 
 for HTTP 413 and `AccessDenied.Unpurchased` (**done 2026-10-05**: `providers.py`, two tests); a full-size connection
 check in Settings (**done 2026-10-05**: Settings > Developer > Connections & action review > "Real-size question"
 sends one question as JARVIS really sends it, without chats, saved facts or files; `App.full_question`); the
-Alibaba "maintenance mode" check; three reviewer notes (**done 2026-10-05**: the fixed "CORE LINK NOMINAL" is gone,
+Alibaba "maintenance mode" check (**looked at 2026-10-06, nothing to change:** the console notice named
+`dashscope.aliyuncs.com`, the Beijing address; JARVIS and the owner-run checks use `dashscope-intl.aliyuncs.com`, the
+Singapore address, which answered full JARVIS questions on 2026-10-05, five days after the date in the notice. A
+public page that says whether the notice also covers the international address was not found); three reviewer notes (**done 2026-10-05**: the fixed "CORE LINK NOMINAL" is gone,
 the line shows the real state of the link; the Core answers "not found" for the missing `command-background.png`;
 stale values when the connection is lost are covered by the strip "CORE NOT CONNECTED // WHAT YOU SEE MAY BE OUT OF
 DATE" that every section shows); in Settings the SAVE button floats over the row beneath it (**done 2026-10-05**: the bar now has
 a solid ground and sits at the bottom, and the rows under Settings > AI have their spacing; `static/horizon.css`,
-checked in the sandbox at two window sizes); the new header checked in the desktop app itself; the version 3
+checked in the sandbox at two window sizes); the new header checked in the desktop app itself (**done 2026-10-06** in a test desktop window:
+the same Electron and window options as the app, its own profile, a sandbox Core; pictures and measurements in
+`docs/release-rehearsal-20261006-1015/header-check/`. At the app's own size, 1280 wide, all eight sections, MORE and
+SETTINGS sit in one row and end 35 pixels before the Windows buttons; the window can be moved by the free parts of
+the header. Found and fixed: between 1501 and about 1620 wide MAPS was folded into MORE although it fits at 1280;
+the compact header now applies 150 pixels earlier in the desktop window, and all eight show from 1280 to full
+width. Not tried: moving the real window with the mouse); the version 3
 Stage 7 guest driver (**done 2026-10-06**: `docs/STAGE7-DRIVER-V3.md`; the two incidents of the 1.0.14 check fixed,
-21 decision cases pass on this PC, not yet run in the VM); the release notes. Added 2026-10-05: backups and the switch-over now carry the owner's own
+21 decision cases pass on this PC, not yet run in the VM); the release notes (**done 2026-10-06**, `release-notes.json`). Added 2026-10-05: backups and the switch-over now carry the owner's own
 style sheet (`owner-style.css`) beside the personality (`recovery.py`, `switch_over.py`, tests).
 
 Then, as for every release: build, comparison with 1.0.14, regression, zip install, sandbox Stage 7, the VM check on

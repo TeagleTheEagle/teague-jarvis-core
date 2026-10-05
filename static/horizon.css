@@ -143,6 +143,12 @@ html.hz body dialog::backdrop{background:#01050bcc;backdrop-filter:blur(3px)}
 @media (max-width:1500px){html.hz body .topbar{gap:16px!important}html.hz body .topbar nav>.nav,html.hz .hz-more-toggle{padding:0 8px;font-size:11px;letter-spacing:.1em}
  html.hz .ti-palette-trigger{min-width:0}.hz-search-text{display:none}html.hz .ti-clock{display:none}.hz-owner{display:none}}
 @media (max-width:1500px){html.hz.desktop-integrated-titlebar .ti-palette-trigger kbd{display:none}html.hz.desktop-integrated-titlebar body .topbar nav>.nav,html.hz.desktop-integrated-titlebar .hz-more-toggle{padding:0 7px}}
+/* The desktop window gives 150px of the header to the Windows buttons, so the compact header applies 150px earlier
+   there. (Seen in a desktop window 1600 wide: MAPS was folded into MORE although all eight sections fit at 1280.) */
+@media (min-width:1501px) and (max-width:1650px){html.hz.desktop-integrated-titlebar body .topbar{gap:16px!important}
+ html.hz.desktop-integrated-titlebar body .topbar nav>.nav,html.hz.desktop-integrated-titlebar .hz-more-toggle{padding:0 8px;font-size:11px;letter-spacing:.1em}
+ html.hz.desktop-integrated-titlebar .ti-palette-trigger{min-width:0}html.hz.desktop-integrated-titlebar .ti-palette-trigger kbd,html.hz.desktop-integrated-titlebar .hz-search-text,
+ html.hz.desktop-integrated-titlebar .ti-clock,html.hz.desktop-integrated-titlebar .hz-owner{display:none}}
 @media (max-width:1100px){html.hz body .brand-product small,html.hz body .connection:not(.lost) span,html.hz .ti-palette-trigger kbd{display:none}html.hz body .brand-product{font-size:19px}
  .hz-strip p:before,.hz-strip p:after{display:none}.hz-strip{letter-spacing:.2em}}
 @media (max-width:760px){.hz-strip{display:none}html.hz body .topbar{margin-bottom:0!important}
