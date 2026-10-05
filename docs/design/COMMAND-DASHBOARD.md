@@ -1,4 +1,7 @@
-# Command dashboard (release 1.0.15)
+# Command dashboard (release 1.0.15): first layout
+
+**Superseded on 2026-10-05 by the second layout and the new look for the whole interface: see `NEW-LOOK.md`.**
+This file is kept as the record of the first layout (commits 39901c5, 5d0c96d, f7776df) and of its review.
 
 Owner request, 2026-10-05: "can we apply this new and improved version of jarvis's interface into the application",
 with the concept image `command-dashboard-concept-20261005.jpg` (from the owner's `Copy of Untitled presentation.pdf`,
@@ -51,10 +54,10 @@ Out of scope for 1.0.15: phone and glasses clients, network and graphics telemet
 - After the owner's "get rid of this" (f7776df): the centre "JARVIS / CORE ONLINE" title is gone; the live mode
   shows under the activity bar.
 
-## Independent review of 39901c5 and 5d0c96d: findings, NOT YET APPLIED
+## Independent review of 39901c5 and 5d0c96d: ten findings, all applied in 5f2ed59 (see `NEW-LOOK.md` for where)
 
 Recorded 2026-10-05 from the session handover summary (the reviewer's own text was not carried over, so these are
-the summarised findings). Waiting for the owner's choice: apply these, start the new look, or both.
+the summarised findings). The owner chose "both" (fixes and the new look) the same day.
 
 1. Stale data shows as ready when the Core is unreachable: show unknown, and "CONNECTING" before the first state.
 2. "READY" overstates: the Voice row is always green, the ring can only read 5/6 or 6/6, and the note is hidden at
@@ -71,10 +74,10 @@ the summarised findings). Waiting for the owner's choice: apply these, start the
 9. Conversations are capped at 100: show "100+". Deleted linked tasks are counted: count only tasks that exist.
 10. Push-to-talk still shows wake-word text; `teague.css` `padding:0!important` overrides the dashboard padding.
 
-## New look shown by the owner (2026-10-05): seen, not started
+## New look shown by the owner (2026-10-05): built, see `NEW-LOOK.md`
 
 The owner showed four images ("I want it to have this look"; "just look and tell me youve seen it"). The images
-are not saved in the repo. As described in the handover: a dashboard version 2 (Earth horizon, greeting, ask bar,
+were sent again and are saved beside this file (`new-look-20261005-*.webp`). As described in the handover: a dashboard version 2 (Earth horizon, greeting, ask bar,
 suggestion chips, recent activity, performance rings, world map, missions, schedule, quick tools); a Teague
 Industries brand scene with the chrome T; a JARVIS logo (chrome T in a ring, "AI / Assistant", "Observe |
 Understand | Assist | Innovate"); a "One core, many capabilities" globe. The real-data rule above still applies:
