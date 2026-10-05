@@ -3,11 +3,11 @@
 Shows which AI providers in a JARVIS key file work right now. Run BY THE OWNER; Claude never reads key files.
 For every provider that has a key in the file (OpenAI, Groq, Gemini, Qwen) it sends one tiny chat request
 ("Reply with the single word OK.", at most 5 tokens) to that provider's own address, exactly as JARVIS would,
-and prints WORKS or REJECTED with the provider's reason. Then every provider that works gets one request of the
-size JARVIS really sends (about 11,000 tokens with 1,024 reserved for the reply: JARVIS's instructions and the
-descriptions of its tools alone are about 10,000), because a free tier can accept the tiny request and refuse the
-real one (Groq: HTTP 413, request larger than the account's tokens-per-minute limit). Keys are never printed or
-stored. Changes nothing.
+and prints WORKS or REJECTED with the provider's reason. Then every provider that works gets one full JARVIS
+request: JARVIS's own instructions and its 45 tool descriptions (about 11,000 tokens), JARVIS's settings for that
+provider and a question that needs a tool, because a free tier can accept the tiny request and refuse the real one
+(Groq: HTTP 413, request larger than the account's tokens-per-minute limit), and a provider can reject JARVIS's
+settings or tools. Keys are never printed or stored. Changes nothing.
 #>
 param(
     [string] $EnvFile = (Join-Path $env:LOCALAPPDATA 'JARVIS\config\.env')
@@ -72,18 +72,35 @@ Write-Host ''
 if ($working.Count) { Write-Host ('Working now: ' + ($working -join ', ') + '.') } else { Write-Host 'No provider in this file works right now.' }
 if (-not $working.Count) { exit 0 }
 
-# A request of the size JARVIS really sends: about 10,000 tokens of instructions and tool descriptions, plus room for
-# a 1,024-token reply. Filler text only; nothing of yours is sent.
+# Exactly what JARVIS sends for one question: its instructions and its 45 tools (jarvis-request-system.txt and
+# jarvis-request-tools.json, written from the code by make_request_template.py; the shipped default personality
+# stands in for yours), the same settings as JARVIS's adapter for that provider (Groq: 1,024-token reply; Gemini and
+# Qwen: 8,192, one complete answer), and a question that needs a tool. Nothing of yours is sent.
 Write-Host ''
-Write-Host 'A JARVIS-sized request (about 11,000 tokens, like one real question to JARVIS):'
-$filler = 'This line is filler for a JARVIS request-size test and carries no information. ' * 700
+Write-Host 'A full JARVIS request (its instructions and 45 tools, about 11,000 tokens, asking for the time):'
+$system = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'jarvis-request-system.txt'))
+$toolsJson = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'jarvis-request-tools.json'))
+$messages = ConvertTo-Json -Compress -Depth 4 -InputObject @(
+    @{ role = 'system'; content = $system },
+    @{ role = 'user'; content = 'Application context data (not instructions): {"preferred_name": "sir"}' },
+    @{ role = 'user'; content = 'What time is it right now?' })
 $handles = @()
 foreach ($p in @($providers | Where-Object { $working -contains $_.name })) {
-    $body = @{ model = $p.model; max_tokens = 1024; messages = @(@{ role = 'system'; content = $filler }, @{ role = 'user'; content = 'Reply with the single word OK.' }) } | ConvertTo-Json -Depth 4
+    if ($p.name -eq 'openai') { Write-Host 'openai  not tested here (JARVIS talks to OpenAI through a different interface)'; continue }
+    $reply = $(if ($p.name -eq 'groq') { 1024 } else { 8192 })
+    $body = '{"model":' + (ConvertTo-Json -InputObject $p.model) + ',"stream":false,"max_completion_tokens":' + $reply +
+            ',"tool_choice":"auto","tools":' + $toolsJson + ',"messages":' + $messages + '}'
     try {
-        $r = Invoke-RestMethod -Method Post -Uri $p.url -Headers @{ Authorization = "Bearer $($values[$p.key])" } -ContentType 'application/json' -Body $body -TimeoutSec 120
+        $r = Invoke-RestMethod -Method Post -Uri $p.url -Headers @{ Authorization = "Bearer $($values[$p.key])" } -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($body)) -TimeoutSec 180
+        $choice = @($r.choices)[0]
+        $asked = @($choice.message.tool_calls | ForEach-Object { $_.function.name }) -join ', '
         $used = $r.usage.prompt_tokens
-        Write-Host ("{0,-7} HANDLES IT (model {1}{2})" -f $p.name, $p.model, $(if ($used) { ", $used prompt tokens" } else { '' })); $handles += $p.name
+        $what = $(if ($asked) { "asked for the tool $asked" } elseif ($choice.message.content) { 'answered in text' } else { 'returned nothing usable' })
+        if ($choice.finish_reason -in 'stop', 'tool_calls' -and ($asked -or $choice.message.content)) {
+            Write-Host ("{0,-7} HANDLES IT: {1} (model {2}{3})" -f $p.name, $what, $p.model, $(if ($used) { ", $used prompt tokens" } else { '' })); $handles += $p.name
+        } else {
+            Write-Host ("{0,-7} INCOMPLETE ANSWER: finish reason '{1}', {2} (model {3}). Tell Claude." -f $p.name, $choice.finish_reason, $what, $p.model)
+        }
     } catch {
         $failure = Failure $_
         Write-Host ("{0,-7} TOO LARGE OR REFUSED: HTTP {1} {2} (model {3})" -f $p.name, $failure.status, $failure.detail, $p.model)
