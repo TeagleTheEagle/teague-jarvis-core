@@ -32,7 +32,7 @@ class VoiceEngine:
         if not text:
             raise ValueError('No spoken text remains.')
         # Include provider settings and credentials in a digest, never in output.
-        settings = '\0'.join(os.getenv(k, '') for k in ('FISH_API_KEY','FISH_VOICE_ID','FISH_MODEL','ELEVENLABS_API_KEY','ELEVENLABS_VOICE_ID','ELEVENLABS_MODEL','OPENAI_API_KEY','DASHSCOPE_API_KEY','QWEN_TTS_VOICE','QWEN_TTS_MODEL','DASHSCOPE_BASE_URL','DASHSCOPE_TTS_URL'))
+        settings = '\0'.join(os.getenv(k, '') for k in ('FISH_API_KEY','FISH_VOICE_ID','FISH_MODEL','OPENAI_API_KEY','DASHSCOPE_API_KEY','QWEN_TTS_VOICE','QWEN_TTS_MODEL','DASHSCOPE_BASE_URL','DASHSCOPE_TTS_URL'))
         key = hashlib.sha256((profile+'\0'+settings+'\0'+text).encode()).digest()
         with self.lock:
             now = time.monotonic()

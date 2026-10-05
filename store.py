@@ -8,6 +8,8 @@ import memory
 from pathlib import Path
 from contextlib import contextmanager
 
+VOICE_PROFILES = ('auto', 'fish', 'openai', 'qwen')  # the same as providers.VOICE_PROFILES
+
 
 class Store:
     def __init__(self, root):
@@ -190,6 +192,8 @@ class Store:
         result = {'name': '', 'voice': False, 'continuous': False, 'response_length': 'balanced', 'tone': 'cinematic', 'humor': True, 'speech_rate': 'natural', 'wake_sensitivity': 'normal', 'quiet_hours': False, 'briefing_time': '', 'proactive': False}
         with self.connect() as db:
             result.update({r['key']: json.loads(r['value']) for r in db.execute('SELECT * FROM settings')})
+        if result.get('voice_profile', 'auto') not in VOICE_PROFILES:  # e.g. an ElevenLabs choice saved before 1.0.15
+            result['voice_profile'] = 'auto'
         return result
 
     def save_settings(self, values):
@@ -200,7 +204,7 @@ class Store:
                     raise ValueError('Invalid setting.')
                 if isinstance(val, str) and len(val) > 100:
                     raise ValueError('Setting too long.')
-                if key == 'voice_profile' and val not in ('auto','fish','openai','eleven_flash','eleven_quality','qwen'): raise ValueError('Invalid voice profile.')
+                if key == 'voice_profile' and val not in VOICE_PROFILES: raise ValueError('Invalid voice profile.')
                 if key == 'response_length' and val not in ('brief', 'balanced', 'detailed'):
                     raise ValueError('Invalid response length.')
                 if key == 'tone' and val not in ('cinematic','professional','casual'): raise ValueError('Invalid tone.')

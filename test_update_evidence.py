@@ -50,7 +50,7 @@ class UpdateEvidence(unittest.TestCase):
             def fake(messages,tools,emit,cancel,vision):
                 emit('assistant.delta',{'text':'OpenAI model access succeeded.'})
                 return {'role':'assistant','content':'OpenAI model access succeeded.'}
-            with patch.dict(os.environ,{'GROQ_API_KEY':'fake-test'}),patch('providers.chat',side_effect=fake):
+            with patch.dict(os.environ,{'OPENAI_API_KEY':'fake-test'}),patch('providers.chat',side_effect=fake):
                 app.work(run,'Tell me something useful',None)
             self.assertFalse(any(e['event']=='run.failed' for e in run.events),run.events)
             output=' '.join(e['data'].get('text','') for e in run.events)

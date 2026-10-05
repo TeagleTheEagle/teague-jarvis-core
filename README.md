@@ -1,6 +1,6 @@
 # JARVIS
 
-Local personal assistant with a cyan command centre inspired by your two reference images. Groq supplies AI conversation; Fish Audio supplies your selected voice.
+Local personal assistant with a cyan command centre inspired by your two reference images. OpenAI or Qwen (Alibaba Cloud Model Studio) supplies AI conversation and vision, chosen with `JARVIS_PROVIDER`; Fish Audio or a Qwen cloned voice supplies speech. Groq, Gemini and ElevenLabs were removed in 1.0.15.
 
 ## Launch
 
@@ -32,22 +32,22 @@ Your supplied credentials are saved in **.env**, ignored by Git and never served
 
 | Service | Status |
 |---|---|
-| Groq chat | Connected; live streamed response tested |
+| AI chat and vision | OpenAI (`JARVIS_PROVIDER=openai`, the default) or Qwen (`JARVIS_PROVIDER=qwen`, with `QWEN_VISION_MODEL` for images) |
 | Fish Audio | Connected; audio generation succeeded after API credit was added |
-| Groq vision | Qwen 3.8 configured; live test reached the account's rate limit |
-| Groq transcription | Live transcription tested; recording requires browser microphone permission |
+| Qwen voice | Optional cloned voice: `QWEN_TTS_VOICE` with the Qwen key |
+| Speech recognition | Local Whisper on this PC; no key needed; recording requires microphone permission |
 | Spotify | Optional; needs Client ID and browser sign-in |
 | YouTube search | Optional; needs YouTube API key; pasted URLs need no key |
 | Web search | Best-effort DuckDuckGo results; optional Brave API key supported |
 
-Fish voice reference: `14129c3e320149449d6bada6862f7338`. The synthesis model is `s2-pro`. Fish takes priority when configured; ElevenLabs is an optional alternative. A configured badge indicates credentials are present, not guaranteed connectivity or quota.
+Fish voice reference: `14129c3e320149449d6bada6862f7338`. The synthesis model is `s2-pro`. A Qwen cloned voice takes priority when configured, then Fish; OpenAI Cedar can be chosen in Settings. A configured badge indicates credentials are present, not guaranteed connectivity or quota.
 
 ## Controls
 
 - Type into Communications; Enter sends, Shift+Enter inserts a newline.
 - Click **VOICE OFF** to turn spoken replies on. Text remains visible if speech fails.
 - Click **ENABLE MIC** or press F4 to begin listening; grant browser permission. Escape stops the interaction.
-- Always-on listening starts on page load. Say **Hey Jarvis**, followed by your command, then pause. Wake detection runs locally; only activated commands go to Groq. Say **Hey Jarvis** during a reply to interrupt. Mute, Stop, or Escape turns the mic off. Browser microphone permission is required.
+- Always-on listening starts on page load. Say **Hey Jarvis**, followed by your command, then pause. Wake detection and transcription run locally; only the transcribed text of an activated command goes to the AI provider. Say **Hey Jarvis** during a reply to interrupt. Mute, Stop, or Escape turns the mic off. Browser microphone permission is required.
 - Commands end after about 1.3 seconds of silence and are capped at 30 seconds. An empty wake activation expires after seven seconds. See [Voice and memory](VOICE-AND-MEMORY.md) for setup, memory commands, and limitations.
 - Use Memory to add/edit/delete saved facts and notes. No automatic extraction of personal facts occurs.
 - Use Files to upload documents and create PDF, Word, Markdown or text files. Generated files stay under `data/generated/` and never silently overwrite another file.
@@ -83,7 +83,7 @@ One run executes at a time. Tool loops are bounded. Cancellation prevents subseq
 ## Source and verification
 
 - `server.py`: authenticated loopback API, runs, approvals, uploads/downloads.
-- `providers.py`: Groq, Fish, optional ElevenLabs, Spotify PKCE.
+- `providers.py`: OpenAI, Qwen, Fish, Spotify PKCE.
 - `actions.py`: tool schemas, commands, document handling, search and YouTube.
 - `store.py`: transactional SQLite, initial schema migration version 1.
 - `personality.txt`: editable assistant behavior.
@@ -92,15 +92,15 @@ One run executes at a time. Tool loops are bounded. Cancellation prevents subseq
 
 Run `python -m unittest -v`. The test suite covers persistence, approval expiry/replay/denial, cancellation, credential non-disclosure, cross-origin access, file confinement and document round-trips. External services and real application launches are mocked.
 
-Live Groq text and Fish audio generation were tested. The browser rendered and completed a real chat response without console errors. Vision testing returned HTTP 429. Microphone device capture, Spotify and YouTube playback still depend on browser/device/account permissions.
+Original build (before 1.0.15 removed Groq): live Groq text and Fish audio generation were tested. The browser rendered and completed a real chat response without console errors. Vision testing returned HTTP 429. Microphone device capture, Spotify and YouTube playback still depend on browser/device/account permissions.
 
 The PDFs were reference material. Fragile recipes were replaced with structured document parsing, explicit microphone/screen consent, scoped launches, transactional storage and a single Groq key. No additional accounts, quota-evading key rotation, antivirus changes, or guide-suggested plugin installations were performed. Activity rings represent assistant state, not CPU/network telemetry.
 
 This app binds only to localhost and is intended for one local user. Do not publish it as a public service without additional hardening.
 
-Provider references: [Groq API](https://console.groq.com/docs/api-reference), [Groq vision](https://console.groq.com/docs/model/qwen/qwen3.8-27b), [Fish Audio](https://docs.fish.audio/api-reference/endpoint/openapi-v1/text-to-speech), [Spotify PKCE](https://developer.spotify.com/documentation/web-api/tutorials/code-pkce-flow).
+Provider references: [OpenAI API](https://platform.openai.com/docs/api-reference), [Qwen (Alibaba Cloud Model Studio)](https://www.alibabacloud.com/help/en/model-studio/), [Fish Audio](https://docs.fish.audio/api-reference/endpoint/openapi-v1/text-to-speech), [Spotify PKCE](https://developer.spotify.com/documentation/web-api/tutorials/code-pkce-flow).
 
-Provider 429 handling: a temporary rate limit is reported as temporary. For Groq it pauses voice commands for the Retry-After time (60-second fallback) and blocks new model calls during the cooldown; for OpenAI Chat Completions models it pauses voice commands for 30 seconds; OpenAI Responses-API models (gpt-6-*), Gemini and Qwen set no pause (wait, then retry). A billing or credit refusal (for example OpenAI insufficient_quota) is reported as such, names the provider and sets no pause, because waiting will not help. Identical tool calls cannot repeat within one run. This does not increase your provider quota.
+Provider 429 handling: a temporary rate limit is reported as temporary. For OpenAI Chat Completions models it pauses voice commands for 30 seconds; OpenAI Responses-API models (gpt-6-*) and Qwen set no pause (wait, then retry). A billing or credit refusal (for example OpenAI insufficient_quota) is reported as such, names the provider and sets no pause, because waiting will not help. Identical tool calls cannot repeat within one run. This does not increase your provider quota.
 # Backup and recovery
 
 Use **Settings → Backup & recovery** for verified local backups and restoration into a separate folder. This preserves the complete saved database and saved data folders; the older export/import flow is not a full recovery mechanism. See [RECOVERY.md](RECOVERY.md) for exclusions, CLI recovery and validation limits.

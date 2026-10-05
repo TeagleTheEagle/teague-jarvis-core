@@ -108,9 +108,9 @@ $$('dialog').forEach(d=>d.addEventListener('click',e=>{if(e.target===d){const r=
 async function refresh(){
   try {
     state.data=await api('/api/state'); const d=state.data,c=d.capabilities;
-    const brainReady=String(c.brain||'').toLowerCase().includes('configured');
+    const brain=String(c.brain||'').toLowerCase(),brainReady=brain.includes('configured')&&!brain.includes('not configured');
     $('#connection').textContent='LOCAL NODE ONLINE';$('#brainStatus').textContent=brainReady?'CONFIGURED':'AWAITING KEY';
-    $('#brainStatus').classList.toggle('cyan',brainReady);$('#voiceStatus').textContent=c.fish?'FISH AUDIO':c.elevenlabs?'ELEVENLABS':'BROWSER';
+    $('#brainStatus').classList.toggle('cyan',brainReady);$('#voiceStatus').textContent=c.voice_provider==='qwen'?'QWEN VOICE':c.voice_provider==='fish'?'FISH AUDIO':'BROWSER';
     $('#modeDescription').textContent=brainReady?'AI provider configured. Awaiting your command.':'Local systems ready. Connect an AI provider when you’re ready.';
     $('#uptime').textContent=duration(d.uptime); $('#memoryCount').textContent=String(d.memory.length).padStart(2,'0');
     $('#memoryPreview').textContent=d.memory.length?d.memory[0].body:'Your preferences, remembered. Tell me what matters.';
@@ -336,7 +336,7 @@ async function speak(text){ if(window.JARVIS_INSPECTION)return;
   if(!state.data?.settings.voice||!text||state.data?.settings.quiet_hours)return;
   stopSpeech();voiceDiagnostic('Audibility','Not confirmed for this reply');voiceDiagnostic('Playback','Waiting for speech');pauseRecognition();$('#stopButton').disabled=false;const generation=state.voiceGeneration;const controller=new AbortController();speechRequest=controller;
   try{
-    if(['openai','qwen'].includes(state.data.settings.voice_profile) || state.data.capabilities.qwen_voice || state.data.capabilities.fish || state.data.capabilities.elevenlabs){
+    if(['openai','qwen'].includes(state.data.settings.voice_profile) || state.data.capabilities.qwen_voice || state.data.capabilities.fish){
       JarvisLatency.mark('TTS_started');const synthesisStarted=performance.now();voiceDiagnostic('Speech generation','Request started');
       const response=await fetch('/api/speech',{method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
       if(!response.ok){const data=await response.json();throw new Error(data.error||'Voice request failed.');}
@@ -437,7 +437,7 @@ $('#attachButton').onclick=$('#uploadFile').onclick=()=>$('#fileInput').click();
 $('#captureScreen').onclick=()=>openScreenVision();
 $('#exportForm').onsubmit=async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;try{const result=await api('/api/tool',{name:'create_file',args:{title:$('#documentTitle').value,content:$('#documentContent').value,format:$('#documentFormat').value}});$('#exportResult').replaceChildren();link($('#exportResult'),'Download '+result.filename,result.url);log('Created '+result.filename,'FILE READY');toast('Document saved in the JARVIS generated folder.');}catch(e){toast(e.message,true);}finally{b.disabled=false;}};
 
-$('#settingsButton').onclick=()=>{if(!state.data)return;$('#userName').value=state.data.settings.name;$('#continuousInput').checked=state.data.settings.continuous;$('#responseLength').value=state.data.settings.response_length;const list=$('#integrationList');list.replaceChildren();const c=state.data.capabilities;const brainReady=String(c.brain||'').toLowerCase().includes('configured');[['AI chat',brainReady],['Vision',c.vision],['Fish Audio voice',c.fish],['YouTube search',c.youtube],['Spotify',c.spotify_connected]].forEach(([name,ready])=>{const row=document.createElement('div');row.className='integration-row';const a=document.createElement('span'),b=document.createElement('span');a.textContent=name;b.textContent=ready?'CONFIGURED':'NOT CONNECTED';if(ready)b.className='cyan';row.append(a,b);list.append(row);});view('settings');};
+$('#settingsButton').onclick=()=>{if(!state.data)return;$('#userName').value=state.data.settings.name;$('#continuousInput').checked=state.data.settings.continuous;$('#responseLength').value=state.data.settings.response_length;const list=$('#integrationList');list.replaceChildren();const c=state.data.capabilities;const brain=String(c.brain||'').toLowerCase(),brainReady=brain.includes('configured')&&!brain.includes('not configured');[['AI chat',brainReady],['Vision',c.vision],['Fish Audio voice',c.fish],['Qwen voice',c.qwen_voice],['YouTube search',c.youtube],['Spotify',c.spotify_connected]].forEach(([name,ready])=>{const row=document.createElement('div');row.className='integration-row';const a=document.createElement('span'),b=document.createElement('span');a.textContent=name;b.textContent=ready?'CONFIGURED':'NOT CONNECTED';if(ready)b.className='cyan';row.append(a,b);list.append(row);});view('settings');};
 $('#settingsForm').onsubmit=async e=>{e.preventDefault();try{await api('/api/settings',{name:$('#userName').value,continuous:$('#continuousInput').checked,response_length:$('#responseLength').value});$('#settingsDialog').close();if(state.mic)disableMic();await refresh();if(state.data.settings.continuous)await toggleMic();toast('Preferences saved.');}catch(e){toast(e.message,true);}};
 $('#videoButton').onclick=()=>$('#videoDialog').showModal();
 $('#videoForm').onsubmit=async e=>{e.preventDefault();try{const result=await api('/api/tool',{name:'youtube',args:{query:$('#videoQuery').value}});loadVideo(result);$('#videoDialog').close();view('command');}catch(e){toast(e.message,true);}};

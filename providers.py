@@ -11,7 +11,6 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-import math
 import socket
 import ssl
 
@@ -23,20 +22,17 @@ class ProviderError(Exception):
     service = None   # which provider answered
 
 
-_cooldowns = {}
-_cooldown_lock = threading.Lock()
+AI_PROVIDERS = ('openai', 'qwen')  # Groq, Gemini and ElevenLabs were removed in 1.0.15 (owner decision 2026-10-05)
+VOICE_PROFILES = ('auto', 'fish', 'openai', 'qwen')
 
 
-def rate_limit(model, headers, service='Groq'):
-    try:
-        seconds = max(1, min(86400, math.ceil(float((headers or {}).get('retry-after', '60')))))
-    except (ValueError, TypeError, OverflowError, AttributeError):
-        seconds = 60
-    with _cooldown_lock:
-        _cooldowns[model] = time.time() + seconds
-    error = ProviderError(f'{service} rate limit reached (temporary). Try again in about {seconds} seconds. Local notes and timers still work. No keys were rotated. (HTTP 429)')
-    error.retry_after, error.status, error.limit, error.service = seconds, 429, 'rate', service
-    return error
+def provider():
+    """The chat provider named by JARVIS_PROVIDER; OpenAI when the line is missing."""
+    return os.getenv('JARVIS_PROVIDER', '').strip().lower() or 'openai'
+
+
+def _unsupported():
+    return ProviderError(f'JARVIS_PROVIDER={provider()} is not supported. Set JARVIS_PROVIDER=openai or JARVIS_PROVIDER=qwen in your local .env and restart JARVIS.')
 
 
 _ERROR_CODE = re.compile(r'[A-Za-z0-9_.-]{1,64}')
@@ -60,7 +56,7 @@ def _error_fields(exc):
 
 # HTTP 429 codes the providers document as quota, credit or billing problems (checked 2026-10-04).
 # The same word differs per provider: OpenAI's insufficient_quota means no credits; Qwen's is a
-# per-minute throttle. Groq and Gemini use 429 for rate limits only.
+# per-minute throttle.
 _BILLING_429 = {
     'OpenAI': {'insufficient_quota': 'The OpenAI account has no API credits left',
                'credit_balance_exhausted': 'The OpenAI account has no API credits left',
@@ -78,7 +74,7 @@ _RATE_429 = {'OpenAI': {'rate_limit_exceeded', 'slow_down'},
              'Qwen': {'Throttling', 'Throttling.RateQuota', 'LimitRequests', 'limit_requests', 'Throttling.BurstRate',
                       'limit_burst_rate', 'Throttling.AllocationQuota', 'insufficient_quota',
                       'Throttling.ServiceOverloaded', 'Throttling.ResourceExhausted'}}
-_PLAN_SERVICES = ('OpenAI', 'Qwen', 'SerpApi', 'Brave Search', 'Fish Audio', 'ElevenLabs')
+_PLAN_SERVICES = ('OpenAI', 'Qwen', 'SerpApi', 'Brave Search', 'Fish Audio')
 _STATUS_LABELS = {400: 'Request rejected. Check model and integration settings.', 401: 'Authentication failed. Check your local credentials.', 403: 'Access denied. Check account permissions and subscription.', 404: 'Resource or model not found.'}
 FISH_402 = 'Insufficient API credit. Fish Audio API credit is separate from website credit; add API credit in the Fish developer dashboard.'
 
@@ -99,10 +95,8 @@ def _http_error(prefix, service, exc):
             limit, tail = 'billing', f'HTTP 429, {code}' if code in billing else 'HTTP 429, type insufficient_quota'
         else:
             limit = 'rate'
-            if service in ('Groq', 'Gemini') or code in _RATE_429.get(service, ()) or kind == 'rate_limit_error':
+            if code in _RATE_429.get(service, ()) or kind == 'rate_limit_error':
                 label = 'Rate limit reached (temporary). Wait a little, then retry. No keys were rotated.'
-                if service == 'Gemini':
-                    label += ' Gemini daily limits reset at midnight Pacific time.'
             elif service in _PLAN_SERVICES:
                 label = f'Rate limit or usage quota reached. Wait a little, then retry; if it keeps happening, check the {service} plan, usage limits and billing. No keys were rotated.'
             else:
@@ -110,7 +104,6 @@ def _http_error(prefix, service, exc):
     elif status == 402:
         limit = 'billing'
         label = (FISH_402 if service == 'Fish Audio' else
-                 'Gemini Prepay credit balance is used up. Add credits or turn on auto-reload in Google AI Studio billing, then retry.' if service == 'Gemini' else
                  'Payment required: the account has no credit for this request. Check its billing.')
     error = ProviderError(f'{prefix}{label} ({tail})')
     error.status, error.limit, error.service = status, limit, service
@@ -119,13 +112,11 @@ def _http_error(prefix, service, exc):
 
 def request(url, data=None, headers=None, method=None, raw=False, timeout=35):
     host = urllib.parse.urlparse(url).hostname
-    service = {'api.openai.com': 'OpenAI', 'api.fish.audio': 'Fish Audio', 'api.groq.com': 'Groq', 'serpapi.com': 'SerpApi', 'api.search.brave.com': 'Brave Search', 'api.elevenlabs.io': 'ElevenLabs'}.get(host, 'External service')
-    if host == 'generativelanguage.googleapis.com':
-        service = 'Gemini'
-    elif (host or '').endswith('.aliyuncs.com'):
+    service = {'api.openai.com': 'OpenAI', 'api.fish.audio': 'Fish Audio', 'serpapi.com': 'SerpApi', 'api.search.brave.com': 'Brave Search'}.get(host, 'External service')
+    if (host or '').endswith('.aliyuncs.com'):
         service = 'Qwen'
     path = urllib.parse.urlparse(url).path
-    operation = 'transcription' if 'transcriptions' in path else 'voice synthesis' if 'tts' in path or 'text-to-speech' in path else 'chat' if 'completions' in path or path.endswith('/responses') else 'request'
+    operation = 'transcription' if 'transcriptions' in path else 'voice synthesis' if 'tts' in path else 'chat' if 'completions' in path or path.endswith('/responses') else 'request'
     prefix = f'{service} {operation}: '
     payload = json.dumps(data).encode() if isinstance(data, dict) else data
     h = {'User-Agent': 'JarvisLocal/1.0', **(headers or {})}
@@ -156,36 +147,29 @@ def request(url, data=None, headers=None, method=None, raw=False, timeout=35):
 
 
 def capabilities():
-    if os.getenv('JARVIS_PROVIDER', '').lower() == 'gemini':
-        # Reuse independent voice/search capabilities without selecting another brain.
-        result = _base_capabilities()
-        configured = bool(os.getenv('GEMINI_API_KEY'))
-        result.update(brain='Gemini configured' if configured else 'Gemini not configured',
-                      model=os.getenv('GEMINI_MODEL') or GEMINI_DEFAULT_MODEL,
-                      vision_provider='Gemini', vision=configured)
-        return result
-    if os.getenv('JARVIS_PROVIDER', '').lower() == 'qwen':
-        result = _base_capabilities()
+    result = _base_capabilities()
+    if provider() == 'qwen':
         configured = bool(os.getenv('DASHSCOPE_API_KEY'))
         result.update(brain='Qwen configured' if configured else 'Qwen not configured',
                       model=os.getenv('QWEN_MODEL', QWEN_DEFAULT_MODEL),
                       vision_provider='Qwen', vision=configured and bool(os.getenv('QWEN_VISION_MODEL')))
-        return result
-    return _base_capabilities()
+    elif provider() == 'openai':
+        configured = bool(os.getenv('OPENAI_API_KEY'))
+        # No AI key at all: the server answers in local command mode (server.py).
+        result.update(brain='OpenAI configured' if configured else 'OpenAI not configured' if os.getenv('DASHSCOPE_API_KEY') else 'local commands',
+                      model=os.getenv('OPENAI_MODEL', 'gpt-4o-mini'), vision_provider='OpenAI',
+                      vision=configured and bool(os.getenv('OPENAI_VISION_MODEL', 'gpt-4o-mini')))
+    else:
+        result.update(brain=f'Unsupported provider {provider()}: use openai or qwen', model=None, vision_provider=None, vision=False)
+    return result
 
 
 def _base_capabilities():
-    use_openai = bool(os.getenv('OPENAI_API_KEY') and os.getenv('JARVIS_PROVIDER', 'groq').lower() == 'openai')
     return {
-        'brain': 'OpenAI configured' if (os.getenv('OPENAI_API_KEY') and os.getenv('JARVIS_PROVIDER', 'groq').lower() == 'openai') else 'Groq configured' if os.getenv('GROQ_API_KEY') else 'local commands',
-        'model': os.getenv('OPENAI_MODEL', 'gpt-4o-mini') if (os.getenv('OPENAI_API_KEY') and os.getenv('JARVIS_PROVIDER', 'groq').lower() == 'openai') else os.getenv('GROQ_MODEL', 'openai/gpt-oss-120b'),
-        'vision_provider': 'OpenAI' if (os.getenv('OPENAI_API_KEY') and os.getenv('JARVIS_PROVIDER', 'groq').lower() == 'openai') else 'Groq',
-        'vision': bool(os.getenv('OPENAI_VISION_MODEL', 'gpt-4o-mini')) if use_openai else bool(os.getenv('GROQ_API_KEY') and os.getenv('GROQ_VISION_MODEL')),
-        'transcription': bool(os.getenv('OPENAI_API_KEY') or os.getenv('GROQ_API_KEY')),
-        'elevenlabs': bool(os.getenv('ELEVENLABS_API_KEY') and os.getenv('ELEVENLABS_VOICE_ID')),
+        'transcription': bool(os.getenv('OPENAI_API_KEY')),
         'fish': bool(os.getenv('FISH_API_KEY') and os.getenv('FISH_VOICE_ID')),
         'qwen_voice': qwen_voice_configured(),
-        'voice_provider': 'qwen' if qwen_voice_configured() else 'fish' if os.getenv('FISH_API_KEY') and os.getenv('FISH_VOICE_ID') else 'elevenlabs' if os.getenv('ELEVENLABS_API_KEY') and os.getenv('ELEVENLABS_VOICE_ID') else 'browser',
+        'voice_provider': 'qwen' if qwen_voice_configured() else 'fish' if os.getenv('FISH_API_KEY') and os.getenv('FISH_VOICE_ID') else 'browser',
         'search': 'SerpApi configured' if os.getenv('SERPAPI_API_KEY') else 'Brave configured' if os.getenv('BRAVE_API_KEY') else 'DuckDuckGo best effort',
         'youtube': bool(os.getenv('YOUTUBE_API_KEY')),
         'spotify': bool(os.getenv('SPOTIFY_CLIENT_ID')),
@@ -195,11 +179,11 @@ def live_health():
     checks = {}
     targets = []
     caps = capabilities()
-    use_openai = bool(os.getenv('OPENAI_API_KEY') and os.getenv('JARVIS_PROVIDER', 'groq').lower() == 'openai')
-    use_gemini = os.getenv('JARVIS_PROVIDER', '').lower() == 'gemini'
-    use_qwen = os.getenv('JARVIS_PROVIDER', '').lower() == 'qwen'
-    key = os.getenv('GEMINI_API_KEY') if use_gemini else os.getenv('DASHSCOPE_API_KEY') if use_qwen else os.getenv('OPENAI_API_KEY') if use_openai else os.getenv('GROQ_API_KEY')
-    if key and use_qwen:
+    use_qwen = provider() == 'qwen'
+    key = os.getenv('DASHSCOPE_API_KEY') if use_qwen else os.getenv('OPENAI_API_KEY') if provider() == 'openai' else None
+    if provider() not in AI_PROVIDERS:
+        checks['Chat model access'] = {'status': 'not_configured', 'detail': str(_unsupported())}
+    elif key and use_qwen:
         # Model Studio has no per-model lookup in compatible mode: a minimal real
         # completion proves key, region and model authorisation together.
         started = time.perf_counter()
@@ -215,10 +199,7 @@ def live_health():
         except ProviderError as exc:
             checks['Chat model access'] = {'status': 'unavailable', 'latency_ms': round((time.perf_counter()-started)*1000), 'detail': str(exc)}
     elif key:
-        base = 'https://api.openai.com/v1/models/' if use_openai else 'https://api.groq.com/openai/v1/models/'
-        if use_gemini:
-            base = 'https://generativelanguage.googleapis.com/v1beta/openai/models/'
-        targets.append(('Chat model access', base + urllib.parse.quote(caps['model'], safe=''), {'Authorization': 'Bearer ' + key}))
+        targets.append(('Chat model access', 'https://api.openai.com/v1/models/' + urllib.parse.quote(caps['model'], safe=''), {'Authorization': 'Bearer ' + key}))
     else:
         checks['Chat model access'] = {'status':'not_configured','detail':'Add a chat provider key locally.'}
     if os.getenv('BRAVE_API_KEY'):
@@ -241,18 +222,17 @@ def live_health():
 def chat(messages, tools, emit, cancel, vision=False):
     if cancel.is_set():
         return None
-    if os.getenv('JARVIS_PROVIDER', '').lower() == 'gemini':
-        return gemini_chat(messages, tools, emit, cancel, vision)
-    if os.getenv('JARVIS_PROVIDER', '').lower() == 'qwen':
+    if provider() == 'qwen':
         return qwen_chat(messages, tools, emit, cancel, vision)
-    use_openai = bool(os.getenv('OPENAI_API_KEY') and os.getenv('JARVIS_PROVIDER', 'groq').lower() == 'openai')
-    key = os.getenv('OPENAI_API_KEY') if use_openai else os.getenv('GROQ_API_KEY')
+    if provider() != 'openai':
+        raise _unsupported()
+    key = os.getenv('OPENAI_API_KEY')
     if not key:
-        raise ProviderError('Add OPENAI_API_KEY or GROQ_API_KEY to your local .env and restart to enable AI conversation.')
-    model = (os.getenv('OPENAI_VISION_MODEL', 'gpt-4o-mini') if vision else os.getenv('OPENAI_MODEL', 'gpt-4o-mini')) if use_openai else (os.getenv('GROQ_VISION_MODEL') if vision else os.getenv('GROQ_MODEL', 'openai/gpt-oss-120b'))
+        raise ProviderError('OpenAI is selected. Add OPENAI_API_KEY locally and restart JARVIS.')
+    model = os.getenv('OPENAI_VISION_MODEL', 'gpt-4o-mini') if vision else os.getenv('OPENAI_MODEL', 'gpt-4o-mini')
     if not model:
         raise ProviderError('Set a supported vision model before asking about images.')
-    if use_openai and model.startswith('gpt-6'):
+    if model.startswith('gpt-6'):
         inputs=[]
         for m in messages:
             if m.get('_response_output'):
@@ -285,120 +265,54 @@ def chat(messages, tools, emit, cancel, vision=False):
         response={'role':'assistant','content':content or None,'_response_output':output}
         if calls: response['tool_calls']=calls
         return response
-    with _cooldown_lock:
-        remaining = math.ceil(_cooldowns.get(model, 0) - time.time())
-    if remaining > 0:
-        name = 'OpenAI' if use_openai else 'Groq'
-        error = ProviderError(f'{name} rate limit: still waiting after HTTP 429. Try again in {remaining} seconds. No request was sent.')
-        error.retry_after, error.status, error.limit, error.service = remaining, 429, 'rate', name
-        raise error
-    body = {'model': model, 'messages': messages, 'stream': True, 'max_completion_tokens': 1024}
-    if use_openai and model.startswith('gpt-6'):
-        body.update(reasoning_effort='medium', max_completion_tokens=8192)
+    body = {'model': model, 'messages': messages, 'stream': False, 'max_completion_tokens': 1024}
     if any(m.get('role') == 'tool' and '"path": "' in str(m.get('content', '')) and ('static/pro.css' in str(m.get('content', '')) or 'personality.txt' in str(m.get('content', ''))) for m in messages):
         body['max_completion_tokens'] = 8192
 
     if tools and not vision:
         body.update(tools=tools, tool_choice='auto', parallel_tool_calls=False)
-    endpoint = 'https://api.openai.com/v1/chat/completions' if use_openai else 'https://api.groq.com/openai/v1/chat/completions'
+    endpoint = 'https://api.openai.com/v1/chat/completions'
     # OpenAI's non-streaming response is more resilient on restricted local networks;
-    # keep streaming for Groq, while still emitting the completed answer to the UI.
-    if use_openai:
-        body['stream'] = False
-        deadline = time.monotonic() + 120
-        def attempt():
+    # the completed answer is still emitted to the UI.
+    deadline = time.monotonic() + 120
+    def attempt():
+        if cancel.is_set():
+            return None
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise ProviderError('OpenAI request time limit exceeded.')
+        return request(endpoint, body, {'Authorization': f'Bearer {key}'}, timeout=remaining)
+    try:
+        try:
+            result = attempt()
+        except ProviderError as first:
             if cancel.is_set():
                 return None
+            if 'connection failed' not in str(first).lower() and 'timed out' not in str(first).lower():
+                raise
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 raise ProviderError('OpenAI request time limit exceeded.')
-            return request(endpoint, body, {'Authorization': f'Bearer {key}'}, timeout=remaining)
-        try:
-            try:
-                result = attempt()
-            except ProviderError as first:
-                if cancel.is_set():
-                    return None
-                if 'connection failed' not in str(first).lower() and 'timed out' not in str(first).lower():
-                    raise
-                remaining = deadline - time.monotonic()
-                if remaining <= 0:
-                    raise ProviderError('OpenAI request time limit exceeded.')
-                if cancel.wait(min(3, remaining)):
-                    return None
-                result = attempt()
-        except ProviderError as exc:
-            if 'HTTP 429' in str(exc) and exc.limit != 'billing':  # no credits: waiting will not help
-                exc.retry_after = 30
-            raise
-        if cancel.is_set():
-            return None
-        choice = (result.get('choices') or [{}])[0]
-        if choice.get('finish_reason') == 'length':
-            raise ProviderError('The response reached its token limit. Please narrow the request or split it into smaller steps.')
-        message = choice.get('message') or {}
-        content = message.get('content') or ''
-        if content:
-            emit('assistant.delta', {'text': content})
-        response = {'role': 'assistant', 'content': content or None}
-        if message.get('tool_calls'):
-            response['tool_calls'] = message['tool_calls']
-        return response
-    req = urllib.request.Request(endpoint, data=json.dumps(body).encode(), headers={'Authorization': f'Bearer {key}', 'Content-Type': 'application/json', 'User-Agent': 'JarvisLocal/1.0'})
-    content, calls = '', {}
-    done = False
-    try:
-        with urllib.request.urlopen(req, timeout=35) as response:
-            for raw in response:
-                if cancel.is_set():
-                    return None
-                if not raw.startswith(b'data: '):
-                    continue
-                value = raw[6:].strip()
-                if value == b'[DONE]':
-                    done = True
-                    break
-                packet = json.loads(value)
-                for choice in packet.get('choices', []):
-                    delta = choice.get('delta', {})
-                    text = delta.get('content') or ''
-                    if text:
-                        content += text
-                        emit('assistant.delta', {'text': text})
-                    for call in delta.get('tool_calls', []):
-                        item = calls.setdefault(call['index'], {'id': '', 'type': 'function', 'function': {'name': '', 'arguments': ''}})
-                        if call.get('id'):
-                            item['id'] = call['id']
-                        for field in ('name', 'arguments'):
-                            item['function'][field] += call.get('function', {}).get(field, '')
-    except urllib.error.HTTPError as exc:
-        if exc.code == 429 and not use_openai:
-            raise rate_limit(model, exc.headers, 'Groq') from None
-        provider = 'OpenAI' if use_openai else 'Groq'
-        raise ProviderError(f'{provider} returned HTTP {exc.code}. Check your key, model access, and quota in Settings. No fallback answer was fabricated.') from None
-    except (urllib.error.URLError, TimeoutError, OSError, ValueError):
-        raise ProviderError('The AI stream failed. Any partial text is incomplete; please retry.') from None
-    if not done:
-        raise ProviderError('The AI connection ended before completion. Please retry.')
-    result = {'role': 'assistant', 'content': content or None}
-    if calls:
-        result['tool_calls'] = [calls[i] for i in sorted(calls)]
-    return result
-
-
-# Google's current stable Flash model (ai.google.dev/gemini-api/docs/models, checked 2026-10-04):
-# since 2026-09-18 Google serves gemini-2.5 models only to projects that used them before. A
-# specific stable id, not the hot-swapped gemini-flash-latest alias. A GEMINI_MODEL line wins.
-GEMINI_DEFAULT_MODEL = 'gemini-3.8-flash'
-
-
-def gemini_chat(messages, tools, emit, cancel, vision=False):
-    """Optional Gemini adapter; results still pass through server evidence/action guards."""
-    key = os.getenv('GEMINI_API_KEY')
-    if not key:
-        raise ProviderError('Gemini is selected. Add GEMINI_API_KEY locally and restart JARVIS.')
-    return _compatible_chat('Gemini', 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-                            key, os.getenv('GEMINI_MODEL') or GEMINI_DEFAULT_MODEL, messages, tools, emit, cancel, vision)
+            if cancel.wait(min(3, remaining)):
+                return None
+            result = attempt()
+    except ProviderError as exc:
+        if 'HTTP 429' in str(exc) and exc.limit != 'billing':  # no credits: waiting will not help
+            exc.retry_after = 30
+        raise
+    if cancel.is_set():
+        return None
+    choice = (result.get('choices') or [{}])[0]
+    if choice.get('finish_reason') == 'length':
+        raise ProviderError('The response reached its token limit. Please narrow the request or split it into smaller steps.')
+    message = choice.get('message') or {}
+    content = message.get('content') or ''
+    if content:
+        emit('assistant.delta', {'text': content})
+    response = {'role': 'assistant', 'content': content or None}
+    if message.get('tool_calls'):
+        response['tool_calls'] = message['tool_calls']
+    return response
 
 
 # Alibaba Cloud Model Studio (DashScope), OpenAI-compatible mode. The address depends on
@@ -428,7 +342,7 @@ def qwen_chat(messages, tools, emit, cancel, vision=False):
 
 
 def _compatible_chat(service, endpoint, key, model, messages, tools, emit, cancel, vision):
-    """Shared non-streaming OpenAI-compatible adapter (Gemini, Qwen)."""
+    """Non-streaming OpenAI-compatible adapter (Qwen)."""
     if cancel.is_set():
         return None
     # OpenAI Responses metadata is provider-specific; retain ordinary conversation
@@ -578,7 +492,7 @@ def qwen_speech(text):
 
 
 def speech(text, profile='auto'):
-    if profile not in ('auto','fish','openai','eleven_flash','eleven_quality','qwen'):
+    if profile not in VOICE_PROFILES:
         raise ValueError('Unknown voice profile.')
     text = speech_text(text)
     if not text:
@@ -592,26 +506,22 @@ def speech(text, profile='auto'):
         raise ProviderError('Fish Audio key and voice ID are required.')
     if profile in ('auto','fish') and os.getenv('FISH_API_KEY') and os.getenv('FISH_VOICE_ID'):
         return request('https://api.fish.audio/v1/tts', {'text': text[:5000], 'reference_id': os.environ['FISH_VOICE_ID'], 'format': 'mp3', 'mp3_bitrate': 192, 'sample_rate': 44100, 'latency': 'normal', 'normalize': True, 'prosody': {'speed': 1.0, 'volume': 0, 'normalize_loudness': True}, 'chunk_length': 300, 'condition_on_previous_chunks': True}, {'Authorization': 'Bearer ' + os.environ['FISH_API_KEY'], 'model': os.getenv('FISH_MODEL', 's2-pro')}, raw=True)
-    key, voice = os.getenv('ELEVENLABS_API_KEY'), os.getenv('ELEVENLABS_VOICE_ID')
-    if not key or not voice:
-        raise ProviderError('ElevenLabs is not configured. Use the browser voice or add your key and voice ID.')
-    model = {'eleven_flash':'eleven_flash_v2_5','eleven_quality':'eleven_multilingual_v2'}.get(profile,os.getenv('ELEVENLABS_MODEL','eleven_flash_v2_5'))
-    return request('https://api.elevenlabs.io/v1/text-to-speech/' + urllib.parse.quote(voice, safe=''), {'text': text[:5000], 'model_id': model}, {'xi-api-key': key}, raw=True)
+    raise ProviderError('No voice provider is configured. Add the Fish Audio or Qwen voice settings locally, or use the browser voice.')
 
 
 def transcribe(audio, mime):
-    use_openai = bool(os.getenv('OPENAI_API_KEY') and os.getenv('JARVIS_PROVIDER', 'groq').lower() == 'openai')
-    key = os.getenv('OPENAI_API_KEY') if use_openai else os.getenv('GROQ_API_KEY')
+    """Cloud transcription through OpenAI (the app itself transcribes locally with Whisper)."""
+    key = os.getenv('OPENAI_API_KEY')
     if not key:
-        raise ProviderError('Speech transcription requires a configured AI provider. Browser recognition may be available without it.')
+        raise ProviderError('Cloud speech transcription needs OPENAI_API_KEY. Local transcription and browser recognition work without it.')
     suffix = {'audio/webm': 'webm', 'audio/ogg': 'ogg', 'audio/mp4': 'mp4', 'audio/wav': 'wav', 'audio/mpeg': 'mp3'}.get(mime.split(';')[0])
     if not suffix:
         raise ValueError('Unsupported recording format.')
     boundary = secrets.token_hex(20)
-    model = 'gpt-4o-mini-transcribe' if use_openai else 'whisper-large-v3-turbo'
+    model = 'gpt-4o-mini-transcribe'
     data = (f'--{boundary}\r\nContent-Disposition: form-data; name="model"\r\n\r\n{model}\r\n--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="recording.{suffix}"\r\nContent-Type: {mime}\r\n\r\n').encode() + audio + f'\r\n--{boundary}--\r\n'.encode()
     headers = {'Authorization': f'Bearer {key}', 'Content-Type': 'multipart/form-data; boundary=' + boundary}
-    endpoint = 'https://api.openai.com/v1/audio/transcriptions' if use_openai else 'https://api.groq.com/openai/v1/audio/transcriptions'
+    endpoint = 'https://api.openai.com/v1/audio/transcriptions'
     try:
         return request(endpoint, data, headers, timeout=60)
     except ProviderError as first:

@@ -1,6 +1,7 @@
 """Writes the fixed part of a JARVIS AI request, as server.py builds it, for tools/host/Test-AiKeys.ps1:
 jarvis-request-system.txt (the default personality, tool guidance, verified-status guidance and development-tools
-paragraph) and jarvis-request-tools.json (actions.TOOLS). With these the owner-run check can send a provider exactly
+paragraph), jarvis-request-tools.json (actions.TOOLS) and jarvis-request-tools-responses.json (the same tools as
+providers.chat sends them to OpenAI's Responses API, for gpt-6 models). With these the owner-run check can send a provider exactly
 what JARVIS sends, tool list included, without touching the installed JARVIS. The owner's own personality.txt is not
 read; the shipped default stands in for it.
     python tools/host/make_request_template.py
@@ -32,6 +33,8 @@ def main():
     here = Path(__file__).resolve().parent
     (here / 'jarvis-request-system.txt').write_text(system, encoding='utf-8', newline='\n')
     (here / 'jarvis-request-tools.json').write_text(json.dumps(actions.TOOLS, ensure_ascii=False), encoding='utf-8', newline='\n')
+    responses = [{'type': 'function', **t['function'], 'strict': False} for t in actions.TOOLS]  # as in providers.chat
+    (here / 'jarvis-request-tools-responses.json').write_text(json.dumps(responses, ensure_ascii=False), encoding='utf-8', newline='\n')
     print(f'system {len(system)} characters, {len(actions.TOOLS)} tools ({len(json.dumps(actions.TOOLS))} characters)')
 
 

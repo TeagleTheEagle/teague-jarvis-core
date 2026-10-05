@@ -16,7 +16,6 @@ import providers
 
 OPENAI = 'https://api.openai.com/v1/chat/completions'
 QWEN = 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions'
-GEMINI = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
 UPSTREAM = 'UPSTREAM-DETAIL-NOT-SHOWN'
 RETRY_TRIGGERS = ('connection failed', 'timed out', 'stream failed')  # providers.py and server.py retry on these
 
@@ -65,7 +64,6 @@ class ProviderErrorTests(unittest.TestCase):
         for text in ('Groq', 'Rate limit reached', 'test-only'):
             self.assertNotIn(text, str(exc))
         self.assertEqual((exc.limit, exc.service, exc.retry_after), ('billing', 'OpenAI', 0))
-        self.assertNotIn('gpt-4o-mini', providers._cooldowns)
 
     def test_openai_responses_path_no_credits(self):
         # The owner's OpenAI model may use the Responses API (gpt-6-*); same wording there.
@@ -122,18 +120,14 @@ class ProviderErrorTests(unittest.TestCase):
         self.assertIn('account balance is overdue or empty', str(exc))
         self.assertEqual(exc.limit, 'billing')
 
-    def test_gemini_429_and_402(self):
-        exc = self.chat_error({'JARVIS_PROVIDER': 'gemini', 'GEMINI_API_KEY': 'test-only'},
-                              refusal(GEMINI, 429, b'[{"error":{"code":429,"status":"RESOURCE_EXHAUSTED","message":"UPSTREAM-DETAIL-NOT-SHOWN"}}]'))
-        self.assertIn('Gemini chat: Rate limit reached (temporary)', str(exc))
-        self.assertIn('midnight Pacific', str(exc))
-        self.assertNotIn('credits', str(exc))
-        self.assertEqual(exc.limit, 'rate')
-        exc = self.request_error(GEMINI, 402)
-        self.assertIn('Gemini Prepay credit', str(exc))
+    def test_402_names_the_fish_dashboard_only_for_fish(self):
+        exc = self.request_error(OPENAI, 402)
+        self.assertIn('Payment required', str(exc))
         self.assertNotIn('Fish', str(exc))
         self.assertEqual(exc.limit, 'billing')
-        self.assertIn('Fish developer dashboard', str(self.request_error('https://api.fish.audio/v1/tts', 402)))
+        exc = self.request_error('https://api.fish.audio/v1/tts', 402)
+        self.assertIn('Fish Audio voice synthesis:', str(exc))
+        self.assertIn('Fish developer dashboard', str(exc))
 
     def test_broken_bodies_only_lose_the_code(self):
         oversized = json.dumps({'error': {'code': 'insufficient_quota', 'padding': 'x' * 5000}}).encode()
@@ -165,39 +159,10 @@ class ProviderErrorTests(unittest.TestCase):
         self.assertIn('Rate limit reached. Wait before retrying', str(exc))
         self.assertNotIn('that service', str(exc))
 
-    def test_rate_limit_names_the_provider_and_bounds_the_wait(self):
-        self.addCleanup(lambda: [providers._cooldowns.pop(m, None) for m in ('m1', 'm2', 'm3')])
-        error = providers.rate_limit('m1', {'retry-after': '5'}, 'OpenAI')
-        self.messages.append(str(error))
-        for text in ('OpenAI', 'about 5 seconds', 'HTTP 429'):
-            self.assertIn(text, str(error))
-        for text in ('Groq', 'Fish'):
-            self.assertNotIn(text, str(error))
-        self.assertIn('Groq', str(providers.rate_limit('m2', {})))  # the default stays Groq
-        for value, seconds in (('0', 1), ('-5', 1), ('999999', 86400), ('nan', 60), ('inf', 60), ('Wed, 21 Oct 2026 07:28:00 GMT', 60)):
-            with self.subTest(value=value):
-                self.assertEqual(providers.rate_limit('m3', {'retry-after': value}).retry_after, seconds)
-        self.assertEqual(providers.rate_limit('m3', None).retry_after, 60)
-
-    def test_cooldown_message_names_the_active_provider(self):
-        providers._cooldowns['gpt-4o-mini'] = providers.time.time() + 50
-        self.addCleanup(providers._cooldowns.pop, 'gpt-4o-mini', None)
-        env = {'JARVIS_PROVIDER': 'openai', 'OPENAI_API_KEY': 'test-only', 'OPENAI_MODEL': 'gpt-4o-mini'}
-        with patch.dict(os.environ, env, clear=True), patch('urllib.request.urlopen') as call, \
-                self.assertRaises(providers.ProviderError) as caught:
-            providers.chat([], [], lambda *args: None, threading.Event())
-        call.assert_not_called()
-        self.messages.append(str(caught.exception))
-        self.assertIn('OpenAI rate limit', str(caught.exception))
-        self.assertIn('No request was sent', str(caught.exception))
-        self.assertNotIn('Groq', str(caught.exception))
-        self.assertGreater(caught.exception.retry_after, 0)
-
     def test_messages_never_trigger_automatic_retries_and_keep_the_wearable_classification(self):
         for name in ('test_openai_no_credits_says_so_and_sets_no_pause', 'test_openai_documented_billing_codes',
                      'test_openai_rate_limit_is_temporary_and_keeps_the_30_second_pause', 'test_qwen_billing_codes',
-                     'test_qwen_insufficient_quota_is_a_short_throttle_not_credit', 'test_gemini_429_and_402',
-                     'test_rate_limit_names_the_provider_and_bounds_the_wait', 'test_cooldown_message_names_the_active_provider'):
+                     'test_qwen_insufficient_quota_is_a_short_throttle_not_credit', 'test_402_names_the_fish_dashboard_only_for_fish'):
             getattr(self, name)()
         for message in self.messages:
             with self.subTest(message=message[:70]):
