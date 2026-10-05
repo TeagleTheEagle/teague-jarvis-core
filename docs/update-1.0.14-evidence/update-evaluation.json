@@ -1,0 +1,21 @@
+{
+  "schema": "jarvis-everyday-update-evaluation-v1",
+  "verdict": "EVERYDAY_UPDATE_COMPLETE",
+  "evaluated_utc": "2026-10-05T04:05:43Z",
+  "from": "1.0.11-60d406fb6398",
+  "to": "1.0.14-e03872680e1d",
+  "to_zip_sha256": "ceb7d9e1922cebbf650753c4028473c5962c558ed70ec9f4be20f9fdc740d8d3",
+  "install_home": "%LOCALAPPDATA%\\JARVIS (the owner's everyday JARVIS)",
+  "approval": { "owner_text": "I approve the update of my everyday JARVIS to 1.0.14", "record": "C:\\Users\\jonny\\JARVIS-claude-workspace\\governance\\UPDATE-1.0.14-APPROVAL-RECORD.json", "plan": "docs/UPDATE-EVERYDAY-1.0.14.md", "plan_sha256": "9eddc20c9c7d358225a9161f3574a90557afbd50c8745888803ae1d68097a801" },
+  "preconditions": { "stage7": "STAGE_7_COMPLETE for 1.0.14 (27 of 27)", "sandbox_rehearsal": "13 of 13 PASS" },
+  "steps": [
+    { "step": 1, "record": "check.json", "result": "PASS", "notes": "owner account, not elevated, launcher hash equal to the approval; package hash equal; 1.0.11 current and verified; nothing running; 12 GB free; package unpacked in 16.8 s" },
+    { "step": 2, "record": "backup.json", "result": "PASS", "notes": "backup de3c17ea5d1b464ab83f9a0567874802 with 1.0.11's own backup code: 331 files, 2,953,222 bytes, test restore passed, all 18 table counts equal (1,150 messages); copy on D: hash-equal (e1b09edc...); program still verified" },
+    { "step": 3, "record": "update.json", "result": "PASS", "notes": "installed 1.0.14 in 130.3 s (copy 79.1 s, verify 39.0 s, stop 3.2 s, switch 0.01 s), verified; current 1.0.14, previous 1.0.11 kept; database file byte-for-byte unchanged (50e1a846...); shortcuts kept; JARVIS not started" },
+    { "step": 4, "record": "owner-check.json", "result": "PASS (owner-reported)", "notes": "version in Settings > About, memories and conversations, AI answer, voice, quiet quit with no 'Core stopped' box" },
+    { "step": 5, "record": "restart-check.json", "result": "PASS", "notes": "after a PC restart JARVIS 1.0.14 started by itself from the Startup shortcut (--login-launch), about 6.5 minutes after sign-in (Windows' scheduling of Startup-folder apps)" }
+  ],
+  "rollback": "not used; 1.0.11 stays installed beside 1.0.14 (releases folder) and the launcher's rollback runs only with rollback-approved.json on the owner's word",
+  "claude_actions_on_the_live_installation": "none: every step was run by the owner; Claude read records, process lists and file times only, never config\\.env or the backup's contents",
+  "evaluated_by": "Claude Code (Claude Opus 5.5)"
+}

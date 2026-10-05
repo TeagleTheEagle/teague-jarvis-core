@@ -1,8 +1,20 @@
 # JARVIS: current status (living document)
 
 **Read this first in every new Claude Code session, and update it at the end of each one.**
-Last updated: 2026-10-05 (about 02:00 local) (STAGE_6_COMPLETE, SWITCH-OVER COMPLETE, STAGE_7_COMPLETE;
-**release 1.0.14 built and checked on this PC; its Stage 7 check plan waits for the owner's approval**).
+Last updated: 2026-10-05 (about 15:10 local) (STAGE_6_COMPLETE, SWITCH-OVER COMPLETE, STAGE_7_COMPLETE;
+**the everyday JARVIS is 1.0.14-e03872680e1d: Stage 7 check of 1.0.14 complete, update EVERYDAY_UPDATE_COMPLETE,
+automatic start at sign-in confirmed on this PC**).
+
+- **Everyday JARVIS updated to 1.0.14 (2026-10-05, `EVERYDAY_UPDATE_COMPLETE`).** Steps 1-5 of
+  `docs/UPDATE-EVERYDAY-1.0.14.md` all PASS, every step run by the owner: check; backup de3c17ea… (331 files, 1,150
+  messages, test restore passed, copy on D:); update in 130 s with the database byte-for-byte unchanged; the owner's
+  check (version, memories, AI, voice, quiet quit); and after a PC restart JARVIS started by itself from the Startup
+  shortcut, about 6.5 minutes after sign-in (Windows' scheduling of Startup-folder apps; a faster start would need a
+  Run key or logon task, an owner decision). 1.0.11 stays installed as the rollback copy. Records
+  `D:\JARVIS-update-1.0.14\evidence\` (manifest d75e96e0…), repo copy `docs/update-1.0.14-evidence/`. **Next, each on
+  the owner's word:** a version 3 Stage 7 guest driver fixing incidents 01-02 (before the next release check);
+  after a trouble-free period, the cleanup (test VM, data copies on D:, old folder and Codex, the 1.0.11 release
+  folder, `%LOCALAPPDATA%\JARVIS-package`); then the roadmap (`docs/ROADMAP.md`).
 
 - **Release 1.0.14 (2026-10-05, owner: "use this session go"; 1.0.12 and 1.0.13 superseded, never offered).**
   Build **`1.0.14-e03872680e1d`** (commit e038726; `D:\JARVIS-release-work\release\`, zip sha256 `ceb7d9e1...d8d3`,
@@ -34,7 +46,7 @@ Last updated: 2026-10-05 (about 02:00 local) (STAGE_6_COMPLETE, SWITCH-OVER COMP
   df9e417d… (guest), repo copy `docs/stage7-1.0.14-evidence/`. Fix both defects in a version 3 copy before the next
   release check. **Next:** the update of the everyday JARVIS to 1.0.14, plan `docs/UPDATE-EVERYDAY-1.0.14.md` with
   launcher `tools/host/Invoke-EverydayUpdate.ps1` + `update-step.cmd` (check, backup with its own backup code, update,
-  rollback only on the owner's word); sandbox rehearsal 13 of 13 PASS (`docs/release-rehearsal-20261005-1014/update-rehearsal/`); plan **approved by the owner** ("I approve the update of my everyday JARVIS to 1.0.14", first clock reading 2026-10-05T03:39:06Z; record `../governance/UPDATE-1.0.14-APPROVAL-RECORD.json`, plan sha256 9eddc20c…); launcher placed in `D:\JARVIS-update-1.0.14\tools\` with `update-authorized.json` (hashes equal the approval; repo copy `docs/update-1.0.14-evidence/`). **Steps 1-3 PASS (2026-10-05, 03:42-03:48Z): the everyday JARVIS is 1.0.14-e03872680e1d** (backup de3c17ea… 331 files, 1,150 messages, test restore passed; update 130 s, verified, database byte-for-byte unchanged, 1.0.11 kept as rollback). Step 4: the owner reported "all checks passed no core stopped box popped up" (`owner-check.json`). **Next, owner:** step 5, one PC restart to confirm JARVIS starts by itself at sign-in (never yet confirmed on this PC). Owner: will use the
+  rollback only on the owner's word); sandbox rehearsal 13 of 13 PASS (`docs/release-rehearsal-20261005-1014/update-rehearsal/`); plan **approved by the owner** ("I approve the update of my everyday JARVIS to 1.0.14", first clock reading 2026-10-05T03:39:06Z; record `../governance/UPDATE-1.0.14-APPROVAL-RECORD.json`, plan sha256 9eddc20c…); launcher placed in `D:\JARVIS-update-1.0.14\tools\` with `update-authorized.json` (hashes equal the approval; repo copy `docs/update-1.0.14-evidence/`). **Steps 1-3 PASS (2026-10-05, 03:42-03:48Z): the everyday JARVIS is 1.0.14-e03872680e1d** (backup de3c17ea… 331 files, 1,150 messages, test restore passed; update 130 s, verified, database byte-for-byte unchanged, 1.0.11 kept as rollback). Step 4: the owner reported "all checks passed no core stopped box popped up" (`owner-check.json`). Step 5 PASS: after a PC restart JARVIS started by itself (`restart-check.json`). **`EVERYDAY_UPDATE_COMPLETE`** (`update-evaluation.json`). Owner: will use the
   everyday JARVIS again once it is on 1.0.14.
 - **Release 1.0.12 (2026-10-04, on the owner's "next move" / "now do the next move"; superseded, see above).** The fix list
   `docs/POST-CUTOVER-FIXES.md` items 1-6 fixed (status table at the end of that file; item 7 partly, 8 open,
@@ -81,7 +93,8 @@ only records where the work stands. Historical handover context: `docs/PROJECT-C
 
 ## Where we are
 
-- **SWITCH-OVER COMPLETE (2026-10-04T08:45Z).** The owner's everyday JARVIS is now the installed
+- **SWITCH-OVER COMPLETE (2026-10-04T08:45Z).** (Since 2026-10-05 the everyday JARVIS is 1.0.14, see the first
+  bullet; automatic start at sign-in is confirmed.) The owner's everyday JARVIS became the installed
   build **1.0.11-60d406fb6398 at `%LOCALAPPDATA%\JARVIS`** (data, preferences and keys carried
   over; Desktop and Startup shortcut "JARVIS"; AI provider Groq for now). **That folder is the
   live installation: Claude does not modify it (owner-only); updates reach it only as a tested
@@ -527,4 +540,4 @@ changes the owner's real folders); tested in the VM at Gate 17 and Stage 7 (auto
   `docs/STAGE7-CHECK-1.0.14.md` ready for approval. Lessons: a regression failure that passed before is not "load"
   until reproduced (run 3 on an idle PC settled it); a reviewer can find that a new wait condition hurts the crash
   path. The owner's pasted summary contained "Ultracode is off", which switched on multi-agent mode by mistake; no
-  workflow was started (two single reviewer agents instead). Nothing pushed or synced.
+  workflow was started (two single reviewer agents instead). Then, same session: the owner approved and ran the Stage 7 check of 1.0.14 in the VM (two driver defects found and worked around with the owner, both recorded; `STAGE_7_COMPLETE`, 27 of 27), approved the update of the everyday JARVIS (plan and launcher written and rehearsed 13 of 13 in a sandbox) and ran it: `EVERYDAY_UPDATE_COMPLETE`, automatic start at sign-in confirmed after a PC restart (about 6.5 min after sign-in). Lessons: decision tests must also run the guest driver with the egress drive unmounted and with a long wait after a restart; the owner cannot always tell the VM window from the PC (check the prompt shows jarvis-s6-guest); Claude cannot operate the VM (owner-only and another account's screen). Nothing pushed or synced.
