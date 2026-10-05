@@ -80,6 +80,11 @@ month** in Alibaba Cloud billing; raise it once you know your real use.
   use OpenRouter today: the Qwen provider accepts only `*.aliyuncs.com` addresses (`providers.py`), so it needs a new
   provider in a release (tests, Stage 7 check, owner approval). Fish Audio voice and local Whisper stay as they are.
   Not started; the owner decides.
+- **Anthropic (owner asked 2026-10-05, "does anthropic offer api keys?"):** yes, through the Claude Console with
+  prepaid credits, separate from a Claude Pro/Max subscription. Prices per million tokens in / out (cache reads):
+  Claude Sonnet 5.5 $2 / $10 ($0.20), Claude Opus 5.5 $4 / $20 ($0.20), Claude Haiku 4.5 $1 / $5. All read images and
+  use tools. JARVIS has no Claude provider: it needs a new provider in a release (Anthropic Messages API, explicit
+  `cache_control` for caching). Also reachable through OpenRouter. Not started; the owner decides.
 - **Voice (owner, 2026-10-05): "i want to use qwen now not fish auido".** Already built, no release needed: the key
   file needs `QWEN_TTS_VOICE=<cloned voice ID>` (and `QWEN_TTS_MODEL` only if the voice was enrolled for a model other
   than `qwen3-tts-vc-2026-01-22`), then Settings > VOICE PREVIEW > "Qwen — cloned JARVIS voice" > USE THIS VOICE. A
