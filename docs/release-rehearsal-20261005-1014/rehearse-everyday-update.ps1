@@ -44,19 +44,22 @@ function StartSandbox {
     }
     throw 'the sandbox JARVIS did not become ready'
 }
+function Session($link) {
+    # The page sets the session cookie that every /api route needs (as tools\guest\stage7-v2\Invoke-Stage7.ps1 does).
+    $null = Invoke-WebRequest -UseBasicParsing -Uri ($link.origin + '/') -Headers @{ 'X-Jarvis-Desktop' = $link.token } -SessionVariable s -TimeoutSec 15
+    $s
+}
 function StateOf($link) {
-    $page = Invoke-WebRequest -UseBasicParsing -Uri ($link.origin + '/') -Headers @{ 'X-Jarvis-Desktop' = $link.token } -TimeoutSec 10
-    $cookie = ($page.Headers['Set-Cookie'] -split ';')[0]
-    (Invoke-WebRequest -UseBasicParsing -Uri ($link.origin + '/api/state') -Headers @{ 'X-Jarvis-Desktop' = $link.token; Cookie = $cookie } -TimeoutSec 20).Content | ConvertFrom-Json
+    $s = Session $link
+    Invoke-RestMethod -Uri ($link.origin + '/api/state') -Headers @{ 'X-Jarvis-Desktop' = $link.token } -WebSession $s -TimeoutSec 30
 }
 function StopSandbox {
     # A requested shutdown of the sandbox Core, then the sandbox's own remaining programs (started by this harness).
     $link = CoreLink
     if ($link) {
         try {
-            $page = Invoke-WebRequest -UseBasicParsing -Uri ($link.origin + '/') -Headers @{ 'X-Jarvis-Desktop' = $link.token } -TimeoutSec 10
-            $cookie = ($page.Headers['Set-Cookie'] -split ';')[0]
-            Invoke-WebRequest -UseBasicParsing -Method Post -Uri ($link.origin + '/api/shutdown') -Body '{}' -ContentType 'application/json' -Headers @{ 'X-Jarvis-Desktop' = $link.token; Cookie = $cookie } -TimeoutSec 10 | Out-Null
+            $s = Session $link
+            Invoke-RestMethod -Method Post -Uri ($link.origin + '/api/shutdown') -Body '{}' -ContentType 'application/json' -Headers @{ 'X-Jarvis-Desktop' = $link.token } -WebSession $s -TimeoutSec 10 | Out-Null
         } catch {}
         for ($i = 0; $i -lt 60 -and (CoreLink); $i++) { Start-Sleep -Milliseconds 500 }
     }

@@ -1,8 +1,8 @@
 # Updating your everyday JARVIS to 1.0.14
 
-Status: **DRAFT (2026-10-05, Claude Code). Not approved; nothing has run on your real JARVIS.** Updating the everyday
-JARVIS is your decision (`CLAUDE.md`). It is offered only after 1.0.14 passes its Stage 7 check in the VM
-(`docs/STAGE7-CHECK-1.0.14.md`). The launcher is to be rehearsed in a sandbox on D: first (results added here).
+Status: **READY FOR YOUR APPROVAL (2026-10-05, Claude Code). Rehearsed in a sandbox: all 13 checks passed. Nothing
+has run on your real JARVIS.** Updating the everyday JARVIS is your decision (`CLAUDE.md`). 1.0.14 passed its Stage 7
+check in the VM on 2026-10-05 (`STAGE_7_COMPLETE`, 27 of 27 checks, `docs/stage7-1.0.14-evidence/`).
 
 ## In plain words
 
@@ -23,9 +23,26 @@ properly and refuse rather than half-finish.
 - On this PC: the build compared with 1.0.11 (only the changed JARVIS files differ), its full test suite with its
   own Python and Electron, the zip install, and the whole Stage 7 pass in a sandbox, including updating from 1.0.11
   while running, rolling back and an update killed halfway (`docs/release-rehearsal-20261005-1014/README.md`).
-- In the test VM: the Stage 7 check of 1.0.14 (must pass before this plan is offered for approval).
+- In the test VM: the Stage 7 check of 1.0.14 passed (install, restart with automatic start, uninstall and
+  reinstall, update from 1.0.11 while running, rollback, update again, an update killed mid-copy then rerun; 27 of
+  27 checks; updates 159-257 s, rollback 98 s, stopping JARVIS about 3 s).
 - 1.0.14 changes no part of the database layout (no table or schema change since 1.0.11), so 1.0.11 reads your data
   just as before if you ever roll back.
+- **This launcher, rehearsed** (`docs/release-rehearsal-20261005-1014/rehearse-everyday-update.ps1`, records in
+  `update-rehearsal/`): 1.0.11 installed into a sandbox folder on D: and started once; refused without approval;
+  refused while JARVIS was running; step 1 PASS (unpack 18 s, 1.0.11 verified); step 2 PASS (backup made with
+  1.0.11's own backup code, test restore passed, copy hash-equal, program still verifies); step 3 PASS (update 30 s,
+  stop 0.7 s, verified, database file byte-for-byte unchanged); 1.0.14 started on the same data; a rerun changed
+  nothing; rollback (only with its approval file) PASS, 1.0.11 verified; 13 of 13 checks. Your real JARVIS was not
+  running and was never addressed. A first rehearsal run stopped on a defect of the rehearsal harness itself (it
+  asked the sandbox Core for its state without the session cookie), fixed and run again.
+- **Not rehearsable by me:** your real data (the sandbox database was new and empty; the same backup code made and
+  test-restored your real data at Gate 18 and the switch-over, 176 files, every count equal), your real install
+  folder, and your real restart.
+- Launcher sha256 (commit with this plan): `Invoke-EverydayUpdate.ps1`
+  `61df7eb1c25c6d25a051a3aadc76c715016f43dbe9516b45bfb64d121bc889cc`, `update-step.cmd`
+  `9c469bd44002e59066f5b8e7e2b077173826780840b37e7f4151e99be86d3388`; the 1.0.14 package zip sha256
+  `ceb7d9e1922cebbf650753c4028473c5962c558ed70ec9f4be20f9fdc740d8d3`.
 
 ## The steps
 
@@ -71,6 +88,5 @@ on D:, the old folder and Codex, the old 1.0.11 release folder).
 
 ## Approval
 
-After the Stage 7 check has passed and this plan says READY FOR YOUR APPROVAL, reply in your own words, for example:
-"I approve the update of my everyday JARVIS to 1.0.14". I then record it, put the launcher in
-`D:\JARVIS-update-1.0.14\tools\` with its hashes, and you start with step 1.
+Reply in your own words, for example: "I approve the update of my everyday JARVIS to 1.0.14". I then record it, put
+the launcher in `D:\JARVIS-update-1.0.14\tools\` with its hashes, and you start with step 1.

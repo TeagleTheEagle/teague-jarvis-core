@@ -1,0 +1,59 @@
+live JARVIS processes at the start: 0
+===== install 1.0.11 into the sandbox home
+PASS  sandbox: 1.0.11 installed  installed
+PASS  sandbox: 1.0.11 running on its data  1.0.11-60d406fb6398
+===== no approval: refused  14:35:50
+STOPPED: this update has not been approved yet (Claude records your approval of the plan first).
+Nothing further was done. Photograph this window for Claude.
+exit=2
+PASS  refused without approval  exit 2
+===== JARVIS running: refused  14:35:51
+STEP 1 of 3: checks before the update to 1.0.14-e03872680e1d (nothing in your JARVIS changes)
+
+STOPPED: JARVIS is running. Quit it completely (right-click its icon near the clock > Quit JARVIS completely), then double-click update-step again.
+Nothing further was done. Photograph this window for Claude.
+exit=2
+PASS  refused while JARVIS runs  exit 2
+===== step 1 check  14:35:55
+STEP 1 of 3: checks before the update to 1.0.14-e03872680e1d (nothing in your JARVIS changes)
+Checking the package against its hash (about a minute) ...
+Unpacking the package to D:\JARVIS-release-work\update-rehearsal-1.0.14-run2\update\package (a few minutes) ...
+Checking every file of your installed JARVIS (a minute or two) ...
+
+STEP 1 PASSED. Tell Claude "step 1 done". Then double-click update-step again for step 2 (the backup).
+exit=0
+PASS  step 1 check  exit 0
+===== step 2 backup  14:36:25
+STEP 2 of 3: a fresh backup of your JARVIS (the same as Settings > Backups: create, then test restore)
+Making the backup (about a minute) ...
+Backup c7c461f6431849f1b27d0d39e37a7406: 156 files, verified. Testing the restore in a temporary folder ...
+
+STEP 2 PASSED: backup c7c461f6431849f1b27d0d39e37a7406 made and test-restored; a copy is in D:\JARVIS-release-work\update-rehearsal-1.0.14-run2\update\backup. Tell Claude "step 2 done", then double-click update-step again for step 3 (the update).
+exit=0
+PASS  step 2 backup  exit 0
+===== step 3 update  14:36:35
+STEP 3 of 3: update your JARVIS from 1.0.11-60d406fb6398 to 1.0.14-e03872680e1d
+Updating (a few minutes; your data, settings and keys are not touched) ...
+
+STEP 3 PASSED: your JARVIS is now 1.0.14-e03872680e1d, every file verified. It was not started. Tell Claude "step 3 done"; Claude gives you the short check to do when you start it.
+exit=0
+PASS  step 3 update  exit 0
+PASS  update: database unchanged  d6ac5582b0db8eb4d0abd65a36a9e4e20fcf0f247721845ab6f4bf7e511512c8
+PASS  update: current is 1.0.14, previous 1.0.11  1.0.14-e03872680e1d
+PASS  sandbox: 1.0.14 running on the same data  1.0.14-e03872680e1d
+===== rerun after the update: nothing to do  14:37:30
+The update to 1.0.14-e03872680e1d is complete and recorded. Nothing more to do here.
+exit=0
+PASS  rerun changes nothing  exit 0
+===== rollback (approved)  14:37:31
+ROLLBACK: switch your JARVIS back to 1.0.11-60d406fb6398
+
+ROLLBACK PASSED: your JARVIS is back on 1.0.11-60d406fb6398. Tell Claude "rollback done".
+exit=0
+PASS  rollback to 1.0.11  1.0.11-60d406fb6398
+===== rerun after the rollback: nothing to do  14:37:48
+The update to 1.0.14-e03872680e1d is complete and recorded. Nothing more to do here.
+exit=0
+PASS  rerun after rollback changes nothing  exit 0
+live JARVIS processes at the end: 0 (start: 0); sandbox processes at the end: 0
+13 checks, 0 failed
