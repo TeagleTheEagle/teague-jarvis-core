@@ -24,11 +24,17 @@ class AutomaticActionsTests(unittest.TestCase):
         self.assertFalse(self.app.approvals)
 
     def test_change_and_rollback_retain_backup(self):
-        with patch('server.ROOT', self.root):
+        # Until 1.0.15 a style change applied with no approval. Since 1.0.15 every change JARVIS makes to
+        # itself asks first (permissions.py; master document section 6), the style included.
+        with patch('server.ROOT', self.root), patch('runtime_paths.installed', return_value=False):
             result = self.app.tool('development_propose', {'path':'static/pro.css', 'content':'body { color: cyan; }', 'reason':'test'})
-            self.assertEqual(result['status'], 'applied')
+            self.assertEqual(result['status'], 'awaiting approval')
+            self.assertEqual((self.root/'static/pro.css').read_text(), 'body { color: white; }')
+            self.assertEqual(self.app.approve(result['approval']['id'], True)['status'], 'applied')
             self.assertEqual((self.root/'static/pro.css').read_text(), 'body { color: cyan; }')
-            self.app.tool('development_rollback', {'proposal':result['proposal']})
+            undo = self.app.tool('development_rollback', {'proposal':result['proposal']})
+            self.assertEqual((self.root/'static/pro.css').read_text(), 'body { color: cyan; }')
+            self.app.approve(undo['approval']['id'], True)
             self.assertEqual((self.root/'static/pro.css').read_text(), 'body { color: white; }')
         self.assertFalse(self.app.approvals)
 

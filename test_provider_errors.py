@@ -120,6 +120,27 @@ class ProviderErrorTests(unittest.TestCase):
         self.assertIn('account balance is overdue or empty', str(exc))
         self.assertEqual(exc.limit, 'billing')
 
+    def test_qwen_model_not_purchased_names_both_causes(self):
+        # The owner's account, 2026-10-05: HTTP 403 AccessDenied.Unpurchased, caused by an unpaid bill.
+        exc = self.request_error(QWEN, 403, error_body('AccessDenied.Unpurchased'))
+        for text in ('Qwen chat: Alibaba Cloud refused access to this model', 'not activated', 'unpaid bill', 'Waiting will not help',
+                     '(HTTP 403, AccessDenied.Unpurchased)'):
+            self.assertIn(text, str(exc))
+        self.assertEqual((exc.limit, exc.retry_after, exc.status, exc.service), ('billing', 0, 403, 'Qwen'))
+        other = self.request_error(QWEN, 403, error_body('AccessDenied'))  # any other refusal keeps the general wording
+        self.assertIn('Access denied', str(other))
+        self.assertIsNone(other.limit)
+        self.assertIn('(HTTP 403)', str(self.request_error(OPENAI, 403, error_body('AccessDenied.Unpurchased'))))  # a Qwen code only
+
+    def test_a_request_that_is_too_large_says_waiting_will_not_help(self):
+        # 2026-10-05: one JARVIS question was larger than a free plan's limit per minute (HTTP 413).
+        for url, name in ((OPENAI, 'OpenAI'), (QWEN, 'Qwen')):
+            exc = self.request_error(url, 413)
+            for text in (name + ' chat: The request is larger than', 'Waiting will not help', '(HTTP 413)'):
+                self.assertIn(text, str(exc))
+            self.assertEqual((exc.limit, exc.retry_after, exc.status), (None, 0, 413))
+            self.assertTrue(providers.backup_worthy(exc))  # the other provider may accept it
+
     def test_402_names_the_fish_dashboard_only_for_fish(self):
         exc = self.request_error(OPENAI, 402)
         self.assertIn('Payment required', str(exc))

@@ -258,8 +258,10 @@
 
     // Mode: announced only when it changes.
     const mode = (s && s.mode) || 'standby';
-    set(coreMode, online ? MODES[mode] || mode.toUpperCase() : link === 'snapshot' ? 'INSPECTION SNAPSHOT' : model.LINK_TEXT[link]);
-    setClass(coreMode, 'cd-mode' + (link === 'lost' ? ' offline' : online ? '' : ' pending'));
+    const stopped = model.stopped(link, live);  // the emergency stop holds: JARVIS is not standing by
+    set(serviceLine, stopped ? 'Emergency stop is on.' : 'At your service.');
+    set(coreMode, online ? stopped ? 'STOPPED' : MODES[mode] || mode.toUpperCase() : link === 'snapshot' ? 'INSPECTION SNAPSHOT' : model.LINK_TEXT[link]);
+    setClass(coreMode, 'cd-mode' + (link === 'lost' || stopped ? ' offline' : online ? '' : ' pending'));
     setClass(meter.online, online ? 'on' : ''); setClass(meter.listening, online && mode === 'listening' ? 'on live' : '');
     setClass(meter.thinking, online && (mode === 'thinking' || mode === 'processing') ? 'on live' : ''); setClass(meter.speaking, online && mode === 'speaking' ? 'on live' : '');
     setClass(footDot, 'cd-foot-dot' + (online ? ' on' : '')); footDot.title = online ? 'Core connected' : 'Core: ' + model.LINK_TEXT[link].toLowerCase();

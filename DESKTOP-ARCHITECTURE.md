@@ -33,7 +33,7 @@ Uploaded images stay in an in-memory dictionary capped at ten entries, until evi
 
 The browser currently includes periodic screen observations. The first desktop version must not start or expose that timer: desktop mode will use one capture per explicit command. Preserve browser behaviour separately.
 
-Some supported styling changes and allowlisted app launches currently run immediately under earlier authorisation. Do not describe the existing app as requiring approval for every tool. Add no new consequential action bypasses.
+Allowlisted app launches run immediately under earlier authorisation. Do not describe the existing app as requiring approval for every tool. Add no new consequential action bypasses. (Until release 1.0.15 supported styling and personality changes also ran immediately; since 1.0.15 every change JARVIS makes to itself asks first, and what each tool may do is one table: `permissions.py`, `docs/PERMISSIONS.md`.)
 
 ## First-version architecture
 

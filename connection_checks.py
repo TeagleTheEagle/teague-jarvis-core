@@ -1,4 +1,5 @@
 """User-triggered, bounded diagnostics. Never retain provider payloads or keys."""
+import json
 import os
 import threading
 import time
@@ -7,10 +8,14 @@ import providers
 import maps
 
 
-def check(service, mode=None):
-    """mode is the saved answer mode (Settings > Answer speed), so the chat check asks the model that answers."""
-    if service not in ('chat', 'voice', 'search', 'maps'):
-        raise ValueError('Choose chat, voice, search or maps.')
+SERVICES = ('chat', 'full', 'voice', 'search', 'maps')
+
+
+def check(service, mode=None, full=None):
+    """mode is the saved answer mode (Settings > Answer speed), so the chat check asks the model that answers.
+    full, for the 'full' check: a function returning (messages, tools) exactly as a real question sends them."""
+    if service not in SERVICES:
+        raise ValueError('Choose chat, full, voice, search or maps.')
     start = time.perf_counter()
     result = {'service': service, 'checked_at': time.time()}
     try:
@@ -18,7 +23,21 @@ def check(service, mode=None):
             reply = providers.chat([{'role': 'user', 'content': 'Connection test. Reply with only READY.'}], [], lambda *args: None, threading.Event(), **providers.chat_options(mode, ''))
             if not reply.get('content'):
                 raise ValueError('The model returned no text.')
-            detail = 'The configured chat model generated text. Tool use and vision were not tested.'
+            detail = 'The configured chat model generated text. This was a tiny request: use the full question test to check a real-size one. Tool use and vision were not tested.'
+        elif service == 'full':
+            # A provider can pass the tiny test and still refuse a real question: on 2026-10-05 a free plan accepted
+            # "READY" and answered every real question with HTTP 413. This sends what a real question sends.
+            if full is None:
+                raise ValueError('The full question test is not available here.')
+            messages, tools = full()
+            reply = providers.chat(messages, tools, lambda *args: None, threading.Event(), **providers.chat_options(mode, ''))
+            asked_tool = bool(reply and reply.get('tool_calls'))
+            if not reply or not (reply.get('content') or asked_tool):
+                raise ValueError('The model returned neither text nor a tool request.')
+            size = len(json.dumps(messages, ensure_ascii=False)) + len(json.dumps(tools, ensure_ascii=False))
+            detail = (f'The chat model accepted a real-size JARVIS question: the full instructions and all {len(tools)} tools, about {size:,} characters. '
+                      + ('It asked for a tool, as a real question does. ' if asked_tool else 'It answered in text without asking for a tool. ')
+                      + 'This was one question without earlier conversation; a long conversation is larger. No tool was run.')
         elif service == 'voice':
             if providers.capabilities()['voice_provider'] == 'browser':
                 return {**result, 'status': 'manual_check', 'detail': 'Browser voice needs an audible playback test on this device.', 'latency_ms': 0}

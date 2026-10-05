@@ -143,9 +143,17 @@ class RecoveryTests(unittest.TestCase):
         selected,_=recovery.inventory(app,self.data)
         self.assertEqual(selected['app/personality.txt'],home/'config'/'personality.txt')
         self.assertEqual(selected['app/desktop/preferences.json'],home/'config'/'preferences.json')
+        self.assertNotIn('app/owner-style.css',selected)  # no approved style change yet: nothing to save
+        (home/'config'/'owner-style.css').write_text('body{font-size:18px}')  # the owner's own style sheet (1.0.15)
+        selected,_=recovery.inventory(app,self.data)
+        self.assertEqual(selected['app/owner-style.css'],home/'config'/'owner-style.css')
         backup=recovery.Recovery(app,self.data,home/'data-backups').create()
         with zipfile.ZipFile(home/'data-backups'/(backup['id']+'.zip')) as z:
             self.assertEqual(z.read('app/personality.txt'),b'owner personality')
+            self.assertEqual(z.read('app/owner-style.css'),b'body{font-size:18px}')
+        (self.root/'owner-style.css').write_text('body{color:white}')  # development: beside the code
+        selected,_=recovery.inventory(self.root,self.data)
+        self.assertEqual(selected['app/owner-style.css'],self.root/'owner-style.css')
 
     def test_backup_works_while_a_core_runs_and_never_saves_its_state_logs_or_session_token(self):
         import core_lock

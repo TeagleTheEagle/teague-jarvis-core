@@ -91,6 +91,23 @@ class SwitchOverTests(unittest.TestCase):
         self.assertEqual((home / 'config' / 'personality.txt').read_text(encoding='utf-8'), 'Old personality.\n')
         self.assertEqual((app / 'personality.txt').read_text(encoding='utf-8'), 'Shipped default.\n')  # program files untouched
 
+    def test_the_owners_style_sheet_travels_with_the_personality(self):
+        # Release 1.0.15: an approved style change lives in owner-style.css beside the personality.
+        (self.old / 'owner-style.css').write_text('body{font-size:18px}\n', encoding='utf-8')
+        archive = self.archive.parent / (recovery.Recovery(self.old, self.old / 'data', self.archive.parent).create()['id'] + '.zip')
+        home = self.new.parent / 'home2'
+        app = home / 'releases' / '1.0.15-abc' / 'app'
+        app.mkdir(parents=True)
+        (home / 'config').mkdir()
+        (app.parent / 'manifest.json').write_text('{"product": "JARVIS"}', encoding='utf-8')
+        (app / 'personality.txt').write_text('Old personality.\n', encoding='utf-8')
+        manifest, imported, skipped, replaced, config = switch_over.plan(archive, self.data, app)
+        self.assertEqual(config['owner-style.css'], 'differs')
+        result = switch_over.apply(archive, self.data, app, include_personal_config=True)
+        self.assertIn('owner-style.css', result['personal_config_written'])
+        self.assertEqual((home / 'config' / 'owner-style.css').read_text(encoding='utf-8'), 'body{font-size:18px}\n')
+        self.assertFalse((app / 'owner-style.css').exists())  # never inside the program files
+
     def test_refuses_while_jarvis_is_running(self):
         running = core_lock.CoreLock(self.data)
         self.addCleanup(running.release)

@@ -5,6 +5,7 @@ import time
 import uuid
 import re
 import memory
+import permissions
 from pathlib import Path
 from contextlib import contextmanager
 
@@ -52,9 +53,17 @@ class Store:
                 CREATE TABLE IF NOT EXISTS turn_evidence (
                     id INTEGER PRIMARY KEY AUTOINCREMENT, conversation TEXT NOT NULL,
                     tool TEXT NOT NULL, result TEXT NOT NULL, created REAL NOT NULL);
+                CREATE TABLE IF NOT EXISTS control (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS tool_modes (
+                    tool TEXT PRIMARY KEY, mode TEXT NOT NULL, updated REAL NOT NULL);
             ''')
             for column, definition in [('item_key','TEXT'),('category','TEXT'),('source','TEXT'),('confidence','REAL NOT NULL DEFAULT 1.0')]:
                 try: db.execute(f'ALTER TABLE items ADD COLUMN {column} {definition}')
+                except sqlite3.OperationalError: pass
+            # Which question and which device an activity row belongs to (1.0.15). Both stay empty on older rows,
+            # and an older JARVIS that writes only action and status still works on this database.
+            for column in ('run_id', 'device'):
+                try: db.execute(f'ALTER TABLE audit ADD COLUMN {column} TEXT')
                 except sqlite3.OperationalError: pass
 
     @contextmanager
@@ -143,8 +152,7 @@ class Store:
 
     def record_evidence(self, conversation, tool, result):
         # Only compact public/action results; never development file contents or keys.
-        allowed = {'calculate', 'create_file', 'save_item', 'set_timer', 'suit_diagram', 'project_link_chat', 'project_save_document'}
-        if tool not in allowed or not isinstance(result, dict):
+        if tool not in permissions.EVIDENCE_TOOLS or not isinstance(result, dict):
             return
         payload = json.dumps(result)
         if len(payload) > 6000 or re.search(r'gsk_|sk-fish-|sk-proj-|api[_ -]?key|bearer\s', payload, re.I):
@@ -226,9 +234,42 @@ class Store:
                                 db.execute('DELETE FROM items WHERE id=?', (row['id'],))
         return self.settings()
 
-    def audit(self, action, status):
+    def audit(self, action, status, run_id=None, device=None):
         with self.connect() as db:
-            db.execute('INSERT INTO audit(action,status,created) VALUES (?,?,?)', (action[:80], status[:80], time.time()))
+            db.execute('INSERT INTO audit(action,status,created,run_id,device) VALUES (?,?,?,?,?)',
+                       (action[:80], status[:80], time.time(), run_id[:64] if isinstance(run_id, str) else None, device[:64] if isinstance(device, str) else None))
+
+    # The emergency stop and the owner's switch for each tool live outside `settings`: the settings page, the
+    # JSON export and a restored JSON backup cannot reach them.
+    def stop_state(self):
+        with self.connect() as db:
+            row = db.execute("SELECT value FROM control WHERE key='emergency_stop'").fetchone()
+        try:
+            value = json.loads(row['value']) if row else None
+        except ValueError:
+            value = {}  # unreadable: stay stopped until the owner resumes
+        return value if isinstance(value, dict) or value is None else {}
+
+    def set_stop(self, value):
+        with self.connect() as db:
+            if value is None:
+                db.execute("DELETE FROM control WHERE key='emergency_stop'")
+            else:
+                db.execute("INSERT OR REPLACE INTO control VALUES ('emergency_stop',?)", (json.dumps(value),))
+
+    def tool_modes(self):
+        with self.connect() as db:
+            return {r['tool']: r['mode'] for r in db.execute('SELECT tool,mode FROM tool_modes')}
+
+    def set_tool_mode(self, tool, mode):
+        if tool not in permissions.TABLE or mode not in permissions.modes_for(tool):
+            raise ValueError('That switch position is not available for this tool.')
+        with self.connect() as db:
+            if mode == permissions.DEFAULT:
+                db.execute('DELETE FROM tool_modes WHERE tool=?', (tool,))
+            else:
+                db.execute('INSERT OR REPLACE INTO tool_modes VALUES (?,?,?)', (tool, mode, time.time()))
+        return self.tool_modes()
 
     def logs(self):
         with self.connect() as db:

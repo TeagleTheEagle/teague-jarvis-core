@@ -55,4 +55,9 @@ assert.equal(m.voiceLine({micOn:true,armed:true}),'Listening.');
 assert.equal(m.voiceLine({micOn:true,suspended:true}),'Microphone paused while JARVIS replies.');
 assert.equal(m.voiceLine({micOn:true,wakeEnabled:false}),'Microphone on, without the wake word.');
 assert.equal(m.voiceLine({micOn:true,wakeEnabled:true}),'Say "Hey Jarvis", then your request.');
+// The emergency stop: said only while the Core is heard from and says so; never guessed.
+assert.equal(m.stopped('online',{control:{stopped:true}}),true);
+assert.equal(m.stopped('online',{control:{stopped:false}}),false);
+assert.equal(m.stopped('online',{}),false);assert.equal(m.stopped('online',null),false);
+for(const state of ['connecting','checking','lost','snapshot'])assert.equal(m.stopped(state,{control:{stopped:true}}),false,state);
 console.log('Dashboard model checks passed.');

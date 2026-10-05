@@ -91,6 +91,15 @@ def _http_error(prefix, service, exc):
     label, limit, tail = _STATUS_LABELS.get(status, 'The provider could not complete the request.'), None, f'HTTP {status}'
     if service == 'Qwen' and code == 'Arrearage':
         label, limit = 'Alibaba Cloud refused access: the account balance is overdue or empty. Top up in Alibaba Cloud Billing, then retry.', 'billing'
+    elif service == 'Qwen' and code == 'AccessDenied.Unpurchased':
+        # Seen on the owner's account on 2026-10-05; the cause there was an unpaid bill, not a missing purchase.
+        label, limit = ('Alibaba Cloud refused access to this model. Either the model is not activated for the account in Model Studio, '
+                        'or an unpaid bill blocks it. Waiting will not help: check Model Studio and Billing in the Alibaba Cloud console, then retry.'), 'billing'
+        tail = f'HTTP {status}, {code}'
+    elif status == 413:
+        # Seen on 2026-10-05 from a free plan whose limit per minute was smaller than one JARVIS question.
+        label = ('The request is larger than this provider or plan accepts at once. Waiting will not help: '
+                 'use a plan or model with a higher limit, or ask with a shorter question or a smaller attachment.')
     elif status == 429:
         billing = _BILLING_429.get(service, {})
         if code in billing or (service == 'OpenAI' and kind == 'insufficient_quota'):

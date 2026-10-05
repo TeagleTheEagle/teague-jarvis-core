@@ -60,6 +60,35 @@ class ConnectionTests(unittest.TestCase):
         with patch('providers.chat',return_value={'content':'READY'}):
             self.assertEqual(connection_checks.check('chat')['status'],'passed')
 
+    def test_full_question_sends_what_a_real_question_sends_and_runs_no_tool(self):
+        messages = [{'role': 'system', 'content': 'instructions ' * 50}, {'role': 'user', 'content': 'What time is it?'}]
+        tools = [{'type': 'function', 'function': {'name': 'time_now'}}, {'type': 'function', 'function': {'name': 'set_timer'}}]
+        full = lambda: (messages, tools)
+        asked = {'role': 'assistant', 'tool_calls': [{'id': 'c', 'function': {'name': 'time_now', 'arguments': '{}'}}]}
+        with patch('providers.chat', return_value=asked) as chat:
+            result = connection_checks.check('full', None, full)
+        self.assertEqual(result['status'], 'passed')
+        self.assertIs(chat.call_args.args[0], messages)
+        self.assertIs(chat.call_args.args[1], tools)
+        self.assertIn('all 2 tools', result['detail'])
+        self.assertIn('It asked for a tool', result['detail'])
+        self.assertIn('No tool was run', result['detail'])
+        with patch('providers.chat', return_value={'content': 'It is noon.'}):
+            self.assertIn('answered in text', connection_checks.check('full', None, full)['detail'])
+        for empty in ({'content': None}, {'content': '', 'tool_calls': []}, None):
+            with patch('providers.chat', return_value=empty):
+                self.assertEqual(connection_checks.check('full', None, full)['status'], 'failed')
+        # The provider's refusal of a real-size question is the answer the owner needs, in our own words.
+        refused = providers.ProviderError('Qwen chat: The request is larger than this provider or plan accepts at once. (HTTP 413)')
+        with patch('providers.chat', side_effect=refused):
+            result = connection_checks.check('full', None, full)
+        self.assertEqual((result['status'], result['detail']), ('failed', str(refused)))
+        self.assertEqual(connection_checks.check('full')['status'], 'failed')  # nothing to send: said, not guessed
+        with self.assertRaises(ValueError): connection_checks.check('everything')
+        # The tiny test says that it was tiny.
+        with patch('providers.chat', return_value={'content': 'READY'}):
+            self.assertIn('tiny request', connection_checks.check('chat')['detail'])
+
     def test_voice_empty_audio_and_manual_browser(self):
         with patch('providers.capabilities',return_value={'voice_provider':'browser'}),patch('providers.speech') as speech:
             self.assertEqual(connection_checks.check('voice')['status'],'manual_check');speech.assert_not_called()

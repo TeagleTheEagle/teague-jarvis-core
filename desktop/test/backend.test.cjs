@@ -36,7 +36,10 @@ test('shared background Core: first app starts it, a second app joins it, closin
   assert.equal(second.started,false,'second app must join, not start another Core');
   assert.equal(second.origin,first.origin);
   assert.equal(second.token,first.token);
-  await second.stop();                       // emergency stop reaches the shared Core
+  await second.stop();                       // stopping what runs now reaches the shared Core
+  assert.equal((await second.emergencyStop()).stopped,true);   // the emergency stop holds in the shared Core...
+  assert.equal((await first.emergencyStop()).stopped,true);    // ...for every app joined to it...
+  assert.equal((await second.resume()).stopped,false);         // ...until the owner resumes
   await second.quit();                       // closing one app...
   assert.equal(await first.alive(),true);    // ...leaves JARVIS running for the others
   assert.equal((await fetch(first.origin+'/')).status,403,'the Core requires its client token');

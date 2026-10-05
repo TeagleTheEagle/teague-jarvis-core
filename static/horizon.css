@@ -78,7 +78,20 @@ html.hz .ti-file-inspector,html.hz .ti-recent{border:1px solid var(--hz-line)!im
 html.hz body #settingsView,html.hz body #changesView{border:0!important;background:none!important;box-shadow:none!important}
 html.hz body .panel.file-drop{border-style:dashed!important}html.hz body .panel.file-drop[data-drag=true]{border-color:#7fd4ff!important;background:#0f3a63!important}
 html.hz .ti-recent{padding:14px 16px}
-html.hz .ti-save-bar{background:none!important;border-color:var(--ti-line)!important}
+/* The Save bar stays at the bottom of the window while the settings scroll under it. It needs a solid ground:
+   without one the button floated over whatever row was beneath it. */
+html.hz .ti-save-bar{background:linear-gradient(180deg,#071a2ef5,#06121ffc)!important;border-top:1px solid var(--hz-line)!important;border-radius:0 0 10px 10px;
+ box-shadow:0 -14px 22px -8px #020a15}
+/* The settings section scrolls and has 28px of padding at its foot; without this the bar stopped 28px short of the
+   bottom and a strip of the rows showed beneath it. */
+html.hz body #settingsView #settingsForm>.ti-save-bar{bottom:-28px}
+/* Settings rows that app.js adds sit deeper (a div inside the "Response length" row) and missed the spacing of
+   the other rows: a label touched the control above it. */
+html.hz body .ti-settings-group label>div{margin-top:20px}
+html.hz body .ti-settings-group label>div>label{display:block;margin-bottom:20px;max-width:900px}
+html.hz body .ti-settings-group label>div>label:last-child{margin-bottom:0}
+html.hz body .ti-settings-group label>div>label>select,html.hz body .ti-settings-group label>div>label>input:not([type=checkbox]){display:block;width:min(100%,620px);margin-top:8px}
+html.hz body .ti-settings-group label>div>label.check-label{display:flex;align-items:center}
 html.hz .ti-stats{overflow:hidden}
 html.hz .ti-stat strong{color:#f3f8fc;font-weight:300}
 html.hz .ti-stat small,html.hz body .panel-heading span{color:#8aa6c0}

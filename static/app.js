@@ -172,7 +172,7 @@ function renderReminders(){
 function renderLogs(){
   const root=$('#missionLog');root.replaceChildren();const list=[...state.localLogs,...(state.data?.logs||[])].sort((a,b)=>b.created-a.created).slice(0,20);
   if(!list.length)list.push({created:Date.now()/1000,action:'Ready for your command',status:'SYSTEM ONLINE'});
-  list.forEach(l=>{const row=document.createElement('div');row.className='log-item';const time=document.createElement('time');time.textContent=new Date(l.created*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:false});const p=document.createElement('p'),b=document.createElement('b');b.textContent=l.status.toUpperCase();p.append(b,document.createTextNode(l.action.replaceAll('_',' ')));row.append(time,p);root.append(row);});
+  list.forEach(l=>{const row=document.createElement('div');row.className='log-item';const time=document.createElement('time');time.textContent=new Date(l.created*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:false});const p=document.createElement('p'),b=document.createElement('b');b.textContent=l.status.toUpperCase();p.append(b,document.createTextNode(l.action.replaceAll('_',' ')));if(l.device||l.run_id){const origin=document.createElement('small');origin.className='log-origin';origin.textContent=[l.device==='pc'?'this PC':l.device,l.run_id?'question '+String(l.run_id).slice(0,6):''].filter(Boolean).join(' · ');p.append(origin);}row.append(time,p);root.append(row);});
 }
 let entryKind='note',entryId=null;
 function entry(kind,item){entryKind=kind;entryId=item?.id||null;$('#entryTitle').textContent=(item?'Edit ':'New ')+(kind==='memory'?'memory':kind);$('#entryText').value=item?.body||'';$('#entryDialog').showModal();$('#entryText').focus();}
@@ -207,6 +207,8 @@ function screenIntent(text){
   return null;
 }
 async function send(text,screenAttachment=null,options={}){ if(window.JARVIS_INSPECTION)return;
+  // "Emergency stop", typed or spoken: goes straight to the Core, also while another answer is running.
+  if(!screenAttachment&&typeof JarvisPermissions!=='undefined'&&JarvisPermissions.stopPhrase(text)&&window.jarvisEmergencyStop){message('user',text);const reached=await window.jarvisEmergencyStop('Asked for in words: '+text.trim());message(reached?'assistant':'error',reached?'Emergency stop is on. I will not answer or do anything until you press RESUME on the PC.':'The emergency stop did not reach the Core.');return;}
   if(!screenAttachment&&!state.attachment&&timerStatusIntent(text)){await answerTimerStatus(text);return;}
   const localControl=!screenAttachment&&!state.attachment&&assistantControlIntent(text);
   if(localControl){const result=await performAssistantControl(localControl);message('user',text);message('assistant',controlSummary(localControl,result));return;}
@@ -246,7 +248,7 @@ async function send(text,screenAttachment=null,options={}){ if(window.JARVIS_INS
       if(event.event==='tool.started'){coreWorking++;const label=event.data.name.replaceAll('_',' ');log(label,'RUNNING');output.p.dataset.activity='Working on '+label+'…';}
       if(event.event==='tool.completed'){coreWorking=Math.max(0,coreWorking-1);
         toolResult(event.data.name,event.data.result,output.el);output.p.dataset.activity='';
-        if(event.data.name==='set_timer'&&state.data){
+        if(event.data.name==='set_timer'&&state.data&&event.data.result.id){
           const timer=event.data.result;
           state.data.reminders=state.data.reminders.filter(r=>r.id!==timer.id);
           state.data.reminders.push(timer);
@@ -295,7 +297,8 @@ function toolResult(name,result,container){
   }
 
   if(result.approval && !result.diff && window.renderActionPreview){window.renderActionPreview(result,container);return;}
-  if(result.approval){const box=document.createElement('div');box.className='approval';const label=document.createElement('div');label.textContent='APPROVAL REQUIRED · Open '+result.approval.args.app+' on this computer? Expires in 2 minutes.';if(result.diff){label.textContent='Apply change to '+result.path+'? '+result.validation+' Review the diff before applying.';const preview=document.createElement('pre');preview.textContent=result.diff;preview.style.maxHeight='320px';preview.style.overflow='auto';box.append(preview);}box.append(label);[true,false].forEach(approved=>{const b=document.createElement('button');b.textContent=approved?'APPROVE':'DENY';b.onclick=async()=>{box.querySelectorAll('button').forEach(x=>x.disabled=true);try{const r=await api('/api/approval',{id:result.approval.id,approved});label.textContent=r.status==='launched'?r.app+' launched.':r.status==='applied'?'Change applied. Refresh for interface changes; restart for Python changes. Run tests and keep the rollback available.':'Action denied.';log(label.textContent);}catch(e){label.textContent=e.message;}await refresh();};box.append(b);});container.append(box);}
+  if(result.status==='proposal only'&&result.diff){const box=document.createElement('div');box.className='approval';const label=document.createElement('div');label.textContent='PROPOSAL ONLY · '+result.path+' · '+(result.summary||'Not applied.');const preview=document.createElement('pre');preview.textContent=result.diff;preview.style.maxHeight='320px';preview.style.overflow='auto';box.append(preview,label);container.append(box);return;}
+  if(result.approval){const box=document.createElement('div');box.className='approval';const label=document.createElement('div');label.textContent='APPROVAL REQUIRED · Open '+result.approval.args.app+' on this computer? Expires in 2 minutes.';if(result.diff){label.textContent='Apply change to '+result.path+'? '+result.validation+' Review the diff before applying.';const preview=document.createElement('pre');preview.textContent=result.diff;preview.style.maxHeight='320px';preview.style.overflow='auto';box.append(preview);}box.append(label);[true,false].forEach(approved=>{const b=document.createElement('button');b.textContent=approved?'APPROVE':'DENY';b.onclick=async()=>{box.querySelectorAll('button').forEach(x=>x.disabled=true);try{const r=await api('/api/approval',{id:result.approval.id,approved});label.textContent=r.status==='launched'?r.app+' launched.':r.status==='applied'?'Change applied. '+(r.next_step||'Refresh for interface changes; restart for Python changes. Run tests and keep the rollback available.'):'Action denied.';log(label.textContent);}catch(e){label.textContent=e.message;}await refresh();};box.append(b);});container.append(box);}
   if(name==='youtube'&&result.video_id)loadVideo(result);
   if(name==='get_directions'&&!result.error&&window.showMapRoute)window.showMapRoute(result);
   if(name==='create_file'&&result.url){const div=document.createElement('div');link(div,'Download '+result.filename,result.url);container.append(div);}
@@ -307,7 +310,7 @@ function addFeedback(container,text){
   const box=document.createElement('div');box.className='feedback';
   ['helpful','not_helpful'].forEach(rating=>{const b=document.createElement('button');b.textContent=rating==='helpful'?'HELPFUL':'NOT HELPFUL';b.onclick=async()=>{try{await api('/api/feedback',{conversation:state.conversation,message:text,rating});box.textContent='FEEDBACK SAVED';}catch(e){toast(e.message,true);}};box.append(b);});container.append(box);
 }
-const draftKey='jarvis.draft.'+state.conversation;$('#messageInput').value=localStorage.getItem(draftKey)||'';$('#messageInput').oninput=()=>localStorage.setItem(draftKey,$('#messageInput').value);$('#chatForm').onsubmit=e=>{e.preventDefault();if((state.busy||state.transcribing)&&!assistantControlIntent($('#messageInput').value))return;const text=$('#messageInput').value;$('#messageInput').value='';localStorage.removeItem(draftKey);send(text);};
+const draftKey='jarvis.draft.'+state.conversation;$('#messageInput').value=localStorage.getItem(draftKey)||'';$('#messageInput').oninput=()=>localStorage.setItem(draftKey,$('#messageInput').value);$('#chatForm').onsubmit=e=>{e.preventDefault();if((state.busy||state.transcribing)&&!assistantControlIntent($('#messageInput').value)&&!(typeof JarvisPermissions!=='undefined'&&JarvisPermissions.stopPhrase($('#messageInput').value)))return;const text=$('#messageInput').value;$('#messageInput').value='';localStorage.removeItem(draftKey);send(text);};
 $('#messageInput').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('#chatForm').requestSubmit();}};
 $$('[data-command]').forEach(b=>b.onclick=()=>send(b.dataset.command));
 async function stop(){stopSpeech();disableMic();$('#stopButton').disabled=true;if(state.run){try{await api('/api/cancel',{run_id:state.run});}catch(e){toast(e.message,true);}}log('Stop requested');}
@@ -387,6 +390,7 @@ const voice = new JarvisVoice({
       if(!text)return;coreAcknowledgedUntil=performance.now()+450;
       if(/^(?:(?:hey )?jarvis[ ,]*)?(?:take|capture)(?: a)? screenshot(?:[ ,]+jarvis)?[.!?]*$/i.test(text)){state.transcribing=false;void captureSharedScreen(true);return;}
       if(/^(?:stop sharing|stop watching)(?:[ ,]+jarvis)?[.!?]*$/i.test(text)){stopScreenVision();return;}
+      if(typeof JarvisPermissions!=='undefined'&&JarvisPermissions.stopPhrase(text)){state.transcribing=false;voice.endConversation();void send(text);return;}
       if(assistantControlIntent(text)){state.transcribing=false;void send(text);return;}
       if(JarvisVoice.isEndPhrase(text)){screenAwaitingGuidance=false;voice.endConversation();state.interrupted=false;await speak('At your service, Mr. Teague.');return;}
       if(/^(?:stop|cancel|be quiet|silence)[.!]?$/i.test(text)){voice.endConversation();log('Voice stop requested');return;}

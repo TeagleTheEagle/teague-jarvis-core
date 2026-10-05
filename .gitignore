@@ -16,6 +16,8 @@ desktop/*-result.json
 desktop/*-test.png
 desktop/live-permissions.txt
 desktop/.jarvis-session.json
+# The owner's own style sheet (approved style changes) when JARVIS runs from this folder; never source.
+/owner-style.css
 *.sqlite3
 *.sqlite3-wal
 *.sqlite3-shm

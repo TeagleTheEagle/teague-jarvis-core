@@ -4,6 +4,8 @@ from email.utils import parsedate_to_datetime
 import re
 import time
 
+import permissions
+
 
 def stamp(value):
     return datetime.datetime.fromtimestamp(value,datetime.timezone.utc).astimezone().isoformat(timespec='seconds')
@@ -83,7 +85,7 @@ def receipt(name,result):
     return 'result returned; completion not inferred'
 
 
-ACTION_TOOLS={'save_item','set_timer','manage_timer','manage_saved_memory','preview_action','development_edit','development_propose','development_rollback','assistant_control','navigate_panel','inspect_interface','create_file','project_save_document','project_link_chat','open_app','spotify'}
+ACTION_TOOLS=permissions.ACTION_TOOLS  # which tools' results count as receipts: one table, permissions.py
 
 
 def action_guard(text,events):

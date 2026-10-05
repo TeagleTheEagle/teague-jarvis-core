@@ -36,38 +36,58 @@ def relevant(items, query, limit=20):
     return sorted(items, key=lambda item: (score(item), item['updated']), reverse=True)[:limit]
 
 
+_PREFERENCE = re.compile(r'(?:remember|save|learn)(?: that)? I prefer\s+(.+)', re.I | re.S)
+_CORRECTION = re.compile(r'(?:correct|update) preference:\s*(.+?)\s*=>\s*(.+)', re.I | re.S)
+_NAME = re.compile(r'(?:my name is|call me|remember (?:that )?my name is)\s+([^\n!?]{1,80})[.!]?', re.I)
+_PROJECT = re.compile(r'(?:remember |save |update )?project\s+([^:\n]{1,80}):\s*(.{1,4000})', re.I | re.S)
+_REPLACE = re.compile(r'replace memory:\s*(.+?)\s*=>\s*(.+)', re.I | re.S)
+_FORGET = re.compile(r'forget memory:\s*(.+)', re.I | re.S)
+
+
+def governed_by(text):
+    """The tool whose permission covers this exact memory command (permissions.py), or None when the text
+    is not a memory command that changes something. These commands are answered here, not by a tool call,
+    so the Core asks the same table before it lets one run."""
+    text = text.strip()
+    if _PREFERENCE.fullmatch(text) or _NAME.fullmatch(text) or _PROJECT.fullmatch(text):
+        return 'save_item'
+    if _CORRECTION.fullmatch(text) or _REPLACE.fullmatch(text) or _FORGET.fullmatch(text):
+        return 'manage_saved_memory'
+    return None
+
+
 def command(store, text):
     text = text.strip()
-    preference = re.fullmatch(r'(?:remember|save|learn)(?: that)? I prefer\s+(.+)', text, re.I | re.S)
+    preference = _PREFERENCE.fullmatch(text)
     if preference:
         value = 'Preference: I prefer ' + preference[1].strip().rstrip('.')
         store.put('memory', value, category='preference', source='explicit_user', confidence=1.0)
         return 'Saved that preference. You can say “forget memory: ' + value + '” any time.'
-    correction = re.fullmatch(r'(?:correct|update) preference:\s*(.+?)\s*=>\s*(.+)', text, re.I | re.S)
+    correction = _CORRECTION.fullmatch(text)
     if correction:
         matches = [r for r in store.items('memory') if r.get('category') == 'preference' and r['body'].casefold().endswith(correction[1].strip().casefold())]
         if len(matches) == 1:
             store.put('memory', 'Preference: ' + correction[2].strip(), matches[0]['id'], category='preference', source='explicit_correction', confidence=1.0)
             return 'Updated that preference.'
         return 'I couldn’t identify one preference to update. Use the exact saved preference before =>.'
-    name = re.fullmatch(r'(?:my name is|call me|remember (?:that )?my name is)\s+([^\n!?]{1,80})[.!]?', text, re.I)
+    name = _NAME.fullmatch(text)
     if name:
         value = name[1].strip().rstrip('.')
         store.put('memory', 'Preferred name: ' + value)
         store.save_settings({'name': value})
         return 'I’ll call you ' + value + '. Your preferred name is saved.'
-    project = re.fullmatch(r'(?:remember |save |update )?project\s+([^:\n]{1,80}):\s*(.{1,4000})', text, re.I | re.S)
+    project = _PROJECT.fullmatch(text)
     if project:
         store.put('memory', 'Project ' + project[1].strip() + ': ' + project[2].strip())
         return 'Saved the current details for project ' + project[1].strip() + '.'
-    replace = re.fullmatch(r'replace memory:\s*(.+?)\s*=>\s*(.+)', text, re.I | re.S)
+    replace = _REPLACE.fullmatch(text)
     if replace:
         matches = [r for r in store.items('memory') if key(r['body']) == key(replace[1])]
         if len(matches) != 1:
             return 'I couldn’t identify one saved memory to replace. Use Edit in the Memory Bank.'
         store.put('memory', replace[2], matches[0]['id'])
         return 'Updated that saved memory.'
-    forget = re.fullmatch(r'forget memory:\s*(.+)', text, re.I | re.S)
+    forget = _FORGET.fullmatch(text)
     if forget:
         matches = [r for r in store.items('memory') if r['body'].strip().casefold() == forget[1].strip().casefold()]
         if len(matches) != 1:

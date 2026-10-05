@@ -16,7 +16,13 @@ Base: `http://127.0.0.1:8765`. Load `/` first for a random process-scoped HttpOn
 | POST | `/api/reminder/dismiss` | `{id}`, also cancels pending timers |
 | POST | `/api/upload` | `{name, data: base64}` returns ID/type/character count/truncation |
 | POST | `/api/tool` | `{name, args}`; schemas in actions.py |
-| POST | `/api/approval` | `{id, approved: boolean}`; single-use, 120-second expiry |
+| POST | `/api/approval` | `{id, approved: boolean}`; single-use; expires after 5 minutes (a draft or an "ask first" tool) or 30 minutes (a change to JARVIS itself); refused while the emergency stop holds |
+| GET | `/api/permissions` | The table of every tool (`permissions.py`) with the owner's switch for each, and the emergency stop state |
+| POST | `/api/permissions` | `{tool, mode: default\|ask\|off}`; only positions the table offers for that tool |
+| POST | `/api/emergency-stop` | `{reason?}`; cancels everything, drops waiting approvals and holds until resumed; returns `{stopped, since, device, reason, saved}` |
+| POST | `/api/resume` | `{}`; ends the emergency stop (only the signed-in interface on the PC reaches it) |
+| POST | `/api/cancel-all` | `{}`; cancels what runs now and nothing more |
+| GET | `/owner-style.css` | The owner's own style sheet from the config folder; empty until a style change is approved |
 | POST | `/api/speech` | `{text}` returns `audio/mpeg` |
 | POST | `/api/transcribe` | `{data: base64, mime}` returns transcript |
 | GET | `/api/files/NAME` | Download from generated folder |

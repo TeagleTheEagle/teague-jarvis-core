@@ -25,9 +25,13 @@ if(!app.requestSingleInstanceLock()){app.quit();}else{
 }
 function show(){if(win&&!win.isDestroyed()){if(win.isMinimized())win.restore();win.show();win.focus();win.webContents.send('jarvis:reset-navigation');if(resumeMicOnShow){resumeMicOnShow=false;win.webContents.send('jarvis:resume-mic');}}}
 // stopLocal: this app's own activity (screen grant, capture, mic/speech in the window).
-// stop: emergency stop for the whole shared Core (tray, shortcut, companion STOP ALL).
+// stop: also stops what the shared Core is doing now, and nothing more (the window reloading, or its interface gone).
+// emergencyStop: the emergency stop that holds (tray, shortcut, companion STOP ALL): the Core answers nothing and
+// runs nothing until the owner resumes (the banner in the window, Settings > Permissions, or the tray).
 function stopLocal(){liveGrantUntil=0;capture?.stop();if(win&&!win.isDestroyed()){win.webContents.send('jarvis:stop');}}
 function stop(){stopLocal();backend?.stop();}
+function emergencyStop(){stopLocal();backend?.emergencyStop();}
+function resumeCore(){backend?.resume();}
 async function quit(stopCore=false){if(quitting)return;quitting=true;updates?.close();liveGrantUntil=0;capture?.stop();unwatchCore?.();if(stopCore)await backend?.shutdown();else await backend?.quit();try{require('node:fs').unlinkSync(sessionFile);}catch{}globalShortcut.unregisterAll();companion?.destroy();tray?.destroy();app.quit();}
 async function start(){
  app.setAppUserModelId('local.jarvis.desktop');
@@ -84,9 +88,9 @@ async function start(){
  ipcMain.handle('jarvis:companion-hide',event=>{captureSender(event);companionWanted=false;if(companion&&!companion.isDestroyed())companion.hide();return {visible:!!companion&&!companion.isDestroyed()&&companion.isVisible()};});
  ipcMain.handle('jarvis:companion-status',event=>{captureSender(event);return {visible:!!companion&&!companion.isDestroyed()&&companion.isVisible()};});
  ipcMain.on('jarvis:companion-update',(event,data)=>{try{captureSender(event);}catch{return;}if(!data||!Number.isFinite(data.volume)||!Array.isArray(data.samples)||data.samples.length>64||data.samples.some(v=>!Number.isFinite(v)))return;lastCompanionState={low:Math.max(0,Math.min(1,Number(data.low)||0)),mid:Math.max(0,Math.min(1,Number(data.mid)||0)),high:Math.max(0,Math.min(1,Number(data.high)||0)),input:Math.max(0,Math.min(1,Number(data.input)||0)),reduced:!!data.reduced,mode:['standby','listening','thinking','speaking','processing','interrupted','error','understood'].includes(data.mode)?data.mode:'standby',volume:Math.max(0,Math.min(1,data.volume)),samples:data.samples.map(v=>Math.max(-1,Math.min(1,v))),status:String(data.status||'').slice(0,200),screen:String(data.screen||'').slice(0,200),mic:!!data.mic};if(companion&&!companion.isDestroyed())companion.webContents.send('jarvis:companion-state',lastCompanionState);});
- ipcMain.on('jarvis:companion-action',(event,action)=>{if(!companion||event.sender!==companion.webContents||event.senderFrame!==companion.webContents.mainFrame)return;if(action==='show')show();else if(action==='hide'){companionWanted=false;companion.hide();}else if(action==='stop')stop();else if(['capture','mic','live','stop-screen'].includes(action))win.webContents.send('jarvis:companion-command',action);});
+ ipcMain.on('jarvis:companion-action',(event,action)=>{if(!companion||event.sender!==companion.webContents||event.senderFrame!==companion.webContents.mainFrame)return;if(action==='show')show();else if(action==='hide'){companionWanted=false;companion.hide();}else if(action==='stop')emergencyStop();else if(['capture','mic','live','stop-screen'].includes(action))win.webContents.send('jarvis:companion-command',action);});
  const stopKey=preferences.emergencyStopShortcut||'CommandOrControl+Alt+Shift+X';
- if(!globalShortcut.register(stopKey,stop))dialog.showMessageBox(win,{type:'warning',message:'The emergency stop shortcut is unavailable.',detail:'Use the tray Stop activity or the floating companion STOP ALL button.'});
+ if(!globalShortcut.register(stopKey,emergencyStop))dialog.showMessageBox(win,{type:'warning',message:'The emergency stop shortcut is unavailable.',detail:'Use Emergency stop in the tray menu, STOP ALL in the JARVIS window or on the floating companion.'});
  ipcMain.handle('jarvis:screen-preference', (event,value)=>{captureSender(event);if(typeof value==='boolean'){preferences.requestedPrimaryDisplayScreenshots=value;capture.stop();require('node:fs').writeFileSync(preferencesFile,JSON.stringify(preferences,null,2));}return {primary:!!preferences.requestedPrimaryDisplayScreenshots,shortcut:stopKey,micOnLaunch:!!preferences.micOnLaunch&&!process.argv.some(a=>['--smoke-test','--animation-test','--live-test'].includes(a))};});
  ipcMain.handle('jarvis:mic-preference',(event,value)=>{captureSender(event);if(typeof value!=='boolean')throw new Error('Invalid microphone preference.');preferences.micOnLaunch=value;require('node:fs').writeFileSync(preferencesFile,JSON.stringify(preferences,null,2));return {saved:true};});
  const revokeCapture=()=>{capture.stop();if(!win.isDestroyed())win.webContents.send('jarvis:screen-revoked');};
@@ -103,7 +107,7 @@ async function start(){
  unwatchCore=backend.watch(reason=>coreEnded(reason,{quitting:()=>quitting,showErrorBox:text=>dialog.showErrorBox('JARVIS desktop',text),quit:()=>void quit()}));
  tray=new Tray(nativeImage.createFromPath(path.join(__dirname,'tray.png')));
  tray.setToolTip('JARVIS · closing this window keeps JARVIS running');
- tray.setContextMenu(Menu.buildFromTemplate([{label:'Show JARVIS',click:show},{label:'Floating JARVIS',click:showCompanion},{label:'Stop activity',click:stop},{type:'separator'},{label:'Close desktop app (JARVIS keeps running)',click:()=>void quit()},{label:'Quit JARVIS completely',click:()=>void quit(true)}]));tray.on('double-click',show);
+ tray.setContextMenu(Menu.buildFromTemplate([{label:'Show JARVIS',click:show},{label:'Floating JARVIS',click:showCompanion},{label:'Emergency stop (JARVIS stays stopped)',click:emergencyStop},{label:'Resume JARVIS',click:resumeCore},{type:'separator'},{label:'Close desktop app (JARVIS keeps running)',click:()=>void quit()},{label:'Quit JARVIS completely',click:()=>void quit(true)}]));tray.on('double-click',show);
  win.webContents.once('did-finish-load',()=>{
   if(loginLaunch&&!process.argv.some(a=>['--smoke-test','--animation-test','--live-test'].includes(a)))setTimeout(()=>{if(!quitting&&!win.isDestroyed()){const hour=new Date().getHours();win.webContents.send('jarvis:login-greeting',hour<12?'Good morning, Mr. Teague. JARVIS is online and ready for your day, sir.':hour<18?'Good afternoon, Mr. Teague. JARVIS is online and ready, sir.':'Good evening, Mr. Teague. JARVIS is online and ready, sir.');}},1400);
  });

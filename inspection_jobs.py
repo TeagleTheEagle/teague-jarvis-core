@@ -78,6 +78,12 @@ class InspectionJobs:
             self.jobs[key]['cancel'].set()
         return {'status':'cancellation_requested', 'job_id':key}
 
+    def cancel_all(self):
+        """Emergency stop: every job that is still working is asked to stop."""
+        with self.lock:
+            for job in self.jobs.values():
+                job['cancel'].set()
+
     def _work(self, key, request, runner, summarizer, budget, on_finish=None, *, before_step=None):
         job = self.jobs[key]
         deadline = time.monotonic()+budget

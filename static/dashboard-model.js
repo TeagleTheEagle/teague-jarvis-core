@@ -59,6 +59,9 @@ const JarvisDashboardModel = (() => {
       {kind, name, state: !known ? 'unknown' : !device ? 'none' : device.simulated ? 'simulated' : device.connected ? 'ok' : 'offline',
         text: !known ? 'Unknown' : !device ? 'Not paired' : device.simulated ? 'Simulated only' : device.connected ? 'Online' : 'Offline'}));
   }
+  // The emergency stop holds (permissions.py): known only while the Core is heard from. While it holds the
+  // dashboard says so instead of "standing by".
+  const stopped = (state, data) => state === 'online' && !!(data && data.control && data.control.stopped);
   // The line under the waveform. The wake word is only offered while the detector is really waiting for it.
   function voiceLine({micOn, armed, manual, suspended, wakeEnabled}) {
     if (!micOn) return 'Microphone off. Press F4 to turn it on.';
@@ -67,6 +70,6 @@ const JarvisDashboardModel = (() => {
     if (wakeEnabled === false) return 'Microphone on, without the wake word.';
     return 'Say "Hey Jarvis", then your request.';
   }
-  return {link, live, systems, summary, devices, voiceLine, configured, LINK_TEXT, SILENT_MS};
+  return {link, live, systems, summary, devices, stopped, voiceLine, configured, LINK_TEXT, SILENT_MS};
 })();
 if (typeof module !== 'undefined') module.exports = JarvisDashboardModel;

@@ -149,19 +149,19 @@ def tree_files(folder):
 
 
 def owner_config(root):
-    """The owner's personality and desktop preferences when they live outside the program
-    (installed release, config folder). In development they are already under root."""
+    """The owner's personality, own style sheet and desktop preferences when they live outside the
+    program (installed release, config folder). In development they are already under root."""
     import runtime_paths
     config=runtime_paths.config_dir_for(root)
     if config==Path(root).resolve(): return {}
-    files=(('app/personality.txt','personality.txt'),('app/desktop/preferences.json','preferences.json'))
+    files=(('app/personality.txt','personality.txt'),('app/owner-style.css','owner-style.css'),('app/desktop/preferences.json','preferences.json'))
     return {name:config/file for name,file in files if (config/file).is_file()}
 
 
 def inventory(root, data):
     selected={}
     for p in root.iterdir():
-        if p.is_file() and (p.suffix in ('.py','.md','.ps1','.cmd','.cjs') or p.name in ('requirements.txt','requirements-local-voice.txt','requirements-wearables.txt','personality.txt','release-notes.json')):
+        if p.is_file() and (p.suffix in ('.py','.md','.ps1','.cmd','.cjs') or p.name in ('requirements.txt','requirements-local-voice.txt','requirements-wearables.txt','personality.txt','owner-style.css','release-notes.json')):
             if p.is_symlink(): raise ValueError('Linked source file.')
             selected['app/'+p.name]=p
     for folder in ('static','desktop','phone','wearables','docs/glasses'):

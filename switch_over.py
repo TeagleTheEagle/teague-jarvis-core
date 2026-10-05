@@ -34,15 +34,17 @@ DATA_FOLDER_REFUSED = ('The JARVIS data folder does not allow creating folders, 
 PROTECTED = {core_lock.LOCK_NAME, core_lock.OWNER_NAME, core_lock.CONNECTION_NAME, 'speech-models',
              'wake-models', 'logs', 'dev-electron-profile'}
 DATABASE_SIDE_FILES = ('jarvis.sqlite3-wal', 'jarvis.sqlite3-shm')
-PERSONAL_CONFIG = {'app/personality.txt': 'personality.txt', 'app/desktop/preferences.json': 'desktop/preferences.json'}
+PERSONAL_CONFIG = {'app/personality.txt': 'personality.txt', 'app/owner-style.css': 'owner-style.css',
+                   'app/desktop/preferences.json': 'desktop/preferences.json'}
 
 
 def personal_config_targets(root):
-    """Where the owner's personality and desktop preferences live: the config folder in an
+    """Where the owner's personality, own style sheet and desktop preferences live: the config folder in an
     installed release (never inside the verified program files), beside the code in development."""
     config = runtime_paths.config_dir_for(root)
     if config != Path(root).resolve():
-        return {'app/personality.txt': config / 'personality.txt', 'app/desktop/preferences.json': config / 'preferences.json'}
+        return {'app/personality.txt': config / 'personality.txt', 'app/owner-style.css': config / 'owner-style.css',
+                'app/desktop/preferences.json': config / 'preferences.json'}
     return {name: Path(root) / target for name, target in PERSONAL_CONFIG.items()}
 
 
@@ -130,7 +132,7 @@ def main(argv=None):
                         help='saved-data folder (default: the installed data folder, else <app>/data)')
     parser.add_argument('--apply', action='store_true', help='Import (default is a dry run that changes nothing)')
     parser.add_argument('--include-personal-config', action='store_true',
-                        help='Also take personality.txt and desktop/preferences.json from the backup where they differ')
+                        help='Also take personality.txt, owner-style.css and desktop/preferences.json from the backup where they differ')
     args = parser.parse_args(argv)
     try:
         if args.apply:

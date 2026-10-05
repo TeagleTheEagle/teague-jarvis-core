@@ -19,6 +19,8 @@ import unittest
 from unittest.mock import Mock, patch
 import uuid
 
+import development
+import permissions
 import providers
 import runtime_paths
 from store import Store
@@ -41,16 +43,18 @@ def definitions(filename, names, namespace):
 def app_fixture():
     ns = definitions('server.py', {'Run', 'App', 'WEARABLE_READ_TOOLS'}, dict(
         ROOT=ROOT, runtime_paths=runtime_paths, threading=threading, time=time, uuid=uuid, re=re,
-        providers=providers, companion_tools=types.SimpleNamespace(stamp=lambda: {'at': 0}),
+        providers=providers, permissions=permissions, development=development, companion_tools=types.SimpleNamespace(stamp=lambda: {'at': 0}),
     ))
     app = ns['App'].__new__(ns['App'])
     app.stage4 = None
     app.lock = threading.RLock()
+    app.stopped = None  # no emergency stop
     app.runs = {}
     app.attachments = {}
     app.devices = Mock()
     app.timings = []
     app.store = Mock()
+    app.store.tool_modes.return_value = {}  # the owner changed no tool switch
     return ns, app
 
 
@@ -407,7 +411,7 @@ class WorkerCancellationTests(unittest.TestCase):
         app.store.recent_research.return_value = []
         app.store.recent_evidence.return_value = []
         ns.update(os=os, json=json,
-            memory=types.SimpleNamespace(command=lambda *a: None, relevant=lambda *a: []),
+            memory=types.SimpleNamespace(command=lambda *a: None, governed_by=lambda *a: None, relevant=lambda *a: []),
             actions=types.SimpleNamespace(local_command=lambda *a: None, TOOLS=[]),
             answer_evidence=types.SimpleNamespace(command=lambda *a: None, action_guard=lambda text, events: text, evidence=lambda *a: []),
             verified_status=types.SimpleNamespace(status_question=lambda *a: False, GUIDANCE='', guard=lambda text, context: text),
