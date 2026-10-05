@@ -158,22 +158,28 @@ def request(url, data=None, headers=None, method=None, raw=False, timeout=35, op
     except urllib.error.HTTPError as exc:
         raise _http_error(prefix, service, exc) from None
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        reason = getattr(exc, 'reason', exc)
-        if isinstance(reason, ssl.SSLError):
-            detail = 'Secure connection failed. Check system time and certificate/network settings.'
-        elif isinstance(reason, socket.gaierror):
-            detail = 'DNS lookup failed. Check your internet connection.'
-        elif isinstance(reason, PermissionError) or getattr(reason, 'winerror', None) == 10013:
-            detail = 'Network access blocked. Check app network permissions or firewall.'
-        elif isinstance(reason, TimeoutError):
-            detail = 'Connection timed out. Try again shortly.'
-        else:
-            detail = 'Connection failed. Check internet access and provider availability.'
-        error = ProviderError(prefix + detail)
-        error.unreachable, error.service = True, service
-        raise error from None
+        raise _unreachable(prefix, service, exc) from None
     except ValueError:
         raise ProviderError(prefix + 'Invalid response received from provider.') from None
+
+
+def _unreachable(prefix, service, exc):
+    """The provider could not be reached at all: one error in our own words, marked as such (the backup provider
+    and the offline answer are for exactly this case)."""
+    reason = getattr(exc, 'reason', exc)
+    if isinstance(reason, ssl.SSLError):
+        detail = 'Secure connection failed. Check system time and certificate/network settings.'
+    elif isinstance(reason, socket.gaierror):
+        detail = 'DNS lookup failed. Check your internet connection.'
+    elif isinstance(reason, PermissionError) or getattr(reason, 'winerror', None) == 10013:
+        detail = 'Network access blocked. Check app network permissions or firewall.'
+    elif isinstance(reason, TimeoutError):
+        detail = 'Connection timed out. Try again shortly.'
+    else:
+        detail = 'Connection failed. Check internet access and provider availability.'
+    error = ProviderError(prefix + detail)
+    error.unreachable, error.service = True, service
+    return error
 
 
 def capabilities(mode=None):
@@ -260,6 +266,7 @@ def live_health(mode=None):
 PROVIDER_NAMES = {'openai': 'OpenAI', 'qwen': 'Qwen'}
 # The line the Core adds to a reply written by the backup provider. The same pattern removes it from
 # what goes back to a model and from anything a model writes, so that only the Core can say it.
+BACKUP_OPENING = re.compile(r'\[\s*(?:OpenAI|Qwen)\s+answered\b', re.I)
 BACKUP_NOTE = re.compile(r'\s*\[\s*(?:OpenAI|Qwen)\s+answered\s+this\s+question\s+because\s+(?:OpenAI|Qwen)\s+could\s+not\b[^\]]{0,400}\]', re.I)
 
 
@@ -293,15 +300,16 @@ def backup_note(backup, error):
     return f'[{PROVIDER_NAMES[backup]} answered this question because {chosen} could not. {first_sentence(error)}]'
 
 
-def chat(messages, tools, emit, cancel, vision=False, mode=None, text='', use=None):
+def chat(messages, tools, emit, cancel, vision=False, mode=None, text='', use=None, stream=False):
     """One model request. mode (Settings > Answer speed; None means the default) and text (the
     user's own words) only steer Qwen today: see qwen_plan(). use names the provider for this one
-    request when it is not the chosen one (the backup, see backup_provider())."""
+    request when it is not the chosen one (the backup, see backup_provider()). stream: ask for the
+    answer in pieces (Qwen only today; each piece is handed to emit as 'assistant.piece')."""
     if cancel.is_set():
         return None
     chosen = use or provider()
     if chosen == 'qwen':
-        return qwen_chat(messages, tools, emit, cancel, vision, mode, text)
+        return qwen_chat(messages, tools, emit, cancel, vision, mode, text, stream)
     if chosen != 'openai':
         raise unsupported_error()
     key = os.getenv('OPENAI_API_KEY')
@@ -466,7 +474,7 @@ def chat_options(mode, text):
     return {'mode': mode, 'text': text}
 
 
-def qwen_chat(messages, tools, emit, cancel, vision=False, mode=None, text=''):
+def qwen_chat(messages, tools, emit, cancel, vision=False, mode=None, text='', stream=False):
     """Qwen through Model Studio; results still pass through server evidence/action guards."""
     key = os.getenv('DASHSCOPE_API_KEY')
     if not key:
@@ -474,11 +482,130 @@ def qwen_chat(messages, tools, emit, cancel, vision=False, mode=None, text=''):
     model, thinking = qwen_plan(mode, text, vision)
     if not model:
         raise ProviderError('Image understanding needs a Qwen vision model. Authorise one for your key and set QWEN_VISION_MODEL.')
-    return _compatible_chat('Qwen', qwen_base() + '/chat/completions', key, model, messages, tools, emit, cancel, vision, thinking)
+    return _compatible_chat('Qwen', qwen_base() + '/chat/completions', key, model, messages, tools, emit, cancel, vision, thinking, stream)
 
 
-def _compatible_chat(service, endpoint, key, model, messages, tools, emit, cancel, vision, thinking=False):
-    """Non-streaming OpenAI-compatible adapter (Qwen)."""
+STREAM_QUIET_SECONDS = 60   # a streamed answer that sends nothing for this long is given up
+STREAM_TOTAL_SECONDS = 120  # and so is one that is still going after this long
+STREAM_MOST_BYTES = 16 * 1024 * 1024  # or one that grows past what request() accepts as a complete answer
+
+
+def cut_connection(sock):
+    """Ends a connection that another thread is waiting on, so that the thread wakes at once. shutdown() wakes it on
+    most systems; on Windows only closing the socket itself does (seen on this PC over a real local connection), and
+    the socket is taken from its Python object first so that nothing closes the same handle twice."""
+    try:
+        sock.shutdown(socket.SHUT_RDWR)
+    except Exception:
+        pass
+    try:
+        socket.close(sock.detach())
+    except Exception:
+        pass
+
+
+def _end_stream(response, cancel, deadline, done):
+    """Ends a streamed answer from outside its reader: at once when the owner presses Stop, and when the total
+    time is up. (The reader may be waiting for the provider's next bytes, where it can look at neither.)"""
+    while not done.is_set():
+        if cancel.is_set() or time.monotonic() > deadline:
+            try:
+                cut_connection(response.fp.raw._sock)
+            except Exception:
+                try:
+                    response.close()
+                except Exception:
+                    pass
+            return
+        time.sleep(0.1)
+
+
+def _compatible_stream(service, endpoint, key, body, emit, cancel):
+    """The same request with "stream": true (OpenAI-compatible server-sent events). Each piece of the answer's
+    text is handed to emit('assistant.piece', {'text': piece}) as it arrives; a model's thinking is not.
+    Returns (text, tool calls, finish reason), or None when cancelled. A stream that breaks raises a
+    ProviderError that says "stream failed": no partial answer is ever accepted, and the Core then asks again
+    the old way, in one piece. A stream still going when the total time is up ends as the one-piece request
+    does after that time ("timed out", could not be reached): asking again could not succeed either."""
+    prefix = f'{service} chat: '
+    payload = json.dumps({**body, 'stream': True}).encode()
+    req = urllib.request.Request(endpoint, data=payload, headers={'User-Agent': 'JarvisLocal/1.0', 'Authorization': f'Bearer {key}',
+                                                                   'Content-Type': 'application/json', 'Accept': 'text/event-stream'})
+    try:
+        response = urllib.request.urlopen(req, timeout=STREAM_QUIET_SECONDS)
+    except urllib.error.HTTPError as exc:
+        raise _http_error(prefix, service, exc) from None
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        raise _unreachable(prefix, service, exc) from None
+    broken = ProviderError(prefix + 'Stream failed before the answer was complete. No partial answer was accepted.')
+    text, calls, finish, size, deadline = [], {}, None, 0, time.monotonic() + STREAM_TOTAL_SECONDS
+    done = threading.Event()
+    threading.Thread(target=_end_stream, args=(response, cancel, deadline, done), name='reply-stream-watch', daemon=True).start()
+    try:
+        with response:
+            while True:
+                if cancel.is_set():
+                    return None
+                if time.monotonic() > deadline:
+                    break  # the total time is up (decided below)
+                raw = response.readline(1024 * 1024)
+                if not raw:
+                    break
+                size += len(raw)
+                if size > STREAM_MOST_BYTES:
+                    raise broken
+                line = raw.decode('utf-8', 'replace').strip()
+                if not line.startswith('data:'):
+                    continue  # a blank line between events, a comment, an event name
+                data = line[5:].strip()
+                if data == '[DONE]':
+                    break
+                chunk = json.loads(data)
+                if not isinstance(chunk, dict) or chunk.get('error'):
+                    raise broken
+                for choice in chunk.get('choices') or []:
+                    delta = choice.get('delta') or {}
+                    piece = delta.get('content')
+                    if isinstance(piece, str) and piece:
+                        text.append(piece)
+                        emit('assistant.piece', {'text': piece})
+                    for call in delta.get('tool_calls') or []:
+                        # A tool request arrives in parts: its id and name once, its arguments bit by bit.
+                        index = call.get('index', 0)
+                        if not isinstance(index, int) or isinstance(index, bool):
+                            raise broken
+                        slot = calls.setdefault(index, {'id': '', 'type': 'function', 'function': {'name': '', 'arguments': ''}})
+                        function = call.get('function') or {}
+                        if call.get('id'):
+                            slot['id'] = call['id']
+                        if isinstance(function.get('name'), str):
+                            slot['function']['name'] += function['name']
+                        if isinstance(function.get('arguments'), str):
+                            slot['function']['arguments'] += function['arguments']
+                    if choice.get('finish_reason'):
+                        finish = choice['finish_reason']
+        answer = ''.join(text), [calls[index] for index in sorted(calls)], finish
+    except ProviderError:
+        if cancel.is_set():
+            return None
+        raise
+    except Exception:
+        # The connection dropped, went quiet, was ended from outside (Stop, the total time), or sent something
+        # that is not a piece of an answer. What it was is decided below.
+        answer = None
+    finally:
+        done.set()
+    if cancel.is_set():
+        return None
+    if answer is None or finish is None:
+        if time.monotonic() > deadline:
+            raise _unreachable(prefix, service, TimeoutError()) from None
+        raise broken  # also: it ended without saying that it was finished
+    return answer
+
+
+def _compatible_chat(service, endpoint, key, model, messages, tools, emit, cancel, vision, thinking=False, stream=False):
+    """OpenAI-compatible adapter (Qwen): one complete answer, or (stream) the same answer received in pieces."""
     if cancel.is_set():
         return None
     # OpenAI Responses metadata is provider-specific; retain ordinary conversation
@@ -491,10 +618,16 @@ def _compatible_chat(service, endpoint, key, model, messages, tools, emit, cance
         body['enable_thinking'] = False
     if tools and not vision:
         body.update(tools=tools, tool_choice='auto')
-    result = request(endpoint, body, {'Authorization': f'Bearer {key}'}, timeout=120)
-    if cancel.is_set():
-        return None
-    choice = (result.get('choices') or [{}])[0]
+    if stream:
+        streamed = _compatible_stream(service, endpoint, key, body, emit, cancel)
+        if streamed is None:
+            return None
+        choice = {'finish_reason': streamed[2], 'message': {'content': streamed[0], 'tool_calls': streamed[1]}}
+    else:
+        result = request(endpoint, body, {'Authorization': f'Bearer {key}'}, timeout=120)
+        if cancel.is_set():
+            return None
+        choice = (result.get('choices') or [{}])[0]
     if choice.get('finish_reason') not in ('stop', 'tool_calls'):
         raise ProviderError(f'{service} did not return a complete response. No partial answer was accepted.')
     message = choice.get('message') or {}

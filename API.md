@@ -9,7 +9,7 @@ Base: `http://127.0.0.1:8765`. Load `/` first for a random process-scoped HttpOn
 | POST | `/api/chat` | `{text, conversation, attachment?: uploadId}` returns `{run_id}` |
 | GET | `/api/runs/ID/events?after=-1` | `{events, done}`, waits up to 10 seconds for new events |
 | POST | `/api/cancel` | `{run_id}` |
-| POST | `/api/settings` | Subset of `{name, voice, continuous, response_length, answer_mode, provider_backup, speech_recognition, offline_answers, tone, humor, speech_rate, wake_sensitivity, quiet_hours, briefing_time, proactive, voice_profile}` |
+| POST | `/api/settings` | Subset of `{name, voice, continuous, response_length, answer_mode, provider_backup, speech_recognition, offline_answers, reply_stream, tone, humor, speech_rate, wake_sensitivity, quiet_hours, briefing_time, proactive, voice_profile}` |
 | POST | `/api/item` | `{kind: memory|note|task, body, id?: existingId}` |
 | POST | `/api/item/delete` | `{kind, id}` |
 | POST | `/api/reminder` | `{title, seconds}` |
@@ -33,7 +33,7 @@ Base: `http://127.0.0.1:8765`. Load `/` first for a random process-scoped HttpOn
 | POST | `/api/spotify/disconnect` | `{}` clears tokens |
 | POST | `/api/shutdown` | `{}` stops backend |
 
-The AI provider (OpenAI or Qwen) returns each answer complete; the browser receives deltas via cursor-based long polling, not SSE/WebSocket. Each event is `{id, run_id, event, data}`. IDs start at zero. Pass the last consumed ID as `after` to reconnect without replaying consumed events. Event history is in RAM and pruned after 30 minutes on new requests; a backend restart loses active runs.
+The AI provider (OpenAI or Qwen) returns each answer complete; the browser receives deltas via cursor-based long polling, not SSE/WebSocket. With the setting `reply_stream` (off by default; Qwen only; `docs/REPLY-STREAM.md`) the Core receives the answer in pieces and emits `assistant.draft` (`{text}`: the whole draft so far, complete sentences that passed the claim checks; an empty text takes the draft away). A draft is for display only: `assistant.delta` and `assistant.completed` still carry the finished, checked answer and replace it. Each event is `{id, run_id, event, data}`. IDs start at zero. Pass the last consumed ID as `after` to reconnect without replaying consumed events. Event history is in RAM and pruned after 30 minutes on new requests; a backend restart loses active runs.
 
 Events: `run.started`, `assistant.delta` (`{text}`), `tool.started` (`{name}`), `tool.completed` (`{name,result}`), `assistant.completed` (`{text}`), and terminal `run.completed`, `run.cancelled`, or `run.failed` (`{message, retry_after, provider, limit}`: `retry_after` is the seconds to pause voice commands after a temporary rate limit, otherwise 0; `limit` is `rate`, `billing` or null). Tool results can contain an approval, file URL, search results, or video ID. No hidden reasoning is emitted. `provider.backup` (`{from, to, reason}`) is emitted once when the backup provider takes over a question (Settings > AI, off by default); the reply text then ends with a bracketed line saying so.
 

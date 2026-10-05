@@ -22,6 +22,7 @@ ANSWER_SECONDS = 90         # a small model on a CPU is slow, and the first answ
 HISTORY_CHARACTERS = 3000
 # The line the Core adds to a reply written by the local model. The same pattern removes it from what goes
 # back to a model and from anything a model writes, so that only the Core can say it.
+OFFLINE_OPENING = re.compile(r'\[\s*Answered\s+offline\b', re.I)
 OFFLINE_NOTE = re.compile(r'\s*\[\s*Answered\s+offline\s+by\s+the\s+local\s+model\b[^\]]{0,600}\]', re.I)
 # Models that write their thinking before the answer and close it with </think>. Seen on the owner's PC on
 # 2026-10-06 with qwen3:4b: the reply began with the thinking, had no opening tag, and "think": false changed
@@ -112,12 +113,15 @@ def _ask(provider, payload, cancel):
     while not box:  # the box is filled when the request has ended, one way or the other
         time.sleep(0.05)
         if cancel.is_set() and not box:
-            connection = getattr(provider, 'connection', None)
-            try:
-                if connection is not None and connection.sock is not None:
-                    connection.sock.shutdown(socket.SHUT_RDWR)
-            except OSError:
-                pass
+            sock = getattr(getattr(provider, 'connection', None), 'sock', None)
+            if sock is not None:
+                # shutdown() tells Ollama the question is over; closing the socket itself is what wakes the waiting
+                # request on Windows (it is taken from its Python object first, so nothing closes the handle twice).
+                for end in (lambda: sock.shutdown(socket.SHUT_RDWR), lambda: socket.close(sock.detach())):
+                    try:
+                        end()
+                    except Exception:
+                        pass
             raise OfflineUnavailable('Stopped.')
     if 'error' in box:
         raise box['error']

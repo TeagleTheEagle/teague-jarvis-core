@@ -52,6 +52,7 @@ import update_history
 import recovery
 import auto_backup
 import offline_answers
+import reply_drafts
 import verified_status
 import answer_evidence
 import actions
@@ -321,6 +322,19 @@ class App:
         safe = verified_status.guard(text, {'health': self.last_health, 'connections': dict(self.check_results), 'tests': [e['data']['result'] for e in run.events if e['event'] == 'tool.completed' and e['data']['name'] == 'computer_run_tests']})
         safe = answer_evidence.action_guard(safe, run.events)
         return offline_answers.OFFLINE_NOTE.sub('', providers.BACKUP_NOTE.sub('', safe))
+
+    DRAFT_SECONDS = 0.2  # a reply shown while it is written is refreshed at most this often
+
+    def drafts_for(self, run):
+        """Replies that appear while they are written (reply_drafts.py): for one attempt at an answer, shows as a
+        draft what the claim checks have already passed."""
+        def check(text):
+            if any(e['event'] == 'tool.completed' and e['data']['name'] == 'daily_briefing' for e in run.events):
+                return None  # a briefing is written by the Core from its own data: nothing of the model's text is shown early
+            if providers.BACKUP_OPENING.search(text) or offline_answers.OFFLINE_OPENING.search(text):
+                return None  # the beginning of a line only the Core may write (who answered): nothing more is shown early
+            return self.claim_checks(run, text)
+        return reply_drafts.Drafts(check, lambda text: run.emit('assistant.draft', {'text': text}), every=self.DRAFT_SECONDS)
 
     def offline_answer(self, run, text, settings, error, usable):
         """When no AI provider can be reached: one answer from the small local model on this PC, if the owner has
@@ -931,6 +945,13 @@ class App:
                 # user's own "think hard about ..."; providers.qwen_plan). The same choice applies to
                 # every model request of this run. Empty when nothing differs from the default.
                 depth = {} if self.stage4 else providers.chat_options(settings.get('answer_mode'), text)
+                # Settings > AI > "Show replies while they are written": with Qwen the answer is asked for in pieces
+                # and shown as it grows, as far as the claim checks have passed it. Not for another device's
+                # question (its client waits for the finished reply) and not in the Stage 4 harness.
+                streaming = bool(settings.get('reply_stream')) and not self.stage4 and not getattr(run, 'wearable', False) and providers.provider() == 'qwen'
+                if streaming:
+                    depth = {**depth, 'stream': True}
+                drafts = None
                 deadline = run.created + 120
                 answer = ''
                 tool_count = 0
@@ -950,11 +971,15 @@ class App:
                         provider_started = time.perf_counter()
                         run.emit('response.timing', {'stage':'provider request','ms':0})
                         first_delta = None
+                        drafts = self.drafts_for(run) if depth.get('stream') else None
                         def collect(event, payload):
                             nonlocal first_delta
-                            if event=='assistant.delta' and first_delta is None:
+                            if event in ('assistant.delta','assistant.piece') and first_delta is None:
                                 first_delta=time.perf_counter()
                                 run.emit('response.timing', {'stage':'provider first token','ms':round((first_delta-provider_started)*1000)})
+                            if event=='assistant.piece':
+                                if drafts: drafts.add(payload.get('text'))
+                                return  # the pieces themselves are not kept: the finished answer is
                             buffered_events.append((event,payload))
                         response = providers.chat(messages, available_tools, collect, run.cancel, vision, **depth)
                         measured={'provider_ms':round((time.perf_counter()-provider_started)*1000),'first_token_ms':None if first_delta is None else round((first_delta-provider_started)*1000),'buffered':True}
@@ -963,9 +988,18 @@ class App:
                         # Content is emitted only after checking the final response below.
                     except providers.ProviderError as stream_error:
                         failed = stream_error
+                        if drafts: drafts.clear()  # that attempt is thrown away: its draft comes off the screen
+                        in_pieces = bool(depth.get('stream'))
+                        if in_pieces:
+                            depth = {k: v for k, v in depth.items() if k != 'stream'}  # the rest of this question is asked in one piece
                         if run.cancel.is_set():
                             raise
-                        if 'stream failed' in str(failed).lower() or 'connection failed' in str(failed).lower():
+                        again = 'stream failed' in str(failed).lower() or 'connection failed' in str(failed).lower()
+                        if in_pieces:
+                            # Asked again the usual way, in one piece: when the stream broke, and when the provider turned the request
+                            # for pieces down (HTTP 400 that is not a bill or a limit). Not once this question's time is used up.
+                            again = (again or (getattr(failed, 'status', None) == 400 and not getattr(failed, 'limit', None))) and time.time() < deadline
+                        if again:
                             run.measurements.append({'retry':True,'reason':'stream interruption'})
                             if run.cancel.wait(1):
                                 break
@@ -1013,9 +1047,11 @@ class App:
                                 run.emit('provider.backup', {'from': providers.PROVIDER_NAMES.get(providers.provider(), providers.provider()), 'to': providers.PROVIDER_NAMES[backup], 'reason': providers.first_sentence(failed)})
                                 self.audit('backup provider took over: ' + providers.PROVIDER_NAMES[backup], 'used', run)
                     if run.cancel.is_set() or response is None:
+                        if drafts: drafts.clear()  # stopped: nothing of an unfinished answer stays on screen
                         break
                     messages.append(response)
                     calls = response.get('tool_calls', [])
+                    if calls and drafts: drafts.clear()  # words that came with a tool request are not part of the reply
                     if not calls:
                         if any(e['event']=='tool.completed' and e['data']['name']=='daily_briefing' for e in run.events):
                             snapshot=next(e['data']['result'] for e in reversed(run.events) if e['event']=='tool.completed' and e['data']['name']=='daily_briefing')
