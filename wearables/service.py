@@ -8,6 +8,8 @@ import threading
 import time
 import uuid
 
+import permissions
+
 
 class Service:
     def __init__(self, app):
@@ -21,6 +23,15 @@ class Service:
 
     def dispatch(self, op, body):
         if not isinstance(body,dict): raise ValueError('Expected object.')
+        if op=='start' and permissions.stop_phrase(body.get('text')) and self.app.stopped is None:
+            # The emergency stop words are never turned away as "busy", "too many requests" or a malformed
+            # request: the Core stops first (server.App.start_run) and answers them itself. Once JARVIS is
+            # stopped, repeating the words is an ordinary request again, with the bridge's usual limits.
+            self.runs={r for r in self.runs if r in self.app.runs}
+            conversation=body.get('conversation')
+            if not isinstance(conversation,str) or not conversation.startswith('wearable-'):conversation='wearable-local'
+            result=self.app.start_run({'text':body['text'],'conversation':conversation},wearable=True)
+            self.runs.add(result['run_id']);return result
         if not self.lock.acquire(blocking=False): raise ValueError('Wearable service busy.')
         try:
             self.app.devices.heartbeat('pc')
@@ -76,6 +87,7 @@ class Service:
                 return self.app.local_stt.transcribe(body)
             if op=='speech':
                 if set(body)!={'text'} or not isinstance(body['text'],str) or not 1<=len(body['text'])<=12000:raise ValueError('Invalid speech text.')
+                self.app.require_running()  # while the emergency stop holds, nothing is spoken for a device
                 started=time.perf_counter()
                 audio=self.app.voice_engine.synthesize(body['text'],self.app.store.settings().get('voice_profile','auto'))
                 return {'audio':base64.b64encode(audio).decode(),'mime':'audio/mpeg','tts_ms':round((time.perf_counter()-started)*1000)}
@@ -97,7 +109,10 @@ def handle(handler):
             handler.close_connection=True;return handler.send(400,{'error':'Invalid bounded JSON request.'})
         body=json.loads(handler.rfile.read(size))
         return handler.send(200,service.dispatch(handler.path.rsplit('/',1)[-1],body))
-    except (ValueError,TypeError,KeyError):return handler.send(400,{'error':'Invalid, busy, expired or unavailable wearable request.'})
+    except (ValueError,TypeError,KeyError) as exc:
+        # The one reason a device is told plainly: JARVIS is stopped until the owner resumes on the PC.
+        stopped=str(exc)==permissions.STOPPED_MESSAGE
+        return handler.send(400,{'error':permissions.STOPPED_MESSAGE if stopped else 'Invalid, busy, expired or unavailable wearable request.',**({'stopped':True} if stopped else {})})
     except Exception:
         # No provider credentials or raw exceptions cross the bridge.
         return handler.send(503,{'error':'JARVIS service unavailable. Check provider quota, voice configuration or local speech model.'})

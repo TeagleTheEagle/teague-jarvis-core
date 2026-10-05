@@ -5,6 +5,19 @@ const p=require('./static/permissions.js');
 // The stop words: the whole message only.
 for(const text of ['Emergency stop','JARVIS, emergency stop','hey jarvis stop everything now','Stop all.','kill switch'])assert.equal(p.stopPhrase(text),true,text);
 for(const text of ['stop','stop speaking','stop the timer','what is an emergency stop?','resume','',null,undefined,'x'.repeat(200)])assert.equal(p.stopPhrase(text),false,String(text));
+// Capitals and punctuation do not matter: speech recognition adds its own.
+for(const text of ['Emergency stop?','Emergency, stop.','Hey, Jarvis, emergency stop.','EMERGENCY STOP!!!'])assert.equal(p.stopPhrase(text),true,text);
+for(const text of ["don't stop everything",'stop all timers','non-emergency stop','?!'])assert.equal(p.stopPhrase(text),false,text);
+// The commands the window answers by itself obey the emergency stop and the owner's switches (the Core's state).
+assert.equal(p.windowMay(null,'navigate_panel'),true);                                  // before the first state
+assert.equal(p.windowMay({control:{stopped:false},permissions:{}},'navigate_panel'),true);
+assert.equal(p.windowMay({control:{stopped:false}},'navigate_panel'),true);            // an older Core sends no switches
+assert.equal(p.windowMay({control:{stopped:false},permissions:{navigate_panel:'off'}},'navigate_panel'),false);
+assert.equal(p.windowMay({control:{stopped:false},permissions:{inspect_interface:'ask'}},'inspect_interface'),false);
+assert.equal(p.windowMay({control:{stopped:false},permissions:{navigate_panel:'off'}},'assistant_control'),true);
+assert.equal(p.windowMay({control:{stopped:true},permissions:{}},'navigate_panel'),false);  // stopped: nothing
+assert.equal(p.windowMay({control:{stopped:true}}),false);
+assert.equal(p.windowMay({control:{stopped:false},permissions:{navigate_panel:'off'}}),true);  // no tool: only the stop counts
 // One switch position in words.
 const change={label:'Set a timer',effect:'changes',asks:'no',mode:'default',modes:['default','ask','off']};
 assert.deepEqual(change.modes.map(m=>p.modeText(change,m)),['Allowed','Ask first','Off']);

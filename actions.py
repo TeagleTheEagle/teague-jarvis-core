@@ -75,7 +75,7 @@ TOOLS = [
     schema('daily_briefing', 'Prepare a concise personal briefing combining current news, saved tasks, reminders, and projects.', {}),
     schema('image_search', 'Find image results for the user and return image URLs with source links. Use this when the user asks to show, find, or display a picture or image.', {'query': STR}, ['query']),
     schema('create_file', 'Save a text, Markdown, PDF or Word document in the dedicated generated folder. Supply full content.', {'title': STR, 'content': STR, 'format': {'type': 'string', 'enum': ['txt', 'md', 'pdf', 'docx']}}, ['title', 'content', 'format']),
-    schema('open_app', 'Launch an allowlisted Windows application immediately; the user has authorized these launches.', {'app': {'type': 'string', 'enum': ['calculator', 'notepad', 'paint']}}, ['app']),
+    schema('open_app', 'Launch an allowlisted Windows application (Calculator, Notepad or Paint).', {'app': {'type': 'string', 'enum': ['calculator', 'notepad', 'paint']}}, ['app']),
     schema('youtube', 'Find a YouTube video, or load a supplied video URL. Query search needs a YouTube API key.', {'query': STR}, ['query']),
     schema('spotify', 'Control a connected Spotify account. Only when the user asks for Spotify music playback.', {'action': {'type': 'string', 'enum': ['play', 'pause', 'next', 'previous', 'volume', 'status']}, 'query': STR, 'volume': {'type': 'integer', 'minimum': 0, 'maximum': 100}}, ['action']),
 ]

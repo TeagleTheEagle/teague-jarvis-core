@@ -51,7 +51,8 @@ TABLE = {
         'No: a saved inspection report is kept.', receipt=True,
         note='Pictures of the interface go to the AI provider only when you allow sending.'),
     'inspection_reports': _rule('Read saved inspection reports'),
-    'inspection_findings': _rule('Read the list of interface findings'),
+    'inspection_findings': _rule('Read the list of interface findings',
+        note='Reading the list also brings each finding\'s status up to date in JARVIS\'s own records.'),
     'inspection_link_change': _rule('Link a proposed change to a finding', CHANGES, LOCAL,
         'No: the history is kept; a later entry corrects it.'),
     # ---- saved things ----
@@ -130,13 +131,22 @@ MODES = (DEFAULT, ASK, OFF)
 
 STOPPED_MESSAGE = 'JARVIS is stopped (emergency stop). Nothing runs until you press RESUME on the PC.'
 # The emergency stop by voice or typing, from any device. Only the whole message counts, so talking about
-# stopping something is not a stop. There is deliberately no phrase that resumes.
-STOP_PHRASE = re.compile(r"(?:(?:hey |ok |okay )?jarvis[,.!]?\s+)?(?:emergency stop|stop everything|stop all|kill switch)"
-                         r"(?:[,.!]?\s+(?:now|please))?(?:[,.!]?\s+jarvis)?[.!]*", re.I)
+# stopping something is not a stop. Capitals and punctuation do not matter (speech recognition adds its own:
+# "Emergency, stop." and "Emergency stop?" both stop). Anything else in the message, a digit, an emoji or a word
+# in another script, means it is not the stop ("stop all 3" is about three things). There is deliberately no
+# phrase that resumes. The window uses the same words (static/permissions.js); the tests hold the two equal.
+STOP_PHRASE = re.compile(r"(?:(?:hey|ok|okay) )?(?:jarvis )?(?:emergency stop|stop everything|stop all|kill switch)"
+                         r"(?: (?:now|please))?(?: jarvis)?")
+# What counts as punctuation here: blanks and the ASCII marks except the underscore, plus the curly quotes, the
+# dashes and the ellipsis that keyboards and speech recognition put in. Written out so that Python and JavaScript
+# read exactly the same set.
+_STOP_SEPARATORS = re.compile('[ \\t\\n\\r\\f\\v\\u00a0!-/:-@\\[-\\^`{-~\\u2018\\u2019\\u201c\\u201d\\u2026\\u2013\\u2014]+')
 
 
 def stop_phrase(text):
-    return isinstance(text, str) and len(text) <= 80 and bool(STOP_PHRASE.fullmatch(text.strip()))
+    if not isinstance(text, str) or len(text) > 80:
+        return False
+    return bool(STOP_PHRASE.fullmatch(_STOP_SEPARATORS.sub(' ', text.lower()).strip(' ')))
 
 
 def effect(name, args=None):
@@ -176,6 +186,25 @@ def decide(name, args=None, *, stopped=False, by_jarvis=True, wearable=False, mo
     if by_jarvis and mode == ASK and ASK in modes_for(name) and does == CHANGES and not approved:
         return 'ask', ''
     return 'run', ''
+
+
+ASK_NOTE = (' The owner has chosen to be asked on screen before this happens: the call returns "awaiting approval" and'
+            ' nothing has happened until they approve. Say that it is waiting, never that it is done.')
+
+
+def offered(tool, mode):
+    """A tool as the AI model is offered it: one set to "ask first" says so in its description."""
+    name = tool['function']['name']
+    if mode != ASK or name not in TABLE or ASK not in modes_for(name):
+        return tool
+    return {**tool, 'function': {**tool['function'], 'description': tool['function']['description'] + ASK_NOTE}}
+
+
+def changed(modes=None):
+    """The owner's switches that differ from "Allowed", as the window needs them: the few commands it answers
+    by itself (sections, the microphone, timers, inspections) obey the same switches as the Core."""
+    return {name: mode for name, mode in (modes or {}).items()
+            if name in TABLE and mode != DEFAULT and mode in modes_for(name)}
 
 
 def listing(modes=None):

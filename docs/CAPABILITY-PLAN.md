@@ -34,6 +34,7 @@ engineering loop with your approval at every turn, not a system that rewrites it
    once. A change the AI model makes to `personality.txt` then shapes every later answer without you seeing it
    first. Eleven more files change after one approval click.
    **Decision D1.** (a) Every such change asks first and shows the difference (recommended), or (b) leave as it is.
+   **Decided by the owner on 2026-10-05: "ask first"** (built in 1.0.15, `docs/PERMISSIONS.md` sections 4 and 6).
 2. **Those tools write into the folder the program runs from.** In the installed everyday JARVIS that is the
    release folder, which is meant to stay exactly as tested: an edit there makes the installed build differ from
    the checked build, the installer's verify would flag it, and the next update would discard it. Whether this has
@@ -192,7 +193,7 @@ and the code has no local chat model. Confirm which one stands.
 
 | Decision | Recommended |
 |---|---|
-| D1 changes to its own personality and style | ask first |
+| D1 changes to its own personality and style | ask first. **Decided 2026-10-05: "ask first".** |
 | D2 installed JARVIS never edits its program files; customisations in the config folder | yes, in 1.0.15 |
 | D3 models and speed | after the speed check, from the numbers |
 | D4 key for the question set | a test key file in the workspace, placed by you once |

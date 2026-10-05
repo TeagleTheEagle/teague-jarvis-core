@@ -57,14 +57,19 @@ class Store:
                 CREATE TABLE IF NOT EXISTS tool_modes (
                     tool TEXT PRIMARY KEY, mode TEXT NOT NULL, updated REAL NOT NULL);
             ''')
-            for column, definition in [('item_key','TEXT'),('category','TEXT'),('source','TEXT'),('confidence','REAL NOT NULL DEFAULT 1.0')]:
-                try: db.execute(f'ALTER TABLE items ADD COLUMN {column} {definition}')
-                except sqlite3.OperationalError: pass
+            def add_columns(table, columns):
+                # Look first. A failure to add a column is an error, except "already there" (another JARVIS
+                # process added it between the look and the change).
+                have = {row[1] for row in db.execute(f'PRAGMA table_info({table})')}
+                for column, definition in columns:
+                    if column in have: continue
+                    try: db.execute(f'ALTER TABLE {table} ADD COLUMN {column} {definition}')
+                    except sqlite3.OperationalError as exc:
+                        if 'duplicate column' not in str(exc).lower(): raise
+            add_columns('items', [('item_key','TEXT'),('category','TEXT'),('source','TEXT'),('confidence','REAL NOT NULL DEFAULT 1.0')])
             # Which question and which device an activity row belongs to (1.0.15). Both stay empty on older rows,
             # and an older JARVIS that writes only action and status still works on this database.
-            for column in ('run_id', 'device'):
-                try: db.execute(f'ALTER TABLE audit ADD COLUMN {column} TEXT')
-                except sqlite3.OperationalError: pass
+            add_columns('audit', [('run_id','TEXT'),('device','TEXT')])
 
     @contextmanager
     def connect(self):

@@ -5,6 +5,7 @@ import time
 import unittest
 from unittest.mock import patch
 from server import App, Run
+import actions
 import connection_checks
 import providers
 
@@ -88,6 +89,35 @@ class ConnectionTests(unittest.TestCase):
         # The tiny test says that it was tiny.
         with patch('providers.chat', return_value={'content': 'READY'}):
             self.assertIn('tiny request', connection_checks.check('chat')['detail'])
+
+    def test_the_settings_test_sends_a_real_size_question_without_anything_saved(self):
+        # Settings > Connections > "Real-size question": the full instructions and every tool on offer, as a real
+        # question sends them; no conversation, saved fact or file; and no tool is run.
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        app = App(temp.name)
+        app.store.put('memory', 'Preference: I prefer tea')
+        app.store.message('c', 'user', 'a private chat line')
+        app.set_permission('open_app', 'ask')
+        app.set_permission('web_search', 'off')
+        asked = {'role': 'assistant', 'tool_calls': [{'id': 'c', 'function': {'name': 'time_now', 'arguments': '{}'}}]}
+        with patch('providers.chat', return_value=asked) as chat, patch.object(app, 'tool', side_effect=AssertionError('no tool is run')):
+            result = app.connection_test('full')
+        self.assertEqual(result['status'], 'passed')
+        messages, tools = chat.call_args.args[0], chat.call_args.args[1]
+        self.assertEqual(messages[0], {'role': 'system', 'content': app.instructions()})
+        self.assertIn('development_read', messages[0]['content'])  # the Core's own guidance is part of it
+        sent = json.dumps(messages)
+        self.assertNotIn('I prefer tea', sent)
+        self.assertNotIn('a private chat line', sent)
+        self.assertEqual(json.loads(messages[1]['content'].split(': ', 1)[1])['saved_facts'], [])
+        names = [t['function']['name'] for t in tools]
+        self.assertEqual(len(names), len(actions.TOOLS) - 1)
+        self.assertNotIn('web_search', names)                      # switched off: not offered, as in a real question
+        self.assertIn('asked on screen', next(t for t in tools if t['function']['name'] == 'open_app')['function']['description'])
+        self.assertIn(f'all {len(names)} tools', result['detail'])
+        self.assertEqual(app.check_results['full']['status'], 'passed')
+        with self.assertRaises(ValueError): app.connection_test('everything')
 
     def test_voice_empty_audio_and_manual_browser(self):
         with patch('providers.capabilities',return_value={'voice_provider':'browser'}),patch('providers.speech') as speech:

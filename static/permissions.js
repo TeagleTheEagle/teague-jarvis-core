@@ -3,8 +3,26 @@
 // The Core decides everything (permissions.py, server.App.tool); this file only shows it and sends the owner's clicks.
 const JarvisPermissions = {
   // The same words the Core accepts (permissions.STOP_PHRASE). test_permissions.py holds the two equal.
-  STOP_PHRASE: /^(?:(?:hey |ok |okay )?jarvis[,.!]?\s+)?(?:emergency stop|stop everything|stop all|kill switch)(?:[,.!]?\s+(?:now|please))?(?:[,.!]?\s+jarvis)?[.!]*$/i,
-  stopPhrase(text) { return typeof text === 'string' && text.length <= 80 && JarvisPermissions.STOP_PHRASE.test(text.trim()); },
+  // Capitals and punctuation do not matter: speech recognition adds its own ("Emergency, stop."). Anything else
+  // in the message (a digit, an emoji, a word in another script) means it is not the stop: "stop all 3".
+  STOP_PHRASE: /^(?:(?:hey|ok|okay) )?(?:jarvis )?(?:emergency stop|stop everything|stop all|kill switch)(?: (?:now|please))?(?: jarvis)?$/,
+  // Blanks and the ASCII marks except the underscore, the curly quotes, the dashes and the ellipsis: the same set,
+  // character for character, as permissions._STOP_SEPARATORS.
+  STOP_SEPARATORS: /[ \t\n\r\f\v !-\/:-@\[-\^`{-~‘’“”…–—]+/g,
+  stopPhrase(text) {
+    if (typeof text !== 'string' || Array.from(text).length > 80) return false;
+    return JarvisPermissions.STOP_PHRASE.test(text.toLowerCase().replace(JarvisPermissions.STOP_SEPARATORS, ' ').replace(/^ +| +$/g, ''));
+  },
+  // The window answers a few exact commands by itself (a section, the microphone, a timer's status, an
+  // inspection). They obey the same switches as the Core: while the emergency stop holds, or when the owner's
+  // switch for the matching tool is not "Allowed", the window does not act and the words go to the Core, which
+  // refuses, asks first or answers. `data` is the Core's state; before the first state the window may act.
+  windowMay(data, tool) {
+    if (!data) return true;
+    if (data.control && data.control.stopped) return false;
+    const mode = tool && data.permissions ? data.permissions[tool] : null;
+    return !mode || mode === 'default';
+  },
   // The words for one switch position of one tool.
   modeText(row, mode) {
     if (mode === 'ask') return 'Ask first';
@@ -52,6 +70,8 @@ if (typeof document !== 'undefined') (() => {
     if (Date.now() - silencedAt < 5000) return;  // once per stop
     silencedAt = Date.now();
     try { if (typeof stop === 'function') await stop(); } catch (e) { /* silencing this window is best effort */ }
+    // Screen sharing ends as well, as it does for a stop from the tray or the shortcut.
+    try { if (typeof stopScreenVision === 'function') stopScreenVision(); } catch (e) { /* best effort */ }
   }
   async function emergencyStop(reason) {
     let reached = true;
@@ -114,6 +134,7 @@ if (typeof document !== 'undefined') (() => {
       select.disabled = true;
       try { render(await api('/api/permissions', {tool: row.name, mode: select.value})); toast(row.label + ': ' + JarvisPermissions.modeText(row, select.value) + '.'); }
       catch (e) { toast(e.message, true); await load(); }
+      await refreshNow();  // the commands this window answers by itself obey the new position at once
     };
     node.append(name, facts, select); return node;
   }
@@ -130,10 +151,18 @@ if (typeof document !== 'undefined') (() => {
   }
   const settingsNav = q('.nav[data-view="settings"]'); if (settingsNav) settingsNav.addEventListener('click', load);
 
+  // The stop controls stay visible and usable whatever a style sheet says (an approved owner style sheet is loaded
+  // last and could otherwise hide them): these few properties are set on the elements themselves, as important.
+  const pin = (node, shown) => {
+    for (const [name, value] of [['display', shown ? (node === banner ? 'flex' : 'inline-flex') : 'none'], ['visibility', 'visible'], ['opacity', '1'], ['pointer-events', 'auto']])
+      if (node.style.getPropertyValue(name) !== value || node.style.getPropertyPriority(name) !== 'important') node.style.setProperty(name, value, 'important');
+  };
+
   // ---- one reading of the stop for the button, the banner and the panel ----
   let last = null, lastText = null;
   function tick() {
     const c = control(), stopped = !!(c && c.stopped), text = JarvisPermissions.stopText(c, new Date());
+    pin(banner, stopped); pin(resumeButton, stopped); pin(stopButton, !stopped);
     if (stopped === last && text === lastText) return;
     const before = last; last = stopped; lastText = text;
     document.documentElement.classList.toggle('es-stopped', stopped);

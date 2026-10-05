@@ -84,8 +84,10 @@ async function connectCore(root,options={}){
   stop:()=>request('/api/cancel-all').catch(()=>{}),       // stops what runs now; the Core keeps running and answering
   // The emergency stop that holds: nothing is answered or run until resume(). A Core that does not know the
   // route (never the case within one release) still gets everything running stopped.
-  emergencyStop:()=>request('/api/emergency-stop',{reason:'Stop from the desktop app (tray, shortcut or floating JARVIS)'}).catch(()=>request('/api/cancel-all')).catch(()=>{}),
-  resume:()=>request('/api/resume').catch(()=>{}),
+  // Answers {stopped:true,...} when the stop holds; {status:'cancel requested'} when only the running work was
+  // cancelled; {error} when the Core did not answer at all. The app tells the owner when the stop did not hold.
+  emergencyStop:()=>request('/api/emergency-stop',{reason:'Stop from the desktop app (tray, shortcut or floating JARVIS)'}).catch(()=>request('/api/cancel-all')).catch(e=>({error:e.message})),
+  resume:()=>request('/api/resume').catch(e=>({error:e.message})),
   quit:async()=>{},                                         // closing an app never stops the shared Core
   async shutdown(){                                          // "Quit JARVIS completely"
    await request('/api/shutdown').catch(()=>{});

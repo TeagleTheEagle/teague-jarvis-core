@@ -2,6 +2,7 @@
 import asyncio
 import threading
 
+import permissions
 import project_budgets as budgets
 import repair_workflow
 from repair_sandbox import check_candidate
@@ -115,6 +116,8 @@ def dispatch(app, service, body, *, stage4_token=None):
         if action!='run' or set(body)!={'action','operation','project','task','confirmation'}:
             raise ValueError('Only the fixed approved fixture is supported.')
         if current and current['status']=='RUNNING': raise ValueError('A repair experiment is already running.')
+        # Looked at under the lock the emergency stop takes, so no experiment starts as a stop arrives.
+        if getattr(app,'stopped',None) is not None: raise ValueError(permissions.STOPPED_MESSAGE)
         stop=threading.Event()
         current={'operation':operation,'status':'RUNNING','cancel':stop}
         app.repair_experiment=current

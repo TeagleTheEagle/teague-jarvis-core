@@ -209,25 +209,30 @@ function screenIntent(text){
 async function send(text,screenAttachment=null,options={}){ if(window.JARVIS_INSPECTION)return;
   // "Emergency stop", typed or spoken: goes straight to the Core, also while another answer is running.
   if(!screenAttachment&&typeof JarvisPermissions!=='undefined'&&JarvisPermissions.stopPhrase(text)&&window.jarvisEmergencyStop){message('user',text);const reached=await window.jarvisEmergencyStop('Asked for in words: '+text.trim());message(reached?'assistant':'error',reached?'Emergency stop is on. I will not answer or do anything until you press RESUME on the PC.':'The emergency stop did not reach the Core.');return;}
-  if(!screenAttachment&&!state.attachment&&timerStatusIntent(text)){await answerTimerStatus(text);return;}
+  // The commands this window answers by itself obey the same switches as the Core (Settings > Permissions) and the
+  // emergency stop: when one is not allowed here, the words go to the Core, which refuses, asks first or answers.
+  // What only switches something off (mute, stop speaking, hide the hologram, stop sharing) always works here.
+  let heldBack=false;
+  const windowMay=tool=>{const may=typeof JarvisPermissions==='undefined'||JarvisPermissions.windowMay(state.data,tool);if(!may)heldBack=true;return may;};
+  if(!screenAttachment&&!state.attachment&&timerStatusIntent(text)&&windowMay('manage_timer')){await answerTimerStatus(text);return;}
   const localControl=!screenAttachment&&!state.attachment&&assistantControlIntent(text);
-  if(localControl){const result=await performAssistantControl(localControl);message('user',text);message('assistant',controlSummary(localControl,result));return;}
+  if(localControl&&(['mute','stop_speaking','hide_hologram'].includes(localControl)||windowMay('assistant_control'))){const result=await performAssistantControl(localControl);message('user',text);message('assistant',controlSummary(localControl,result));return;}
   if(!screenAttachment){
     const intent=screenIntent(text);
     if(screenAwaitingGuidance&&(screenStream||desktopScreen)&&!intent){screenAwaitingGuidance=false;document.getElementById('screenQuestion').value=text;await captureSharedScreen(true,false,text);return;}
-    if(intent==='float'){await document.getElementById('screenFloat').onclick();return;}
-    if(intent==='start'&&window.jarvisDesktop){await startDesktopLive();return;}
-    if(intent==='start'){openScreenVision();document.getElementById('screenStatus').textContent=window.jarvisDesktop?'Use CAPTURE & ANALYSE or ask me to analyse your screen. Your primary display will be used.':'Click START SCREENSHARE and choose what to share. Analysis and observation notes start together.';return;}
+    if(intent==='float'&&windowMay('assistant_control')){await document.getElementById('screenFloat').onclick();return;}
+    if(intent==='start'&&windowMay('assistant_control')&&window.jarvisDesktop){await startDesktopLive();return;}
+    if(intent==='start'&&windowMay('assistant_control')){openScreenVision();document.getElementById('screenStatus').textContent=window.jarvisDesktop?'Use CAPTURE & ANALYSE or ask me to analyse your screen. Your primary display will be used.':'Click START SCREENSHARE and choose what to share. Analysis and observation notes start together.';return;}
     if(intent==='stop'){stopScreenVision();return;}
-    if(intent==='capture'||intent==='analyse'){
+    if((intent==='capture'||intent==='analyse')&&windowMay()){
       if(window.jarvisDesktop&&!desktopScreen)await authoriseDesktopScreen();
       if(!screenStream&&!desktopScreen){openScreenVision();document.getElementById('screenStatus').textContent=window.jarvisDesktop?'Authorise a display first. Then ask again to capture and analyse it.':'No screen source is shared. Click START SCREENSHARE first.';return;}
       await captureSharedScreen(true,false,text);return;
     }
   }
-  if(state.busy||state.transcribing||!text.trim())return;
+  if(state.busy||state.transcribing||!text.trim()){if(heldBack&&text.trim())toast('JARVIS is still working on the last request. Nothing was sent; try again in a moment.');return;}
   const destination=JarvisNavigation.destination(text);
-  if(destination&&!state.attachment&&!screenAttachment){
+  if(destination&&windowMay('navigate_panel')&&!state.attachment&&!screenAttachment){
     const button=document.querySelector('.nav[data-view="'+destination+'"]');
     if(button){
       state.busy=true;state.interrupted=false;
@@ -272,7 +277,7 @@ async function send(text,screenAttachment=null,options={}){ if(window.JARVIS_INS
     }
     return Boolean(completed);
   }catch(e){output.el.classList.add('error');output.p.textContent+='\n'+e.message;toast(e.message,true);}
-  finally{coreWorking=0;output.p.dataset.activity='';state.run=null;state.busy=false;$('#sendButton').disabled=false;$('#stopButton').disabled=!state.mic;setMode('standby');await refresh();resumeRecognition();scrollMessages();}
+  finally{coreWorking=0;output.p.dataset.activity='';state.run=null;state.busy=false;$('#sendButton').disabled=false;$('#stopButton').disabled=!state.mic;setMode(state.mic&&voice.armed?'listening':'standby');await refresh();resumeRecognition();scrollMessages();}
 }
 function toolResult(name,result,container){
   if(name==='inspect_interface'&&result.status==='inspection_requested'){
@@ -336,7 +341,7 @@ function disconnectSpeechVisual(){speechSource?.disconnect();speechAnalyser?.dis
 let speechRequest;
 function stopSpeech(){if(state.audio&&!state.audio.paused)coreInterruptedUntil=performance.now()+180;if(speechRequest||state.audio||window.speechSynthesis?.speaking)voiceDiagnostic('Playback','Stopped / cancelled');state.voiceGeneration++;speechRequest?.abort();speechRequest=null;if(state.audio){state.audio.pause();state.audio=null;}window.speechSynthesis?.cancel();}
 async function speak(text){ if(window.JARVIS_INSPECTION)return;
-  if(!state.data?.settings.voice||!text||state.data?.settings.quiet_hours)return;
+  if(!state.data?.settings.voice||!text||state.data?.settings.quiet_hours||state.data?.control?.stopped)return;
   stopSpeech();voiceDiagnostic('Audibility','Not confirmed for this reply');voiceDiagnostic('Playback','Waiting for speech');pauseRecognition();$('#stopButton').disabled=false;const generation=state.voiceGeneration;const controller=new AbortController();speechRequest=controller;
   try{
     if(['openai','qwen'].includes(state.data.settings.voice_profile) || state.data.capabilities.qwen_voice || state.data.capabilities.fish){
@@ -366,6 +371,7 @@ const voice = new JarvisVoice({
   interruptThreshold: ()=>({sensitive:.006,normal:.012,conservative:.035}[localStorage.getItem('jarvis.interruptSensitivity')||'normal']||.012),
   interruptLevel: (level,threshold)=>{const indicator=document.getElementById('interruptMonitor');if(indicator){indicator.hidden=false;indicator.textContent='Interruption ready · mic '+Math.round(level*1000)/10+'% · trigger '+Math.round(threshold*1000)/10+'%';}},
   canInterrupt: ()=>localStorage.getItem('jarvis.handsFreeInterrupt')!=='off'&&Boolean((state.audio&&!state.audio.paused)||window.speechSynthesis?.speaking),
+  thinking: ()=>Boolean(state.busy&&!speechRequest&&!(state.audio&&!state.audio.paused)&&!window.speechSynthesis?.speaking),
   prepare: async()=>{const r=await fetch('/api/wake/prepare',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}',signal:AbortSignal.timeout(15000)});const d=await r.json();if(!r.ok)throw new Error(d.error||'Wake detector unavailable.');return d;},
   detect: async (pcm,client)=>api('/api/wake',{client,sensitivity:state.data?.settings.wake_sensitivity||'normal',data:await blobBase64(new Blob([pcm]))}),
   status: text=>{if(state.mic){if(!state.busy)setMode(voice.armed?'listening':voice.processing?'thinking':'standby');$('#micIndicator').textContent='LOCAL WAKE WORD';$('#inputStatus').textContent=text;}},
@@ -378,7 +384,6 @@ const voice = new JarvisVoice({
   idle: async ()=>{if(!state.mic||state.busy||!voice.session)return;state.interrupted=false;try{await speak('Anything else, sir?');}finally{voice.resume();}},
   error: e=>{voiceDiagnostic('Microphone / wake',e.message);disableMic();toast('Wake-word listener: '+e.message,true);},
   command: async (blob,generation)=>{
-    if(state.rateUntil>Date.now()){toast((state.rateProvider||'The AI provider')+' is rate-limited. Try again in '+Math.ceil((state.rateUntil-Date.now())/1000)+' seconds.');return;}
     if(state.transcribing)return;
     state.transcribing=true;
     JarvisLatency.mark('transcription_started');const transcriptionStarted=performance.now();voiceDiagnostic('Transcription','Local request started');
@@ -388,9 +393,10 @@ const voice = new JarvisVoice({
       JarvisLatency.mark('transcription_complete');JarvisLatency.value('local_stt_ms',data.latency_ms);JarvisLatency.value('stt_model_load_ms',data.model_load_ms);JarvisLatency.value('stt_inference_ms',data.inference_ms);voiceDiagnostic('Transcription',(data.text?.trim()?'Text returned':'No speech returned')+' · '+Math.round(performance.now()-transcriptionStarted)+' ms');
       const text=(data.text||'').replace(/^\s*(?:hey[ ,]+)?jarvis[ ,.!:;-]*/i,'').trim();
       if(!text)return;coreAcknowledgedUntil=performance.now()+450;
-      if(/^(?:(?:hey )?jarvis[ ,]*)?(?:take|capture)(?: a)? screenshot(?:[ ,]+jarvis)?[.!?]*$/i.test(text)){state.transcribing=false;void captureSharedScreen(true);return;}
+      if(/^(?:(?:hey )?jarvis[ ,]*)?(?:take|capture)(?: a)? screenshot(?:[ ,]+jarvis)?[.!?]*$/i.test(text)&&(typeof JarvisPermissions==='undefined'||JarvisPermissions.windowMay(state.data))){state.transcribing=false;void captureSharedScreen(true);return;}
       if(/^(?:stop sharing|stop watching)(?:[ ,]+jarvis)?[.!?]*$/i.test(text)){stopScreenVision();return;}
       if(typeof JarvisPermissions!=='undefined'&&JarvisPermissions.stopPhrase(text)){state.transcribing=false;voice.endConversation();void send(text);return;}
+      if(state.rateUntil>Date.now()){toast((state.rateProvider||'The AI provider')+' is rate-limited. Try again in '+Math.ceil((state.rateUntil-Date.now())/1000)+' seconds.');return;}
       if(assistantControlIntent(text)){state.transcribing=false;void send(text);return;}
       if(JarvisVoice.isEndPhrase(text)){screenAwaitingGuidance=false;voice.endConversation();state.interrupted=false;await speak('At your service, Mr. Teague.');return;}
       if(/^(?:stop|cancel|be quiet|silence)[.!]?$/i.test(text)){voice.endConversation();log('Voice stop requested');return;}

@@ -37,7 +37,7 @@ class JarvisVoice {
     finally{this.recovering=false;}
   }
   pause(){this.bargeFrames=[];this.bargeVoiced=0;this.suspended=true;this.epoch++;this.queue=[];this.pre=[];}
-  resume(){this.suspended=false;this.continueListening();}
+  resume(){this.suspended=false;this.queue=[];this.continueListening();}
   continueListening(){if(!this.active||!this.session||this.processing||this.suspended||this.armed)return;this.armed=true;this.manual=false;this.frames=[];this.pre=[];this.elapsed=this.quiet=this.voiced=0;this.cb.status('CONVERSATION OPEN · SAY “THANK YOU JARVIS” TO FINISH');}
   inviteConversation(explicitStart=false){if(!this.active||(!explicitStart&&this.endedByUser))return false;if(explicitStart)this.endedByUser=false;this.session=true;this.nudged=false;return true;}
   endConversation(){this.endedByUser=true;this.session=false;this.armed=false;this.manual=false;this.frames=[];this.pre=[];this.queue=[];this.epoch++;this.cb.status('SAY “HEY JARVIS”');}
@@ -53,6 +53,10 @@ class JarvisVoice {
     this.cb.level?.(Math.sqrt(pcm.reduce((sum,v)=>sum+v*v,0)/pcm.length)/32768);
     if(this.processing)return;
     if(this.suspended){
+      // While JARVIS works on an answer and plays nothing, the wake word still counts: "Hey JARVIS" interrupts
+      // the answer and listens, so a spoken "emergency stop" is heard then too. Never while a reply is being
+      // spoken (it would hear itself); there the barge-in below applies.
+      if(this.wakeEnabled!==false&&this.cb.thinking?.()){this.bargeFrames=[];this.bargeVoiced=0;this.listenForWake(pcm,generation,true);return;}
       // Headset barge-in: sustained microphone energy after browser echo cancellation.
       // No wake requests or transcription are sent for the playback monitoring frames.
       if(!this.session||!this.cb.canInterrupt?.()){this.bargeFrames=[];this.bargeVoiced=0;return;}
@@ -76,8 +80,13 @@ class JarvisVoice {
       if(this.elapsed>=28||(!this.manual&&this.voiced>=.32&&this.quiet>=(this.cb.endpointSeconds?.()||1.28)))this.finish();
       else if(!this.manual&&this.voiced===0&&this.quiet>=12&&!this.nudged){this.nudged=true;this.armed=false;this.frames=[];this.pre=[];this.cb.idle?.();}return;}
     if(this.wakeEnabled===false)return;
+    this.listenForWake(pcm,generation,false);
+  }
+  // working: JARVIS is busy with an answer. The Core may answer the wake requests late then, so frames that
+  // cannot be looked at in time are dropped instead of switching the microphone off.
+  listenForWake(pcm,generation,working){
     this.pre.push(pcm);if(this.pre.length>4)this.pre.shift();
-    if(this.queue.length>=6){this.fail(new Error('Wake detection fell behind. Enable the microphone again.'));return;}
+    if(this.queue.length>=6){if(!working){this.fail(new Error('Wake detection fell behind. Enable the microphone again.'));return;}this.queue.shift();}
     this.queue.push(pcm);this.drain(generation);
   }
   async drain(generation){if(this.pending)return;this.pending=true;
@@ -86,11 +95,11 @@ class JarvisVoice {
       catch(e){
         // A request from an earlier listening state must not stop the current one.
         if(generation!==this.generation)return;
-        if(epoch!==this.epoch)continue;
+        if(epoch!==this.epoch||this.suspended)continue;
         throw e;
       }
       if(generation!==this.generation)return;if(epoch!==this.epoch)continue;
-      if(data.detected){this.cb.diagnostic?.('Wake word','Detected');this.arm();}else if(!this.armed)this.cb.status('SAY “HEY JARVIS”');}}
+      if(data.detected){this.cb.diagnostic?.('Wake word','Detected');if(this.suspended)this.armed=false;this.arm();}else if(!this.armed&&!this.suspended)this.cb.status('SAY “HEY JARVIS”');}}
     catch(e){if(generation===this.generation)this.fail(e);}
     finally{if(generation===this.generation)this.pending=false;}
   }

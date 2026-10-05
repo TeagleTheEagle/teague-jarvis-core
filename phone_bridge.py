@@ -10,9 +10,15 @@ import ssl
 import time
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import permissions
 from store import Store
 
 ROOT = Path(__file__).resolve().parent
+
+
+class Stopped(Exception):
+    """The owner's emergency stop holds (permissions.py): nothing is read or changed for a phone until the
+    owner resumes on the PC."""
 
 
 class Bridge:
@@ -51,9 +57,16 @@ class Bridge:
             raise PermissionError('Device key invalid or revoked.')
         return row['id']
 
+    @staticmethod
+    def running(db):
+        # The same record the Core keeps (store.set_stop). This bridge is its own process, so it looks each time.
+        if db.execute("SELECT 1 FROM control WHERE key='emergency_stop'").fetchone():
+            raise Stopped()
+
     def tasks(self, token):
         self.device(token)
         with self.store.connect() as db:
+            self.running(db)
             rows = db.execute('''SELECT i.id,i.body,i.updated,COALESCE(m.completed,0) completed
                 FROM items i LEFT JOIN task_meta m ON m.item_id=i.id
                 WHERE i.kind='task' ORDER BY i.updated DESC LIMIT 100''').fetchall()
@@ -73,6 +86,7 @@ class Bridge:
         with self.store.connect() as db:
             # Task and retry receipt commit together. Concurrent retries cannot duplicate work.
             db.execute('BEGIN IMMEDIATE')
+            self.running(db)
             active = db.execute('SELECT revoked FROM phone_devices WHERE id=?', (device,)).fetchone()
             if not active or active['revoked']:
                 raise PermissionError('Device revoked.')
@@ -88,7 +102,7 @@ class Bridge:
             row = db.execute('SELECT id,body FROM items WHERE id=?', (ident,)).fetchone()
             result = {'status': 'saved', 'task': dict(row), 'request_id': request_id}
             db.execute('INSERT INTO phone_requests VALUES (?,?,?,?)', (device, request_id, digest, json.dumps(result)))
-            db.execute('INSERT INTO audit(action,status,created) VALUES (?,?,?)', ('phone.task.create', 'saved', now))
+            db.execute('INSERT INTO audit(action,status,created,device) VALUES (?,?,?,?)', ('phone.task.create', 'saved', now, 'phone-' + device[:12]))
         return result
 
 
@@ -150,6 +164,8 @@ class Handler(BaseHTTPRequestHandler):
                     raise ValueError('Incomplete request.')
                 return self.reply(200, self.server.bridge.create(token, json.loads(raw)))
             return self.reply(404, {'error': 'Operation not available to phone.'})
+        except Stopped:
+            return self.reply(503, {'error': permissions.STOPPED_MESSAGE, 'stopped': True})
         except PermissionError:
             return self.reply(401, {'error': 'Device key invalid or revoked.'})
         except (ValueError, UnicodeError):

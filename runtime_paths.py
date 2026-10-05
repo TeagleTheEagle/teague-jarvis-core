@@ -91,10 +91,42 @@ def env_file():
     return config_dir() / '.env'
 
 
+# Every personality text a release has shipped (sha256 of the text with LF line endings, outer blank space
+# removed). The installer copies the shipped personality into the config folder at the first install, so a
+# copy that still equals one of these was never changed by the owner: the wording of the release that runs
+# applies, not the copy frozen at the first install. ADD the new hash whenever personality.txt changes
+# (test_permissions_review.py fails until it is here); never remove one.
+SHIPPED_PERSONALITIES = frozenset({
+    '3edf45e42879411a65161564c11d6d7b08ad57f8c772ad311378ce2ab293f5d5',  # baseline; shipped in 1.0.7 to 1.0.14
+    '762841ddbc68a0bee528b5f0faf697f0d24a4b1532ab9d6593bd7802e7c51a0b',  # 1.0.15: changes to itself ask first
+})
+
+
+def personality_hash(text):
+    import hashlib
+    return hashlib.sha256(text.replace('\r\n', '\n').strip().encode('utf-8')).hexdigest()
+
+
+def unchanged_shipped_copy(path):
+    """True when this file is, word for word, a personality text that some release shipped."""
+    try:
+        return personality_hash(Path(path).read_text(encoding='utf-8')) in SHIPPED_PERSONALITIES
+    except (OSError, ValueError):
+        return False
+
+
+def personality_file_for(root, config):
+    """The personality in effect for the program in `root` with the owner's config folder `config`: the
+    owner's own copy when it differs from everything a release shipped, else the running release's text."""
+    shipped, configured = Path(root) / 'personality.txt', Path(config) / 'personality.txt'
+    if configured.is_file() and not unchanged_shipped_copy(configured):
+        return configured
+    return shipped if shipped.is_file() else configured
+
+
 def personality_file():
-    """The owner's personality if present in the config folder, else the shipped default."""
-    configured = config_dir() / 'personality.txt'
-    return configured if configured.is_file() else ROOT / 'personality.txt'
+    """The owner's personality if the config folder holds one of their own, else the shipped default."""
+    return personality_file_for(ROOT, config_dir())
 
 
 def wearable_connection_file():

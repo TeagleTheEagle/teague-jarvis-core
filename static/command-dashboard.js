@@ -54,9 +54,10 @@
   const busy = () => { const s = app(); return !!s && !!(s.busy || s.transcribing); };
   // A question typed or chosen here goes to JARVIS through the existing send(); the conversation opens so the reply
   // is seen. send() ignores a request while another is being answered, so that case is said out loud and the text
-  // is kept rather than dropped.
+  // is kept rather than dropped. The emergency stop words always go through: send() answers them before anything else.
   const ask = text => { text = (text || '').trim(); if (!text || typeof send !== 'function') return false;
-    if (busy()) { if (typeof toast === 'function') toast('JARVIS is still working on the last request. Nothing was sent; try again in a moment.'); return false; }
+    const stopWords = typeof JarvisPermissions !== 'undefined' && JarvisPermissions.stopPhrase(text);
+    if (busy() && !stopWords) { if (typeof toast === 'function') toast('JARVIS is still working on the last request. Nothing was sent; try again in a moment.'); return false; }
     go('communications'); send(text); return true; };
   const linkButton = (text, action) => { const b = el('button', 'cd-link', text); b.type = 'button'; b.addEventListener('click', action); return b; };
 

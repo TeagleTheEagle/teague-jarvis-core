@@ -15,10 +15,13 @@ import difflib
 import hashlib
 import json
 import os
+import re
 import time
 import uuid
 from collections import namedtuple
 from pathlib import Path
+
+import runtime_paths
 
 OWNER_FILES = ('personality.txt', 'owner-style.css')
 PROGRAM_FILES = ('static/pro.css', 'static/app.js', 'static/voice.js', 'static/index.html', 'static/mic-worklet.js',
@@ -32,6 +35,85 @@ PROPOSAL_ONLY_NOTE = ('Saved as a proposal only. An installed JARVIS never chang
 
 Layout = namedtuple('Layout', 'root data config installed')
 
+# The owner's style sheet is for how things look: colours, fonts, text size, spacing, borders and shadows. A
+# change JARVIS proposes to it may set only those properties, with sizes kept in a sane range, so it cannot hide,
+# move, cover or relabel anything by the usual means (display, visibility, opacity, position, transform, size,
+# generated text, @-rules). It also may not name the controls the owner stops and approves with.
+# This LIMITS a style change; it is not a guarantee (text coloured like its background is still unreadable).
+# What protects the owner is the difference shown before approval, Undo, and the ways to stop that no style
+# sheet reaches: the tray, the shortcut, the spoken and the typed stop words.
+_OWNER_CSS_PROPERTIES = frozenset('''
+    color background background-color accent-color caret-color
+    font-size font-family font-weight font-style font-variant line-height letter-spacing word-spacing
+    text-align text-transform text-decoration text-shadow
+    padding padding-top padding-right padding-bottom padding-left
+    margin margin-top margin-right margin-bottom margin-left gap row-gap column-gap
+    border border-top border-right border-bottom border-left border-color border-width border-style border-radius
+    outline outline-color outline-width outline-style box-shadow'''.split())
+_OWNER_CSS_FUNCTIONS = frozenset(('rgb', 'rgba', 'hsl', 'hsla', 'var', 'linear-gradient', 'radial-gradient'))
+_OWNER_CSS_ACCEPTS = 'In owner-style.css a rule may set only colours, fonts, text size, spacing, borders and shadows. '
+_PROTECTED_CSS = ('.es-', 'emergencystop', '.perm-', 'approval', 'action-review', 'reliability-panel', 'role=alert', "role='alert'", 'role="alert"')
+_CSS_LENGTH = re.compile(r'(\d*\.?\d+)(px|pt|rem|em|vmin|vmax|vh|vw|ch|ex|cm|mm|in|q|%)')
+
+
+def _transparent(value):
+    """A colour written so that nothing shows: the word, a hex colour with no opacity, or an alpha of zero."""
+    if re.search(r'\btransparent\b', value) or re.search(r'#(?:[0-9a-f]{3}0|[0-9a-f]{6}00)\b', value):
+        return True
+    for inside in re.findall(r'(?:rgba?|hsla?)\(([^()]*)\)', value):
+        alpha = inside.rsplit('/', 1)[1] if '/' in inside else inside.split(',')[3] if inside.count(',') == 3 else None
+        number = re.fullmatch(r'\s*(\d*\.?\d+)\s*%?\s*', alpha) if alpha is not None else None
+        if number and float(number[1]) == 0:
+            return True
+    return False
+
+
+def _check_owner_css(content):
+    """The owner's style sheet as JARVIS may propose it: plain rules, known properties, sane sizes."""
+    low = content.lower()
+    if any(x in low.replace(' ', '').replace('\t', '') for x in _PROTECTED_CSS):
+        raise ValueError('A style change cannot restyle the emergency stop, the approval cards or the Permissions switches.')
+    text = re.sub(r'/\*.*?\*/', ' ', low, flags=re.S)
+    if '/*' in text or '@' in text:
+        raise ValueError(_OWNER_CSS_ACCEPTS + '@-rules and unfinished comments are not accepted.')
+    if not re.fullmatch(r'(\s*[^{};]+\{[^{}]*\})*\s*', text):
+        raise ValueError(_OWNER_CSS_ACCEPTS + 'Write plain rules: a selector, then its properties in braces.')
+    for selector, body in re.findall(r'([^{};]+)\{([^{}]*)\}', text):
+        if '::' in selector or re.search(r':(before|after|first-letter|first-line|marker|placeholder|selection|backdrop)\b', selector):
+            raise ValueError(_OWNER_CSS_ACCEPTS + 'Rules for generated or partial content (::before, ::after and the like) are not accepted.')
+        for declaration in filter(None, (part.strip() for part in body.split(';'))):
+            name, colon, value = declaration.partition(':')
+            name, value = name.strip(), re.sub(r'!\s*important\s*$', '', value.strip()).strip()
+            if not colon or not value:
+                raise ValueError(_OWNER_CSS_ACCEPTS + f'"{declaration[:60]}" is not a property with a value.')
+            if name not in _OWNER_CSS_PROPERTIES and not re.fullmatch(r'--[a-z0-9_-]+', name):
+                raise ValueError(_OWNER_CSS_ACCEPTS + f'"{name[:40]}" is not accepted.')
+            if '!' in value or any(function not in _OWNER_CSS_FUNCTIONS for function in re.findall(r'([a-z-]+)\(', value)):
+                raise ValueError(_OWNER_CSS_ACCEPTS + f'The value of "{name[:40]}" uses something that is not accepted.')
+            plain = re.sub(r'#[0-9a-f]{3,8}\b', ' ', value)  # a colour written in hex is not a number
+            if re.search(r'(?<![\w#-])-\s*\.?\d', plain):
+                raise ValueError(_OWNER_CSS_ACCEPTS + f'"{name[:40]}" has a negative value; those are not accepted.')
+            for number, unit in _CSS_LENGTH.findall(plain):
+                if float(number) > (400 if unit in ('px', 'pt', '%') else 40):
+                    raise ValueError(_OWNER_CSS_ACCEPTS + f'"{name[:40]}" has a size that is too large.')
+            if name == 'font-size':
+                sizes = _CSS_LENGTH.findall(plain)
+                smallest = {'px': 8, 'pt': 6, 'em': 0.5, 'rem': 0.5, '%': 50}
+                if 'var(' in value or (not sizes and re.search(r'\d', plain)) or any(float(number) < smallest.get(unit, 1) for number, unit in sizes):
+                    raise ValueError(_OWNER_CSS_ACCEPTS + 'A text size must be written out and stay readable (at least 8px, 0.5em or 50%).')
+            if name == 'color' and _transparent(value):
+                raise ValueError(_OWNER_CSS_ACCEPTS + 'Text cannot be made transparent.')
+
+
+def _check_css(path, content):
+    low = content.lower()
+    if content.count('{') != content.count('}') or any(x in low for x in ('url(', '@import', 'expression(')):
+        raise ValueError('CSS requires balanced braces and cannot load external resources.')
+    if chr(92) in content:  # a backslash: an escaped character could spell a refused word or a hidden selector
+        raise ValueError('CSS in a proposed change cannot contain a backslash (escaped characters are not accepted).')
+    if path in OWNER_FILES:
+        _check_owner_css(content)
+
 
 def guidance(installed):
     """What the AI model is told about changing JARVIS itself (added to the instructions of every question;
@@ -39,7 +121,7 @@ def guidance(installed):
     program = ('This JARVIS is installed: its program files are never changed from here. A change to any other allowlisted file is saved as a proposal only, for the engineer and a later release; say so plainly. '
                if installed else
                'Changes to the other allowlisted source files also wait for approval; syntax checks do not prove runtime correctness. Offer computer_run_tests and explain restart requirements after approval. ')
-    return ('\nYou have real development_read, development_propose, development_edit and development_rollback tools. For a request to change your interface text size, colours or spacing, use them now rather than referring the user to device settings: read static/pro.css to find the rule, then put an overriding rule in owner-style.css (the owner\'s own style sheet, loaded last). For a request to change your personality, edit personality.txt. '
+    return ('\nYou have real development_read, development_propose, development_edit and development_rollback tools. For a request to change your interface text size, colours or spacing, use them now rather than referring the user to device settings: read static/pro.css to find the rule, then put an overriding rule in owner-style.css (the owner\'s own style sheet, loaded last; it accepts only colours, fonts, text size, spacing, borders and shadows, in plain rules without @-rules, positions, sizes or hidden elements). For a request to change your personality, edit personality.txt. '
             'Every change waits for the owner\'s approval in the interface, with the difference shown: say that it is waiting, never that it is applied. This replaces any earlier wording about applying style or personality changes directly. '
             + program + 'Credentials, launchers, permission enforcement and arbitrary files cannot be changed by these tools. A missing provider integration still needs an implementation and the user must complete that provider\'s consent flow.')
 
@@ -70,14 +152,20 @@ def _target(where, path):
 def applies(where, path):
     """Can a change to this file be applied here at all (after approval)?"""
     where = layout(where)
-    return path in OWNER_FILES or not where.installed
+    if not where.installed:
+        return True
+    # Installed: only the owner's own files, and only when they live outside the program folder. (A config
+    # folder that is the program folder itself would put the change among the tested program files.)
+    return path in OWNER_FILES and where.config.resolve() != where.root.resolve()
 
 
 def read(root, path):
     where = layout(root)
     target = _target(where, path)
-    if path == 'personality.txt' and not target.is_file():
-        target = where.root / path  # no customisation yet: the personality the program ships with
+    if path == 'personality.txt':
+        # The personality in effect: the owner's own copy, or the text the program ships with when there is no
+        # copy yet or the copy is still the untouched text of an earlier release (runtime_paths).
+        target = runtime_paths.personality_file_for(where.root, where.config)
     if path == 'owner-style.css' and not target.is_file():
         return ''  # no custom style yet
     return target.read_text(encoding='utf-8')
@@ -88,14 +176,18 @@ def prepare(root, path, content, reason):
     before = read(where, path)
     if not isinstance(content, str) or len(content) > 200000 or (not content.strip() and path != 'owner-style.css'):
         raise ValueError('Replacement must contain 1–200000 characters.')
-    if path.endswith('.css') and (content.count('{') != content.count('}') or any(x in content.lower() for x in ('url(', '@import', 'expression('))):
-        raise ValueError('CSS requires balanced braces and cannot load external resources.')
+    if path.endswith('.css'):
+        _check_css(path, content)
     validation = validate(where, path, content)
     if content == before:
         raise ValueError('No changes proposed.')
     can_apply = applies(where, path)
     if path in OWNER_FILES:
         validation += f' {len(content):,} characters (now {len(before):,}).'
+    if path == 'personality.txt' and can_apply and _earlier_release_wording(where, content):
+        # For example undoing the owner's own change after an update: what comes back is not this old text.
+        validation += (' This is the wording of an earlier release. After approval no wording of your own is left,'
+                       ' and the personality of the release that is running applies, not this older text.')
     folder = where.data / 'development' / uuid.uuid4().hex
     folder.mkdir(parents=True)
     (folder / 'before.txt').write_text(before, encoding='utf-8')
@@ -112,6 +204,15 @@ def prepare(root, path, content, reason):
     return result
 
 
+def _earlier_release_wording(where, text):
+    """True when `text` is a personality some earlier release shipped and not the one the running release ships.
+    Such a text in the config folder counts as "no wording of the owner's own" (runtime_paths)."""
+    shipped = where.root / 'personality.txt'
+    if where.config.resolve() == where.root.resolve() or not shipped.is_file():
+        return False
+    return runtime_paths.personality_hash(text) in runtime_paths.SHIPPED_PERSONALITIES and text != shipped.read_text(encoding='utf-8')
+
+
 def _load(where, proposal):
     if not isinstance(proposal, str) or len(proposal) != 32 or any(x not in '0123456789abcdef' for x in proposal):
         raise ValueError('Invalid proposal.')
@@ -125,8 +226,10 @@ def _write(where, path, candidate):
         target.unlink(missing_ok=True)  # no custom style
         return
     shipped = where.root / path
-    if path == 'personality.txt' and target.resolve() != shipped.resolve() and shipped.is_file() and candidate == shipped.read_text(encoding='utf-8'):
-        # Back to the personality the program ships with: no private copy, so later releases' wording applies again.
+    if path == 'personality.txt' and target.resolve() != shipped.resolve() and shipped.is_file() and (
+            candidate == shipped.read_text(encoding='utf-8') or _earlier_release_wording(where, candidate)):
+        # Back to a personality the program shipped (this release's or an earlier one's): no private copy is
+        # kept, so the wording of the release that runs applies, now and after later updates.
         target.unlink(missing_ok=True)
         return
     target.parent.mkdir(parents=True, exist_ok=True)

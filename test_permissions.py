@@ -403,7 +403,7 @@ class AskFirstTests(AppCase):
         # "remember that I prefer ..." and "forget memory: ..." are answered by memory.py without a tool call.
         _, events = self.ask('remember that I prefer tea')
         self.assertIn('Saved that preference', events['assistant.completed']['text'])
-        self.assertEqual([(r['status'], r['device']) for r in self.rows('memory command')], [('completed', 'pc')])
+        self.assertEqual([(r['status'], r['device']) for r in self.rows('memory command: Save a note, a task or a fact')], [('completed', 'pc')])
         self.app.set_permission('save_item', 'ask')
         _, events = self.ask('remember that I prefer coffee')
         self.assertIn('Waiting for approval on screen', events['assistant.completed']['text'])

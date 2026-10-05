@@ -30,8 +30,18 @@ function show(){if(win&&!win.isDestroyed()){if(win.isMinimized())win.restore();w
 // runs nothing until the owner resumes (the banner in the window, Settings > Permissions, or the tray).
 function stopLocal(){liveGrantUntil=0;capture?.stop();if(win&&!win.isDestroyed()){win.webContents.send('jarvis:stop');}}
 function stop(){stopLocal();backend?.stop();}
-function emergencyStop(){stopLocal();backend?.emergencyStop();}
-function resumeCore(){backend?.resume();}
+// A stop or a resume that did not reach the Core is said in a dialog, never left silent.
+function tell(message,detail){const options={type:'error',message,detail,buttons:['OK']};if(win&&!win.isDestroyed())dialog.showMessageBox(win,options);else dialog.showMessageBox(options);}
+async function emergencyStop(){
+ stopLocal();const result=await backend?.emergencyStop();
+ if(result?.stopped===true||quitting)return;
+ tell('The emergency stop did not reach JARVIS.',(result?.status?'What was running was cancelled, but JARVIS is not held stopped. ':'JARVIS may still be running. ')+'This app\'s own microphone, speech and screen sharing were stopped. Press STOP ALL in the JARVIS window, or choose "Quit JARVIS completely" in the tray menu.'+(result?.error?'\n\n'+result.error:''));
+}
+async function resumeCore(){
+ const result=await backend?.resume();
+ if((result&&result.stopped===false)||quitting)return;
+ tell('JARVIS was not resumed.','JARVIS stays stopped. Press RESUME JARVIS in the JARVIS window, or try again.'+(result?.error?'\n\n'+result.error:''));
+}
 async function quit(stopCore=false){if(quitting)return;quitting=true;updates?.close();liveGrantUntil=0;capture?.stop();unwatchCore?.();if(stopCore)await backend?.shutdown();else await backend?.quit();try{require('node:fs').unlinkSync(sessionFile);}catch{}globalShortcut.unregisterAll();companion?.destroy();tray?.destroy();app.quit();}
 async function start(){
  app.setAppUserModelId('local.jarvis.desktop');

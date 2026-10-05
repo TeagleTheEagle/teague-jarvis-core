@@ -73,7 +73,9 @@
   const originalSend=send;
   send=async function(text,...args){
     const match=String(text).trim().match(/^(?:hey jarvis[, ]+)?(?:(?:can|could|would) you |please )?(?:inspect|review|analyse|analyze|look at)(?: the| my| your)? (command(?: centre| center)?|communications|system(?: status)?|mission(?: log)?|focus(?: and tasks)?|projects|memory|files|web|diagrams|settings|changes|maps|(?:(?:whole|entire) (?:interface|application|app)|all (?:interfaces|panels)))(?: page| panel)?(?: and (?:suggest improvements|recommend improvements|(?:analyse|analyze) it))?[.!?]*$/i);
-    if(match){const panel=match[1].toLowerCase().split(' ')[0];window.startInterfaceInspection({panel:['whole','entire','all'].includes(panel)?'all':panel,scope:'full_panel',focus:'Review readability, contrast, spacing, alignment, navigation, consistency, accessibility, information density and status clarity. Suggest improvements; do not apply changes.'});return true;}
+    // An inspection can send pictures of the interface to the AI provider: it obeys the owner's switch for it and
+    // the emergency stop. When it is not allowed here, the words go to the Core, which refuses or asks first.
+    if(match&&(typeof JarvisPermissions==='undefined'||JarvisPermissions.windowMay(state.data,'inspect_interface'))){const panel=match[1].toLowerCase().split(' ')[0];window.startInterfaceInspection({panel:['whole','entire','all'].includes(panel)?'all':panel,scope:'full_panel',focus:'Review readability, contrast, spacing, alignment, navigation, consistency, accessibility, information density and status clarity. Suggest improvements; do not apply changes.'});return true;}
     return originalSend(text,...args);
   };
 })();
