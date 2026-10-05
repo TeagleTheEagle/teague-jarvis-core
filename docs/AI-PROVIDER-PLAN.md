@@ -80,6 +80,14 @@ month** in Alibaba Cloud billing; raise it once you know your real use.
   use OpenRouter today: the Qwen provider accepts only `*.aliyuncs.com` addresses (`providers.py`), so it needs a new
   provider in a release (tests, Stage 7 check, owner approval). Fish Audio voice and local Whisper stay as they are.
   Not started; the owner decides.
+- **Voice (owner, 2026-10-05): "i want to use qwen now not fish auido".** Already built, no release needed: the key
+  file needs `QWEN_TTS_VOICE=<cloned voice ID>` (and `QWEN_TTS_MODEL` only if the voice was enrolled for a model other
+  than `qwen3-tts-vc-2026-01-22`), then Settings > VOICE PREVIEW > "Qwen — cloned JARVIS voice" > USE THIS VOICE. A
+  cloned voice belongs to the Alibaba account that enrolled it. Open: whether a voice ID exists on the current account
+  (the console's API Key page shows one key, created 2026-09-18, Singapore, default workspace); if not, a voice sample
+  must be enrolled (owner-run tool, not written yet). Fish lines stay in the file so the owner can switch back.
+  Console notice seen: `dashscope.aliyuncs.com` enters maintenance mode from 2026-09-30 and keeps working; check
+  whether `dashscope-intl` is affected in the next release.
 
 ## Your steps (Alibaba Cloud console, your own account)
 
