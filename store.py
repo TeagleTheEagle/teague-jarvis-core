@@ -204,7 +204,7 @@ class Store:
             db.execute('DELETE FROM reminders WHERE id=?', (item_id,))
 
     def settings(self):
-        result = {'name': '', 'voice': False, 'continuous': False, 'response_length': 'balanced', 'tone': 'cinematic', 'humor': True, 'speech_rate': 'natural', 'wake_sensitivity': 'normal', 'quiet_hours': False, 'briefing_time': '', 'proactive': False, 'answer_mode': DEFAULT_ANSWER_MODE, 'provider_backup': True, 'speech_recognition': 'local'}
+        result = {'name': '', 'voice': False, 'continuous': False, 'response_length': 'balanced', 'tone': 'cinematic', 'humor': True, 'speech_rate': 'natural', 'wake_sensitivity': 'normal', 'quiet_hours': False, 'briefing_time': '', 'proactive': False, 'answer_mode': DEFAULT_ANSWER_MODE, 'provider_backup': True, 'speech_recognition': 'local', 'offline_answers': True}
         with self.connect() as db:
             result.update({r['key']: json.loads(r['value']) for r in db.execute('SELECT * FROM settings')})
         if result.get('voice_profile', 'auto') not in VOICE_PROFILES:  # e.g. an ElevenLabs choice saved before 1.0.15
@@ -216,7 +216,7 @@ class Store:
         return result
 
     def save_settings(self, values):
-        permitted = {'voice_profile': str, 'name': str, 'voice': bool, 'continuous': bool, 'response_length': str, 'tone': str, 'humor': bool, 'speech_rate': str, 'wake_sensitivity': str, 'quiet_hours': bool, 'briefing_time': str, 'proactive': bool, 'answer_mode': str, 'provider_backup': bool, 'speech_recognition': str}
+        permitted = {'voice_profile': str, 'name': str, 'voice': bool, 'continuous': bool, 'response_length': str, 'tone': str, 'humor': bool, 'speech_rate': str, 'wake_sensitivity': str, 'quiet_hours': bool, 'briefing_time': str, 'proactive': bool, 'answer_mode': str, 'provider_backup': bool, 'speech_recognition': str, 'offline_answers': bool}
         with self.connect() as db:
             for key, val in values.items():
                 if key not in permitted or not isinstance(val, permitted[key]):
@@ -264,6 +264,21 @@ class Store:
                 db.execute("DELETE FROM control WHERE key='emergency_stop'")
             else:
                 db.execute("INSERT OR REPLACE INTO control VALUES ('emergency_stop',?)", (json.dumps(value),))
+
+    # Automatic backups (auto_backup.py): the owner's folder and schedule and the record of what was made. Kept
+    # with the stop and the switches, out of reach of the settings page, the JSON export and a restored JSON backup.
+    def auto_backup_state(self):
+        with self.connect() as db:
+            row = db.execute("SELECT value FROM control WHERE key='auto_backup'").fetchone()
+        try:
+            value = json.loads(row['value']) if row else None
+        except ValueError:
+            value = None
+        return value if isinstance(value, dict) else None
+
+    def set_auto_backup_state(self, value):
+        with self.connect() as db:
+            db.execute("INSERT OR REPLACE INTO control VALUES ('auto_backup',?)", (json.dumps(value),))
 
     def tool_modes(self):
         with self.connect() as db:

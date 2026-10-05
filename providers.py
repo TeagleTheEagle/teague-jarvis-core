@@ -260,7 +260,7 @@ def live_health(mode=None):
 PROVIDER_NAMES = {'openai': 'OpenAI', 'qwen': 'Qwen'}
 # The line the Core adds to a reply written by the backup provider. The same pattern removes it from
 # what goes back to a model and from anything a model writes, so that only the Core can say it.
-BACKUP_NOTE = re.compile(r'\s*\[(?:OpenAI|Qwen) answered this question because (?:OpenAI|Qwen) could not\.[^\]\n]*\]')
+BACKUP_NOTE = re.compile(r'\s*\[\s*(?:OpenAI|Qwen)\s+answered\s+this\s+question\s+because\s+(?:OpenAI|Qwen)\s+could\s+not\b[^\]]{0,400}\]', re.I)
 
 
 def backup_provider(vision=False):
@@ -370,7 +370,11 @@ def chat(messages, tools, emit, cancel, vision=False, mode=None, text='', use=No
                 raise
             remaining = deadline - time.monotonic()
             if remaining <= 0:
-                raise ProviderError('OpenAI request time limit exceeded.')
+                # The time ran out on a provider that could not be reached: that is still "could not be reached"
+                # (the backup provider and the offline answer are for exactly this).
+                late = ProviderError('OpenAI request time limit exceeded.')
+                late.unreachable, late.service = bool(getattr(first, 'unreachable', False)), 'OpenAI'
+                raise late
             if cancel.wait(min(3, remaining)):
                 return None
             result = attempt()

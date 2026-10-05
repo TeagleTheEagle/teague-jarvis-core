@@ -411,6 +411,7 @@ class WorkerCancellationTests(unittest.TestCase):
         app.store.recent_research.return_value = []
         app.store.recent_evidence.return_value = []
         ns.update(os=os, json=json,
+            recovery=types.SimpleNamespace(LOCK=threading.Lock()),  # no backup is being made (work() waits for one)
             memory=types.SimpleNamespace(command=lambda *a: None, governed_by=lambda *a: None, relevant=lambda *a: []),
             actions=types.SimpleNamespace(local_command=lambda *a: None, TOOLS=[]),
             answer_evidence=types.SimpleNamespace(command=lambda *a: None, action_guard=lambda text, events: text, evidence=lambda *a: []),

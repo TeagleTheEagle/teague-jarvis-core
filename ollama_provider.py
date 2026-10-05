@@ -73,6 +73,7 @@ class OllamaProvider:
         budget = self.timeout if timeout is None else timeout
         deadline = time.monotonic() + budget
         conn = http.client.HTTPConnection('127.0.0.1', 11434, timeout=budget)
+        self.connection = conn  # offline_answers closes it when the owner presses Stop
         try:
             body = json.dumps(payload).encode() if payload is not None else None
             conn.request('POST' if body is not None else 'GET', path, body,
@@ -103,6 +104,7 @@ class OllamaProvider:
         except (OSError, http.client.HTTPException):
             raise OllamaError('offline') from None
         finally:
+            self.connection = None
             conn.close()
 
     def health_check(self):

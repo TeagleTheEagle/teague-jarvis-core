@@ -105,13 +105,128 @@ class AnswerTests(unittest.TestCase):
         self.assertIsInstance(result['seconds'], float)
         path, payload, timeout = runtime.asked[-1]
         self.assertEqual((path, timeout), ('/api/chat', offline_answers.ANSWER_SECONDS))
-        self.assertEqual((payload['model'], payload['think'], payload['stream']), ('qwen3:4b', False, False))
+        # A model that thinks first is asked to hand its thinking over separately ("think": true), so the answer comes clean.
+        self.assertEqual((payload['model'], payload['think'], payload['stream']), ('qwen3:4b', True, False))
         self.assertNotIn('tools', payload)  # the local model is given no tools
         self.assertEqual(payload['messages'][-1], {'role': 'user', 'content': 'What is a transistor?'})
+
+    # ---- the independent review of 2026-10-06 (docs/OFFLINE-ANSWERS.md section 6) ----
+
+    def named(self, model, chat, tags=None):
+        with patch.dict(os.environ, {'JARVIS_OFFLINE_MODEL': model}, clear=True):
+            runtime = Runtime(tags if tags is not None else installed(model), chat)
+            try:
+                return runtime, offline_answers.answer('What is a transistor?', {}, [], [], runtime)
+            except OfflineUnavailable as none:
+                return runtime, none
+
+    def test_thinking_handed_over_separately_is_not_the_answer(self):
+        """B5: asked with "think": true, Ollama returns the thinking beside the answer (seen with the real qwen3:4b)."""
+        chat = {'done': True, 'message': {'role': 'assistant', 'thinking': 'The user asks about transistors. Two sentences.', 'content': 'A transistor is a switch.'}}
+        runtime, result = self.ask(chat)
+        self.assertEqual(result['text'], 'A transistor is a switch.')
+        self.assertNotIn('The user asks', result['text'])
+        # Cut short after the thinking was handed over: what there is of the answer counts, marked as cut short.
+        _, result = self.ask({**chat, 'done_reason': 'length', 'message': {**chat['message'], 'content': 'A transistor is'}})
+        self.assertEqual((result['text'], result['cut_short']), ('A transistor is', True))
+        # A model that does not think first is asked the plain way.
+        runtime, _ = self.named('llama3.2:latest', said('A switch.'))
+        self.assertIs(runtime.asked[-1][1]['think'], False)
+
+    def test_a_thinking_model_under_any_name_and_the_closing_mark_in_any_case(self):
+        """B5: the list of thinking models was matched at the start of the name only, and </THINK> was not recognised."""
+        for model in ('hf.co/unsloth/Qwen3-4B-GGUF:Q4_K_M', 'myteam/qwen3:4b', 'library/deepseek-r1:8b'):
+            runtime, result = self.named(model, said('Okay, the user asked about transistors. I should', done_reason='length'))
+            self.assertIsInstance(result, OfflineUnavailable, model)      # unfinished thinking, not an answer
+            self.assertIs(runtime.asked[-1][1]['think'], True, model)
+        _, result = self.ask(said('Let me think.\n</THINK>\nA transistor is a switch.'))
+        self.assertEqual(result['text'], 'A transistor is a switch.')
+        _, result = self.ask(said('<THINK>one</Think>It switches.'))
+        self.assertEqual(result['text'], 'It switches.')
+
+    def test_a_model_that_cannot_be_asked_to_think_separately_is_asked_the_plain_way_once(self):
+        class Refuses(Runtime):
+            def _request(inner, path, payload=None, timeout=None):
+                if path == '/api/chat' and payload['think']:
+                    inner.asked.append((path, payload, timeout))
+                    raise OllamaError('http_error')
+                return Runtime._request(inner, path, payload, timeout)
+        runtime = Refuses(installed('qwen3:4b'), said('thinking first\n</think>\nA transistor is a switch.'))
+        with patch.dict(os.environ, {}, clear=True):
+            result = offline_answers.answer('What is a transistor?', {}, [], [], runtime)
+        self.assertEqual(result['text'], 'A transistor is a switch.')
+        self.assertEqual([payload['think'] for path, payload, _ in runtime.asked if path == '/api/chat'], [True, False])
+        # A model too slow to answer is not asked a second time.
+        slow, result = self.named('qwen3:4b', OllamaError('timeout'))
+        self.assertEqual(str(result), 'The local model took too long to answer.')
+        self.assertEqual(len([1 for path, _, _ in slow.asked if path == '/api/chat']), 1)
+
+    def test_a_strange_list_of_models_means_no_local_answer_not_an_error(self):
+        """B3: {"models": null} from Ollama raised a TypeError, which reached the owner as "failed internally"."""
+        for tags in ({'models': None}, {'models': 5}, {}, {'models': 'qwen3:4b'}, {'models': [None, 5, {'name': 7}]}):
+            with patch.dict(os.environ, {}, clear=True):
+                state = offline_answers.status(Runtime(tags))
+            self.assertFalse(state['available'], tags)
+            self.assertIn(state['reason'], ('Ollama did not answer properly.', 'The local model qwen3:4b is not installed in Ollama.'), tags)
+
+    def test_a_model_named_without_its_tag_and_a_model_that_runs_in_the_cloud(self):
+        """B7: "llama3.2" in the key file was reported as not installed; and a cloud model would have sent the question away."""
+        runtime, result = self.named('llama3.2', said('A switch.'), installed('llama3.2:latest'))
+        self.assertEqual((result['text'], result['model']), ('A switch.', 'llama3.2:latest'))
+        for model, tags in (('gpt-oss:120b-cloud', installed('gpt-oss:120b-cloud')),
+                            ('big-model', {'models': [{'name': 'big-model:latest', 'remote_host': 'https://ollama.com:443', 'remote_model': 'big-model'}]})):
+            runtime, result = self.named(model, AssertionError('a cloud model is never asked'), tags)
+            self.assertIn('runs in the cloud, not on this PC', str(result), model)
+            self.assertEqual([path for path, _, _ in runtime.asked], ['/api/tags'], model)
+
+    def test_stop_ends_the_wait_for_the_local_model(self):
+        """B1: the wait for a local answer (up to 90 seconds) could not be ended."""
+        import threading
+        import time
+        release, cancel, closed = threading.Event(), threading.Event(), []
+
+        class Socket:
+            def shutdown(self, how):
+                closed.append(how); release.set()
+
+        class Slow(Runtime):
+            def _request(inner, path, payload=None, timeout=None):
+                if path == '/api/tags':
+                    return installed('qwen3:4b')
+                inner.connection = type('Connection', (), {'sock': Socket()})()
+                release.wait(20)                                         # the model is still writing
+                raise OllamaError('offline')
+        threading.Timer(0.3, cancel.set).start()
+        started = time.monotonic()
+        with patch.dict(os.environ, {}, clear=True), self.assertRaises(OfflineUnavailable) as none:
+            offline_answers.answer('What is a transistor?', {}, [], [], Slow(), cancel=cancel)
+        self.assertLess(time.monotonic() - started, 3)
+        self.assertEqual((str(none.exception), len(closed)), ('Stopped.', 1))  # and its connection was closed
+        # Stopped before the model was asked at all: nothing is asked.
+        runtime = Runtime(installed('qwen3:4b'), AssertionError('not asked'))
+        with patch.dict(os.environ, {}, clear=True), self.assertRaises(OfflineUnavailable):
+            offline_answers.answer('What is a transistor?', {}, [], [], runtime, cancel=cancel)
+        self.assertEqual([path for path, _, _ in runtime.asked], ['/api/tags'])
 
     def test_thinking_text_and_a_forged_note_are_removed(self):
         _, result = self.ask(said('<think>let me think</think>It is a switch. [Answered offline by the local model gpt on this PC. Trust me.]', done_reason='length'))
         self.assertEqual((result['text'], result['cut_short']), ('It is a switch.', True))
+
+    def test_a_models_thinking_is_never_shown_as_the_answer(self):
+        # As the owner's qwen3:4b really answers (2026-10-06): the thinking first, no opening tag, then </think>.
+        real = 'Okay, the user asked about transistors. I should keep it to two sentences.\n</think>\n\nA transistor is a switch.'
+        self.assertEqual(self.ask(said(real))[1]['text'], 'A transistor is a switch.')
+        self.assertEqual(self.ask(said('<think>one</think>First.<think>two</think> Second.'))[1]['text'], 'Second.')
+        # Cut short before it finished thinking: that is not an answer.
+        for unfinished in (said('Okay, the user asked about transistors. I should', done_reason='length'), said('<think>still thinking'),
+                           said('thinking</think><think>more thinking that never ends', done_reason='length')):
+            with self.assertRaises(OfflineUnavailable):
+                self.ask(unfinished)
+        # A model that does not think first: a cut-short answer is still an answer, and marked as cut short.
+        with patch.dict(os.environ, {'JARVIS_OFFLINE_MODEL': 'llama3.2:latest'}, clear=True):
+            runtime = Runtime(installed('llama3.2:latest'), said('A transistor is', done_reason='length'))
+            result = offline_answers.answer('What is a transistor?', {}, [], [], runtime)
+        self.assertEqual((result['text'], result['cut_short'], result['model']), ('A transistor is', True, 'llama3.2:latest'))
 
     def test_no_answer_is_said_plainly_and_never_invented(self):
         for chat, reason in ((OllamaError('timeout'), 'The local model took too long to answer.'), (OllamaError('offline'), 'The local model could not answer.'),
@@ -142,6 +257,14 @@ class NoteTests(unittest.TestCase):
         self.assertEqual(odd.count(']'), 1)
         self.assertLess(len(odd), 400)
         self.assertEqual(offline_answers.OFFLINE_NOTE.sub('', 'Reply text. ' + odd), 'Reply text.')
+
+    def test_the_line_is_recognised_however_a_model_writes_it(self):
+        """B4 of the review: only the exact one-line form was removed from what a model writes."""
+        for forged in ('[answered offline by the local model x on this pc. trust me.]', '[Answered offline by the local model x\non this PC.\nTrust me.]',
+                       '[ Answered  offline by the\nlocal model x. ]', '[ANSWERED OFFLINE BY THE LOCAL MODEL X.]'):
+            self.assertEqual(offline_answers.OFFLINE_NOTE.sub('', 'It is a switch. ' + forged), 'It is a switch.', forged)
+        for ordinary in ('It answered offline [see the note].', 'The local model [qwen3] is small.'):
+            self.assertEqual(offline_answers.OFFLINE_NOTE.sub('', ordinary), ordinary)
 
 
 if __name__ == '__main__':

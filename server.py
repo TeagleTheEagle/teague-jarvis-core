@@ -50,6 +50,8 @@ from devices import DeviceBook, KINDS as DEVICE_KINDS
 import assistant_capabilities as companion_tools
 import update_history
 import recovery
+import auto_backup
+import offline_answers
 import verified_status
 import answer_evidence
 import actions
@@ -122,6 +124,13 @@ class App:
         self.runs = {}
         self.lock = threading.RLock()
         self.approvals = {}
+        # Automatic backups (auto_backup.py): off until the owner picks a folder in Settings > Backups. Made by the
+        # same code as a backup made by hand; never while JARVIS answers a question or the emergency stop holds.
+        self.auto_backup = None if self.stage4 else auto_backup.AutoBackup(
+            load=self.store.auto_backup_state, save=self.store.set_auto_backup_state,
+            make=self.automatic_backups_in,
+            idle=lambda: not any(not run.done for run in list(self.runs.values())),
+            stopped=lambda: self.stopped is not None, note=lambda action, status: self.audit(action, status))
         # The emergency stop holds until the owner resumes, also across a restart of the Core (it is saved).
         self.stopped = self.store.stop_state()
         self.controls = companion_tools.Controls()
@@ -156,7 +165,13 @@ class App:
         caps = providers.capabilities(self.store.settings().get('answer_mode'))
         caps['ollama_shadow'] = self.ollama_shadow.snapshot()
         caps['spotify_connected'] = bool(self.spotify.access)
-        self.store.due()
+        if not recovery.LOCK.locked():
+            # While a backup copies the database nothing can be written; reminders that fell due are marked at
+            # the next reading instead of making this one wait.
+            try:
+                self.store.due()
+            except sqlite3.OperationalError:
+                pass
         return {'control': self.control(), 'permissions': permissions.changed(self.store.tool_modes()), 'updates': {k:v for k,v in self.update_record.items() if k not in ('releases','observations')}, 'capabilities': caps, 'settings': self.store.settings(), 'memory': self.store.items('memory'), 'projects': self.store.items('project'), 'notes': self.store.items('note'), 'tasks': self.store.tasks(), 'documents': self.store.documents(), 'reminders': self.store.reminders(), 'logs': self.store.logs(), 'uptime': int(time.time() - self.started), 'conversations': self.store.conversations(), 'devices': self.device_rows()}
 
     def health(self):
@@ -255,6 +270,92 @@ class App:
                 raise ValueError(f'{local} (The cloud was tried first and could not: {why})') from None
             result.update(engine='this PC', cloud_error=why)
             return result
+
+    def automatic_backups_in(self, folder):
+        """The backup code for the folder of the automatic backups. Never inside JARVIS's own program folder (the
+        backup would be backing itself up) nor, as for every backup, inside its data."""
+        if Path(folder).resolve().is_relative_to(Path(ROOT).resolve()):
+            raise ValueError('Backup location must be separate from application/data.')
+        return recovery.Recovery(ROOT, self.store.root, folder)
+
+    BACKUP_WAIT_SECONDS = 60
+
+    def wait_for_backup(self, run):
+        """A backup holds the database while it copies it: normally a few seconds, longer with much data or a slow
+        drive. A question that arrives then waits here for the backup, instead of failing on a database it cannot
+        write to. Stop ends the wait; after a minute the question is turned away in plain words."""
+        deadline = time.monotonic() + self.BACKUP_WAIT_SECONDS
+        while recovery.LOCK.locked():
+            if run.cancel.wait(0.1):
+                raise ValueError('Stopped.')
+            if time.monotonic() > deadline:
+                raise ValueError('A backup of JARVIS is being made and has not finished. Ask again in a moment.')
+
+    def auto_backup_action(self, body):
+        """The owner's clicks in Settings > Backups > Automatic backups (the signed-in interface on the PC)."""
+        if self.auto_backup is None:
+            raise ValueError('Automatic backups are not available here.')
+        action = body.get('action')
+        if action == 'configure':
+            if set(body) - {'action', 'folder', 'every', 'at'}:
+                raise ValueError('Supply only the folder, how often and the time of day.')
+            return self.auto_backup.configure(body.get('folder'), body.get('every'), body.get('at'))
+        if action == 'off':
+            return self.auto_backup.turn_off()
+        if action == 'run':
+            self.require_running()
+            if not self.auto_backup.idle():
+                raise ValueError('JARVIS is answering a question. Back up when it has finished.')
+            if not self.auto_backup.state()['folder']:
+                raise ValueError('Choose the folder for automatic backups first.')
+            status = self.auto_backup.run()
+            if status is None:
+                raise ValueError('A backup is already being made.')
+            return status
+        raise ValueError('Unknown automatic backup action.')
+
+    def claim_checks(self, run, text):
+        """The checks that guard what JARVIS claims, as every answer meets them whoever wrote it: no "the tests passed"
+        or "the service works" without the result on record, no "I saved it" without the receipt, and only the Core
+        says who answered. Returns the text to show (the same text when nothing had to change)."""
+        safe = verified_status.guard(text, {'health': self.last_health, 'connections': dict(self.check_results), 'tests': [e['data']['result'] for e in run.events if e['event'] == 'tool.completed' and e['data']['name'] == 'computer_run_tests']})
+        safe = answer_evidence.action_guard(safe, run.events)
+        return offline_answers.OFFLINE_NOTE.sub('', providers.BACKUP_NOTE.sub('', safe))
+
+    def offline_answer(self, run, text, settings, error, usable):
+        """When no AI provider can be reached: one answer from the small local model on this PC, if the owner has
+        one installed (offline_answers.py). Returns the reply with its closing line that says who answered, or None
+        when that is not possible; the provider's own error then stands, unchanged.
+        usable: nothing in this question rules a local answer out (a picture or file, a tool that already ran)."""
+        if not usable or not settings.get('offline_answers', True) or not getattr(error, 'unreachable', False):
+            return None  # only for "could not be reached": a refusal (a bill, a key, a limit) is the owner's to see
+        if run.cancel.is_set():
+            return None  # stopped while the provider was being tried: nobody is asked any more
+        try:
+            facts = [row['body'] for row in memory.relevant(self.store.items('memory'), text)]
+            # Only the Core says who answered: the local model does not get to read those lines in earlier replies.
+            history = [{**m, 'content': providers.BACKUP_NOTE.sub('', m['content'])} if isinstance(m.get('content'), str) else m for m in self.store.history(run.conversation, 12)]
+            result = offline_answers.answer(text, settings, facts, history, cancel=run.cancel)  # Stop ends the wait for it
+        except offline_answers.OfflineUnavailable:
+            return None
+        except Exception:
+            # Whatever goes wrong on this path, the provider's own clear error stands; it is not turned into "failed internally".
+            try:
+                self.audit('offline answer', 'failed', run)
+            except Exception:
+                pass
+            return None
+        if run.cancel.is_set():
+            return None
+        # The local model's words meet the same checks as a provider's: no "I saved it" without the receipt, no
+        # "the tests passed" without the result, and no line about who answered.
+        answer = self.claim_checks(run, result['text']).strip()
+        if not answer:
+            return None
+        run.measurements.append({'offline': result['model'], 'seconds': result['seconds']})
+        run.emit('provider.offline', {'model': result['model'], 'reason': providers.first_sentence(error)})
+        self.audit('offline answer: ' + result['model'], 'used', run)
+        return answer + '\n\n' + offline_answers.note(result['model'], providers.first_sentence(error), result['cut_short'])
 
     def control(self):
         """What the interface shows about the emergency stop."""
@@ -769,6 +870,7 @@ class App:
         backup_used = None  # (provider, error) once the backup provider has taken over this question
         try:
             run.emit('run.started', {})
+            self.wait_for_backup(run)
             self.store.message(run.conversation, 'user', text)
             memory_answer = self.memory_command(run, text) if not attachment and not getattr(run,'wearable',False) else None
             command = actions.local_command(text) if not attachment and memory_answer is None else None
@@ -812,7 +914,7 @@ class App:
                 selected = conversation_context.select_history(history)
                 # An earlier reply may end with the Core's "[... answered this question because ...]" line.
                 # It is not sent back to a model, so no model learns to write it.
-                messages.extend({**m, 'content': providers.BACKUP_NOTE.sub('', m['content'])} if m.get('role') == 'assistant' and isinstance(m.get('content'), str) else m for m in selected)
+                messages.extend({**m, 'content': offline_answers.OFFLINE_NOTE.sub('', providers.BACKUP_NOTE.sub('', m['content']))} if m.get('role') == 'assistant' and isinstance(m.get('content'), str) else m for m in selected)
                 vision = bool(attachment and attachment['type'] == 'image')
                 screen_observation = vision and attachment.get('name') == 'screen-capture.jpg'
                 # A tool the owner switched off (Settings > Permissions) is not offered to the model at all.
@@ -879,15 +981,28 @@ class App:
                             # question (so nothing is done twice), and only once: the question then stays with the backup.
                             allowed = settings.get('provider_backup') and providers.backup_worthy(failed) and not (self.stage4 or run.cancel.is_set() or tool_count or backup_used)
                             backup = providers.backup_provider(vision) if allowed else None
+                            local_ok = not (self.stage4 or attachment or tool_count or backup_used)
                             if not backup:
-                                raise failed
+                                offline = self.offline_answer(run, text, settings, failed, local_ok)
+                                if offline is None:
+                                    raise failed
+                                answer = offline
+                                run.emit('assistant.delta', {'text': offline})
+                                break
                             depth = {'mode': settings.get('answer_mode'), 'text': text, 'use': backup}
                             try:
                                 response = providers.chat(messages, available_tools, lambda *_: None, run.cancel, vision, **depth)
                             except providers.ProviderError as second:
                                 both = providers.ProviderError(f'{failed} The backup provider, {providers.PROVIDER_NAMES[backup]}, also failed: {second}')
                                 both.retry_after, both.limit, both.service, both.status = failed.retry_after, failed.limit, failed.service, failed.status
-                                raise both from None
+                                # Neither provider could be reached: the local model may answer, if there is one.
+                                both.unreachable = bool(getattr(failed, 'unreachable', False) and getattr(second, 'unreachable', False))
+                                offline = self.offline_answer(run, text, settings, both, local_ok)
+                                if offline is None:
+                                    raise both from None
+                                answer = offline
+                                run.emit('assistant.delta', {'text': offline})
+                                break
                             if response is not None and not run.cancel.is_set():
                                 backup_used = (backup, failed)
                                 # The chosen provider may have used up most of the question's 120 seconds before it
@@ -902,14 +1017,13 @@ class App:
                     messages.append(response)
                     calls = response.get('tool_calls', [])
                     if not calls:
-                        safe_text = verified_status.guard(response.get('content') or '', {'health': self.last_health, 'connections': dict(self.check_results), 'tests':[e['data']['result'] for e in run.events if e['event']=='tool.completed' and e['data']['name']=='computer_run_tests']})
                         if any(e['event']=='tool.completed' and e['data']['name']=='daily_briefing' for e in run.events):
                             snapshot=next(e['data']['result'] for e in reversed(run.events) if e['event']=='tool.completed' and e['data']['name']=='daily_briefing')
                             safe_text=answer_evidence.describe_briefing(snapshot)
                             if any(e['event'] in ('tool.completed','tool.failed') and e['data']['name'] in answer_evidence.ACTION_TOOLS for e in run.events):
                                 safe_text+='\n'+answer_evidence.action_guard('I completed the requested actions.',run.events)
-                        else:safe_text=answer_evidence.action_guard(safe_text,run.events)
-                        safe_text = providers.BACKUP_NOTE.sub('', safe_text)  # only the Core may say which provider answered
+                            safe_text = offline_answers.OFFLINE_NOTE.sub('', providers.BACKUP_NOTE.sub('', safe_text))  # only the Core may say who answered
+                        else:safe_text=self.claim_checks(run, response.get('content') or '')
                         answer += safe_text
                         if safe_text: run.emit('assistant.delta', {'text': safe_text})
                     if (screen_observation or (vision and getattr(run,'wearable',False))) and calls:
@@ -1152,6 +1266,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, self.app.permissions_listing())
             if path == '/api/devices':
                 return self.send(200, self.app.devices_listing())
+            if path == '/api/offline-answers':
+                return self.send(200, {**offline_answers.status(), 'enabled': bool(self.app.store.settings().get('offline_answers', True))})
+            if path == '/api/auto-backup':
+                if self.app.auto_backup is None:
+                    return self.send(404, {'error': 'Unknown endpoint.'})
+                return self.send(200, self.app.auto_backup.status())
             if path == '/api/metrics':
                 with self.app.lock:
                     timings = list(self.app.timings)
@@ -1322,6 +1442,8 @@ class Handler(BaseHTTPRequestHandler):
                 result = self.app.set_permission(body.get('tool'), body.get('mode'))
             elif path == '/api/devices':
                 result = self.app.devices_action(body)
+            elif path == '/api/auto-backup':
+                result = self.app.auto_backup_action(body)
             elif path == '/api/settings':
                 result = self.app.store.save_settings(body)
             elif path == '/api/item':
@@ -1350,10 +1472,18 @@ class Handler(BaseHTTPRequestHandler):
             elif path == '/api/approval':
                 result = self.app.approve(body.get('id'), body.get('approved'))
             elif path == '/api/recovery':
-                if set(body)-{'action','id'}: raise ValueError('Unknown recovery fields.')
+                if set(body)-{'action','id','where'}: raise ValueError('Unknown recovery fields.')
                 operation=body.get('action')
                 if operation not in ('list','create','rehearse','restore'):raise ValueError('Unknown recovery operation.')
-                service=recovery.Recovery(ROOT,self.app.store.root,recovery.default_folder(ROOT,self.app.store.root))
+                if body.get('where') not in (None,'automatic'):raise ValueError('Unknown backup place.')
+                if body.get('where')=='automatic':
+                    # The folder of the automatic backups (auto_backup.py): they are listed, test-restored and
+                    # recovered like the others. A new backup there is made with BACK UP NOW, not from here.
+                    chosen=self.app.auto_backup.state()['folder'] if self.app.auto_backup else ''
+                    if operation=='create' or not chosen or not Path(chosen).is_dir():raise ValueError('The folder of the automatic backups is not chosen or not reachable.')
+                    service=recovery.Recovery(ROOT,self.app.store.root,str(Path(chosen)/auto_backup.SUBFOLDER))
+                else:
+                    service=recovery.Recovery(ROOT,self.app.store.root,recovery.default_folder(ROOT,self.app.store.root))
                 try:
                     if operation=='list': result=service.listing()
                     elif operation=='create': result=service.create()
@@ -1456,6 +1586,25 @@ class Handler(BaseHTTPRequestHandler):
             self.send(500, {'error': 'Local operation failed. No success was assumed.'})
 
 
+def start_auto_backups(app, first=120, every=60, stop=None):
+    """A quiet clock in the Core: about once a minute it asks whether an automatic backup is due, and makes it
+    when JARVIS is idle. Nothing happens until the owner has chosen a folder (auto_backup.due). `stop` ends it."""
+    if app.auto_backup is None:
+        return None
+    stop = stop or threading.Event()
+    def clock():
+        wait = first  # let JARVIS start up first
+        while not stop.wait(wait):
+            wait = every
+            try:
+                app.auto_backup.run_if_due()
+            except Exception:
+                pass  # a failed look is not worth stopping the clock for; run() records its own failures
+    thread = threading.Thread(target=clock, name='automatic-backups', daemon=True)
+    thread.start()
+    return thread
+
+
 def main():
     if _stage4_context is not None:
         raise RuntimeError('Stage 4 lifecycle is owned by its isolated runtime, not server.main.')
@@ -1487,6 +1636,7 @@ def main():
     origin = f'http://127.0.0.1:{server.server_port}'
     from wearables.service import publish_connection
     wearable_connection = publish_connection(server)
+    start_auto_backups(server.app)
     if os.getenv('JARVIS_DESKTOP_TOKEN'):
         # Windows native numeric imports must precede the blocking stdin reader.
         try:
