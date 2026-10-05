@@ -33,7 +33,8 @@ function Failure($err) {
               $detail = (@($j.error.code, $j.error.type, $j.error.status, $j.error.message, $j.code, $j.message) | Where-Object { $_ } | Select-Object -Unique) -join ': ' } catch { }
     } else { $detail = $err.Exception.Message }
     # Providers echo part of a rejected key in their message: never show it.
-    $detail = [regex]::Replace($detail, '(?i)(provided:\s*)\S+', '$1(hidden)'); $detail = [regex]::Replace($detail, '(?i)\b(sk|gsk|AIza)[-_A-Za-z0-9*]{6,}', '(hidden)')
+    foreach ($name in 'OPENAI_API_KEY', 'DASHSCOPE_API_KEY') { if ($values[$name] -and $values[$name].Length -ge 8) { $detail = $detail.Replace($values[$name], '(hidden)') } }
+    $detail = [regex]::Replace($detail, '(?i)(provided:\s*)\S+', '$1(hidden)'); $detail = [regex]::Replace($detail, '(?i)\b(sk|gsk|AIza)[-_A-Za-z0-9*.]{6,}', '(hidden)')
     # Groq names the organisation in a size refusal: not needed here.
     $detail = [regex]::Replace($detail, '(?i)in organization `?[A-Za-z0-9_]+`?', 'in your organisation')
     if ($detail.Length -gt 400) { $detail = $detail.Substring(0, 400) + '...' }
@@ -44,7 +45,9 @@ $providers = @(
     @{ name = 'openai'; key = 'OPENAI_API_KEY'; url = 'https://api.openai.com/v1/chat/completions'; model = (Pick 'OPENAI_MODEL' 'gpt-4o-mini') },
     @{ name = 'qwen'; key = 'DASHSCOPE_API_KEY'; url = ($qwenBase + '/chat/completions'); model = (Pick 'QWEN_MODEL' 'qwen3.8-max') }
 )
-if (-not ([Uri]$qwenBase).Host.EndsWith('.aliyuncs.com')) { $providers = @($providers | Where-Object { $_.name -ne 'qwen' }); Write-Host 'qwen: skipped (DASHSCOPE_BASE_URL is not a Model Studio address)' }
+# As in providers.py: the Qwen key is only ever sent to an https Alibaba Cloud address.
+$qwenUri = $null
+if (-not ([Uri]::TryCreate($qwenBase, [UriKind]::Absolute, [ref]$qwenUri) -and $qwenUri.Scheme -eq 'https' -and $qwenUri.Host.EndsWith('.aliyuncs.com', [StringComparison]::Ordinal))) { $providers = @($providers | Where-Object { $_.name -ne 'qwen' }); Write-Host 'qwen: skipped (DASHSCOPE_BASE_URL is not an https Model Studio address)' }
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 Write-Host "Key file: $EnvFile"
 Write-Host ("JARVIS is set to use: {0}" -f (Pick 'JARVIS_PROVIDER' 'openai (no JARVIS_PROVIDER line: the default from 1.0.15; 1.0.14 and older used groq)'))

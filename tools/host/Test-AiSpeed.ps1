@@ -12,8 +12,10 @@ exactly as Test-AiKeys.ps1 builds them (JARVIS's own instructions and its 45 too
 Before timing, each model gets one unmeasured request, so that every timed request starts from the same warm state
 (providers keep repeated instructions ready for a few minutes, as they do while JARVIS is in use). About 11 requests;
 expected cost well under one US dollar, most of it OpenAI. Each line is one request and one sample: times vary from
-run to run, and a real question that uses a tool needs two requests. Images (screen analysis) are not measured.
-Keys are never printed or stored. Changes nothing.
+run to run. Real questions are larger (recent conversation, saved facts, your own personality text) and one that uses
+a tool needs a second request, so these times are a lower bound. Like JARVIS, every request uses a new connection
+and is given up after 120 seconds. Images (screen analysis) are not measured. Keys are never printed or stored.
+Changes nothing.
 #>
 param(
     [string] $EnvFile = (Join-Path $env:LOCALAPPDATA 'JARVIS\config\.env')
@@ -38,13 +40,19 @@ function Failure($err) {
               $detail = (@($j.error.code, $j.error.type, $j.error.status, $j.error.message, $j.code, $j.message) | Where-Object { $_ } | Select-Object -Unique) -join ': ' } catch { }
     } else { $detail = $err.Exception.Message }
     # Providers echo part of a rejected key in their message: never show it.
-    $detail = [regex]::Replace($detail, '(?i)(provided:\s*)\S+', '$1(hidden)'); $detail = [regex]::Replace($detail, '(?i)\b(sk|gsk|AIza)[-_A-Za-z0-9*]{6,}', '(hidden)')
+    foreach ($name in 'OPENAI_API_KEY', 'DASHSCOPE_API_KEY') { if ($values[$name] -and $values[$name].Length -ge 8) { $detail = $detail.Replace($values[$name], '(hidden)') } }
+    $detail = [regex]::Replace($detail, '(?i)(provided:\s*)\S+', '$1(hidden)'); $detail = [regex]::Replace($detail, '(?i)\b(sk|gsk|AIza)[-_A-Za-z0-9*.]{6,}', '(hidden)')
     if ($detail.Length -gt 300) { $detail = $detail.Substring(0, 300) + '...' }
     [pscustomobject]@{ status = $status; detail = $detail }
 }
 $qwenBase = (Pick 'DASHSCOPE_BASE_URL' 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1').TrimEnd('/')
-$qwenAllowed = ([Uri]$qwenBase).Host.EndsWith('.aliyuncs.com')
+# As in providers.py: the Qwen key is only ever sent to an https Alibaba Cloud address.
+$qwenUri = $null
+$qwenAllowed = [Uri]::TryCreate($qwenBase, [UriKind]::Absolute, [ref]$qwenUri) -and $qwenUri.Scheme -eq 'https' -and $qwenUri.Host.EndsWith('.aliyuncs.com', [StringComparison]::Ordinal)
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+# JARVIS opens a new connection for every request and never sends "Expect: 100-continue": do the same, so that
+# every line pays what JARVIS pays (see -DisableKeepAlive below).
+[Net.ServicePointManager]::Expect100Continue = $false
 $system = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'jarvis-request-system.txt'))
 $toolsJson = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'jarvis-request-tools.json'))
 $responsesTools = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'jarvis-request-tools-responses.json'))
@@ -62,7 +70,7 @@ Write-Host "Key file: $EnvFile"
 Write-Host ("JARVIS is set to use: {0}" -f (Pick 'JARVIS_PROVIDER' 'openai (no JARVIS_PROVIDER line)'))
 if (-not $values['OPENAI_API_KEY']) { Write-Host 'openai  no key in the file' }
 if (-not $values['DASHSCOPE_API_KEY']) { Write-Host 'qwen    no key in the file' }
-elseif (-not $qwenAllowed) { Write-Host 'qwen    skipped (DASHSCOPE_BASE_URL is not a Model Studio address)' }
+elseif (-not $qwenAllowed) { Write-Host 'qwen    skipped (DASHSCOPE_BASE_URL is not an https Model Studio address)' }
 if (-not $choices.Count) { Write-Host 'Nothing to measure.'; exit 0 }
 
 function Ask($choice, $question) {
@@ -89,12 +97,15 @@ function Ask($choice, $question) {
     }
     $clock = [Diagnostics.Stopwatch]::StartNew()
     try {
-        $r = Invoke-RestMethod -Method Post -Uri $url -Headers @{ Authorization = "Bearer $key" } -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($body)) -TimeoutSec 180
+        # 120 s is where JARVIS itself gives up on a request.
+        $r = Invoke-RestMethod -Method Post -Uri $url -Headers @{ Authorization = "Bearer $key" } -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($body)) -TimeoutSec 120 -DisableKeepAlive
         $clock.Stop()
     } catch {
         $clock.Stop()
         $failure = Failure $_
-        return [pscustomobject]@{ ok = $false; seconds = $clock.Elapsed.TotalSeconds; note = ("REFUSED: HTTP {0} {1}" -f $failure.status, $failure.detail) }
+        $word = $(if ($failure.status -in 401, 403, 404) { 'REFUSED' } else { 'FAILED' })
+        $note = $(if ($failure.status) { "{0}: HTTP {1} {2}" -f $word, $failure.status, $failure.detail } else { "NO ANSWER after {0:N0} s: {1}" -f $clock.Elapsed.TotalSeconds, $failure.detail })
+        return [pscustomobject]@{ ok = $false; failed = $true; status = $failure.status; seconds = $clock.Elapsed.TotalSeconds; note = $note }
     }
     if ($responses) {
         $asked = @($r.output | Where-Object { $_.type -eq 'function_call' } | ForEach-Object { $_.name }) -join ', '
@@ -116,7 +127,7 @@ function Ask($choice, $question) {
     # Thinking: the provider's own count when it reports one; otherwise whether thinking text came back.
     $thought = $(if ($null -ne $think) { "$think of them thinking" } elseif ($thoughtText) { 'thinking text returned, not counted' } else { 'no thinking reported' })
     $tokens = "$in tokens in" + $(if ($null -ne $cached) { " ($cached reused)" } else { '' }) + ", $out out, $thought"
-    [pscustomobject]@{ ok = ($complete -and ($asked -or $words)); seconds = $clock.Elapsed.TotalSeconds; note = "$what [$tokens]" }
+    [pscustomobject]@{ ok = [bool]($complete -and ($asked -or $words)); failed = $false; status = 200; seconds = $clock.Elapsed.TotalSeconds; note = "$what [$tokens]" }
 }
 
 $questions = @(
@@ -125,24 +136,30 @@ $questions = @(
 )
 Write-Host ''
 Write-Host 'Getting ready: one unmeasured request per model...'
-$refused = @{}
+$warmed = @{}; $refused = @{}
 foreach ($c in $choices) {
     $id = $c.provider + '|' + $c.model
-    if ($refused.ContainsKey($id) -or $refused.ContainsKey($id + '|ok')) { continue }
+    if ($warmed.ContainsKey($id)) { continue }
+    $warmed[$id] = $true
     $warm = Ask $c $questions[0].text
-    if ($warm.ok) { $refused[$id + '|ok'] = $true; Write-Host ("  {0,-7} {1}: ready" -f $c.provider, $c.model) }
-    else { $refused[$id] = $warm.note; Write-Host ("  {0,-7} {1}: {2}" -f $c.provider, $c.model, $warm.note) }
+    # Only a refused key or model (401, 403, 404) rules the model out; after anything else it is still measured.
+    if ($warm.ok) { Write-Host ("  {0,-7} {1}: ready" -f $c.provider, $c.model) }
+    elseif ($warm.status -in 401, 403, 404) { $refused[$id] = $true; Write-Host ("  {0,-7} {1}: {2}" -f $c.provider, $c.model, $warm.note) }
+    else { Write-Host ("  {0,-7} {1}: {2} (measuring it anyway)" -f $c.provider, $c.model, $warm.note) }
 }
 foreach ($q in $questions) {
     Write-Host ''
     Write-Host $q.title
     foreach ($c in $choices) {
         $id = $c.provider + '|' + $c.model
-        if ($refused.ContainsKey($id)) { Write-Host ("  {0,-7} {1,-40} not measured (see above)" -f $c.provider, $c.label); continue }
+        if ($refused.ContainsKey($id)) { Write-Host ("  {0,-7} {1,-40} not measured (refused above)" -f $c.provider, $c.label); continue }
         $result = Ask $c $q.text
-        Write-Host ("  {0,-7} {1,-40} {2,6:N1} s   {3}" -f $c.provider, $c.label, $result.seconds, $result.note)
+        # A request that failed has no time worth comparing: show "--", not a number that looks fast.
+        $time = $(if ($result.failed) { '    --  ' } else { '{0,6:N1} s' -f $result.seconds })
+        Write-Host ("  {0,-7} {1,-40} {2}   {3}" -f $c.provider, $c.label, $time, $result.note)
     }
 }
 Write-Host ''
-Write-Host 'Each line is one request, one sample. A real question that uses a tool needs two requests.'
+Write-Host 'Each line is one request, one sample. Real questions are larger (they also carry your recent conversation and'
+Write-Host 'saved facts) and a question that uses a tool needs a second request, so real replies take longer than these.'
 Write-Host 'Send Claude a photo of this window.'
