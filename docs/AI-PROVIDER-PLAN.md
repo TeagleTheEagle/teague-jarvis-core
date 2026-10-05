@@ -87,6 +87,15 @@ month** in Alibaba Cloud billing; raise it once you know your real use.
   `cache_control` for caching). Also reachable through OpenRouter. Not started; the owner decides. The owner created a
   key (scope: default workspace, expires 2027-10-05) and placed it in the key file as `ANTHROPIC_API_KEY` ("KEY
   SAVED", 2026-10-05); no credits yet (Evaluation access plan). Claude never reads it.
+- **Decision (owner, 2026-10-05, same afternoon):** first "claude replaces" (Qwen as the brain), then "Through
+  OpenRouter", then **"Actually i'll just use the openai one then when qwen is up i'll fully switch to qwen".** Now:
+  OpenAI as a stopgap (owner adds credits, sets `JARVIS_PROVIDER=openai`; the key file's model is `gpt-6-astra`, about
+  20 cents a question), then Qwen. No Claude or OpenRouter provider is being built; the started OpenRouter edits were
+  discarded uncommitted. Notes if it comes back: OpenRouter model ids `anthropic/claude-opus-5.5`,
+  `anthropic/claude-sonnet-5.5`; with tool calls the assistant message must carry `reasoning_details` back unmodified;
+  Claude caching needs top-level `cache_control` or a marker in a content part; errors 402 credits, 403 guardrail /
+  moderation / key limit, 502/503 provider unavailable, and errors after the headers arrive as HTTP 200 with an `error`
+  field. The saved `ANTHROPIC_API_KEY` is unused (the owner may disable it in the Claude Console).
 - **Voice (owner, 2026-10-05): "i want to use qwen now not fish auido".** Already built, no release needed: the key
   file needs `QWEN_TTS_VOICE=<cloned voice ID>` (and `QWEN_TTS_MODEL` only if the voice was enrolled for a model other
   than `qwen3-tts-vc-2026-01-22`), then Settings > VOICE PREVIEW > "Qwen — cloned JARVIS voice" > USE THIS VOICE. A
