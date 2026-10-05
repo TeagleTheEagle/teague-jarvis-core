@@ -21,7 +21,7 @@ MAX_CAPTURES = 6
 STATIC = ('index.html','app.js','voice.js','style.css','pro.css','gallery.css',
           'diagrams.js','workspaces.js','reliability.js','reliability.css',
           'latency.js','voice-core.js','teague.js','teague.css','maps.js','maps.css','recovery.js','voice-preview.js','inspection-client.js','desktop-updates.js','assistant-controls.js',
-          'command-dashboard.js','command-dashboard.css','horizon.js','horizon.css','world-map.js',
+          'command-dashboard.js','command-dashboard.css','horizon.js','horizon.css','world-map.js','markdown-view.js',
           'assets/branding/teague/teague-mark.svg','assets/branding/teague/jarvis-mark.svg')
 # test_inspection_browser.py keeps this list in step with the files index.html loads.
 # PC readings are not part of an inspection snapshot: the dashboard shows them as not read.

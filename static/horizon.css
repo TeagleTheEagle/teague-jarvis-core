@@ -95,6 +95,29 @@ html.hz body .message{border-radius:10px}
 html.hz body dialog{border:1px solid var(--hz-line);border-radius:12px;background:#061423f7;box-shadow:0 24px 70px #000c,0 0 30px #0a6fd033}
 html.hz body dialog::backdrop{background:#01050bcc;backdrop-filter:blur(3px)}
 
+/* Formatted replies (markdown-view.js). The paragraph app.js writes to stays in the page for screen readers and for
+   app.js itself; it is only taken out of sight. */
+.message.assistant>p.md-source{position:absolute!important;width:1px!important;height:1px!important;margin:-1px!important;padding:0!important;overflow:hidden!important;
+ clip-path:inset(50%);white-space:nowrap!important;border:0!important}
+.md-view{margin-top:7px;font-size:15px;line-height:1.7;overflow-wrap:anywhere}
+.md-view>*{margin:0 0 .75em!important}.md-view>*:last-child{margin-bottom:0!important}
+.md-view p,.md-view blockquote{white-space:normal!important;font-size:inherit!important;line-height:inherit!important}
+.md-view h4{font-family:var(--sans,'Segoe UI',Arial,sans-serif);font-weight:600;letter-spacing:.02em;color:#f3f8fc;line-height:1.35}
+.md-view .md-h1{font-size:19px}.md-view .md-h2{font-size:17px}.md-view .md-h3{font-size:15.5px;color:#cfe6f7}
+.md-view ul,.md-view ol{padding-left:1.7em;display:grid;gap:.4em;list-style-position:outside}.md-view ul{list-style-type:disc}.md-view ol{list-style-type:decimal}
+.md-view .md-indent{margin-left:1.4em!important}
+.md-view li{display:list-item}.md-view li::marker{color:#5cc8ff;font-weight:600}
+.md-view strong{font-weight:600;color:#fff}.md-view em{font-style:italic}
+.md-view code{font:13px var(--ti-mono,Consolas,monospace);padding:1px 5px;border:1px solid #2f8fdc40;border-radius:4px;background:#0a2038}
+.md-view pre{padding:11px 13px;border:1px solid #2f8fdc40;border-radius:8px;background:#04101d;overflow:auto;line-height:1.5}
+.md-view pre code{padding:0;border:0;background:none;white-space:pre}
+.md-view blockquote{padding-left:13px;border-left:2px solid #38b6ff;color:#b8cde0}
+.md-view hr{height:0;border:0;border-top:1px solid #2f8fdc40}
+.md-view .md-link{color:#7fd4ff;border-bottom:1px dotted #7fd4ff80;cursor:help}
+.md-view[data-activity]:not([data-activity=""]):after{content:attr(data-activity);display:block;margin-top:10px;padding-left:12px;border-left:2px solid #5cc8ff;
+ color:#5cc8ff;font:12px var(--ti-mono,Consolas,monospace);letter-spacing:.08em;text-transform:uppercase;animation:jarvisPulse 1.2s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.md-view[data-activity]:after{animation:none!important}}
+
 /* Footer */
 html.hz body footer{background:#030b16cc;border-top:1px solid var(--hz-line);letter-spacing:.2em;color:#8aa6c0}
 

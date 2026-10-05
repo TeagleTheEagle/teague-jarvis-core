@@ -5,3 +5,4 @@ for(const text of ['How do I open projects?','open projects and delete them','op
 console.log('Navigation commands and non-navigation exclusions passed.');
 
 for(const input of ['Can you open Projects?', 'Hey Jarvis, could you please go from the command page to projects?', 'switch from command to the projects page', 'navigate to projects'])assert.equal(nav.destination(input),'projects',input);
+for(const [input,want] of [['open dashboard','command'],['Hey Jarvis, open the activity log','mission'],['show me release history','changes'],['open chat','communications'],['go to tasks','focus'],['go from the dashboard to projects','projects']])assert.equal(nav.destination(input),want,input);
