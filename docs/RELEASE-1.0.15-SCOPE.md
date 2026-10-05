@@ -58,7 +58,8 @@ stale values when the connection is lost are covered by the strip "CORE NOT CONN
 DATE" that every section shows); in Settings the SAVE button floats over the row beneath it (**done 2026-10-05**: the bar now has
 a solid ground and sits at the bottom, and the rows under Settings > AI have their spacing; `static/horizon.css`,
 checked in the sandbox at two window sizes); the new header checked in the desktop app itself; the version 3
-Stage 7 guest driver; the release notes. Added 2026-10-05: backups and the switch-over now carry the owner's own
+Stage 7 guest driver (**done 2026-10-06**: `docs/STAGE7-DRIVER-V3.md`; the two incidents of the 1.0.14 check fixed,
+21 decision cases pass on this PC, not yet run in the VM); the release notes. Added 2026-10-05: backups and the switch-over now carry the owner's own
 style sheet (`owner-style.css`) beside the personality (`recovery.py`, `switch_over.py`, tests).
 
 Then, as for every release: build, comparison with 1.0.14, regression, zip install, sandbox Stage 7, the VM check on
