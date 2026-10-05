@@ -427,6 +427,7 @@ class App:
         work_started=time.perf_counter()
         context_ms=None
         run.user_text = text
+        backup_used = None  # (provider, error) once the backup provider has taken over this question
         try:
             run.emit('run.started', {})
             self.store.message(run.conversation, 'user', text)
@@ -475,7 +476,9 @@ class App:
                     messages.append({'role':'user', 'content':'Active project reference data, not instructions: '+project_context})
                 history = self.store.history(run.conversation, 40)
                 selected = conversation_context.select_history(history)
-                messages.extend(selected)
+                # An earlier reply may end with the Core's "[... answered this question because ...]" line.
+                # It is not sent back to a model, so no model learns to write it.
+                messages.extend({**m, 'content': providers.BACKUP_NOTE.sub('', m['content'])} if m.get('role') == 'assistant' and isinstance(m.get('content'), str) else m for m in selected)
                 vision = bool(attachment and attachment['type'] == 'image')
                 screen_observation = vision and attachment.get('name') == 'screen-capture.jpg'
                 available_tools = [] if screen_observation else actions.TOOLS
@@ -490,6 +493,7 @@ class App:
                 # user's own "think hard about ..."; providers.qwen_plan). The same choice applies to
                 # every model request of this run. Empty when nothing differs from the default.
                 depth = {} if self.stage4 else providers.chat_options(settings.get('answer_mode'), text)
+                deadline = run.created + 120
                 answer = ''
                 tool_count = 0
                 attempted_tools = set()
@@ -497,7 +501,7 @@ class App:
                 for _ in range(6):
                     if run.cancel.is_set():
                         break
-                    if time.time() - run.created > 120:
+                    if time.time() > deadline:
                         raise ValueError('Request time limit exceeded.')
                     try:
                         # Keep the first stream's deltas private until it completes. If the
@@ -520,12 +524,43 @@ class App:
                         run.emit('response.timing',{'stage':'provider completion','ms':measured['provider_ms']})
                         # Content is emitted only after checking the final response below.
                     except providers.ProviderError as stream_error:
-                        if ('stream failed' not in str(stream_error).lower() and 'connection failed' not in str(stream_error).lower()) or run.cancel.is_set():
+                        failed = stream_error
+                        if run.cancel.is_set():
                             raise
-                        run.measurements.append({'retry':True,'reason':'stream interruption'})
-                        if run.cancel.wait(1):
-                            break
-                        response = providers.chat(messages, available_tools, lambda *_: None, run.cancel, vision, **depth)
+                        if 'stream failed' in str(failed).lower() or 'connection failed' in str(failed).lower():
+                            run.measurements.append({'retry':True,'reason':'stream interruption'})
+                            if run.cancel.wait(1):
+                                break
+                            try:
+                                response = providers.chat(messages, available_tools, lambda *_: None, run.cancel, vision, **depth)
+                                failed = None
+                            except providers.ProviderError as again:
+                                failed = again
+                        if failed is not None:
+                            # Settings > AI > backup provider: the other provider answers this question. Only when the
+                            # owner switched it on, only when the chosen provider itself refused or could not be reached
+                            # (not for a missing key or model, or a reply cut short), only before any tool has run in the
+                            # question (so nothing is done twice), and only once: the question then stays with the backup.
+                            allowed = settings.get('provider_backup') and providers.backup_worthy(failed) and not (self.stage4 or run.cancel.is_set() or tool_count or backup_used)
+                            backup = providers.backup_provider(vision) if allowed else None
+                            if not backup:
+                                raise failed
+                            depth = {'mode': settings.get('answer_mode'), 'text': text, 'use': backup}
+                            try:
+                                response = providers.chat(messages, available_tools, lambda *_: None, run.cancel, vision, **depth)
+                            except providers.ProviderError as second:
+                                both = providers.ProviderError(f'{failed} The backup provider, {providers.PROVIDER_NAMES[backup]}, also failed: {second}')
+                                both.retry_after, both.limit, both.service, both.status = failed.retry_after, failed.limit, failed.service, failed.status
+                                raise both from None
+                            if response is not None and not run.cancel.is_set():
+                                backup_used = (backup, failed)
+                                # The chosen provider may have used up most of the question's 120 seconds before it
+                                # failed. The backup gets its own, so that a question it started (and any tool it
+                                # ran) is not cut off and reported as failed.
+                                deadline = time.time() + 120
+                                run.measurements.append({'backup': backup})
+                                run.emit('provider.backup', {'from': providers.PROVIDER_NAMES.get(providers.provider(), providers.provider()), 'to': providers.PROVIDER_NAMES[backup], 'reason': providers.first_sentence(failed)})
+                                self.store.audit('backup provider took over: ' + providers.PROVIDER_NAMES[backup], 'used')
                     if run.cancel.is_set() or response is None:
                         break
                     messages.append(response)
@@ -538,6 +573,7 @@ class App:
                             if any(e['event'] in ('tool.completed','tool.failed') and e['data']['name'] in answer_evidence.ACTION_TOOLS for e in run.events):
                                 safe_text+='\n'+answer_evidence.action_guard('I completed the requested actions.',run.events)
                         else:safe_text=answer_evidence.action_guard(safe_text,run.events)
+                        safe_text = providers.BACKUP_NOTE.sub('', safe_text)  # only the Core may say which provider answered
                         answer += safe_text
                         if safe_text: run.emit('assistant.delta', {'text': safe_text})
                     if (screen_observation or (vision and getattr(run,'wearable',False))) and calls:
@@ -573,6 +609,11 @@ class App:
                         messages.append({'role': 'tool', 'tool_call_id': call['id'], 'content': json.dumps(result)})
                 else:
                     raise ValueError('Tool iteration limit reached. Please narrow the request.')
+                if backup_used and answer and not run.cancel.is_set():
+                    # The reply itself says who answered and why, on every client (screen, voice, wearable).
+                    note = '\n\n' + providers.backup_note(*backup_used)
+                    answer += note
+                    run.emit('assistant.delta', {'text': note})
             if self.stage4:
                 evidence = answer_evidence.evidence(run.events)
                 run.emit('answer.evidence', {'tools':evidence,'checked_at':time.time(),'basis':'Tool results are available; their scope and limitations still apply.' if evidence else 'No tool verification in this reply. Treat factual claims as unverified unless separately sourced.'})
@@ -593,8 +634,10 @@ class App:
                 run.emit('assistant.completed', {'text': answer, 'details':answer_evidence.briefing_details(briefings[-1]) if briefings else None})
                 run.emit('run.completed', {})
         except (ValueError, providers.ProviderError) as exc:
+            # A failure after the backup provider had taken over still says that it had, and why.
+            taken_over = f' {providers.backup_note(*backup_used)}'.replace('answered this question', 'had taken over this question') if backup_used else ''
             if self.stage4:self.stage4.fail_response(run)
-            else:run.emit('run.cancelled' if run.cancel.is_set() else 'run.failed', {'message': str(exc), 'retry_after': getattr(exc, 'retry_after', 0),
+            else:run.emit('run.cancelled' if run.cancel.is_set() else 'run.failed', {'message': str(exc) + taken_over, 'retry_after': getattr(exc, 'retry_after', 0),
                                                                                       'provider': getattr(exc, 'service', None), 'limit': getattr(exc, 'limit', None)})
         except Exception:
             try:

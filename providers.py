@@ -20,6 +20,7 @@ class ProviderError(Exception):
     status = None    # the provider's HTTP status, when it answered
     limit = None     # 'rate' (temporary: waiting helps) or 'billing' (credits, quota or bill: it does not)
     service = None   # which provider answered
+    unreachable = False  # the provider could not be reached at all (network, DNS, timeout)
 
 
 AI_PROVIDERS = ('openai', 'qwen')  # Groq, Gemini and ElevenLabs were removed in 1.0.15 (owner decision 2026-10-05)
@@ -144,7 +145,9 @@ def request(url, data=None, headers=None, method=None, raw=False, timeout=35):
             detail = 'Connection timed out. Try again shortly.'
         else:
             detail = 'Connection failed. Check internet access and provider availability.'
-        raise ProviderError(prefix + detail) from None
+        error = ProviderError(prefix + detail)
+        error.unreachable, error.service = True, service
+        raise error from None
     except ValueError:
         raise ProviderError(prefix + 'Invalid response received from provider.') from None
 
@@ -166,6 +169,7 @@ def capabilities(mode=None):
                       vision=configured and bool(os.getenv('OPENAI_VISION_MODEL', 'gpt-4o-mini')))
     else:
         result.update(brain=f'Unsupported provider {provider()}: use openai or qwen', model=None, vision_provider=None, vision=False)
+    result['backup'] = PROVIDER_NAMES.get(backup_provider())  # which provider could stand in, or None
     return result
 
 
@@ -226,14 +230,52 @@ def live_health(mode=None):
     return checks
 
 
-def chat(messages, tools, emit, cancel, vision=False, mode=None, text=''):
+PROVIDER_NAMES = {'openai': 'OpenAI', 'qwen': 'Qwen'}
+# The line the Core adds to a reply written by the backup provider. The same pattern removes it from
+# what goes back to a model and from anything a model writes, so that only the Core can say it.
+BACKUP_NOTE = re.compile(r'\s*\[(?:OpenAI|Qwen) answered this question because (?:OpenAI|Qwen) could not\.[^\]\n]*\]')
+
+
+def backup_provider(vision=False):
+    """The other AI provider, when its key is in place and it can take this kind of request, else
+    None. The Core uses it only when the owner has switched the backup on (Settings) and the
+    chosen provider has failed on a question in which no tool has run yet."""
+    chosen = provider()
+    if chosen == 'qwen' and os.getenv('OPENAI_API_KEY') and (not vision or os.getenv('OPENAI_VISION_MODEL', 'gpt-4o-mini')):
+        return 'openai'
+    if chosen == 'openai' and os.getenv('DASHSCOPE_API_KEY') and (not vision or os.getenv('QWEN_VISION_MODEL')):
+        return 'qwen'
+    return None
+
+
+def backup_worthy(error):
+    """True when the chosen provider itself refused the request (it answered with an HTTP error)
+    or could not be reached. A missing key or picture model, or an answer that came back cut short,
+    is not: the owner should see those, not pay a second provider because of them."""
+    return getattr(error, 'status', None) is not None or bool(getattr(error, 'unreachable', False))
+
+
+def first_sentence(error):
+    """The first sentence of one of our own error texts, without square brackets, for a short note."""
+    return re.split(r'(?<=[.!?])\s', str(error).strip(), maxsplit=1)[0].replace('[', '(').replace(']', ')')[:200]
+
+
+def backup_note(backup, error):
+    """Who answered instead of the chosen provider, and the first sentence of why."""
+    chosen = PROVIDER_NAMES.get(provider(), provider())
+    return f'[{PROVIDER_NAMES[backup]} answered this question because {chosen} could not. {first_sentence(error)}]'
+
+
+def chat(messages, tools, emit, cancel, vision=False, mode=None, text='', use=None):
     """One model request. mode (Settings > Answer speed; None means the default) and text (the
-    user's own words) only steer Qwen today: see qwen_plan()."""
+    user's own words) only steer Qwen today: see qwen_plan(). use names the provider for this one
+    request when it is not the chosen one (the backup, see backup_provider())."""
     if cancel.is_set():
         return None
-    if provider() == 'qwen':
+    chosen = use or provider()
+    if chosen == 'qwen':
         return qwen_chat(messages, tools, emit, cancel, vision, mode, text)
-    if provider() != 'openai':
+    if chosen != 'openai':
         raise unsupported_error()
     key = os.getenv('OPENAI_API_KEY')
     if not key:
