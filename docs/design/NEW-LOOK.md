@@ -89,6 +89,44 @@ behind them at any window size. Lists show whole rows only: as many as the panel
 10. Push-to-talk showed wake-word text: the voice line distinguishes hold-to-talk, listening, waiting for the wake
     word and microphone off. The dashboard padding now carries `!important` (teague.css sets `padding:0!important`).
 
+## Chat formatting and voice names (same evening)
+
+- `static/markdown-view.js`: replies show bold text, numbered lists, headings and code instead of the raw marks the
+  AI model types (the owner's screenshots showed `**...**`). The paragraph `app.js` writes to stays the source;
+  the formatted copy is built from elements and text only (reply text is never parsed as HTML; links are shown as
+  text). `test_markdown_view.cjs`.
+- "Open dashboard", "open the activity log", "show me release history" work by voice (`app.js` and
+  `static/navigation.js`), and the command search (Ctrl K) lists the sections under the names in the header.
+
+## Independent review of 5f2ed59 (one reviewer): no high finding; what was done
+
+What may be claimed on screen now lives in one tested place, `static/dashboard-model.js`
+(`test_dashboard_model.cjs`): the connection state (connecting, online, checking, lost, inspection snapshot), the
+six system rows, the heading and ring, the device places and the voice line.
+
+| # | Finding | Done |
+|---|---|---|
+| 1 | Ask bar and chips dropped the question while JARVIS was busy | The text is kept, nothing is sent, a message says so |
+| 2 | Escape on the More menu also ran the global "stop JARVIS" | Escape closes the menu and goes no further |
+| 3 | Keyboard focus lost on every change of section; header jumped 10 px | One shell padding everywhere; only a section whose place changes is moved |
+| 4 | "Unknown rather than stale" had holes | `app.js` records whether and when the Core last answered; the dashboard's readings are a heartbeat; nothing heard for 25 s reads CHECKING and unknown; an inspection picture reads SNAPSHOT and invents nothing; coming back to the window asks the Core at once; the version and the strip follow the same state; the first processor reading after a pause is not shown |
+| 5 | Voice row wrong for OpenAI speech with Qwen thinking; Search always green | The Core reports `openai_voice`; search without a key is "best effort" (blue, not counted as configured); the heading reads "n OF 6 CONFIGURED" |
+| 6 | Rows cut off at the default window size | Lists show whole rows only and the link says how many more there are |
+| 7 | State by colour only; lists rebuilt every round | Row text stays for screen readers and stays visible where something needs a look; the four lights are a picture, the mode line is the text; a list is rebuilt only when its content changes |
+| 8 | Focus ring gone on tick boxes, radio buttons and sliders | The browser's ring is kept for them |
+| 9 | Tests could pass with two fixes broken | "Last reply" requires the Core's `completed` mark and a Core-level test runs one completed and one failed request; the page's files are requested one by one from the real server; the inspection list is checked for files that scripts load; the inspection answers are a tested function |
+| 10 | Desktop app: header no longer moved the window; eight sections did not fit at 1280 | The empty part of the section row is a drag area; tighter spacing with the title-bar padding. **Arithmetic and CSS only: not yet run in the desktop app** |
+| 11 | Forced styles hid states | Release history stays bare; a file dragged over the drop area lights it; the chat box keeps its thinking and listening colours |
+| 12 | Section fitting measured at the wrong times | Also measured when the right side grows; the menu is closed first |
+| 13 | Voice line and microphone button lagged or said the wake word when it was paused | The line follows the detector's real state; a change of mode shows at once |
+| 14 | Smaller items | The location label is a button that opens the existing setting; the command search knows the header's names; "Projects could not be read" instead of loading for ever; one request at a time; the waveform loop stops when the dashboard is not shown; 0% reads NOT STARTED; dead rules removed; the logo's title has its id |
+
+Left as they are, with the reason:
+- The header clock is hidden below 1500 px wide (the row is full; Windows shows a clock and the Today card has one).
+- Notices ("toasts") still appear over Quick tools for a few seconds.
+- Other sections keep their last values when the Core is lost; the strip under the header now says so in amber.
+- `command-background.png` is still named in older files and is not in the repository (nothing requests it now).
+
 ## Not done / owner may change
 
 - Weather, world map, mail and news counts: no real source, so not shown. A weather source or a calendar would be a

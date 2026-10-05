@@ -13,11 +13,12 @@ html.hz body:before{display:block!important;background:linear-gradient(180deg,#0
 html.hz body[data-page=command]:before{display:none!important}
 
 /* Header: one row. Brand, sections, command search, connection, clock. */
-html.hz body .shell{padding:0 22px}
+html.hz body .shell,html.hz body[data-page=command] .shell:has(#commandView:not(.hidden)){padding:0 22px!important}
 html.hz body .topbar{position:relative;display:grid!important;grid-template-columns:auto minmax(0,1fr) auto!important;grid-template-rows:62px!important;grid-template-areas:none!important;
  align-items:center;gap:26px;height:62px!important;min-height:62px!important;padding:0 4px!important;margin:0 0 28px!important;
  background:linear-gradient(180deg,#030b16f2,#030b16b8);border-bottom:1px solid var(--hz-line);box-shadow:0 1px 18px #0a6fd01f}
 html.hz.desktop-integrated-titlebar body .topbar{padding-right:150px!important}
+html.hz.desktop-integrated-titlebar body .topbar nav{-webkit-app-region:drag}html.hz.desktop-integrated-titlebar body .topbar nav>*{-webkit-app-region:no-drag}
 html.hz body .topbar>.brand{grid-area:1/1!important}html.hz body .topbar>nav{grid-area:1/2!important}html.hz body .topbar>.top-actions{grid-area:1/3!important}
 html.hz body .brand{gap:12px}
 html.hz body .brand>img{width:38px;height:38px;filter:drop-shadow(0 0 9px #38b6ff77)}
@@ -51,6 +52,11 @@ html.hz .ti-palette-trigger kbd{font:10px var(--ti-mono);color:#6f8ba6;border:1p
 html.hz body .connection{display:flex;align-items:center;gap:7px;font:600 9.5px var(--sans);letter-spacing:.16em;color:#b8cde0;white-space:nowrap}
 html.hz body .connection i{width:7px;height:7px;border-radius:50%;background:var(--ti-teal);box-shadow:0 0 8px var(--ti-teal)}
 html.hz body .connection.lost{color:var(--ti-amber)}html.hz body .connection.lost i{background:var(--ti-amber);box-shadow:0 0 8px var(--ti-amber)}
+html.hz body .connection.pending{color:#8aa6c0}html.hz body .connection.pending i{background:#55708a;box-shadow:none}html.hz body .connection.pending #connection{display:none}
+.hz-link-note:empty{display:none}
+.hz-warning{color:var(--ti-amber)}.hz-warning .hz-sep{color:var(--ti-amber)}.hz-strip p[hidden]{display:none}
+html.hz .ti-core-telemetry.lost span:first-child{color:var(--ti-amber)}html.hz .ti-core-telemetry.lost i{background:var(--ti-amber)!important;box-shadow:none!important}
+html.hz .ti-core-telemetry.pending i{background:#55708a!important;box-shadow:none!important}
 html.hz .ti-clock{font:12px var(--ti-mono);color:#dbe9f5;letter-spacing:.08em}
 
 /* Strip under the header */
@@ -69,7 +75,9 @@ html.hz .ti-clock{font:12px var(--ti-mono);color:#dbe9f5;letter-spacing:.08em}
 html.hz body .panel,html.hz .ti-stats,html.hz .ti-rail>section,html.hz .ti-focus-aside,html.hz .ti-settings-nav,html.hz .ti-settings-group,html.hz .ti-database-panel,
 html.hz .ti-file-inspector,html.hz .ti-recent{border:1px solid var(--hz-line)!important;border-radius:10px!important;background:var(--hz-panel)!important;
  box-shadow:0 0 26px #0a6fd014,inset 0 1px 0 #38b6ff1a!important}
-html.hz body #settingsView{border:0!important;background:none!important;box-shadow:none!important}
+html.hz body #settingsView,html.hz body #changesView{border:0!important;background:none!important;box-shadow:none!important}
+html.hz body .panel.file-drop{border-style:dashed!important}html.hz body .panel.file-drop[data-drag=true]{border-color:#7fd4ff!important;background:#0f3a63!important}
+html.hz .ti-recent{padding:14px 16px}
 html.hz .ti-save-bar{background:none!important;border-color:var(--ti-line)!important}
 html.hz .ti-stats{overflow:hidden}
 html.hz .ti-stat strong{color:#f3f8fc;font-weight:300}
@@ -89,9 +97,9 @@ html.hz body button.outline:hover,html.hz .ti-toolbar button:hover,html.hz .ti-f
 html.hz .ti-settings-nav button:hover{border-color:#7fd4ff!important;color:#fff!important;box-shadow:0 0 12px #38b6ff33}
 html.hz .ti-toolbar button[aria-pressed=true],html.hz .ti-settings-nav button[aria-current=true]{border-color:#5cc8ff!important;color:#7fd4ff!important;background:#0a2743!important}
 html.hz body input:not([type=checkbox]):not([type=radio]):not([type=range]),html.hz body textarea,html.hz body select{border-radius:8px;border-color:#2f8fdc59;background-color:#04101dcc}
-html.hz body input:focus-visible,html.hz body textarea:focus-visible,html.hz body select:focus-visible{border-color:#7fd4ff;box-shadow:0 0 0 2px #38b6ff33;outline:none}
-html.hz body .composer{border-radius:12px!important;border-color:#2f8fdc80!important;box-shadow:0 0 22px #38b6ff1f!important}
-html.hz body .message{border-radius:10px}
+html.hz body input:not([type=checkbox]):not([type=radio]):not([type=range]):focus-visible,html.hz body textarea:focus-visible,html.hz body select:focus-visible{border-color:#7fd4ff;box-shadow:0 0 0 2px #38b6ff33;outline:none}
+html.hz body .composer{border-radius:12px!important;border-color:#2f8fdc80;box-shadow:0 0 22px #38b6ff1f!important}
+html.hz body.thinking .composer{border-color:#5cc8ffb3}html.hz body.listening .composer{border-color:#7fd4ff;box-shadow:0 0 24px #38b6ff59!important}
 html.hz body dialog{border:1px solid var(--hz-line);border-radius:12px;background:#061423f7;box-shadow:0 24px 70px #000c,0 0 30px #0a6fd033}
 html.hz body dialog::backdrop{background:#01050bcc;backdrop-filter:blur(3px)}
 
@@ -118,12 +126,11 @@ html.hz body dialog::backdrop{background:#01050bcc;backdrop-filter:blur(3px)}
  color:#5cc8ff;font:12px var(--ti-mono,Consolas,monospace);letter-spacing:.08em;text-transform:uppercase;animation:jarvisPulse 1.2s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){.md-view[data-activity]:after{animation:none!important}}
 
-/* Footer */
-html.hz body footer{background:#030b16cc;border-top:1px solid var(--hz-line);letter-spacing:.2em;color:#8aa6c0}
-
 /* Narrower windows */
 @media (max-width:1500px){html.hz body .topbar{gap:16px!important}html.hz body .topbar nav>.nav,html.hz .hz-more-toggle{padding:0 8px;font-size:11px;letter-spacing:.1em}
  html.hz .ti-palette-trigger{min-width:0}.hz-search-text{display:none}html.hz .ti-clock{display:none}.hz-owner{display:none}}
-@media (max-width:1100px){html.hz body .brand-product small,html.hz body .connection span,html.hz .ti-palette-trigger kbd{display:none}html.hz body .brand-product{font-size:19px}
+@media (max-width:1500px){html.hz.desktop-integrated-titlebar .ti-palette-trigger kbd{display:none}html.hz.desktop-integrated-titlebar body .topbar nav>.nav,html.hz.desktop-integrated-titlebar .hz-more-toggle{padding:0 7px}}
+@media (max-width:1100px){html.hz body .brand-product small,html.hz body .connection:not(.lost) span,html.hz .ti-palette-trigger kbd{display:none}html.hz body .brand-product{font-size:19px}
  .hz-strip p:before,.hz-strip p:after{display:none}.hz-strip{letter-spacing:.2em}}
-@media (max-width:760px){.hz-strip{display:none}html.hz body .topbar{margin-bottom:0!important}html.hz body .shell{padding:0 10px}}
+@media (max-width:760px){.hz-strip{display:none}html.hz body .topbar{margin-bottom:0!important}
+ html.hz body .shell,html.hz body[data-page=command] .shell:has(#commandView:not(.hidden)){padding:0 10px!important}}

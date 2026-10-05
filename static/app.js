@@ -107,7 +107,7 @@ $$('dialog').forEach(d=>d.addEventListener('click',e=>{if(e.target===d){const r=
 
 async function refresh(){
   try {
-    state.data=await api('/api/state'); const d=state.data,c=d.capabilities;
+    state.data=await api('/api/state');state.connected=true;state.stateAt=Date.now(); const d=state.data,c=d.capabilities;
     const brain=String(c.brain||'').toLowerCase(),brainReady=brain.includes('configured')&&!brain.includes('not configured');
     $('#connection').textContent='LOCAL NODE ONLINE';$('#brainStatus').textContent=brainReady?'CONFIGURED':brain.startsWith('unsupported')?'CHECK PROVIDER':'AWAITING KEY';
     $('#brainStatus').classList.toggle('cyan',brainReady);$('#voiceStatus').textContent={qwen:'QWEN VOICE',fish:'FISH AUDIO',openai:'OPENAI VOICE'}[(d.settings?.voice_profile&&d.settings.voice_profile!=='auto')?d.settings.voice_profile:c.voice_provider]||'BROWSER';
@@ -123,7 +123,7 @@ async function refresh(){
     select.replaceChildren();const current=new Option('Current session',state.conversation);select.add(current);
     d.conversations.filter(x=>x.id!==state.conversation).forEach(x=>select.add(new Option(x.title||'Untitled session',x.id)));select.value=state.conversation;
     $('#footerStatus').textContent=brainReady?'AI CONFIGURED / LOCAL SERVICES READY':'LOCAL MODE / AI KEY NOT CONNECTED';
-  }catch(e){$('#connection').textContent='CONNECTION LOST';$('#footerStatus').textContent='BACKEND OFFLINE';}
+  }catch(e){state.connected=false;$('#connection').textContent='CONNECTION LOST';$('#footerStatus').textContent='BACKEND OFFLINE';}
 }
 function duration(seconds){return [Math.floor(seconds/3600),Math.floor(seconds/60)%60,Math.floor(seconds)%60].map(x=>String(x).padStart(2,'0')).join(':');}
 function renderItems(kind,selector,items){

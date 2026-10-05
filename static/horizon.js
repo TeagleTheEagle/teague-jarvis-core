@@ -1,6 +1,7 @@
 // Horizon shell (1.0.15): the owner's new look for the whole interface (docs/design/NEW-LOOK.md).
 // Presentation only: the navigation buttons, the command palette and every handler are the existing ones, moved and
-// relabelled. Nothing here invents a value: the version comes from /api/state, the sky is a drawing.
+// relabelled. Nothing here invents a value: the version comes from /api/state, the connection light follows what
+// static/dashboard-model.js makes of the last answer from the Core, and the sky is a drawing.
 (() => {
   const q = s => document.querySelector(s);
   const topbar = q('.topbar'), nav = q('.topbar nav'), shell = q('.shell');
@@ -31,17 +32,25 @@
   toggle.addEventListener('click', e => { e.stopPropagation(); openMenu(menu.hidden); });
   menu.addEventListener('click', () => openMenu(false));
   document.addEventListener('click', e => { if (!more.contains(e.target)) openMenu(false); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !menu.hidden) { openMenu(false); toggle.focus(); } });
+  // Escape closes the open menu and stops there: app.js treats Escape as "stop JARVIS", which is not what a
+  // person closing a menu means. Capture phase, so this runs before that handler.
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !menu.hidden) { e.stopPropagation(); e.preventDefault(); openMenu(false); toggle.focus(); } }, true);
   const syncMore = () => toggle.classList.toggle('active', !!menu.querySelector('.nav.active'));
   new MutationObserver(syncMore).observe(nav, {subtree: true, attributes: true, attributeFilter: ['class']});
   // A narrow window keeps one row: sections that do not fit move under MORE, and come back when there is room.
+  // Only a section whose place changes is moved, so a button that stays keeps the keyboard focus.
+  let shown = primary.length;  // how many everyday sections sit in the row
+  const overflows = () => nav.scrollWidth > nav.clientWidth + 1;
   function fit() {
-    for (const b of primary) nav.insertBefore(b, more);
-    let last = primary.length - 1;
-    while (last > 1 && nav.scrollWidth > nav.clientWidth + 1) { menu.prepend(primary[last]); last -= 1; }
+    if (!menu.hidden) openMenu(false);  // an open menu would be measured as part of the row
+    const focused = document.activeElement, before = shown;
+    while (shown > 2 && overflows()) { shown -= 1; menu.prepend(primary[shown]); }
+    // Room again: bring sections back one at a time, as many as fit.
+    while (shown >= before && shown < primary.length) { nav.insertBefore(primary[shown], more); if (overflows()) { menu.prepend(primary[shown]); break; } shown += 1; }
+    if (focused && focused !== document.activeElement && menu.contains(focused)) toggle.focus();  // its button went under MORE
     syncMore();
   }
-  new ResizeObserver(fit).observe(topbar);
+  const sizes = new ResizeObserver(fit); sizes.observe(topbar); sizes.observe(nav);  // nav: the right side can grow without the header changing size
 
   // ---- right side: command search, connection, clock ----
   const actions = q('.top-actions'), palette = q('.ti-palette-trigger');
@@ -51,32 +60,45 @@
     if (actions) actions.prepend(palette);
   }
 
-  // The connection light follows the text app.js writes (green only while the Core answers).
-  const connection = q('#connection');
-  if (connection && connection.parentElement) {
-    const syncConnection = () => connection.parentElement.classList.toggle('lost', /lost|offline/i.test(connection.textContent));
-    new MutationObserver(syncConnection).observe(connection, {childList: true, characterData: true, subtree: true}); syncConnection();
-  }
-
   // ---- strip under the header: what JARVIS is, and the running version ----
-  const strip = el('div', 'hz-strip'); const line = el('p');
+  const strip = el('div', 'hz-strip'); const line = el('p'), warning = el('p', 'hz-warning', 'CORE NOT CONNECTED'); warning.hidden = true;
   ['ONE CORE', 'MANY CAPABILITIES', 'LOCAL AND PRIVATE'].forEach((text, i) => { if (i) line.append(el('b', 'hz-sep', '//')); line.append(el('span', '', text)); });
+  warning.append(el('b', 'hz-sep', '//'), el('span', '', 'WHAT YOU SEE MAY BE OUT OF DATE'));
   const version = el('span', 'hz-version'); const owner = el('span', 'hz-owner', 'TEAGUE INDUSTRIES');
   const stripRight = el('span', 'hz-strip-right'); stripRight.append(version, owner);
-  strip.append(el('span', 'hz-strip-edge'), line, stripRight); topbar.append(strip);
-  function versionText() {
-    const updates = typeof state !== 'undefined' && state.data && state.data.updates;
-    if (!updates) return '';
-    if (updates.installed_release) return 'v' + String(updates.installed_release).split('-')[0];
-    return updates.source_revision ? 'DEV ' + String(updates.source_revision).slice(0, 7) : 'DEV';
-  }
-  const tick = () => { const text = versionText(); if (version.textContent !== text) version.textContent = text;
-    if (version.title !== (text ? 'Running release' : '')) version.title = text ? 'Running release' : ''; };
-  tick(); setInterval(tick, 3000);
+  strip.append(el('span', 'hz-strip-edge'), line, warning, stripRight); topbar.append(strip);
 
-  // ---- footer wording ----
-  const footerFirst = q('footer span:first-child'); if (footerFirst) footerFirst.lastChild.textContent = ' TEAGUE INDUSTRIES · A BRIGHTER TOMORROW';
-  const footerSecond = q('footer span:nth-child(2)'); if (footerSecond) footerSecond.textContent = 'ONE CORE · LOCAL NODE';
+  // ---- connection: one reading of the link to the Core for the light, the strip, the version and the line under
+  // the small core. Green only while the Core has been heard from recently (static/dashboard-model.js). ----
+  const model = typeof JarvisDashboardModel !== 'undefined' ? JarvisDashboardModel : null;
+  const connection = q('#connection'), light = connection && connection.parentElement;
+  const linkNote = el('span', 'hz-link-note'); if (light) light.append(linkNote);
+  const telemetry = q('.ti-core-telemetry'), telemetrySpans = telemetry ? telemetry.querySelectorAll('span') : [];
+  const linkNow = () => { const s = typeof state !== 'undefined' ? state : null, header = connection ? connection.textContent : '';
+    if (!model || !s) return /lost|offline/i.test(header) ? 'lost' : 'online';
+    return model.link({inspection: !!window.JARVIS_INSPECTION, connected: s.connected !== undefined ? s.connected : /lost/i.test(header) ? false : undefined,
+      hasData: !!s.data, busy: !!(s.busy || s.transcribing), stateAt: s.stateAt, heartbeatAt: s.heartbeatAt, now: Date.now()}); };
+  const write = (node, text) => { if (node && node.textContent !== text) node.textContent = text; };
+  let lastLink = '';
+  function tick() {
+    const link = linkNow(), live = !model || model.live(link);
+    if (link !== lastLink) { lastLink = link;
+      if (light) { light.classList.toggle('lost', link === 'lost'); light.classList.toggle('pending', link !== 'lost' && link !== 'online'); }
+      write(linkNote, link === 'online' || link === 'lost' || !model ? '' : model.LINK_TEXT[link]);
+      line.hidden = link === 'lost'; warning.hidden = link !== 'lost';
+      if (telemetry) { telemetry.classList.toggle('lost', link === 'lost'); telemetry.classList.toggle('pending', link !== 'lost' && link !== 'online');
+        if (telemetrySpans[0] && telemetrySpans[0].lastChild) write(telemetrySpans[0].lastChild, link === 'online' ? ' CORE CONNECTED' : link === 'lost' ? ' CORE NOT CONNECTED' : ' CORE ' + (model ? model.LINK_TEXT[link] : ''));
+        write(telemetrySpans[1], 'ONE CORE · LOCAL NODE'); }
+    }
+    const updates = live && typeof state !== 'undefined' && state.data && state.data.updates;
+    const text = !updates ? '' : updates.installed_release ? 'v' + String(updates.installed_release).split('-')[0] : updates.source_revision ? 'DEV ' + String(updates.source_revision).slice(0, 7) : 'DEV';
+    write(version, text); if (version.title !== (text ? 'Running release' : '')) version.title = text ? 'Running release' : '';
+  }
+  tick(); setInterval(tick, 1500);
+  if (connection) new MutationObserver(tick).observe(connection, {childList: true, characterData: true, subtree: true});
+  // Back in front after being hidden: app.js stopped asking the Core meanwhile and asks again only every 10 s.
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'visible' || window.JARVIS_INSPECTION) return;
+    if (typeof refresh === 'function' && typeof state !== 'undefined' && !state.busy) Promise.resolve(refresh()).then(tick, tick); });
 
   // ---- the sky: stars and the Earth's horizon, drawn once per window size (a drawing, not data) ----
   const sky = el('canvas', 'hz-sky'); sky.setAttribute('aria-hidden', 'true'); document.body.prepend(sky);

@@ -169,6 +169,8 @@ def _base_capabilities():
         'transcription': provider() == 'openai' and bool(os.getenv('OPENAI_API_KEY')),
         'fish': bool(os.getenv('FISH_API_KEY') and os.getenv('FISH_VOICE_ID')),
         'qwen_voice': qwen_voice_configured(),
+        # OpenAI speech needs only the OpenAI key, whichever provider does the thinking (speech() below).
+        'openai_voice': bool(os.getenv('OPENAI_API_KEY')),
         'voice_provider': 'qwen' if qwen_voice_configured() else 'fish' if os.getenv('FISH_API_KEY') and os.getenv('FISH_VOICE_ID') else 'browser',
         'search': 'SerpApi configured' if os.getenv('SERPAPI_API_KEY') else 'Brave configured' if os.getenv('BRAVE_API_KEY') else 'DuckDuckGo best effort',
         'youtube': bool(os.getenv('YOUTUBE_API_KEY')),

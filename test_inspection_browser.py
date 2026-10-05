@@ -58,6 +58,19 @@ class InspectionAssets(unittest.TestCase):
         self.assertEqual(sorted(loaded - set(inspection_runtime.STATIC)), [])
         for name in inspection_runtime.STATIC:
             self.assertTrue((static / name).is_file(), name)
+        # Pictures and stylesheets that the page's scripts load by address.
+        for script in sorted(name for name in loaded if name.endswith('.js')):
+            source = (static / script).read_text(encoding='utf-8')
+            for address in re.findall(r"""['"]/((?:assets/[\w./-]+\.(?:svg|png))|(?:[\w-]+\.css))['"]""", source):
+                if (static / address).is_file():  # an address of a file that was never shipped is not this list's concern
+                    self.assertIn(address, inspection_runtime.STATIC, f'{script} loads /{address}')
+
+    def test_the_inspected_page_gets_a_snapshot_and_no_pc_readings(self):
+        data = {'state': {'capabilities': {}}, 'messages': [], 'projects': []}
+        payloads = inspection_runtime.api_payloads(data)
+        self.assertIs(payloads['/api/state'], data['state'])
+        self.assertIs(payloads['/api/metrics'], inspection_runtime.METRICS_OMITTED)
+        self.assertTrue(inspection_runtime.METRICS_OMITTED['omitted'])
         for key in ('cpu_percent', 'memory', 'disk', 'core_uptime_seconds', 'last_response_ms'):
             self.assertIsNone(inspection_runtime.METRICS_OMITTED[key])
 

@@ -26,7 +26,7 @@ body[data-page=command] .shell:has(>#commandView:not(.hidden)) #commandView.cd-o
 .cd-r-static .edge{stroke:#2f8fdc8c;stroke-width:1}.cd-r-static .inner{stroke:#5cc8ff59;stroke-width:1;transform-origin:center;transform-box:fill-box}
 .cd-r-static .cross{stroke:#7fd4ff;stroke-width:1.5}
 .cd-r-systems path{stroke:#1d4266;stroke-width:5;stroke-linecap:round;transition:stroke .4s}
-.cd-r-systems path.ok{stroke:var(--cd-ok);filter:drop-shadow(0 0 4px #4de3c1)}.cd-r-systems path.warn{stroke:var(--cd-warn);filter:drop-shadow(0 0 4px #f0b866)}
+.cd-r-systems path.basic{stroke:#3f78b8}.cd-r-systems path.ok{stroke:var(--cd-ok);filter:drop-shadow(0 0 4px #4de3c1)}.cd-r-systems path.warn{stroke:var(--cd-warn);filter:drop-shadow(0 0 4px #f0b866)}
 .cd-r-ticks{animation:cd-spin 140s linear infinite;will-change:transform}
 .cd-r-ticks circle{stroke:#5cc8ffa6;stroke-width:9;stroke-dasharray:1.5 11.5}
 .cd-r-dash{animation:cd-spin 70s linear infinite reverse;will-change:transform}
@@ -52,6 +52,8 @@ body[data-page=command] .shell:has(>#commandView:not(.hidden)) #commandView.cd-o
 @keyframes cd-breathe{50%{opacity:.55;transform:scale(.96)}}
 @keyframes cd-ping{0%{transform:scale(1);opacity:1}100%{transform:scale(1.07);opacity:.15}}
 
+body:has(>aside[aria-label="Application update"]:not([hidden])) #commandView.cd-on{padding-bottom:86px!important}
+
 /* Side columns and panels */
 .cd-left,.cd-right{grid-row:1;align-self:stretch;display:flex;flex-direction:column;gap:10px;min-height:0;min-width:0;
  overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:#38b6ff44 transparent}
@@ -67,6 +69,7 @@ body[data-page=command] .shell:has(>#commandView:not(.hidden)) #commandView.cd-o
 .cd-panel header small{font:600 9.5px var(--sans,'Segoe UI',Arial,sans-serif);letter-spacing:.16em;color:var(--cd-ok);text-transform:uppercase;white-space:nowrap}
 .cd-panel header small:not(:empty):before{content:"";display:inline-block;width:6px;height:6px;margin-right:6px;border-radius:50%;background:currentColor;box-shadow:0 0 6px currentColor;vertical-align:1px}
 .cd-offline .cd-left .cd-panel header small,.cd-offline .cd-right .cd-panel:not(:last-child) header small{color:var(--cd-warn)}
+.cd-pending .cd-left .cd-panel header small,.cd-pending .cd-right .cd-panel:not(:last-child) header small{color:var(--cd-muted)}
 .cd-grow{flex:1 1 0;min-height:112px}.cd-fixed{flex:none}
 .cd-note{display:none;margin:8px 0 0;font-size:10px;line-height:1.45;color:var(--cd-muted);letter-spacing:.03em}
 @media (min-height:1020px){.cd-note{display:block}}
@@ -88,7 +91,9 @@ body[data-page=command] .shell:has(>#commandView:not(.hidden)) #commandView.cd-o
 .cd-eyebrow{display:block;font:600 10px var(--sans,'Segoe UI',Arial,sans-serif);letter-spacing:.24em;color:#5fb9ee}
 .cd-date{display:block;margin-top:6px;font:300 25px/1.15 var(--sans,'Segoe UI',Arial,sans-serif);color:#f3f8fc}
 .cd-daytime{display:block;margin-top:4px;font:300 15px var(--sans,'Segoe UI',Arial,sans-serif);color:#b8cde0}
-.cd-place{text-align:right;min-width:0}.cd-place b{display:block;font:400 14px var(--sans,'Segoe UI',Arial,sans-serif);color:var(--cd-text);overflow:hidden;text-overflow:ellipsis}
+.cd-place{text-align:right;min-width:0;max-width:46%;padding:0;border:0;background:none;cursor:pointer}
+.cd-place b{display:block;font:400 14px var(--sans,'Segoe UI',Arial,sans-serif);color:var(--cd-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cd-place.unset b{font-size:11px;color:#6cc7ff}.cd-place:hover b,.cd-place:focus-visible b{text-decoration:underline}.cd-place:focus-visible{outline:1px solid #7fd4ff;outline-offset:3px}
 .cd-place small{display:block;margin-top:3px;font-size:8.5px;letter-spacing:.16em;color:var(--cd-muted)}
 .cd-quote{margin:10px 0 0;max-width:60%;font:300 14px/1.4 var(--sans,'Segoe UI',Arial,sans-serif);color:#cfe0ee;text-shadow:0 1px 4px #04101d}
 .cd-quote small{display:block;margin-top:2px;font-size:10px;letter-spacing:.2em;color:#5fb9ee}
@@ -188,11 +193,12 @@ body[data-page=command] .shell:has(>#commandView:not(.hidden)) #commandView.cd-o
 .cd-systems{right:0;display:grid;gap:8px;justify-items:start;padding:10px 12px;border:1px solid var(--cd-line-soft);border-radius:10px;background:#04101dd9}
 .cd-systems-head small{display:block;font:600 9.5px var(--sans,'Segoe UI',Arial,sans-serif);letter-spacing:.24em;color:#8fb8d8}
 .cd-systems-head b{display:block;margin-top:3px;font:600 12px var(--sans,'Segoe UI',Arial,sans-serif);letter-spacing:.16em;color:var(--cd-ok)}
-.cd-systems-head b.warn{color:var(--cd-warn)}
+.cd-systems-head b.warn{color:var(--cd-warn)}.cd-systems-head b.plain{color:#cfe0ee}
 .cd-rows{list-style:none;margin:0;padding:0;display:grid;gap:8px}
 .cd-rows li{display:grid;grid-template-columns:8px auto;column-gap:8px;align-items:center;font:600 9.5px var(--sans,'Segoe UI',Arial,sans-serif);letter-spacing:.14em;text-transform:uppercase;color:#cfe0ee;white-space:nowrap}
 .cd-rows li i{width:7px;height:7px;border-radius:50%;background:var(--cd-off)}
 .cd-rows li.ok i{background:var(--cd-ok);box-shadow:0 0 7px var(--cd-ok)}.cd-rows li.warn i{background:var(--cd-warn);box-shadow:0 0 7px var(--cd-warn)}
+.cd-rows li.basic i{background:#5b9ddd}
 .cd-rows li em{grid-column:2;font:normal 8.5px var(--ti-mono,Consolas,monospace);letter-spacing:.06em;color:var(--cd-muted)}
 .cd-rows li.warn em{color:var(--cd-warn)}
 .cd-stack{position:absolute;left:0;right:0;bottom:0;z-index:1;height:37%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;text-align:center}
@@ -201,7 +207,7 @@ body[data-page=command] .shell:has(>#commandView:not(.hidden)) #commandView.cd-o
 .cd-greet{font:400 14px var(--sans,'Segoe UI',Arial,sans-serif);color:#6cc7ff}
 .cd-service{font:300 27px/1.15 var(--sans,'Segoe UI',Arial,sans-serif);color:#f3f8fc;text-shadow:0 0 22px #38b6ff55}
 .cd-mode{font:600 9.5px var(--sans,'Segoe UI',Arial,sans-serif);letter-spacing:.34em;margin-right:-.34em;color:var(--cd-ok)}
-.cd-mode.offline{color:var(--cd-warn)}
+.cd-mode.offline{color:var(--cd-warn)}.cd-mode.pending{color:var(--cd-muted)}
 .cd-wave{width:min(74%,440px);height:34px;display:block}
 .cd-voice-hint{font-size:11px;color:#a9bfd3}
 .cd-prompt{font-size:11.5px;color:#b8cde0;margin-top:4px!important}
@@ -237,7 +243,7 @@ body[data-page=command] .shell:has(>#commandView:not(.hidden)) #commandView.cd-o
  .cd-overview{grid-template-columns:1fr;gap:6px}.cd-knowledge{grid-template-columns:repeat(4,1fr)}.cd-knowledge b{font-size:18px}.cd-net{max-height:104px}
  .cd-hello{min-height:150px}.cd-legend small{display:none}
  .cd-tools button{font-size:9px;padding:8px 1px 7px}.cd-tools svg{width:19px;height:19px}
- .cd-rows li em{display:none}.cd-rows{gap:7px}.cd-meters,.cd-systems{padding:8px 9px}.cd-zone{letter-spacing:.1em}
+ .cd-rows li.ok em,.cd-rows li.basic em,.cd-rows li.off em{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}.cd-rows{gap:7px}.cd-meters,.cd-systems{padding:8px 9px}.cd-zone{letter-spacing:.1em}
  .cd-service{font-size:23px}.cd-chips button{padding:6px 12px;font-size:11px}.cd-note{display:none}
  .cd-foot-facts span:nth-of-type(-n+2),.cd-sep{display:none}}
 @media (max-height:860px){.cd-quote,.cd-note,.cd-prompt,.cd-legend{display:none}.cd-history{height:34px}.cd-hello{min-height:132px}.cd-day{height:24px}.cd-list>li{padding:6px 0}.cd-panel{padding:10px 12px}.cd-panel header{margin-bottom:7px}

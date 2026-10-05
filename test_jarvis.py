@@ -146,6 +146,22 @@ class LocalTests(unittest.TestCase):
             self.assertEqual(run.events[-1]['event'], 'run.failed')
             self.assertEqual(len(self.app.store.history('test')), 1)
 
+    def test_only_a_completed_run_counts_as_the_last_reply(self):
+        # The dashboard's "last reply" (system_metrics.snapshot) reads the Core's own record of each run.
+        import system_metrics
+        run = Run('test')
+        self.app.work(run, 'What time is it?', None)
+        self.assertIs(self.app.timings[-1]['completed'], True)
+        answered = self.app.timings[-1]['elapsed_ms']
+        with patch.dict(os.environ, {'OPENAI_API_KEY': 'test-not-a-real-key'}), patch('providers.chat', side_effect=providers.ProviderError('Test timeout')):
+            failed = Run('test')
+            self.app.work(failed, 'Explain something', None)
+        self.assertEqual(failed.events[-1]['event'], 'run.failed')
+        self.assertIs(self.app.timings[-1]['completed'], False)
+        reading = system_metrics.snapshot(self.app.store.root, self.app.started, list(self.app.timings))
+        self.assertEqual(reading['last_response_ms'], answered)
+        self.assertEqual(reading['responses_measured'], 1)
+
     def test_removed_provider_is_refused_not_answered_in_local_mode(self):
         # An old key file: JARVIS_PROVIDER=groq with only a Groq key (removed in 1.0.15).
         env = {'JARVIS_PROVIDER': 'groq', 'GROQ_API_KEY': 'test-only', 'OPENAI_API_KEY': '', 'DASHSCOPE_API_KEY': ''}
@@ -261,12 +277,19 @@ class HTTPTests(unittest.TestCase):
         self.assertEqual(error.exception.code, 404)
 
     def test_command_dashboard_is_served_and_its_readings_need_the_session(self):
-        for path in ('/command-dashboard.js', '/command-dashboard.css', '/horizon.js', '/horizon.css', '/world-map.js', '/markdown-view.js', '/assets/branding/teague/jarvis-mark.svg'):
-            with self.req(path) as response:
-                self.assertEqual(response.status, 200)
+        import re
         with self.req('/') as response:
             page = response.read().decode()
         self.assertIn('/command-dashboard.js', page)
+        # Every script, stylesheet and picture the page names is served, and so is the logo the shell script loads.
+        loaded = set(re.findall(r'<(?:script|img)[^>]*\ssrc="(/[^"]+)"', page)) | set(re.findall(r'<link[^>]*\shref="(/[^"]+)"', page))
+        for path in sorted(loaded | {'/assets/branding/teague/jarvis-mark.svg'}):
+            with self.req(path) as response:
+                self.assertEqual(response.status, 200, path)
+        for name in ('/dashboard-model.js', '/horizon.js', '/world-map.js', '/markdown-view.js'):
+            self.assertIn(name, loaded)
+        with self.req('/api/state') as response:
+            self.assertIsInstance(json.load(response)['capabilities']['openai_voice'], bool)
         with self.assertRaises(urllib.error.HTTPError) as error:
             self.req('/api/metrics', cookie=False)
         self.assertEqual(error.exception.code, 401)

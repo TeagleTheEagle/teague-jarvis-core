@@ -66,8 +66,9 @@ def disk(path):
 
 def snapshot(data_root, started, timings):
     """One reading for /api/metrics. `timings` are the Core's recent response timings (server.App.timings)."""
-    # A failed run also records a timing; only completed runs are replies (a record without the field predates it).
-    answered = [t for t in timings if not t.get('cancelled') and t.get('completed') is not False and t.get('elapsed_ms') is not None]
+    # A failed run also records a timing; only a run the Core marked completed is a reply. The mark is required: if
+    # the Core ever stopped writing it, "last reply" would read as unknown rather than quietly count failures again.
+    answered = [t for t in timings if not t.get('cancelled') and t.get('completed') is True and t.get('elapsed_ms') is not None]
     return {'sampled_at': time.time(), 'cpu_percent': cpu_percent(), 'memory': memory(), 'disk': disk(data_root),
             'core_uptime_seconds': int(time.time() - started),
             'last_response_ms': answered[-1]['elapsed_ms'] if answered else None,
