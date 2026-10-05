@@ -1,0 +1,16 @@
+{
+  "schema": "jarvis-stage7-incident-v1",
+  "check": "1.0.14-e03872680e1d",
+  "recorded_utc": "2026-10-05T02:33:59Z",
+  "observed": "The second start of stage7 in the VM (driver log 2026-10-05T02:32:38Z, outcome 'waiting for the Windows restart') said Windows had not been restarted since the install step. Photo by the owner (guest clock 1:32 PM local).",
+  "facts": [
+    "The Install phase passed at 2026-10-04T16:20:52Z (stage7-20261004-155611, all nine checks PASS); stage7-install-uptime.json recorded an uptime of 2284 s.",
+    "VBox.log: the VM was suspended at log time 00:42:15 (about 16:23Z, the host PC slept) and resumed at 09:20:16 (about 01:01Z on 2026-10-05).",
+    "VBox.log: at log time 09:33:48 the guest's services shut down in order ('Session 0 is about to close', 'Stopping all guest processes'), then at 09:33:58 'GIM: HyperV: Reset initiated through MSR' and RUNNING -> RESETTING: a restart started by Windows itself (Start > Power > Restart), about 2026-10-05T01:15:30Z; Guest Additions reported again at 09:34:14. Not a Machine > Reset from the VirtualBox menu.",
+    "Guest sign-in about 10:48:45 log time (about 02:30Z); stage7 started at 02:32:38Z, about 77 minutes (about 4,600 s) after the restart."
+  ],
+  "cause": "The restart check of the Stage 7 driver (tools/guest/stage7-v2/Invoke-Stage7Pass.ps1 lines 112-114, the same in version 1) treats 'uptime now >= uptime at the install step' as 'no restart'. Windows was restarted, but stage7 was started more than 2284 s after that restart, so the check refused. A false negative of the check, not a failed step: no phase ran, nothing changed in the VM.",
+  "next": "As the driver itself instructs: restart Windows in the VM again, sign in, connect Z: (owner decision 01), and start stage7 within about 30 minutes of the restart so the uptime check can see it. No phase is repeated (AfterRestart has not run yet).",
+  "follow_up": "Version 3 of the driver: compare a boot identifier (or the boot time recorded at install, with a clock-jump margin) instead of uptime against the install-time uptime; add a decision test for a restart followed by a long wait.",
+  "recorded_by": "Claude Code (Claude Opus 5.5)"
+}
