@@ -1,0 +1,112 @@
+live JARVIS processes at the start: 8
+===== first start: Install, then the driver asks for the Windows restart  10:08:02
+
+=== Install (1.0.15-63362929d7ad) started 10:08:02; each line below is one finished check ===
+powershell.exe : /usr/bin/whoami: extra operand '/groups'
+At C:\Users\jonny\JARVIS-claude-workspace\repo\docs\release-rehearsal-20261006-1015\rehearse-stage7-release-v3.ps1:35 
+char:12
++     $out = & powershell -NoProfile -ExecutionPolicy Bypass -File $Dri ...
++            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (/usr/bin/whoami: extra operand '/groups':String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Try '/usr/bin/whoami --help' for more information.
+E0-not-elevated                PASS
+I1-package                     PASS
+I2-extract                     PASS
+I3-install                     PASS
+I4-verify                      PASS
+I5-launch                      PASS
+I6-duplicate-core              PASS
+I7-local-stt                   PASS
+I8-restart                     PASS
+JARVIS is running. On the VM the next phase is AfterRestart, after quitting JARVIS from the tray and restarting Windows.
+stage7 Install : PASS  (D:\JARVIS-release-work\stage7-local-1.0.15\evidence\stage7-20261005-230803)
+
+The install step PASSED. JARVIS is running. Now do this:
+  1. Near the clock, right-click the JARVIS icon (click the ^ arrow if it is hidden) and choose "Quit JARVIS completely".
+  2. Start > Power > Restart.
+  3. Sign in again, wait one minute, then open this disc and double-click stage7 again.
+
+exit=0  10:11:39
+===== second start on the same start of Windows: the restart check must ask for the restart  10:11:39
+
+Windows has not been restarted since the install step. Do this now:
+  1. Near the clock, right-click the JARVIS icon (click the ^ arrow if it is hidden) and choose "Quit JARVIS completely".
+  2. Start > Power > Restart.
+  3. Sign in again, wait one minute, then open this disc and double-click stage7 again.
+
+exit=0  10:11:40
+===== third start as after a restart (-BootIdentityFile): AfterRestart, Uninstall, Update, Interrupt  10:11:40
+
+=== AfterRestart (1.0.15-63362929d7ad) started 10:11:40; each line below is one finished check ===
+powershell.exe : /usr/bin/whoami: extra operand '/groups'
+At C:\Users\jonny\JARVIS-claude-workspace\repo\docs\release-rehearsal-20261006-1015\rehearse-stage7-release-v3.ps1:35 
+char:12
++     $out = & powershell -NoProfile -ExecutionPolicy Bypass -File $Dri ...
++            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (/usr/bin/whoami: extra operand '/groups':String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Try '/usr/bin/whoami --help' for more information.
+E0-not-elevated                PASS
+R1-after-restart               PASS
+stage7 AfterRestart : PASS  (D:\JARVIS-release-work\stage7-local-1.0.15\evidence\stage7-20261005-231141)
+
+=== Uninstall (1.0.15-63362929d7ad) started 10:11:41; each line below is one finished check ===
+/usr/bin/whoami: extra operand '/groups'
+Try '/usr/bin/whoami --help' for more information.
+E0-not-elevated                PASS
+U1-uninstall                   PASS
+U2-reinstall                   PASS
+U3-final-stop                  PASS
+stage7 Uninstall : PASS  (D:\JARVIS-release-work\stage7-local-1.0.15\evidence\stage7-20261005-231141)
+
+=== Update (1.0.15-63362929d7ad) started 10:12:40; each line below is one finished check ===
+/usr/bin/whoami: extra operand '/groups'
+Try '/usr/bin/whoami --help' for more information.
+E0-not-elevated                PASS
+G1-packages                    PASS
+G2-extract-previous            PASS
+G3-previous-installed          PASS
+G4-update                      PASS
+G5-rollback                    PASS
+G6-update-again                PASS
+stage7 Update : PASS  (D:\JARVIS-release-work\stage7-local-1.0.15\evidence\stage7-20261005-231240)
+
+=== Interrupt (1.0.15-63362929d7ad) started 10:17:25; each line below is one finished check ===
+/usr/bin/whoami: extra operand '/groups'
+Try '/usr/bin/whoami --help' for more information.
+E0-not-elevated                PASS
+X0-starting-point              PASS
+X1-previous-running            PASS
+X2-killed-mid-copy             PASS
+X3-update-after-interruption   PASS
+stage7 Interrupt : PASS  (D:\JARVIS-release-work\stage7-local-1.0.15\evidence\stage7-20261005-231725)
+
+ALL STAGE 7 STEPS PASSED for 1.0.15-63362929d7ad.
+Now shut Windows down: Start > Power > Shut down. Wait until the VM window closes.
+Then, on the PC in the jarvis-s6-val account, double-click stage7-step again (it takes the snapshot) and tell Claude: stage 7 done
+
+exit=0  10:19:47
+===== fourth start: nothing left to do  10:19:47
+
+=== AfterRestart (1.0.15-63362929d7ad) started 10:19:47; each line below is one finished check ===
+powershell.exe : /usr/bin/whoami: extra operand '/groups'
+At C:\Users\jonny\JARVIS-claude-workspace\repo\docs\release-rehearsal-20261006-1015\rehearse-stage7-release-v3.ps1:35 
+char:12
++     $out = & powershell -NoProfile -ExecutionPolicy Bypass -File $Dri ...
++            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (/usr/bin/whoami: extra operand '/groups':String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Try '/usr/bin/whoami --help' for more information.
+E0-not-elevated                PASS
+R1-after-restart               FAIL
+stage7 AfterRestart : FAIL  (D:\JARVIS-release-work\stage7-local-1.0.15\evidence\stage7-20261005-231948)
+
+STOPPED: the AfterRestart phase did not pass.
+Photograph this window for Claude and wait.
+
+exit=2  10:23:48
+live JARVIS processes at the end: 8 (start: 8); sandbox processes at the end: 0

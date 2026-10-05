@@ -65,8 +65,27 @@ tests now refuse to run against a driver without `-WhatNext`.
 - **The VM.** Nothing here ran inside it. Whether the VM's Windows offers `BootId` and a readable System log is
   not known (this PC, Windows 11, offers both); if it offers neither, version 3 falls back to the old rule and
   says so on screen.
-- The line that writes `stage7-install-boot.json` runs only after a real install step. It is first exercised by
-  the sandbox Stage 7 rehearsal of 1.0.15 on this PC, which should then also start the driver once without a
-  restart (expected: "has not been restarted") before it continues.
+- ~~The line that writes `stage7-install-boot.json` runs only after a real install step.~~ Exercised by the
+  1.0.15 sandbox rehearsal on 2026-10-06 (section 4 and `docs/release-rehearsal-20261006-1015/README.md`): after
+  the real install step the record held this PC's count of starts (60) and newest start entry (17114); the driver
+  started again on the same start of Windows asked for the restart; started with a file saying "one start later" it
+  saw the restart and went on.
 - The PC-side copies in `tools/host/stage7-v3` differ from version 2 only in names and words; they are used for
   the first time when the owner approves the check of 1.0.15.
+
+## 4. Found by the 1.0.15 sandbox rehearsal (2026-10-06): two runs in one folder
+
+`docs/release-rehearsal-20261006-1015/rehearse-stage7-release-v3.ps1`, the first run: the whole pass said ALL STAGE
+7 STEPS PASSED, but a fourth start of the driver, which should have found nothing left to do, ran the AfterRestart
+phase again (and failed it, JARVIS having been stopped cleanly by the last phase). The records showed why: the
+AfterRestart run and the Uninstall run were both in the folder `stage7-20261005-231141`. The checks script
+(`Invoke-Stage7.ps1`) names each run's folder after its start, to the second; the driver starts the next phase the
+moment the last one has ended; and with JARVIS already running, the AfterRestart checks took less than a second,
+so the Uninstall run got the same folder name and its SUMMARY replaced the AfterRestart one. The driver then saw no
+AfterRestart run that passed. In the 1.0.14 check in the VM the two runs were 8 seconds apart (the after-restart
+check there waits for the Core), in its sandbox rehearsal 2 seconds apart: the defect was always there and had not
+been hit. It is in versions 1 and 2 as well.
+
+Fix in version 3 (`tools/guest/stage7-v3/Invoke-Stage7.ps1`, the one change to that file): a run whose folder
+already exists waits for a free second before it writes anything. The rehearsal was run again with it (see the
+README of that folder); the earlier run's records are kept in `D:\JARVIS-release-work\stage7-local-1.0.15`.

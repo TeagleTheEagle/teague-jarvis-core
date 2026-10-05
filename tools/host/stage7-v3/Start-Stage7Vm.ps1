@@ -7,8 +7,10 @@ in the disc name and the allowed current snapshot taken from the owner's approva
    VM's current state moves. Allowed only when the VM is on the snapshot named in the approval (or already on
    FRESH-PREREQ) AND VirtualBox records no change since that snapshot (currentStateModified="false" in the .vbox),
    so the restore never discards anything.
-2. Checks both discs against their hash records and attaches them: the previous build's package disc on SATA
-   port 1 and this check's Stage 7 disc on port 2.
+2. Checks both discs against their hash records and attaches them: the previous build's disc on SATA port 1
+   (its package disc JARVIS-PACKAGE-<id>.iso when there is one, otherwise its own Stage 7 disc
+   JARVIS-STAGE7-<id>.iso, which carries that build's zip and record at its root: version 3, for every build after
+   1.0.11, which was the last one with a package disc) and this check's Stage 7 disc on port 2.
 3. Starts the VM through Start-FreshVm.ps1, as for every start (NAT localhost-reachable off, proven from VBox.log).
 Records what it did in <Evidence>\stage7-start-<utc>.json.
 #>
@@ -33,7 +35,10 @@ function Val($info, $key) { ($info | Where-Object { $_ -like "$key=*" } | Select
 function Sha256($p) { (Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash.ToLower() }
 if (-not (Test-Path -LiteralPath $Evidence)) { New-Item -ItemType Directory -Path $Evidence -Force | Out-Null }
 $discs = [ordered]@{}
-foreach ($pair in @(@('previous', "JARVIS-PACKAGE-$PreviousId.iso", 1), @('stage7', "JARVIS-STAGE7-$Label.iso", 2))) {
+# The previous build's disc: its package disc (1.0.11 and older) or, from 1.0.12 on, its own Stage 7 disc.
+$previousDisc = "JARVIS-PACKAGE-$PreviousId.iso"
+if (-not (Test-Path -LiteralPath (Join-Path $Root "media\$previousDisc"))) { $previousDisc = "JARVIS-STAGE7-$PreviousId.iso" }
+foreach ($pair in @(@('previous', $previousDisc, 1), @('stage7', "JARVIS-STAGE7-$Label.iso", 2))) {
     $iso = Join-Path $Root "media\$($pair[1])"
     if (-not (Test-Path -LiteralPath $iso) -or -not (Test-Path -LiteralPath "$iso.sha256.json")) { throw "disc or its hash record missing: $iso; STOP" }
     Write-Host "Checking $($pair[1]) ..."

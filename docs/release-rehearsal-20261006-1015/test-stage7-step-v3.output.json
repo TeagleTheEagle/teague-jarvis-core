@@ -1,0 +1,92 @@
+[
+    {
+        "case":  "no approval: refuses",
+        "passed":  true,
+        "output":  "STOPPED: this Stage 7 check has not been approved yet (Claude records your approval first). | Photograph this window for Claude and wait."
+    },
+    {
+        "case":  "version 1 approval file: refuses",
+        "passed":  true,
+        "output":  "STOPPED: the approval file is not a version 3 approval (it belongs to another launcher). | Photograph this window for Claude and wait."
+    },
+    {
+        "case":  "version 2 approval file: refuses",
+        "passed":  true,
+        "output":  "STOPPED: the approval file is not a version 3 approval (it belongs to another launcher). | Photograph this window for Claude and wait."
+    },
+    {
+        "case":  "approval without the expected snapshot: refuses",
+        "passed":  true,
+        "output":  "STOPPED: the approval file does not name the two builds, the label and the expected current snapshot. | Photograph this window for Claude and wait."
+    },
+    {
+        "case":  "unsafe label: refuses",
+        "passed":  true,
+        "output":  "STOPPED: the label \u0027..\\x\u0027 is not valid. | Photograph this window for Claude and wait."
+    },
+    {
+        "case":  "other account: refuses",
+        "passed":  true,
+        "output":  "STOPPED: this launcher runs in the jonny or the jarvis-s6-val account, not someone. | Photograph this window for Claude and wait."
+    },
+    {
+        "case":  "owner, no disc: builds the disc for this label (the 1.0.14 disc does not count)",
+        "passed":  true,
+        "output":  "NEXT STEP: build the Stage 7 disc for 1.0.15-63362929d7ad |   (test mode) would run New-Stage7Disc.ps1 -Evidence D:\\JARVIS-release-work\\scratch\\stage7-v3-step-test\\stage7\\1.0.15-63362929d7ad\\evidence -Label 1.0.15-63362929d7ad -ReleaseId 1.0.15-63362929d7ad -Repo C:\\Users\\jonny\\JARVIS-claude-workspace\\repo"
+    },
+    {
+        "case":  "validation account, no disc: points to jonny",
+        "passed":  true,
+        "output":  "The next step is in your own account (jonny): the Stage 7 disc is not built yet. Switch to jonny and double-click stage7-step there."
+    },
+    {
+        "case":  "disc built, egress folder missing: refuses",
+        "passed":  true,
+        "output":  "STOPPED: the evidence folder for this check (D:\\JARVIS-release-work\\scratch\\stage7-v3-step-test\\S6\\evidence\\guest-egress-01\\stage7-1.0.15-63362929d7ad) is missing; Claude creates it when you approve the check. | Photograph this window for Claude and wait."
+    },
+    {
+        "case":  "disc built, VM off: restores from the approved snapshot (1.0.11 and 1.0.14 records ignored)",
+        "passed":  true,
+        "output":  "NEXT STEP: restore the clean snapshot, attach the two discs and start the VM |   (test mode) would run Start-Stage7Vm.ps1 -AllowedCurrent STAGE7-PASS-1.0.14-e03872680e1d -Evidence D:\\JARVIS-release-work\\scratch\\stage7-v3-step-test\\stage7\\1.0.15-63362929d7ad\\evidence\\vm -FinalId 1.0.15-63362929d7ad -Label 1.0.15-63362929d7ad -PreviousId 1.0.14-e03872680e1d"
+    },
+    {
+        "case":  "disc built, owner account: points to jarvis-s6-val",
+        "passed":  true,
+        "output":  "The disc is built. The next step is in the jarvis-s6-val account: switch to it and double-click stage7-step there."
+    },
+    {
+        "case":  "guest cycle of another build: refuses",
+        "passed":  true,
+        "output":  "STOPPED: the pass inside the VM was started with 1.0.14-e03872680e1d, the plan says 1.0.15-63362929d7ad. | Photograph this window for Claude and wait."
+    },
+    {
+        "case":  "failed guest run: stops",
+        "passed":  true,
+        "output":  "STOPPED: a step inside the VM did not pass (Install, stage7-20261007-010000). Nothing is repeated without a decision. | Photograph this window for Claude and wait."
+    },
+    {
+        "case":  "pass running in the VM",
+        "passed":  true,
+        "output":  "The pass is running inside the VM. Follow what its window says (quit JARVIS, restart Windows, double-click stage7 again) until it says ALL STAGE 7 STEPS PASSED."
+    },
+    {
+        "case":  "started, VM off, pass unfinished: refuses",
+        "passed":  true,
+        "output":  "STOPPED: the VM was already started for this check and is now off, but the pass inside it did not finish. Nothing is repeated without a decision. | Photograph this window for Claude and wait."
+    },
+    {
+        "case":  "all passed, VM still on",
+        "passed":  true,
+        "output":  "All steps inside the VM passed, but the VM is still on. Inside the VM: Start \u003e Power \u003e Shut down. When the VM window has closed, double-click stage7-step again."
+    },
+    {
+        "case":  "all passed, VM off: snapshot for this label",
+        "passed":  true,
+        "output":  "NEXT STEP: take the snapshot STAGE7-PASS-1.0.15-63362929d7ad |   (test mode) would run Take-FreshVmSnapshot.ps1 -Description Stage 7 check 1.0.15-63362929d7ad passed inside the VM with 1.0.15-63362929d7ad (update from 1.0.14-e03872680e1d, interrupted update, rollback, uninstall, reinstall); taken after a clean shutdown -Evidence D:\\JARVIS-release-work\\scratch\\stage7-v3-step-test\\stage7\\1.0.15-63362929d7ad\\evidence\\vm -Snapshot STAGE7-PASS-1.0.15-63362929d7ad"
+    },
+    {
+        "case":  "snapshot recorded: done",
+        "passed":  true,
+        "output":  "This Stage 7 check is recorded and the snapshot STAGE7-PASS-1.0.15-63362929d7ad is taken. Tell Claude: stage 7 done."
+    }
+]

@@ -3,8 +3,9 @@
 Stage 7 (packaged-application acceptance) and the standard pre-update check, run INSIDE the acceptance machine.
 A copy of Invoke-Gate17.ps1 as used for Stage 6 Gates 17 and 19 (that file is evidence and stays unchanged), with
 one added phase, Interrupt: an update killed while it is copying, then run again. Rehearsed locally on D: first.
-Version 3 (tools\guest\stage7-v3): this file is the version 2 file with this one line added; only the driver
-Invoke-Stage7Pass.ps1 changed in version 3.
+Version 3 (tools\guest\stage7-v3): the version 2 file with one change, found by the 1.0.15 sandbox rehearsal: a run
+never writes into another run's folder (two phases that start within the same second got the same folder name).
+The driver Invoke-Stage7Pass.ps1 is where version 3 otherwise differs.
 Version 2 (tools\guest\stage7-v2; the 1.0.11 copy in tools\guest stays unchanged): E0 also records the Windows
 build (CurrentBuildNumber.UBR), its display version and whether the account is in Administrators.
 
@@ -39,6 +40,16 @@ $ErrorActionPreference = 'Stop'
 $script:Started = Get-Date
 $Gate = 'stage7'
 $script:EvidenceDir = Join-Path $Evidence ("$Gate-" + $script:Started.ToUniversalTime().ToString('yyyyMMdd-HHmmss'))
+# Version 3: one folder per run, never another run's. The driver starts the next phase the moment the last one has
+# ended, and a phase whose checks are instant (AfterRestart with JARVIS already up) ends within the same second, so
+# the next phase got the same folder name and wrote its records over the first one's (seen in the 1.0.15 sandbox
+# rehearsal: the after-restart run's SUMMARY was replaced by the uninstall run's, and the driver then ran the
+# after-restart phase again). A run whose folder already exists waits for a free second.
+while (Test-Path -LiteralPath $script:EvidenceDir) {
+    Start-Sleep -Seconds 1
+    $script:Started = Get-Date
+    $script:EvidenceDir = Join-Path $Evidence ("$Gate-" + $script:Started.ToUniversalTime().ToString('yyyyMMdd-HHmmss'))
+}
 New-Item -ItemType Directory -Path $script:EvidenceDir -Force | Out-Null
 $script:Summary = New-Object Collections.ArrayList
 $PreviousStaging = "$Staging-previous"
