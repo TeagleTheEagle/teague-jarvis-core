@@ -1,0 +1,16 @@
+{
+  "schema": "jarvis-everyday-update-owner-check-v1",
+  "release": "1.0.14-e03872680e1d",
+  "recorded_utc": "2026-10-05T03:53:08Z",
+  "owner_text": "all checks passed no core stopped box popped up",
+  "checks_asked": [
+    "Settings > About shows Version 1.0.14-e03872680e1d (installed)",
+    "memories and recent conversations are there",
+    "JARVIS answers a question (AI provider Groq)",
+    "voice works",
+    "Quit JARVIS completely from the icon near the clock: no 'Core stopped' box"
+  ],
+  "taken_as": "step 4 of docs/UPDATE-EVERYDAY-1.0.14.md PASS, as reported by the owner (not observed by Claude)",
+  "next": "step 5: one PC restart, JARVIS starts by itself after sign-in",
+  "recorded_by": "Claude Code (Claude Opus 5.5)"
+}
