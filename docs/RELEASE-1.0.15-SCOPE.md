@@ -44,7 +44,9 @@ In this order. "Section" is the master document's section.
 Done in the repo: the new look for the whole interface, the dashboard, formatted chat replies, the provider clean-up
 (OpenAI and Qwen only), the screen label fix.
 
-Still to do: plain messages for HTTP 413 and `AccessDenied.Unpurchased`; a full-size connection check in Settings; the
+Still to do: which wins, a Windows variable or the key file (found 2026-10-05: Windows holds a `DASHSCOPE_API_KEY`
+variable in the owner's account and JARVIS prefers it over the key file line; the owner's `Test-KeySources.ps1` run
+comes first); plain messages for HTTP 413 and `AccessDenied.Unpurchased`; a full-size connection check in Settings; the
 Alibaba "maintenance mode" check; three reviewer notes (`static/teague.js:37` fixed "CORE LINK NOMINAL";
 `command-background.png` missing; stale values when the connection is lost); in Settings the SAVE button floats
 over the row beneath it (seen 2026-10-05; three tick boxes drawn away from their labels were fixed the same day);
