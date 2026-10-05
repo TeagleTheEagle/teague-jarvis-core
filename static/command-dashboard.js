@@ -76,13 +76,12 @@
   const [upcomingPanel, upcomingMeta] = panel('Upcoming', 'cd-fixed'); const upcoming = el('ul', 'cd-list'); upcomingPanel.append(upcoming);
   right.append(voicePanel, diagPanel, projectPanel, upcomingPanel);
 
-  const frame = el('div', 'cd-core-frame'); frame.setAttribute('aria-live', 'polite');
-  const coreTitle = el('div', 'cd-core-title'); const coreLine = el('strong'); const coreMode = el('small');
-  coreTitle.append(el('b', '', 'JARVIS'), coreLine, coreMode);
+  const frame = el('div', 'cd-core-frame');
   const labelsLeft = el('ul', 'cd-labels left'); const labelsRight = el('ul', 'cd-labels right');
   const foot = el('div', 'cd-core-foot'); const activity = el('div', 'cd-activity'); activity.append(el('i'));
-  foot.append(el('small', '', 'HUMAN POTENTIAL. AMPLIFIED.'), activity);
-  frame.append(coreTitle, labelsLeft, labelsRight, foot);
+  const coreMode = el('p', 'cd-mode'); coreMode.setAttribute('aria-live', 'polite');
+  foot.append(el('small', '', 'HUMAN POTENTIAL. AMPLIFIED.'), activity, coreMode);
+  frame.append(labelsLeft, labelsRight, foot);
 
   const tiles = el('nav', 'cd-tiles'); tiles.setAttribute('aria-label', 'Sections');
   for (const [name, target, label] of TILES) {
@@ -139,10 +138,9 @@
     knowledge.replaceChildren(...[['memory', 'Memories'], ['documents', 'Documents'], ['notes', 'Notes'], ['conversations', 'Conversations']].map(([key, label]) => {
       const box = el('div'); box.append(el('b', '', count(key)), el('small', '', label)); return box; }));
 
-    coreTitle.classList.toggle('offline', !online);
-    coreLine.textContent = online ? 'CORE ONLINE' : 'CORE OFFLINE';
     const mode = (typeof state !== 'undefined' && state.mode) || 'standby';
-    coreMode.textContent = MODES[mode] || mode.toUpperCase();
+    coreMode.classList.toggle('offline', !online);
+    coreMode.textContent = online ? MODES[mode] || mode.toUpperCase() : 'CORE OFFLINE';
     activity.className = 'cd-activity ' + mode;
     const label = ([text, on]) => el('li', on ? '' : 'off', text);
     labelsLeft.replaceChildren(...[['ANALYZE', !!caps.vision], ['SYNTHESIZE', aiOk], ['REASON', aiOk], ['EXECUTE', online], ['REMEMBER', !!d]].map(label));

@@ -13,9 +13,9 @@ body[data-page=command] .shell:has(>#commandView:not(.hidden)) #commandView.cd-o
  grid-column:2;grid-row:2;align-self:stretch;justify-self:stretch;width:auto;height:auto;min-width:0;min-height:0;display:flex!important;align-items:center;justify-content:center}
 body[data-page=command] .shell:has(>#commandView:not(.hidden)) #commandView.cd-on:not(.hidden) .core-panel:not(.scroll-compact){width:100%!important;height:100%!important;
  background:radial-gradient(circle at 50% 50%,#1a6fa833 0,#0a2c4a22 30%,transparent 58%)!important}
-body[data-page=command] .shell:has(>#commandView:not(.hidden)) #commandView.cd-on:not(.hidden) .core-visual{top:52%;
- width:min(60%,calc((100cqh - 250px) * 1.1515))!important}
-#commandView.cd-on .core-panel:after{content:"";position:absolute;left:50%;top:52%;width:min(78%,calc((100cqh - 190px) * 1.02));aspect-ratio:1;
+body[data-page=command] .shell:has(>#commandView:not(.hidden)) #commandView.cd-on:not(.hidden) .core-visual{top:47%;
+ width:min(64%,calc((100cqh - 215px) * 1.1515))!important}
+#commandView.cd-on .core-panel:after{content:"";position:absolute;left:50%;top:47%;width:min(80%,calc(100cqh - 235px));aspect-ratio:1;
  transform:translate(-50%,-50%);border-radius:50%;border:1px solid var(--cd-line);box-shadow:0 0 40px #3ed1ff1f,inset 0 0 60px #3ed1ff12;pointer-events:none}
 
 /* Header band */
@@ -80,12 +80,9 @@ body[data-page=command] .shell:has(>#commandView:not(.hidden)) #commandView.cd-o
 
 /* Centre overlay */
 .cd-core-frame{grid-column:2;grid-row:2;align-self:stretch;justify-self:stretch;position:relative;pointer-events:none;z-index:2;min-height:0}
-.cd-core-title{position:absolute;left:50%;top:2%;transform:translateX(-50%);text-align:center;white-space:nowrap}
-.cd-core-title b{display:block;font:300 28px/1 var(--sans,'Segoe UI',Arial,sans-serif);letter-spacing:.55em;margin-right:-.55em;color:#f1f7fb;text-shadow:0 0 16px #3ed1ff55}
-.cd-core-title strong{display:block;margin-top:8px;font:400 16px/1 var(--sans,'Segoe UI',Arial,sans-serif);letter-spacing:.42em;margin-right:-.42em;color:var(--cd-text)}
-.cd-core-title small{display:block;margin-top:8px;font-size:10px;letter-spacing:.34em;color:var(--cd-ok)}
-.cd-core-title.offline strong{color:var(--cd-warn)}
-.cd-labels{position:absolute;top:52%;transform:translateY(-50%);list-style:none;margin:0;padding:0;display:grid;gap:18px}
+.cd-mode{margin:8px 0 0;font-size:10px;letter-spacing:.34em;margin-right:-.34em;color:var(--cd-ok)}
+.cd-mode.offline{color:var(--cd-warn)}
+.cd-labels{position:absolute;top:47%;transform:translateY(-50%);list-style:none;margin:0;padding:0;display:grid;gap:18px}
 .cd-labels.left{left:3%;text-align:left}.cd-labels.right{right:3%;text-align:right}
 .cd-labels li{font-size:11px;letter-spacing:.24em;color:#b9d8ea;text-shadow:0 0 8px #3ed1ff55}
 .cd-labels li.off{color:var(--cd-off);text-shadow:none}
@@ -155,6 +152,6 @@ body[data-page=command] .shell:has(>#commandView:not(.hidden)) #commandView.cd-o
  .cd-left,.cd-right,.cd-header .cd-facts{display:none}.cd-header{grid-template-columns:1fr auto}}
 @media (max-height:760px){.cd-header{display:none}.cd-tiles button{padding:7px 4px 6px}.cd-tiles button svg{width:18px;height:18px}
  .cd-quote,.cd-note{display:none}}
-@media (max-height:640px){.cd-core-title small,.cd-core-foot small{display:none}.cd-core-title b{font-size:20px}.cd-core-title strong{font-size:12px;margin-top:5px}}
+@media (max-height:640px){.cd-core-foot small{display:none}.cd-mode{margin-top:5px}}
 @media (max-width:820px){.cd-labels{display:none}.cd-tiles{grid-template-columns:repeat(4,minmax(0,1fr))}.cd-tiles button:nth-child(n+5){display:none}}
 @media (prefers-reduced-motion:reduce){.cd-activity i{animation:none!important}.cd-ring .value{transition:none}}
