@@ -73,6 +73,13 @@ month** in Alibaba Cloud billing; raise it once you know your real use.
   Cheaper model for a later side-by-side test, only on the owner's word (the owner does not want JARVIS made less):
   Qwen3.7-Plus, $0.40 in / $1.60 out per million up to 256K tokens (limited-time 20% off; not in the key's current
   permission list).
+- **One key for every AI company (owner asked 2026-10-05, "like claude, chatgbt?"):** OpenRouter (openrouter.ai)
+  sells one prepaid key for Qwen, Claude, GPT, Gemini and others at the companies' own prices plus a 5.5% fee on
+  credit purchases (minimum $0.80); credits do not expire, so no overdue bills. `qwen/qwen3.8-max` is listed there at
+  $2 / $6 with tools and vision. A Claude Pro or ChatGPT Plus subscription gives no API key for an app. JARVIS cannot
+  use OpenRouter today: the Qwen provider accepts only `*.aliyuncs.com` addresses (`providers.py`), so it needs a new
+  provider in a release (tests, Stage 7 check, owner approval). Fish Audio voice and local Whisper stay as they are.
+  Not started; the owner decides.
 
 ## Your steps (Alibaba Cloud console, your own account)
 
