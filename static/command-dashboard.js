@@ -2,8 +2,10 @@
 // real data only (docs/design/NEW-LOOK.md lists every panel and its source).
 // Sources: /api/state (state.data, refreshed by app.js), /api/metrics (this PC), /api/workspaces (projects), the
 // assistant mode (state.mode), the activity log app.js keeps, and the microphone. A value without a source is not
-// shown: there is no weather, no world map and no mail count here. While the Core cannot be reached, everything
-// that came from it reads as unknown rather than as its last value.
+// shown: there is no weather and no mail count here. While the Core cannot be reached, everything that came from
+// it reads as unknown rather than as its last value. The graphics follow the same rule: the rings around the core
+// move with the real assistant state and carry the six system states, the map shows the real day and night sides
+// (static/world-map.js), the network picture is the device registry, the graph is this PC's readings.
 (() => {
   const view = document.querySelector('#commandView');
   if (!view || document.querySelector('.cd-left')) return;
@@ -36,6 +38,7 @@
   const icon = name => { const s = document.createElementNS(SVG, 'svg'); s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('aria-hidden', 'true');
     for (const d of ICONS[name].split(' M').map((p, i) => (i ? 'M' : '') + p)) { const p = document.createElementNS(SVG, 'path'); p.setAttribute('d', d); s.append(p); }
     return s; };
+  const svg = (tag, attrs, text) => { const e = document.createElementNS(SVG, tag); for (const k in attrs || {}) e.setAttribute(k, attrs[k]); if (text !== undefined) e.textContent = text; return e; };
   const panel = (title, cls) => { const p = el('section', 'cd-panel ' + (cls || '')); p.setAttribute('aria-label', title);
     const h = el('header'); const meta = el('small'); h.append(el('h2', '', title), meta); p.append(h); return [p, meta]; };
   const set = (node, text) => { if (node.textContent !== text) node.textContent = text; };  // no churn for screen readers
@@ -63,7 +66,11 @@
   const helloMain = el('div'); helloMain.append(helloEyebrow, helloDate, helloTime);
   const helloTop = el('div', 'cd-hello-top'); helloTop.append(helloMain, helloPlace);
   const quote = el('p', 'cd-quote', '"A more capable you, every day."'); quote.append(el('small', '', '- JARVIS'));
-  hello.append(helloTop, quote);
+  // World map: a drawing with the real day and night sides and the place the PC's time zone is named after.
+  const mapBox = el('div', 'cd-map'); const mapCanvas = el('canvas'); mapCanvas.setAttribute('aria-hidden', 'true');
+  const mapPin = el('i', 'cd-map-pin'); mapPin.hidden = true; mapBox.append(mapCanvas, mapPin);
+  const zoneLine = el('small', 'cd-zone');
+  hello.append(mapBox, helloTop, quote, zoneLine);
 
   const [activityPanel, activityMeta] = panel('Recent activity', 'cd-grow'); const activityList = el('ul', 'cd-list cd-activity-list');
   activityPanel.append(activityList, linkButton('View all activity', () => go('mission')));
@@ -76,15 +83,36 @@
     return {value, circle: box.querySelector('.value'), cell, note}; };
   const r = {cpu: ring('CPU'), memory: ring('MEMORY'), disk: ring('STORAGE'), ready: ring('CONFIGURED')};
   const perfFacts = el('p', 'cd-facts');
-  perfPanel.append(rings, perfFacts, el('p', 'cd-note', 'Configured is not the same as tested: Settings runs the live checks. Network, graphics and temperature are not measured.'));
+  const historyCanvas = el('canvas', 'cd-history'); historyCanvas.setAttribute('aria-hidden', 'true');
+  const legend = el('div', 'cd-legend'); legend.append(el('span', 'cpu', 'CPU'), el('span', 'mem', 'MEMORY'), el('small', '', 'LAST 3 MINUTES, WHILE THIS PAGE IS OPEN'));
+  const cpuHistory = [], memHistory = [], HISTORY = 60;  // one reading every 3 s
+  perfPanel.append(rings, historyCanvas, legend, perfFacts, el('p', 'cd-note', 'Configured is not the same as tested: Settings runs the live checks. Network, graphics and temperature are not measured.'));
   left.append(hello, activityPanel, perfPanel);
 
   const [overviewPanel, overviewMeta] = panel('Core overview', 'cd-fixed'); const overview = el('div', 'cd-overview');
-  const devices = el('div', 'cd-devices'), knowledge = el('div', 'cd-knowledge'); overview.append(devices, knowledge); overviewPanel.append(overview);
+  const knowledge = el('div', 'cd-knowledge');
+  const net = svg('svg', {class: 'cd-net', viewBox: '0 0 262 112', role: 'img'}); const netTitle = svg('title'); net.append(netTitle);
+  const NODES = [['workstation', 'THIS PC', 18], ['mobile', 'PHONE', 56], ['glasses', 'GLASSES', 94]]; const netNode = {};
+  for (const [kind, label, y] of NODES) {
+    const link = svg('path', {class: 'link', d: `M53 50 C 108 50, 100 ${y}, 149 ${y}`}); const group = svg('g', {class: 'node'});
+    const glyph = svg('g', {transform: `translate(${164 - 9} ${y - 9}) scale(.75)`});
+    for (const d of ICONS[kind].split(' M').map((part, i) => (i ? 'M' : '') + part)) glyph.append(svg('path', {d}));
+    const status = svg('text', {class: 'status', x: 186, y: y + 11});
+    group.append(svg('circle', {cx: 164, cy: y, r: 14.5}), glyph, svg('text', {class: 'name', x: 186, y: y - 1}, label), status);
+    net.append(link, group); netNode[kind] = {link, group, status};
+  }
+  const netCore = svg('g', {class: 'core'});
+  netCore.append(svg('circle', {class: 'halo', cx: 32, cy: 50, r: 28}), svg('circle', {cx: 32, cy: 50, r: 21}), svg('circle', {class: 'dot', cx: 32, cy: 50, r: 7}),
+    svg('text', {class: 'name', x: 32, y: 94, 'text-anchor': 'middle'}, 'CORE'));
+  const netCoreState = svg('text', {class: 'status', x: 32, y: 107, 'text-anchor': 'middle'}); netCore.append(netCoreState); net.append(netCore);
+  overview.append(net, knowledge); overviewPanel.append(overview);
   const [projectPanel, projectMeta] = panel('Projects', 'cd-grow'); const projects = el('ul', 'cd-list');
   projectPanel.append(projects, linkButton('Open projects', () => go('projects')));
   const [schedulePanel, scheduleMeta] = panel("Today's schedule", 'cd-grow'); const schedule = el('ul', 'cd-list');
-  schedulePanel.append(schedule, linkButton('Open tasks', () => go('focus')));
+  const dayLine = el('div', 'cd-day'); dayLine.setAttribute('aria-hidden', 'true'); const dayFill = el('i', 'cd-day-fill'), dayNow = el('i', 'cd-day-now'), dayMarks = el('div', 'cd-day-marks');
+  for (const hour of [0, 6, 12, 18]) { const tick = el('span', '', String(hour).padStart(2, '0')); tick.style.left = hour / 24 * 100 + '%'; dayLine.append(tick); }
+  dayLine.append(dayFill, dayMarks, dayNow);
+  schedulePanel.append(dayLine, schedule, linkButton('Open tasks', () => go('focus')));
   const [toolsPanel, toolsMeta] = panel('Quick tools', 'cd-fixed'); const tools = el('div', 'cd-tools'); toolsMeta.textContent = 'ON THIS PC';
   for (const [name, label, action] of [['note', 'New note', () => press('#quickNote')], ['analyse', 'Analyse', () => press('#captureScreen')],
     ['timer', 'Timer', () => press('#timerButton')], ['search', 'Search', () => { go('web'); const box = document.querySelector('#webQuery'); if (box) box.focus(); }],
@@ -109,7 +137,19 @@
   for (const text of PROMPTS) { const b = el('button', '', text); b.type = 'button'; b.addEventListener('click', () => ask(text)); chips.append(b); }
   const screenChip = el('button', '', 'Analyse my screen'); screenChip.type = 'button'; screenChip.addEventListener('click', () => press('#captureScreen')); chips.append(screenChip);
   stack.append(greetLine, serviceLine, coreMode, wave, voiceHint, el('small', 'cd-prompt', 'What can I help you with?'), chips);
-  frame.append(meters, systems, stack);
+  // Rings around the core. Each ring is its own layer so the browser turns it without redrawing; the six arcs are
+  // the six system rows, and the speed follows the assistant state.
+  const reactor = el('div', 'cd-reactor'); reactor.setAttribute('aria-hidden', 'true');
+  const layer = (cls, body) => { const s = svg('svg', {class: cls, viewBox: '-500 -500 1000 1000'}); s.innerHTML = body; reactor.append(s); return s; };
+  reactor.append(el('div', 'cd-bloom'));
+  layer('cd-r-static', '<circle class="edge" r="494"/><circle class="inner" r="386"/><path class="cross" d="M-500 0h36M464 0h36M0-500v36M0 464v36"/>');
+  const arcLayer = layer('cd-r-systems', ''); const arcs = [];
+  for (let i = 0; i < 6; i++) { const a0 = (-90 + i * 60 + 6) * Math.PI / 180, a1 = (-90 + (i + 1) * 60 - 6) * Math.PI / 180, R = 440;
+    const arc = svg('path', {d: `M${(R * Math.cos(a0)).toFixed(1)} ${(R * Math.sin(a0)).toFixed(1)}A${R} ${R} 0 0 1 ${(R * Math.cos(a1)).toFixed(1)} ${(R * Math.sin(a1)).toFixed(1)}`}); arcLayer.append(arc); arcs.push(arc); }
+  layer('cd-r-ticks', '<circle r="468"/>');
+  layer('cd-r-dash', '<circle class="dash" r="412"/><circle class="amber" r="412"/>');
+  for (const name of ['a', 'b']) { const orbit = el('div', 'cd-orbit ' + name); orbit.innerHTML = '<svg viewBox="-500 -500 1000 1000"><circle r="497"/></svg><div class="cd-orbit-spin"><i></i></div>'; reactor.append(orbit); }
+  frame.append(reactor, meters, systems, stack);
 
   // Bottom band: brand, the ask bar, and what stays true of this installation.
   const foot = el('div', 'cd-foot');
@@ -131,6 +171,9 @@
   // ---- render from real data ----
   let metrics = null, metricsOk = false, metricsTried = false, workspaces = null;
   const list = (target, items, empty) => { target.replaceChildren(...(items.length ? items : [el('li', 'cd-empty', empty)])); };
+  // How many rows of a list fit in its panel, from the room the list has and the height of a row already drawn.
+  const capacity = (target, most) => { const row = target.querySelector('li:not(.cd-empty)'); const each = row ? row.offsetHeight : 50;
+    return target.clientHeight ? Math.max(1, Math.min(most, Math.floor((target.clientHeight + 2) / each))) : most; };
   const setRing = (item, percent, text) => { const length = 2 * Math.PI * 50; item.circle.style.strokeDasharray = String(length);
     item.circle.style.strokeDashoffset = String(length * (1 - Math.max(0, Math.min(100, percent == null ? 0 : percent)) / 100));
     item.value.replaceChildren(text); item.cell.classList.toggle('unknown', percent == null); };
@@ -139,6 +182,35 @@
     return /voice|speech|micro|wake/.test(t) ? 'voice' : /memory|remember|note/.test(t) ? 'memory' : /file|document|upload|export|backup/.test(t) ? 'file'
       : /chat|message|conversation|run|answer/.test(t) ? 'message' : /privacy|approval|permission|security|session/.test(t) ? 'shield' : /search|web/.test(t) ? 'search'
       : /task|timer|reminder/.test(t) ? 'timer' : 'system'; };
+
+  // World map: redrawn when the minute or the size changes. The marker is the city the PC's time zone is named
+  // after (a Windows setting), not a measured position.
+  let mapStamp = '';
+  function drawMap(now) {
+    if (typeof JarvisWorldMap === 'undefined') { mapBox.hidden = true; zoneLine.hidden = true; return; }
+    const stamp = Math.floor(now.getTime() / 60000) + ':' + mapCanvas.clientWidth + 'x' + mapCanvas.clientHeight; if (stamp === mapStamp || !mapCanvas.clientWidth) return;
+    mapStamp = stamp;
+    let zone = ''; try { zone = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { /* no zone name: no marker */ }
+    const pin = JarvisWorldMap.draw(mapCanvas, now, JarvisWorldMap.zonePoint(zone));
+    mapPin.hidden = !pin; if (pin) { mapPin.style.left = (pin.x * 100).toFixed(2) + '%'; mapPin.style.top = (pin.y * 100).toFixed(2) + '%'; }
+    const offset = -now.getTimezoneOffset(), sign = offset < 0 ? '-' : '+', hours = Math.floor(Math.abs(offset) / 60), minutes = Math.abs(offset) % 60;
+    set(zoneLine, 'TIME ZONE' + DOT + (zone ? zone.replaceAll('_', ' ').toUpperCase() + DOT : '') + 'UTC' + sign + hours + (minutes ? ':' + String(minutes).padStart(2, '0') : '')
+      + (pin ? DOT + (pin.day ? 'DAYLIGHT NOW' : 'NIGHT NOW') : ''));
+  }
+  // Processor and memory readings taken while this page is open; cleared when they can no longer be read.
+  function drawHistory(show) {
+    const w = historyCanvas.clientWidth, h = historyCanvas.clientHeight; if (!w || !h) return;
+    const ratio = Math.min(devicePixelRatio || 1, 2); if (historyCanvas.width !== Math.round(w * ratio)) { historyCanvas.width = Math.round(w * ratio); historyCanvas.height = Math.round(h * ratio); }
+    const g = historyCanvas.getContext('2d'); g.setTransform(ratio, 0, 0, ratio, 0, 0); g.clearRect(0, 0, w, h);
+    g.strokeStyle = '#2f8fdc26'; g.lineWidth = 1; g.beginPath(); for (const level of [.25, .5, .75]) { g.moveTo(0, Math.round(h * level) + .5); g.lineTo(w, Math.round(h * level) + .5); } g.stroke();
+    if (!show) return;
+    const trace = (values, colour, fill) => { if (values.length < 2) return; const x = i => w - (values.length - 1 - i) * w / (HISTORY - 1), y = v => h - 2 - Math.max(0, Math.min(100, v)) / 100 * (h - 4);
+      g.beginPath(); values.forEach((v, i) => i ? g.lineTo(x(i), y(v)) : g.moveTo(x(i), y(v)));
+      if (fill) { g.lineTo(w, h); g.lineTo(x(0), h); g.closePath(); const shade = g.createLinearGradient(0, 0, 0, h); shade.addColorStop(0, fill); shade.addColorStop(1, 'rgba(56,182,255,0)'); g.fillStyle = shade; g.fill();
+        g.beginPath(); values.forEach((v, i) => i ? g.lineTo(x(i), y(v)) : g.moveTo(x(i), y(v))); }
+      g.strokeStyle = colour; g.lineWidth = 1.6; g.stroke(); };
+    trace(cpuHistory, '#5cc8ff', 'rgba(56,182,255,.32)'); trace(memHistory, '#4de3c1');
+  }
 
   function render() {
     const now = new Date(), hour = now.getHours();
@@ -158,6 +230,7 @@
     const hasPlace = !!place && !/^set location/i.test(place);
     helloPlace.hidden = !hasPlace; if (hasPlace) { set(placeName, place); set(placeNote, 'YOUR LOCATION LABEL'); }
     set(greetLine, greeting + (settings.name ? ', ' + settings.name + '.' : '.') + " I'm JARVIS.");
+    drawMap(now);
 
     // Systems: a row is green only when the thing it names is set up; nothing here is a live test.
     const profile = settings.voice_profile && settings.voice_profile !== 'auto' ? settings.voice_profile : caps.voice_provider;
@@ -180,6 +253,7 @@
     set(systemsState, !d && !lost ? 'CONNECTING' : !online ? 'CORE OFFLINE' : ready === total ? 'ALL CONFIGURED' : (total - ready) + ' TO CHECK');
     systemsState.className = online && ready === total ? '' : 'warn';
     setRing(r.ready, online ? ready * 100 / total : null, online ? ready + '/' + total : '-');
+    arcs.forEach((arc, i) => { if (arc.getAttribute('class') !== statusRows[i][1]) arc.setAttribute('class', statusRows[i][1]); });
 
     // Mode: announced only when it changes.
     const mode = (typeof state !== 'undefined' && state.mode) || 'standby';
@@ -188,6 +262,7 @@
     meter.online.className = online ? 'on' : ''; meter.listening.className = online && mode === 'listening' ? 'on live' : '';
     meter.thinking.className = online && (mode === 'thinking' || mode === 'processing') ? 'on live' : ''; meter.speaking.className = online && mode === 'speaking' ? 'on live' : '';
     footDot.className = 'cd-foot-dot' + (online ? ' on' : ''); footDot.title = online ? 'Core connected' : 'Core not connected';
+    const motion = !online ? 'offline' : mode === 'processing' ? 'thinking' : mode; if (reactor.dataset.mode !== motion) reactor.dataset.mode = motion;
 
     // Voice line: the wake word only applies when the microphone is waiting for it.
     const micOn = typeof state !== 'undefined' && !!state.mic;
@@ -198,7 +273,7 @@
 
     // Recent activity: the same entries as the activity log (this session's events and the Core's audit trail).
     const local = (typeof state !== 'undefined' && state.localLogs) || [];
-    const entries = [...local, ...((live && live.logs) || [])].filter(x => x && x.action).sort((a, b) => b.created - a.created).slice(0, 5);
+    const entries = [...local, ...((live && live.logs) || [])].filter(x => x && x.action).sort((a, b) => b.created - a.created).slice(0, capacity(activityList, 6));
     list(activityList, entries.map(entry => { const li = el('li', 'cd-activity-row'); const box = el('div'); const mark = el('span', 'cd-activity-icon'); mark.append(icon(activityIcon(entry)));
       box.append(el('b', '', String(entry.action).replaceAll('_', ' ')), el('small', '', String(entry.status || '').toLowerCase()));
       li.append(mark, box, el('time', '', new Date(entry.created * 1000).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: false}))); return li; }),
@@ -215,16 +290,23 @@
       facts.push(fresh.last_response_ms == null ? 'No reply yet' : 'Last reply ' + (fresh.last_response_ms / 1000).toFixed(1) + ' s'); }
     if (aiOk && caps.model) facts.push(caps.model);
     set(perfFacts, facts.join(DOT)); perfFacts.hidden = !facts.length;
+    if (!fresh) { cpuHistory.length = 0; memHistory.length = 0; }
+    drawHistory(!!fresh);
     set(perfMeta, fresh ? 'THIS PC' + DOT + 'LIVE' : metrics && metrics.omitted ? 'NOT READ' : !online && (d || lost) ? 'CORE OFFLINE' : metricsTried ? 'NOT READING' : 'READING...');
 
     // Core overview: devices and what JARVIS keeps on this PC.
     const find = re => deviceList.find(x => re.test(x.device_id));
-    const deviceTiles = [['workstation', 'This PC', find(/^pc$/)], ['mobile', 'Phone', find(/phone|mobile/i)], ['glasses', 'Glasses', find(/glass|wear/i)]];
-    devices.replaceChildren(...deviceTiles.map(([kind, name, device]) => {
-      const ok = !!device && device.connected && !device.simulated; const tile = el('div', 'cd-device' + (ok ? ' ok' : ''));
-      tile.append(icon(kind), el('b', '', name.toUpperCase()),
-        el('small', '', !online ? 'Unknown' : !device ? 'Not paired' : device.simulated ? 'Simulated only' : device.connected ? 'Online' : 'Offline'));
-      return tile; }));
+    const described = [];
+    for (const [kind, name, device] of [['workstation', 'This PC', find(/^pc$/)], ['mobile', 'Phone', find(/phone|mobile/i)], ['glasses', 'Glasses', find(/glass|wear/i)]]) {
+      const text = !online ? 'Unknown' : !device ? 'Not paired' : device.simulated ? 'Simulated only' : device.connected ? 'Online' : 'Offline';
+      const cls = !online ? 'unknown' : !device ? 'none' : device.simulated ? 'simulated' : device.connected ? 'ok' : 'offline';
+      const node = netNode[kind]; set(node.status, text);
+      if (node.group.getAttribute('class') !== 'node ' + cls) { node.group.setAttribute('class', 'node ' + cls); node.link.setAttribute('class', 'link ' + cls); }
+      described.push(name + ': ' + text.toLowerCase());
+    }
+    set(netCoreState, !d && !lost ? 'CONNECTING' : online ? 'ONLINE' : 'OFFLINE');
+    if (netCore.getAttribute('class') !== 'core' + (online ? ' ok' : '')) netCore.setAttribute('class', 'core' + (online ? ' ok' : ''));
+    set(netTitle, 'Devices of the one Core. ' + described.join('; ') + '.');
     set(overviewMeta, online ? connected.length + ' DEVICE' + (connected.length === 1 ? '' : 'S') + ' ONLINE' : 'UNKNOWN');
     // The Core lists at most 100 conversations, so 100 means "100 or more".
     const count = key => { if (!live || !Array.isArray(live[key])) return '-'; const n = live[key].length; return key === 'conversations' && n >= 100 ? '100+' : String(n); };
@@ -234,7 +316,7 @@
     // Projects: progress only where linked tasks that still exist allow it to be counted.
     const tasks = (live && live.tasks) || [];
     const shownProjects = online ? workspaces : null;
-    const projectItems = (shownProjects || []).slice(0, 4).map(p => {
+    const projectItems = (shownProjects || []).slice(0, capacity(projects, 5)).map(p => {
       const linked = (p.links || []).filter(x => x.kind === 'task').map(x => tasks.find(t => t.id === x.ref)).filter(Boolean);
       const done = linked.filter(t => t.completed).length; const pct = linked.length ? Math.round(done * 100 / linked.length) : null;
       const li = el('li', 'cd-project'); const mark = el('span', 'cd-activity-icon'); mark.append(icon('project'));
@@ -248,14 +330,23 @@
     const nowS = Date.now() / 1000; const end = new Date(); end.setHours(24, 0, 0, 0); const endS = end.getTime() / 1000;
     const events = [...((live && live.reminders) || []).filter(x => !x.fired && x.due >= nowS && x.due < endS).map(x => [x.due, x.title, 'Reminder']),
       ...tasks.filter(t => !t.completed && t.due && t.due >= nowS && t.due < endS).map(t => [t.due, t.body, 'Task'])].sort((a, b) => a[0] - b[0]);
-    list(schedule, events.slice(0, 5).map(([due, text, kind]) => { const li = el('li', 'cd-event'); li.append(el('time', '', clock(due)), el('span', '', text), el('small', '', kind)); return li; }),
+    list(schedule, events.slice(0, capacity(schedule, 6)).map(([due, text, kind]) => { const li = el('li', 'cd-event'); li.append(el('time', '', clock(due)), el('span', '', text), el('small', '', kind)); return li; }),
       online ? 'Nothing scheduled for the rest of today.' : 'Unknown while the Core is not connected.');
     set(scheduleMeta, online ? events.length + ' TODAY' : '');
+    // The day as a line: where the clock is now, and everything due today (what has passed is dimmed).
+    const startS = endS - 86400, part = t => Math.max(0, Math.min(1, (t - startS) / 86400)) * 100 + '%';
+    dayFill.style.width = part(nowS); dayNow.style.left = part(nowS);
+    const marks = [...((live && live.reminders) || []).filter(x => x.due >= startS && x.due < endS).map(x => [x.due, 'cd-due-reminder', x.due < nowS || x.fired]),
+      ...tasks.filter(t => t.due && t.due >= startS && t.due < endS).map(t => [t.due, 'cd-due-task', t.due < nowS || t.completed])];
+    dayMarks.replaceChildren(...marks.map(([due, kind, past]) => { const mark = el('i', kind + (past ? ' cd-past' : '')); mark.style.left = part(due); return mark; }));
   }
 
   async function poll(force) {
     if (!force && !visible()) return;
-    try { metrics = await api('/api/metrics'); metricsOk = true; } catch (e) { metricsOk = false; }
+    try { metrics = await api('/api/metrics'); metricsOk = true;
+      if (!metrics.omitted && metrics.cpu_percent != null) { cpuHistory.push(metrics.cpu_percent); if (cpuHistory.length > HISTORY) cpuHistory.shift(); }
+      if (!metrics.omitted && metrics.memory) { memHistory.push(metrics.memory.used_percent); if (memHistory.length > HISTORY) memHistory.shift(); }
+    } catch (e) { metricsOk = false; }
     metricsTried = true; render();
   }
   async function pollProjects(force) {

@@ -261,7 +261,7 @@ class HTTPTests(unittest.TestCase):
         self.assertEqual(error.exception.code, 404)
 
     def test_command_dashboard_is_served_and_its_readings_need_the_session(self):
-        for path in ('/command-dashboard.js', '/command-dashboard.css', '/horizon.js', '/horizon.css', '/assets/branding/teague/jarvis-mark.svg'):
+        for path in ('/command-dashboard.js', '/command-dashboard.css', '/horizon.js', '/horizon.css', '/world-map.js', '/assets/branding/teague/jarvis-mark.svg'):
             with self.req(path) as response:
                 self.assertEqual(response.status, 200)
         with self.req('/') as response:

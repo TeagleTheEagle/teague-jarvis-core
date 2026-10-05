@@ -36,7 +36,7 @@ Three layers, all presentation; no control or handler was removed.
 
 | Picture | Dashboard | Source |
 |---|---|---|
-| Greeting, date, time, weather, quote | Greeting, date, time, the owner's location label if one is set, the quote. **No weather** (no source) | PC clock; location label from the clock setting |
+| Greeting, date, time, weather, quote | Greeting, date, time, the owner's location label if one is set, the quote, and a world map with the real day and night sides. **No weather** (no source) | PC clock and time zone; location label from the clock setting |
 | Recent activity (scan, sync, mail, news) | The five newest entries of the activity log | this session's events and the Core's audit trail (`/api/state` logs) |
 | System performance: CPU, memory, storage, network | CPU, memory, storage rings; fourth ring = systems configured (n of 6). **No network ring** (not measured). Below: Core uptime, last reply, AI model | `/api/metrics`, `/api/state` |
 | Core with Online / Listening / Processing / Analysing | The existing core canvas; Online, Listening, Thinking, Speaking light up from the real assistant state | assistant state |
@@ -44,13 +44,30 @@ Three layers, all presentation; no control or handler was removed.
 | "Good morning. I'm JARVIS. At your service." + waveform | Same greeting (with the preferred name); the waveform is the live microphone and is flat when the microphone is off | assistant state, microphone |
 | Suggestion chips | Four requests that are sent to JARVIS as typed, plus "Analyse my screen" (opens the existing screen check) | existing `send()` and screen vision |
 | Ask bar | Sends the question through the existing `send()` and opens Chat so the reply is seen; the left button turns the microphone on or off (same as F4) | existing controls |
-| Global situation (world map, regions, missions, alerts) | **Left out** (no source). In its place: Core overview = devices (this PC, phone, glasses) and counts of memories, documents, notes, conversations | device registry, `/api/state` |
+| Global situation (world map, regions, missions, alerts) | Regions, missions and alerts are **left out** (no source); the map itself moved to the Today card as a day-and-night map. In its place: Core overview = a network picture of the devices (this PC, phone, glasses) and counts of memories, documents, notes, conversations | device registry, `/api/state` |
 | Mission overview | Projects with progress counted from linked tasks that exist | `/api/workspaces`, tasks |
 | Today's schedule | Reminders and tasks due today | `/api/state` |
 | Quick tools | New note, Analyse, Timer, Search, Settings: each presses the existing control | existing controls |
 | Footer: Teague Industries, Secure / Private / Trusted | Teague Industries · A brighter tomorrow; Local / Private / Always with you; a dot that is green only while the Core is connected | fixed text, connection |
 
 3. **Other sections** keep their content and controls and take the shell and the colour system.
+
+## Graphics pass (owner, after the first pictures: "looks great ... maybe make this more graphical")
+
+Added the same evening; every graphic is either a drawing that says so or is driven by a real value.
+
+| Graphic | What drives it |
+|---|---|
+| Rings around the core: tick ring, dashed ring, two orbits with moving points, a soft glow | Decoration, but the speed follows the real assistant state (faster while thinking, a pulse while listening or speaking, stopped and dimmed when the Core is not connected) |
+| Six arcs in the ring | The six system rows: teal = set up, amber = needs a look, dark = unknown |
+| World map in the Today card (`static/world-map.js`) | Dotted land (a coarse hand-typed drawing, tested for land and sea in `test_world_map.cjs`); the lit and dark sides and the sun marker are computed from the PC clock; the green marker is the city the PC's time zone is named after (a Windows setting, not a measured position); the caption says so |
+| Network picture in Core overview | The device registry: this PC, phone, glasses, each line solid and moving when online, dotted when not paired, dashed amber when simulated |
+| Graph under the performance rings | Processor and memory readings from `/api/metrics` taken while the page is open (up to three minutes); cleared when the readings stop |
+| Day line in Today's schedule | The clock (the glowing point) and everything due today (diamonds; dimmed once past) |
+| Line through Recent activity | Decoration |
+
+The side lists (Online / Listening / Thinking / Speaking, and Systems) sit on their own plates so the rings can pass
+behind them at any window size. Lists show whole rows only: as many as the panel has room for.
 
 ## The ten review findings (of 39901c5 and 5d0c96d) and where each was fixed
 
