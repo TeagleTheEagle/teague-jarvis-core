@@ -24,6 +24,7 @@ async def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--live',action='store_true');args=parser.parse_args()
     if not args.live:parser.error('Explicit --live is required for provider requests.')
     from server import App,Server,Handler
+    from store import VOICE_PROFILES
     root=Path(__file__).resolve().parents[1]
     with tempfile.TemporaryDirectory(prefix='jarvis-wearable-probe-') as folder:
         app=App(Path(folder)/'data')
@@ -31,7 +32,7 @@ async def main():
         db=sqlite3.connect((root/'data/jarvis.sqlite3').as_uri()+'?mode=ro',uri=True)
         try:row=db.execute("SELECT value FROM settings WHERE key='voice_profile'").fetchone()
         finally:db.close()
-        if row:app.store.save_settings({'voice_profile':json.loads(row[0])})
+        if row and json.loads(row[0]) in VOICE_PROFILES:app.store.save_settings({'voice_profile':json.loads(row[0])})  # an old ElevenLabs choice stays automatic
         server=Server(('127.0.0.1',0),Handler);server.app=app;server.wearable_service=Service(app)
         thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
         try:

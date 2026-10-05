@@ -31,7 +31,7 @@ def provider():
     return os.getenv('JARVIS_PROVIDER', '').strip().lower() or 'openai'
 
 
-def _unsupported():
+def unsupported_error():
     return ProviderError(f'JARVIS_PROVIDER={provider()} is not supported. Set JARVIS_PROVIDER=openai or JARVIS_PROVIDER=qwen in your local .env and restart JARVIS.')
 
 
@@ -166,7 +166,7 @@ def capabilities():
 
 def _base_capabilities():
     return {
-        'transcription': bool(os.getenv('OPENAI_API_KEY')),
+        'transcription': provider() == 'openai' and bool(os.getenv('OPENAI_API_KEY')),
         'fish': bool(os.getenv('FISH_API_KEY') and os.getenv('FISH_VOICE_ID')),
         'qwen_voice': qwen_voice_configured(),
         'voice_provider': 'qwen' if qwen_voice_configured() else 'fish' if os.getenv('FISH_API_KEY') and os.getenv('FISH_VOICE_ID') else 'browser',
@@ -182,7 +182,7 @@ def live_health():
     use_qwen = provider() == 'qwen'
     key = os.getenv('DASHSCOPE_API_KEY') if use_qwen else os.getenv('OPENAI_API_KEY') if provider() == 'openai' else None
     if provider() not in AI_PROVIDERS:
-        checks['Chat model access'] = {'status': 'not_configured', 'detail': str(_unsupported())}
+        checks['Chat model access'] = {'status': 'not_configured', 'detail': str(unsupported_error())}
     elif key and use_qwen:
         # Model Studio has no per-model lookup in compatible mode: a minimal real
         # completion proves key, region and model authorisation together.
@@ -225,7 +225,7 @@ def chat(messages, tools, emit, cancel, vision=False):
     if provider() == 'qwen':
         return qwen_chat(messages, tools, emit, cancel, vision)
     if provider() != 'openai':
-        raise _unsupported()
+        raise unsupported_error()
     key = os.getenv('OPENAI_API_KEY')
     if not key:
         raise ProviderError('OpenAI is selected. Add OPENAI_API_KEY locally and restart JARVIS.')
@@ -510,7 +510,10 @@ def speech(text, profile='auto'):
 
 
 def transcribe(audio, mime):
-    """Cloud transcription through OpenAI (the app itself transcribes locally with Whisper)."""
+    """Cloud transcription through OpenAI, only when OpenAI is the chosen provider (the app itself transcribes
+    locally with Whisper)."""
+    if provider() != 'openai':
+        raise ProviderError('Cloud speech transcription is only used with JARVIS_PROVIDER=openai. Local transcription and browser recognition work without it.')
     key = os.getenv('OPENAI_API_KEY')
     if not key:
         raise ProviderError('Cloud speech transcription needs OPENAI_API_KEY. Local transcription and browser recognition work without it.')

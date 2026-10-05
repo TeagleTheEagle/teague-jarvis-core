@@ -109,9 +109,9 @@ async function refresh(){
   try {
     state.data=await api('/api/state'); const d=state.data,c=d.capabilities;
     const brain=String(c.brain||'').toLowerCase(),brainReady=brain.includes('configured')&&!brain.includes('not configured');
-    $('#connection').textContent='LOCAL NODE ONLINE';$('#brainStatus').textContent=brainReady?'CONFIGURED':'AWAITING KEY';
-    $('#brainStatus').classList.toggle('cyan',brainReady);$('#voiceStatus').textContent=c.voice_provider==='qwen'?'QWEN VOICE':c.voice_provider==='fish'?'FISH AUDIO':'BROWSER';
-    $('#modeDescription').textContent=brainReady?'AI provider configured. Awaiting your command.':'Local systems ready. Connect an AI provider when you’re ready.';
+    $('#connection').textContent='LOCAL NODE ONLINE';$('#brainStatus').textContent=brainReady?'CONFIGURED':brain.startsWith('unsupported')?'CHECK PROVIDER':'AWAITING KEY';
+    $('#brainStatus').classList.toggle('cyan',brainReady);$('#voiceStatus').textContent={qwen:'QWEN VOICE',fish:'FISH AUDIO',openai:'OPENAI VOICE'}[(d.settings?.voice_profile&&d.settings.voice_profile!=='auto')?d.settings.voice_profile:c.voice_provider]||'BROWSER';
+    $('#modeDescription').textContent=brainReady?'AI provider configured. Awaiting your command.':brain.startsWith('unsupported')?String(c.brain)+'.':'Local systems ready. Connect an AI provider when you’re ready.';
     $('#uptime').textContent=duration(d.uptime); $('#memoryCount').textContent=String(d.memory.length).padStart(2,'0');
     $('#memoryPreview').textContent=d.memory.length?d.memory[0].body:'Your preferences, remembered. Tell me what matters.';
     const hour=new Date().getHours(); $('#greeting').textContent=(hour<12?'Good morning':hour<18?'Good afternoon':'Good evening')+(d.settings.name?', '+d.settings.name:'.');

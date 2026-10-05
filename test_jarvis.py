@@ -146,6 +146,17 @@ class LocalTests(unittest.TestCase):
             self.assertEqual(run.events[-1]['event'], 'run.failed')
             self.assertEqual(len(self.app.store.history('test')), 1)
 
+    def test_removed_provider_is_refused_not_answered_in_local_mode(self):
+        # An old key file: JARVIS_PROVIDER=groq with only a Groq key (removed in 1.0.15).
+        env = {'JARVIS_PROVIDER': 'groq', 'GROQ_API_KEY': 'test-only', 'OPENAI_API_KEY': '', 'DASHSCOPE_API_KEY': ''}
+        with patch.dict(os.environ, env), patch('providers.chat') as chat:
+            run = Run('test')
+            self.app.work(run, 'Explain something', None)
+        chat.assert_not_called()
+        self.assertEqual(run.events[-1]['event'], 'run.failed')
+        self.assertIn('JARVIS_PROVIDER=groq is not supported', run.events[-1]['data']['message'])
+        self.assertFalse(any('local command mode' in str(e['data']) for e in run.events))
+
     def test_billing_refusal_reaches_the_interface_without_a_pause(self):
         error = providers.ProviderError('OpenAI chat: The OpenAI account has no API credits left. (HTTP 429, insufficient_quota)')
         error.limit, error.service = 'billing', 'OpenAI'
@@ -332,6 +343,16 @@ class ProviderChoiceTests(unittest.TestCase):
             with self.assertRaisesRegex(providers.ProviderError, 'Add OPENAI_API_KEY'):
                 providers.chat([], [], lambda *args: None, threading.Event())
             call.assert_not_called()
+
+    def test_cloud_transcription_only_with_openai_chosen(self):
+        with patch.dict(os.environ, {'JARVIS_PROVIDER': 'qwen', 'OPENAI_API_KEY': 'test-only', 'DASHSCOPE_API_KEY': 'test-only'}, clear=True), \
+                patch('urllib.request.urlopen') as call:
+            self.assertFalse(providers.capabilities()['transcription'])
+            with self.assertRaisesRegex(providers.ProviderError, 'only used with JARVIS_PROVIDER=openai'):
+                providers.transcribe(b'audio', 'audio/webm')
+            call.assert_not_called()
+        with patch.dict(os.environ, {'JARVIS_PROVIDER': 'openai', 'OPENAI_API_KEY': 'test-only'}, clear=True):
+            self.assertTrue(providers.capabilities()['transcription'])
 
     def test_an_old_elevenlabs_voice_choice_reads_as_automatic(self):
         with tempfile.TemporaryDirectory() as folder:

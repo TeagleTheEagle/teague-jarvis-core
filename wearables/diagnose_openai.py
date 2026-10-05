@@ -41,7 +41,7 @@ def main():
     import providers
     from PIL import Image
     load_env()
-    if os.getenv('JARVIS_PROVIDER','').lower()!='openai' or not os.getenv('OPENAI_API_KEY'):
+    if providers.provider()!='openai' or not os.getenv('OPENAI_API_KEY'):
         print('Configured OpenAI provider/key unavailable. No request made.');return
     report={'checked_at':datetime.datetime.now().astimezone().isoformat(),'requests':[],
             'component':'wearable vision -> existing providers.chat(vision=True); direct diagnostic using synthetic image',

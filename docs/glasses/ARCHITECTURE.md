@@ -31,7 +31,7 @@ The PC must be awake and reachable for PC-hosted intelligence. This proposal doe
 | Component | Existing files and evidence | Reuse / required separation |
 |---|---|---|
 | Application orchestration | `server.py:83` App; `:143` start_run; `:378` work | Reuse context construction, guarded responses and conversation persistence. Extract behind a facade incrementally, with desktop parity tests. |
-| AI and vision | `providers.py:136` chat; `:259` gemini_chat | Keep provider selection server-side. OpenAI branches currently return complete responses; provider callback is not necessarily first-token timing. No live account check in this audit. |
+| AI and vision | `providers.py` chat (OpenAI); qwen_chat (Gemini removed in 1.0.15) | Keep provider selection server-side. OpenAI branches currently return complete responses; provider callback is not necessarily first-token timing. No live account check in this audit. |
 | Personality and evidence | `personality.txt`, `conversation_context.py`, `answer_evidence.py`, `verified_status.py` | Preserve these; do not bypass guards by invoking provider directly from wearables. |
 | Recognition | `local_stt.py:8`; `providers.py:334`; `wake.py`; `static/voice.js` | Local Whisper consumes bounded 16 kHz mono PCM16, 0.1–30 seconds. Browser capture, endpointing and wake lifecycle need a native equivalent. CPU model loading remains on PC initially. |
 | Voice | `voice_engine.py:24`, `providers.py:314` | Reuse configured voice and in-memory synthesis cache. Native client plays returned audio. Cache lock currently spans synthesis, serializing requests. No streaming TTS implemented here. |

@@ -443,6 +443,8 @@ class App:
                 result = self.tool(*command, run=run)
                 answer = self.describe(command[0], result)
                 run.emit('assistant.delta', {'text': answer})
+            elif not self.stage4 and providers.provider() not in providers.AI_PROVIDERS:
+                raise providers.unsupported_error()  # e.g. JARVIS_PROVIDER=groq after 1.0.15: say so; no local mode, no other provider
             elif not self.stage4 and not (os.getenv('OPENAI_API_KEY') or os.getenv('DASHSCOPE_API_KEY')):
                 if attachment:
                     answer = 'File received. ' + ('Image analysis needs a configured vision model.' if attachment['type'] == 'image' else f'Extracted {len(attachment["text"]):,} characters. ' + ('This file has no readable text; scanned PDFs need OCR. ' if attachment.get('empty') else '')) + ' Add an AI provider key in .env and restart to ask AI questions about it.'

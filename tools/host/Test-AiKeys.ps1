@@ -2,7 +2,7 @@
 .SYNOPSIS
 Shows which AI providers in a JARVIS key file work right now. Run BY THE OWNER; Claude never reads key files.
 For every provider JARVIS supports that has a key in the file (OpenAI, Qwen; Groq and Gemini were removed in
-1.0.15) it sends one tiny chat request ("Reply with the single word OK.", at most 5 tokens) to that provider's own
+1.0.15) it sends one tiny chat request ("Reply with the single word OK.", a reply of a few tokens) to that provider's own
 address and prints WORKS or REJECTED with the provider's reason. Then every provider that works gets one full JARVIS
 question: JARVIS's own instructions and its 45 tool descriptions, JARVIS's settings for that provider (OpenAI gpt-6
 models through the Responses API, as JARVIS sends them) and a question that needs a tool, because an account can
@@ -47,7 +47,7 @@ $providers = @(
 if (-not ([Uri]$qwenBase).Host.EndsWith('.aliyuncs.com')) { $providers = @($providers | Where-Object { $_.name -ne 'qwen' }); Write-Host 'qwen: skipped (DASHSCOPE_BASE_URL is not a Model Studio address)' }
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 Write-Host "Key file: $EnvFile"
-Write-Host ("JARVIS is set to use: {0}" -f (Pick 'JARVIS_PROVIDER' 'nothing chosen (no JARVIS_PROVIDER line; add JARVIS_PROVIDER=openai or JARVIS_PROVIDER=qwen)'))
+Write-Host ("JARVIS is set to use: {0}" -f (Pick 'JARVIS_PROVIDER' 'openai (no JARVIS_PROVIDER line: the default from 1.0.15; 1.0.14 and older used groq)'))
 Write-Host ''
 $working = @()
 foreach ($p in $providers) {
@@ -131,10 +131,9 @@ foreach ($p in @($providers | Where-Object { $working -contains $_.name })) {
     }
 }
 Write-Host ''
-$chosen = (Pick 'JARVIS_PROVIDER' '').ToLower()
+$chosen = (Pick 'JARVIS_PROVIDER' 'openai').ToLower()
 $scope = 'Real questions are larger (they also carry your recent conversation and saved facts) and a question that uses a tool needs a second request.'
-if (-not $chosen) { Write-Host 'The key file has no JARVIS_PROVIDER line: add JARVIS_PROVIDER=openai or JARVIS_PROVIDER=qwen.' }
-elseif ($chosen -notin 'openai', 'qwen') { Write-Host "JARVIS_PROVIDER=$chosen`: from 1.0.15 JARVIS supports only openai or qwen. Change this line before updating JARVIS." }
+if ($chosen -notin 'openai', 'qwen') { Write-Host "JARVIS_PROVIDER=$chosen`: from 1.0.15 JARVIS supports only openai or qwen. Change this line before updating JARVIS." }
 elseif ($handles -contains $chosen) { Write-Host "JARVIS uses $chosen, which took one full JARVIS question. $scope" }
 elseif ($handles.Count) { Write-Host ("JARVIS uses {0}, which did not take a full JARVIS question. These did: {1}. Tell Claude." -f $chosen, ($handles -join ', ')) }
 else { Write-Host 'No provider in this file took a full JARVIS question. Tell Claude.' }
