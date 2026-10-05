@@ -212,6 +212,50 @@ class App:
                     {'role': 'user', 'content': 'Connection test: what time is it?'}]
         return messages, self.offered_tools()
 
+    CLOUD_SPEECH_SECONDS = 8  # how long the cloud may take for one spoken command before this PC does it
+
+    def transcribe_speech(self, body):
+        """Speech to text for the microphone of the JARVIS window (16 kHz PCM, as local_stt takes it). On this PC
+        with Whisper unless the owner chose the cloud in Settings > AI; then the chosen AI provider does it.
+        If the cloud cannot, or takes longer than a few seconds, the local recognition answers and the result
+        says why. Never the cloud while the emergency stop holds, and never for another device."""
+        cloud = None
+        if self.stage4 is None and self.stopped is None and self.store.settings().get('speech_recognition') == 'cloud':
+            cloud = providers.cloud_speech()
+        if not cloud:
+            result = self.local_stt.transcribe(body)
+            result['engine'] = 'this PC'
+            return result
+        # Refused exactly as the local recognition refuses it, before anything is sent anywhere.
+        raw = base64.b64decode(body.get('data', ''), validate=True)
+        if not 3200 <= len(raw) <= 16000 * 2 * 30 or len(raw) % 2:
+            raise ValueError('Expected 0.1–30 seconds of 16 kHz mono PCM16.')
+        started = time.monotonic()
+        try:
+            import io, wave
+            recording = io.BytesIO()
+            with wave.open(recording, 'wb') as out:
+                out.setnchannels(1)
+                out.setsampwidth(2)
+                out.setframerate(16000)
+                out.writeframes(raw)
+            text = providers.transcribe(recording.getvalue(), 'audio/wav', timeout=self.CLOUD_SPEECH_SECONDS)['text']
+            if not isinstance(text, str):
+                raise providers.ProviderError('No text in the answer.')
+            return {'text': text.strip(), 'latency_ms': round((time.monotonic()-started)*1000), 'model_load_ms': 0,
+                    'inference_ms': round((time.monotonic()-started)*1000), 'audio_seconds': round(len(raw)/32000, 2),
+                    'local': False, 'engine': providers.PROVIDER_NAMES[cloud]}
+        except Exception as exc:
+            # Whatever went wrong in the cloud (a refusal, no connection, too slow, an answer that is not one), the
+            # owner still gets their words: this PC does it, and the result says why.
+            why = providers.first_sentence(exc) if isinstance(exc, providers.ProviderError) else 'The cloud answer could not be used.'
+            try:
+                result = self.local_stt.transcribe(body)
+            except ValueError as local:
+                raise ValueError(f'{local} (The cloud was tried first and could not: {why})') from None
+            result.update(engine='this PC', cloud_error=why)
+            return result
+
     def control(self):
         """What the interface shows about the emergency stop."""
         stop = self.stopped
@@ -1053,6 +1097,21 @@ class Handler(BaseHTTPRequestHandler):
                 return False
         return True
 
+    def discard_body(self, limit=1024 * 1024):
+        """After a request was refused without reading what it sent: read and throw away that body (up to a limit,
+        and for two seconds at most), so that closing the connection does not reach the client as a broken
+        connection instead of the refusal that was just sent."""
+        try:
+            remaining = min(int(self.headers.get('Content-Length', '0')), limit)
+            self.connection.settimeout(2)
+            while remaining > 0:
+                chunk = self.rfile.read(min(remaining, 65536))
+                if not chunk:
+                    break
+                remaining -= len(chunk)
+        except (ValueError, OSError):
+            pass
+
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
@@ -1163,6 +1222,7 @@ class Handler(BaseHTTPRequestHandler):
         if not self.allowed():
             # Unread POST bytes must not become another request on this connection.
             self.close_connection = True
+            self.discard_body()
             return
         try:
             length = int(self.headers.get('Content-Length', '0'))
@@ -1358,11 +1418,11 @@ class Handler(BaseHTTPRequestHandler):
             elif path == '/api/wake':
                 result = self.app.wake.predict(body)
             elif path == '/api/voice-lab/transcribe':
-                result = self.app.local_stt.transcribe(body)
-            elif path == '/api/transcribe':
-                self.app.require_running()  # the cloud transcription; the local one (/api/voice-lab/transcribe) stays
-                audio = base64.b64decode(body.get('data', ''), validate=True)
-                result = providers.transcribe(audio, body.get('mime', 'audio/webm'))
+                result = self.app.local_stt.transcribe(body)  # the voice lab: always this PC, as that page says
+            elif path == '/api/speech-to-text':
+                # The window's microphone: this PC, or the chosen AI provider when the owner chose that (docs/SPEECH.md).
+                # (The older /api/transcribe, which sent any recording to the cloud whatever the setting, is gone.)
+                result = self.app.transcribe_speech(body)
             elif path == '/api/spotify/connect':
                 result = {'url': self.app.spotify.start()}
             elif path == '/api/spotify/disconnect':

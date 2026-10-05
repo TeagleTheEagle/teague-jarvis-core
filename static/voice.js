@@ -43,7 +43,7 @@ class JarvisVoice {
   endConversation(){this.endedByUser=true;this.session=false;this.armed=false;this.manual=false;this.frames=[];this.pre=[];this.queue=[];this.epoch++;this.cb.status('SAY “HEY JARVIS”');}
   static isEndPhrase(text){const words=text.toLowerCase().replace(/[^a-z\s]/g,' ').replace(/\s+/g,' ').trim();return /^(?:(?:all right|alright|okay|ok) )?thank you (?:jarvis|travis|jeremy)$/.test(words);}
   arm(manual=false){if(!this.active||this.armed||this.processing)return;this.epoch++;this.queue=[];this.suspended=false;this.endedByUser=false;this.session=true;this.nudged=false;this.manual=manual;this.armed=true;this.frames=manual?[]:this.pre.slice();this.elapsed=this.quiet=this.voiced=0;this.cb.wake();this.cb.status('LISTENING · SPEAK YOUR COMMAND');}
-  async finish(){if(!this.armed)return;const generation=this.generation,frames=this.frames;this.armed=false;this.frames=[];this.pre=[];this.processing=true;this.cb.timing?.('speech_ended',this.lastVoicedAt);this.cb.status('TRANSCRIBING LOCALLY…');
+  async finish(){if(!this.armed)return;const generation=this.generation,frames=this.frames;this.armed=false;this.frames=[];this.pre=[];this.processing=true;this.cb.timing?.('speech_ended',this.lastVoicedAt);this.cb.status('TRANSCRIBING…');
     try{if(frames.length)await this.cb.command(new Blob(frames,{type:'application/octet-stream'}),generation);}
     catch(e){if(generation===this.generation)this.cb.error(e);}
     finally{if(generation===this.generation){this.processing=false;this.continueListening();if(!this.session)this.cb.status('SAY “HEY JARVIS”');}}

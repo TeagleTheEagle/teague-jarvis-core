@@ -35,7 +35,7 @@ Your supplied credentials are saved in **.env**, ignored by Git and never served
 | AI chat and vision | OpenAI (`JARVIS_PROVIDER=openai`, the default) or Qwen (`JARVIS_PROVIDER=qwen`, with `QWEN_VISION_MODEL` for images) |
 | Fish Audio | Connected; audio generation succeeded after API credit was added |
 | Qwen voice | Optional cloned voice: `QWEN_TTS_VOICE` with the Qwen key |
-| Speech recognition | Local Whisper on this PC; no key needed; recording requires microphone permission |
+| Speech recognition | Local Whisper on this PC; no key needed; recording requires microphone permission. Since 1.0.15, optionally the chosen AI provider instead (Settings > AI > Speech recognition; docs/SPEECH.md) |
 | Spotify | Optional; needs Client ID and browser sign-in |
 | YouTube search | Optional; needs YouTube API key; pasted URLs need no key |
 | Web search | Best-effort DuckDuckGo results; optional Brave API key supported |
@@ -47,7 +47,7 @@ Fish voice reference: `14129c3e320149449d6bada6862f7338`. The synthesis model is
 - Type into Communications; Enter sends, Shift+Enter inserts a newline.
 - Click **VOICE OFF** to turn spoken replies on. Text remains visible if speech fails.
 - Click **ENABLE MIC** or press F4 to begin listening; grant browser permission. Escape stops the interaction.
-- Always-on listening starts on page load. Say **Hey Jarvis**, followed by your command, then pause. Wake detection and transcription run locally; only the transcribed text of an activated command goes to the AI provider. Say **Hey Jarvis** during a reply to interrupt. Mute, Stop, or Escape turns the mic off. Browser microphone permission is required.
+- Always-on listening starts on page load. Say **Hey Jarvis**, followed by your command, then pause. Wake detection and transcription run locally; only the transcribed text of an activated command goes to the AI provider. (Since 1.0.15 you can choose, in Settings > AI > Speech recognition, to have the chosen AI provider turn your speech into text instead; then the recording of each command is sent to that company. Off unless you choose it; wake detection always stays local.) Say **Hey Jarvis** during a reply to interrupt. Mute, Stop, or Escape turns the mic off. Browser microphone permission is required.
 - Commands end after about 1.3 seconds of silence and are capped at 30 seconds. An empty wake activation expires after seven seconds. See [Voice and memory](VOICE-AND-MEMORY.md) for setup, memory commands, and limitations.
 - Use Memory to add/edit/delete saved facts and notes. No automatic extraction of personal facts occurs.
 - Use Files to upload documents and create PDF, Word, Markdown or text files. Generated files stay under `data/generated/` and never silently overwrite another file.

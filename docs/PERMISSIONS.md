@@ -77,8 +77,8 @@ Still decided where they were: the owner's-own-words checks of four tools (in `A
 - **While it holds:** no question is accepted from any device, no tool runs, no approval is carried out or stored
   (the stop is looked at under the same lock that stores one), no inspection or repair experiment starts and a
   running one is cancelled (it can still be looked at and cancelled). The interface's own buttons that reach the
-  internet are refused too (web search and its pictures, a route, the connection tests, speech, cloud
-  transcription), nothing is spoken for a wearable, the window says nothing aloud, and the commands the window
+  internet are refused too (web search and its pictures, a route, the connection tests, speech), cloud speech
+  recognition is not used (`docs/SPEECH.md`), nothing is spoken for a wearable, the window says nothing aloud, and the commands the window
   answers by itself wait as well. A question cannot slip in at the moment a stop arrives: the stop is looked at
   under the lock the stop itself takes. The
   optional phone bridge (`phone_bridge.py`, which nothing starts) reads the same record and refuses. The owner can

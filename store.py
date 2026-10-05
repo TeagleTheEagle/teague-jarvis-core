@@ -204,17 +204,19 @@ class Store:
             db.execute('DELETE FROM reminders WHERE id=?', (item_id,))
 
     def settings(self):
-        result = {'name': '', 'voice': False, 'continuous': False, 'response_length': 'balanced', 'tone': 'cinematic', 'humor': True, 'speech_rate': 'natural', 'wake_sensitivity': 'normal', 'quiet_hours': False, 'briefing_time': '', 'proactive': False, 'answer_mode': DEFAULT_ANSWER_MODE, 'provider_backup': True}
+        result = {'name': '', 'voice': False, 'continuous': False, 'response_length': 'balanced', 'tone': 'cinematic', 'humor': True, 'speech_rate': 'natural', 'wake_sensitivity': 'normal', 'quiet_hours': False, 'briefing_time': '', 'proactive': False, 'answer_mode': DEFAULT_ANSWER_MODE, 'provider_backup': True, 'speech_recognition': 'local'}
         with self.connect() as db:
             result.update({r['key']: json.loads(r['value']) for r in db.execute('SELECT * FROM settings')})
         if result.get('voice_profile', 'auto') not in VOICE_PROFILES:  # e.g. an ElevenLabs choice saved before 1.0.15
             result['voice_profile'] = 'auto'
         if result.get('answer_mode') not in ANSWER_MODES:  # a value this version does not know
             result['answer_mode'] = DEFAULT_ANSWER_MODE
+        if result.get('speech_recognition') not in ('local', 'cloud'):
+            result['speech_recognition'] = 'local'
         return result
 
     def save_settings(self, values):
-        permitted = {'voice_profile': str, 'name': str, 'voice': bool, 'continuous': bool, 'response_length': str, 'tone': str, 'humor': bool, 'speech_rate': str, 'wake_sensitivity': str, 'quiet_hours': bool, 'briefing_time': str, 'proactive': bool, 'answer_mode': str, 'provider_backup': bool}
+        permitted = {'voice_profile': str, 'name': str, 'voice': bool, 'continuous': bool, 'response_length': str, 'tone': str, 'humor': bool, 'speech_rate': str, 'wake_sensitivity': str, 'quiet_hours': bool, 'briefing_time': str, 'proactive': bool, 'answer_mode': str, 'provider_backup': bool, 'speech_recognition': str}
         with self.connect() as db:
             for key, val in values.items():
                 if key not in permitted or not isinstance(val, permitted[key]):
@@ -226,6 +228,7 @@ class Store:
                     raise ValueError('Invalid response length.')
                 if key == 'tone' and val not in ('cinematic','professional','casual'): raise ValueError('Invalid tone.')
                 if key == 'answer_mode' and val not in ANSWER_MODES: raise ValueError('Invalid answer speed.')
+                if key == 'speech_recognition' and val not in ('local', 'cloud'): raise ValueError('Invalid speech recognition choice.')
                 if key == 'speech_rate' and val not in ('slow','natural','fast'): raise ValueError('Invalid speech rate.')
                 if key == 'wake_sensitivity' and val not in ('low','normal','high'): raise ValueError('Invalid wake sensitivity.')
                 if key == 'briefing_time' and val and not re.fullmatch(r'([01]\d|2[0-3]):[0-5]\d', val): raise ValueError('Briefing time must use HH:MM.')

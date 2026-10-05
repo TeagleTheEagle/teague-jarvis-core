@@ -123,13 +123,28 @@ def _http_error(prefix, service, exc):
     return error
 
 
-def request(url, data=None, headers=None, method=None, raw=False, timeout=35):
+class _KeysStayPut(urllib.request.HTTPRedirectHandler):
+    """A request that carries a key is never sent on to another address: a redirect answer ends it instead.
+    (urllib would repeat the request, key included, at whatever address the answer names.) Requests without a
+    key, such as fetching a finished sound or a picture, follow redirects as before."""
+    KEY_HEADERS = frozenset(('authorization', 'x-subscription-token', 'x-goog-api-key', 'api-key', 'x-api-key'))
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if any(name.lower() in self.KEY_HEADERS for name in list(req.headers) + list(req.unredirected_hdrs)):
+            return None
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+urllib.request.install_opener(urllib.request.build_opener(_KeysStayPut))
+
+
+def request(url, data=None, headers=None, method=None, raw=False, timeout=35, operation=None):
     host = urllib.parse.urlparse(url).hostname
     service = {'api.openai.com': 'OpenAI', 'api.fish.audio': 'Fish Audio', 'serpapi.com': 'SerpApi', 'api.search.brave.com': 'Brave Search'}.get(host, 'External service')
     if (host or '').endswith('.aliyuncs.com'):
         service = 'Qwen'
     path = urllib.parse.urlparse(url).path
-    operation = 'transcription' if 'transcriptions' in path else 'voice synthesis' if 'tts' in path else 'chat' if 'completions' in path or path.endswith('/responses') else 'request'
+    operation = operation or ('transcription' if 'transcriptions' in path else 'voice synthesis' if 'tts' in path else 'chat' if 'completions' in path or path.endswith('/responses') else 'request')
     prefix = f'{service} {operation}: '
     payload = json.dumps(data).encode() if isinstance(data, dict) else data
     h = {'User-Agent': 'JarvisLocal/1.0', **(headers or {})}
@@ -184,7 +199,10 @@ def capabilities(mode=None):
 
 def _base_capabilities():
     return {
-        'transcription': provider() == 'openai' and bool(os.getenv('OPENAI_API_KEY')),
+        # Speech recognition in the cloud is done by the chosen AI provider (cloud_speech below); the app's own
+        # default is local recognition, which needs neither.
+        'transcription': cloud_speech() is not None,
+        'transcription_provider': {'openai': 'OpenAI', 'qwen': 'Qwen'}.get(cloud_speech()),
         'fish': bool(os.getenv('FISH_API_KEY') and os.getenv('FISH_VOICE_ID')),
         'qwen_voice': qwen_voice_configured(),
         # OpenAI speech needs only the OpenAI key, whichever provider does the thinking (speech() below).
@@ -627,11 +645,60 @@ def speech(text, profile='auto'):
     raise ProviderError('No voice provider is configured. Add the Fish Audio or Qwen voice settings locally, or use the browser voice.')
 
 
-def transcribe(audio, mime):
-    """Cloud transcription through OpenAI, only when OpenAI is the chosen provider (the app itself transcribes
-    locally with Whisper)."""
+QWEN_ASR_MODEL = 'qwen3-asr-flash'  # Alibaba Model Studio, speech recognition for a finished recording
+QWEN_ASR_LIMIT = 10 * 1024 * 1024   # Alibaba's limit for one recording once it is written out as text (base64)
+
+
+def cloud_speech():
+    """The provider that turns speech into text in the cloud: the chosen AI provider, when its key is in place.
+    None otherwise. (The app's own default is local recognition with Whisper, which needs neither.)"""
+    name = provider()
+    if name == 'qwen' and os.getenv('DASHSCOPE_API_KEY'):
+        return 'qwen'
+    if name == 'openai' and os.getenv('OPENAI_API_KEY'):
+        return 'openai'
+    return None
+
+
+def qwen_transcribe(audio, mime, timeout=60):
+    """Speech to text through Alibaba Model Studio (qwen3-asr-flash, the OpenAI-compatible route). The request
+    and the answer are as Alibaba's API reference gives them (read 2026-10-06). Anything else than text in the
+    answer is an error, never "nothing was said"."""
+    key = os.getenv('DASHSCOPE_API_KEY')
+    if not key:
+        raise ProviderError('Qwen speech recognition needs DASHSCOPE_API_KEY. Local recognition works without it.')
+    kind = mime.split(';')[0]
+    if kind not in ('audio/wav', 'audio/mpeg'):
+        raise ValueError('Qwen speech recognition takes WAV or MP3 recordings.')
+    data = 'data:' + kind + ';base64,' + base64.b64encode(audio).decode('ascii')
+    if len(data) > QWEN_ASR_LIMIT:
+        raise ValueError('The recording is too large for Qwen speech recognition (10 MB).')
+    options = {'enable_itn': True}  # numbers as digits ("5 minutes"), as the local recognition writes them
+    language = os.getenv('QWEN_ASR_LANGUAGE', 'en').strip()
+    if language:  # an empty QWEN_ASR_LANGUAGE line lets Alibaba detect the language
+        options['language'] = language
+    body = {'model': os.getenv('QWEN_ASR_MODEL', QWEN_ASR_MODEL), 'stream': False, 'asr_options': options,
+            'messages': [{'role': 'user', 'content': [{'type': 'input_audio', 'input_audio': {'data': data}}]}]}
+    result = request(qwen_base() + '/chat/completions', body, {'Authorization': f'Bearer {key}'}, timeout=timeout, operation='speech recognition')
+    try:
+        text = result['choices'][0]['message']['content']
+    except (KeyError, IndexError, TypeError):
+        raise ProviderError('Qwen speech recognition: no text in the answer.') from None
+    if isinstance(text, list) and all(isinstance(part, dict) and isinstance(part.get('text'), str) for part in text):
+        text = ' '.join(part['text'] for part in text)  # Alibaba's other answer shape: [{"text": "..."}]
+    if not isinstance(text, str):
+        raise ProviderError('Qwen speech recognition: no text in the answer.')
+    return {'text': text.strip()}
+
+
+def transcribe(audio, mime, timeout=None):
+    """Speech to text in the cloud, by the chosen AI provider: Qwen (qwen3-asr-flash) or OpenAI. The app itself
+    transcribes locally with Whisper unless the owner chose the cloud in Settings > AI.
+    timeout: seconds for the one request; given, there is no second try (the microphone path cannot wait)."""
+    if provider() == 'qwen':
+        return qwen_transcribe(audio, mime, timeout or 60)
     if provider() != 'openai':
-        raise ProviderError('Cloud speech transcription is only used with JARVIS_PROVIDER=openai. Local transcription and browser recognition work without it.')
+        raise ProviderError('Cloud speech recognition is done by the chosen AI provider: set JARVIS_PROVIDER to openai or qwen. Local recognition works without it.')
     key = os.getenv('OPENAI_API_KEY')
     if not key:
         raise ProviderError('Cloud speech transcription needs OPENAI_API_KEY. Local transcription and browser recognition work without it.')
@@ -644,12 +711,15 @@ def transcribe(audio, mime):
     headers = {'Authorization': f'Bearer {key}', 'Content-Type': 'multipart/form-data; boundary=' + boundary}
     endpoint = 'https://api.openai.com/v1/audio/transcriptions'
     try:
-        return request(endpoint, data, headers, timeout=60)
+        result = request(endpoint, data, headers, timeout=timeout or 60)
     except ProviderError as first:
-        if 'timed out' not in str(first).lower() and 'connection failed' not in str(first).lower():
+        if timeout or ('timed out' not in str(first).lower() and 'connection failed' not in str(first).lower()):
             raise
         time.sleep(2)
-        return request(endpoint, data, headers, timeout=60)
+        result = request(endpoint, data, headers, timeout=60)
+    if not isinstance(result, dict) or not isinstance(result.get('text'), str):
+        raise ProviderError('OpenAI transcription: no text in the answer.')
+    return result
 
 
 class Spotify:

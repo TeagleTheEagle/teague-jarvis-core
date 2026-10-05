@@ -151,6 +151,14 @@ class Gateway:
         self.app.devices.forget(device_id)
 
 
+def _refuse_unread(handler, status, payload):
+    """Refuse a request whose body was not read: close the connection afterwards, and throw the unread body away
+    first so that the client receives this answer and not a broken connection (server.Handler.discard_body)."""
+    handler.close_connection = True
+    handler.send(status, payload)
+    getattr(handler, 'discard_body', lambda: None)()
+
+
 def handle(handler):
     """POST /api/device/<op>. The same loopback and same-origin checks as every route. The proof is the device's
     own key: these routes ask neither for the owner's session nor for the desktop app's token."""
@@ -158,13 +166,11 @@ def handle(handler):
     host = f'127.0.0.1:{handler.server.server_port}'
     if (gateway is None or handler.headers.get('Host') != host or handler.headers.get('Origin') not in (None, 'http://' + host)
             or handler.headers.get('Sec-Fetch-Site') == 'cross-site'):
-        handler.close_connection = True
-        return handler.send(403, {'error': 'Device access is not available here.'})
+        return _refuse_unread(handler, 403, {'error': 'Device access is not available here.'})
     try:
         size = int(handler.headers.get('Content-Length', '0'))
         if handler.headers.get('Transfer-Encoding') or handler.headers.get_content_type() != 'application/json' or not 0 < size <= 3 * 1024 * 1024:
-            handler.close_connection = True
-            return handler.send(400, {'error': 'Use a bounded JSON request.'})
+            return _refuse_unread(handler, 400, {'error': 'Use a bounded JSON request.'})
         try:
             body = json.loads(handler.rfile.read(size))
         except ValueError:

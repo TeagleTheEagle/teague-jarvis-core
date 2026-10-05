@@ -117,11 +117,11 @@ def handle(handler):
     token=handler.headers.get('X-Jarvis-Wearable','')
     if (not service or handler.headers.get('Host')!=host or handler.headers.get('Origin') not in (None,'http://'+host)
             or handler.headers.get('Sec-Fetch-Site')=='cross-site' or not secrets.compare_digest(token,service.token)):
-        handler.close_connection=True;return handler.send(403,{'error':'Wearable authorization required.'})
+        handler.close_connection=True;handler.send(403,{'error':'Wearable authorization required.'});return getattr(handler,'discard_body',lambda:None)()
     try:
         size=int(handler.headers.get('Content-Length','0'))
         if handler.headers.get('Transfer-Encoding') or handler.headers.get_content_type()!='application/json' or not 0<size<=3*1024*1024:
-            handler.close_connection=True;return handler.send(400,{'error':'Invalid bounded JSON request.'})
+            handler.close_connection=True;handler.send(400,{'error':'Invalid bounded JSON request.'});return getattr(handler,'discard_body',lambda:None)()
         body=json.loads(handler.rfile.read(size))
         return handler.send(200,service.dispatch(handler.path.rsplit('/',1)[-1],body))
     except (ValueError,TypeError,KeyError) as exc:

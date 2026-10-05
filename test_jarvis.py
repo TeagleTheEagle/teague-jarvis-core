@@ -385,13 +385,17 @@ class ProviderChoiceTests(unittest.TestCase):
                 providers.chat([], [], lambda *args: None, threading.Event())
             call.assert_not_called()
 
-    def test_cloud_transcription_only_with_openai_chosen(self):
-        with patch.dict(os.environ, {'JARVIS_PROVIDER': 'qwen', 'OPENAI_API_KEY': 'test-only', 'DASHSCOPE_API_KEY': 'test-only'}, clear=True), \
+    def test_cloud_transcription_is_done_by_the_chosen_provider_only(self):
+        # Until 1.0.15 only OpenAI could; now Qwen as well (test_speech_recognition.py). Never the provider that
+        # was not chosen, even when its key is in the file.
+        with patch.dict(os.environ, {'JARVIS_PROVIDER': 'qwen', 'OPENAI_API_KEY': 'test-only'}, clear=True), \
                 patch('urllib.request.urlopen') as call:
             self.assertFalse(providers.capabilities()['transcription'])
-            with self.assertRaisesRegex(providers.ProviderError, 'only used with JARVIS_PROVIDER=openai'):
-                providers.transcribe(b'audio', 'audio/webm')
+            with self.assertRaisesRegex(providers.ProviderError, 'needs DASHSCOPE_API_KEY'):
+                providers.transcribe(b'audio', 'audio/wav')
             call.assert_not_called()
+        with patch.dict(os.environ, {'JARVIS_PROVIDER': 'qwen', 'OPENAI_API_KEY': 'test-only', 'DASHSCOPE_API_KEY': 'test-only'}, clear=True):
+            self.assertEqual(providers.capabilities()['transcription_provider'], 'Qwen')
         with patch.dict(os.environ, {'JARVIS_PROVIDER': 'openai', 'OPENAI_API_KEY': 'test-only'}, clear=True):
             self.assertTrue(providers.capabilities()['transcription'])
 

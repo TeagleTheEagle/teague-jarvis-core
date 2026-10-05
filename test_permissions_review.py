@@ -226,7 +226,7 @@ class RouteTests(unittest.TestCase):
                 patch.object(server.providers, 'transcribe', side_effect=nothing), patch.object(server.connection_checks, 'check', side_effect=nothing), \
                 patch.object(self.server.app.voice_engine, 'synthesize', side_effect=nothing):
             for path, data in (('/api/web/search', {'query': 'x'}), ('/api/maps/route', {'origin': 'a', 'destination': 'b'}),
-                               ('/api/connections/test', {'service': 'chat'}), ('/api/speech', {'text': 'hello'}), ('/api/transcribe', {'data': ''})):
+                               ('/api/connections/test', {'service': 'chat'}), ('/api/speech', {'text': 'hello'})):
                 self.assertEqual(self.refused(path, data), (400, permissions.STOPPED_MESSAGE), path)
             # Pictures for the owner's own search results wait too (second review).
             self.assertEqual(self.refused('/api/image?url=https://upload.wikimedia.org/x.jpg')[0], 400)
