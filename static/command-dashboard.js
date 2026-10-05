@@ -1,26 +1,35 @@
-// Command dashboard (1.0.15): the owner's concept layout around the existing core canvas, with real data only.
+// Command dashboard (1.0.15, second layout): the owner's dashboard picture around the existing core canvas, with
+// real data only (docs/design/NEW-LOOK.md lists every panel and its source).
 // Sources: /api/state (state.data, refreshed by app.js), /api/metrics (this PC), /api/workspaces (projects), the
-// assistant mode (state.mode) and the microphone (voice, voiceDiagnostic). A value that has no source is not shown.
+// assistant mode (state.mode), the activity log app.js keeps, and the microphone. A value without a source is not
+// shown: there is no weather, no world map and no mail count here. While the Core cannot be reached, everything
+// that came from it reads as unknown rather than as its last value.
 (() => {
   const view = document.querySelector('#commandView');
-  if (!view || document.querySelector('.cd-header')) return;
+  if (!view || document.querySelector('.cd-left')) return;
   const SVG = 'http://www.w3.org/2000/svg';
   const ICONS = {
-    overview: 'M12 3l8 4.5v9L12 21l-8-4.5v-9z M12 12l8-4.5 M12 12v9 M12 12L4 7.5',
-    communications: 'M4 5h16v10H9l-5 4z',
-    web: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18z M3 12h18 M12 3c3.5 3.5 3.5 14.5 0 18 M12 3c-3.5 3.5-3.5 14.5 0 18',
-    projects: 'M3 6h6l2 2h10v11H3z',
-    memory: 'M7 7h10v10H7z M9 3v4 M15 3v4 M9 17v4 M15 17v4 M3 9h4 M3 15h4 M17 9h4 M17 15h4',
-    focus: 'M9 6h11 M9 12h11 M9 18h11 M4 6l1 1 2-2 M4 12l1 1 2-2 M4 18l1 1 2-2',
-    settings: 'M12 9a3 3 0 1 0 0 6a3 3 0 1 0 0-6z M12 2v3 M12 19v3 M2 12h3 M19 12h3 M4.9 4.9L7 7 M17 17l2.1 2.1 M4.9 19.1L7 17 M17 7l2.1-2.1',
     workstation: 'M3 5h18v11H3z M8 20h8 M12 16v4',
     mobile: 'M8 2h8a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z M11 18h2',
     glasses: 'M2 13a3.5 3.5 0 0 0 7 0 M15 13a3.5 3.5 0 0 0 7 0 M9 13h6 M2 13l2-5 M22 13l-2-5',
-    mic: 'M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z M5 11a7 7 0 0 0 14 0 M12 18v3'};
-  const TILES = [['overview', 'command', 'Overview'], ['communications', 'communications', 'Comms'], ['web', 'web', 'Web'],
-    ['projects', 'projects', 'Projects'], ['memory', 'memory', 'Memory'], ['focus', 'focus', 'Tasks'], ['settings', 'settings', 'Settings']];
+    mic: 'M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z M5 11a7 7 0 0 0 14 0 M12 18v3',
+    send: 'M4 12l16-8-6 16-3-6z M11 14l9-10',
+    note: 'M5 4h10l4 4v12H5z M15 4v4h4 M8 12h8 M8 16h6',
+    analyse: 'M3 5h18v11H3z M8 20h8 M12 16v4 M8 11l3-3 2 2 3-3',
+    timer: 'M12 7a7 7 0 1 0 0 14a7 7 0 1 0 0-14z M12 10v4l3 2 M9 3h6',
+    search: 'M11 4a7 7 0 1 0 0 14a7 7 0 1 0 0-14z M16 16l5 5',
+    settings: 'M12 9a3 3 0 1 0 0 6a3 3 0 1 0 0-6z M12 2v3 M12 19v3 M2 12h3 M19 12h3 M4.9 4.9L7 7 M17 17l2.1 2.1 M4.9 19.1L7 17 M17 7l2.1-2.1',
+    project: 'M3 6h6l2 2h10v11H3z',
+    system: 'M12 3l8 4.5v9L12 21l-8-4.5v-9z M12 12l8-4.5 M12 12v9 M12 12L4 7.5',
+    voice: 'M4 10v4 M8 7v10 M12 4v16 M16 7v10 M20 10v4',
+    memory: 'M7 7h10v10H7z M9 3v4 M15 3v4 M9 17v4 M15 17v4 M3 9h4 M3 15h4 M17 9h4 M17 15h4',
+    file: 'M6 3h9l4 4v14H6z M15 3v4h4',
+    message: 'M4 5h16v10H9l-5 4z',
+    shield: 'M12 3l8 3v6c0 5-3.5 8-8 9c-4.5-1-8-4-8-9V6z',
+    dot: 'M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8z'};
   const MODES = {standby: 'STANDING BY', listening: 'LISTENING', thinking: 'THINKING', processing: 'THINKING', speaking: 'SPEAKING',
     error: 'ATTENTION NEEDED', interrupted: 'INTERRUPTED', understood: 'UNDERSTOOD'};
+  const PROMPTS = ['Give me my daily briefing', 'What is on my schedule today?', 'Summarise my open tasks', 'Help me plan my day'];
   const DOT = ' · ';
 
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
@@ -29,181 +38,224 @@
     return s; };
   const panel = (title, cls) => { const p = el('section', 'cd-panel ' + (cls || '')); p.setAttribute('aria-label', title);
     const h = el('header'); const meta = el('small'); h.append(el('h2', '', title), meta); p.append(h); return [p, meta]; };
+  const set = (node, text) => { if (node.textContent !== text) node.textContent = text; };  // no churn for screen readers
   const data = () => (typeof state !== 'undefined' && state.data) || null;
   const visible = () => document.visibilityState === 'visible' && !view.classList.contains('hidden');
-  const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.dataset.motion === 'reduced';
   const gb = bytes => (bytes / 1073741824).toFixed(bytes >= 107374182400 ? 0 : 1);
   const duration = s => s < 3600 ? Math.floor(s / 60) + 'm' : Math.floor(s / 3600) + 'h ' + Math.floor(s % 3600 / 60) + 'm';
   const clock = t => new Date(t * 1000).toLocaleTimeString(undefined, {hour: 'numeric', minute: '2-digit'});
   const configured = text => /configured/i.test(text || '') && !/not configured/i.test(text || '');
+  const go = name => { const nav = document.querySelector(`.nav[data-view="${name}"]`); if (nav) nav.click(); else if (typeof window.view === 'function') window.view(name); };
+  const press = selector => { const b = document.querySelector(selector); if (b) b.click(); };
+  // A question typed or chosen here goes to JARVIS through the existing send(); the conversation opens so the reply is seen.
+  const ask = text => { text = (text || '').trim(); if (!text || typeof send !== 'function') return; go('communications'); send(text); };
+  const linkButton = (text, action) => { const b = el('button', 'cd-link', text); b.type = 'button'; b.addEventListener('click', action); return b; };
 
   // ---- build ----
   view.classList.add('cd-on');
-  const header = el('div', 'cd-header');
-  const brand = el('div', 'cd-brand', 'TEAGUE INDUSTRIES'); brand.append(el('small', '', 'A BRIGHTER TOMORROW'));
-  const title = el('div', 'cd-title'); title.append(el('b', '', 'JARVIS'), el('small', '', 'INTELLIGENCE AMPLIFIES HUMANITY'));
-  const facts = el('div', 'cd-facts'); const timeBox = el('div', 'cd-time'); const timeText = el('b'); const dateText = el('small');
-  timeBox.append(timeText, dateText);
-  const fact = lines => { const s = el('span'); lines.forEach((line, i) => { if (i) s.append(el('br')); s.append(document.createTextNode(line)); }); return s; };
-  facts.append(fact(['People', 'Technology', 'A cleaner, brighter tomorrow']), fact(['Local core', '127.0.0.1', 'Keys stay on this PC']), timeBox);
-  header.append(brand, title, facts);
+  const left = el('div', 'cd-left'), right = el('div', 'cd-right');
 
-  const left = el('div', 'cd-left'); const right = el('div', 'cd-right');
-  const [statusPanel, statusMeta] = panel('System status', 'cd-fixed');
-  const status = el('div', 'cd-status'); const rows = el('ul', 'cd-rows'); const ring = el('div', 'cd-ring');
-  ring.innerHTML = '<svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="50"></circle><circle class="value" cx="60" cy="60" r="50"></circle></svg>';
-  const ringText = el('div'); const ringValue = el('b', '', '-'); ringText.append(ringValue, el('small', '', 'READY'));
-  ring.append(ringText); status.append(rows, ring);
-  const quote = el('p', 'cd-quote', '"Higher intelligence. A brighter tomorrow."'); quote.append(el('small', '', '- Teague Industries'));
-  statusPanel.append(status, el('p', 'cd-note', 'Ready means configured; Settings runs the live checks.'), quote);
-  const [devicePanel, deviceMeta] = panel('Devices', 'cd-fixed'); const devices = el('div', 'cd-devices'); devicePanel.append(devices);
-  const [knowledgePanel, knowledgeMeta] = panel('Knowledge', 'cd-grow'); const knowledge = el('div', 'cd-knowledge'); knowledgePanel.append(knowledge);
-  knowledgeMeta.textContent = 'ON THIS PC';
-  left.append(statusPanel, devicePanel, knowledgePanel);
+  const hello = el('section', 'cd-panel cd-hello cd-fixed'); hello.setAttribute('aria-label', 'Today');
+  const helloEyebrow = el('small', 'cd-eyebrow'), helloDate = el('b', 'cd-date'), helloTime = el('span', 'cd-daytime');
+  const helloPlace = el('div', 'cd-place'); const placeName = el('b'), placeNote = el('small');
+  helloPlace.append(placeName, placeNote);
+  const helloMain = el('div'); helloMain.append(helloEyebrow, helloDate, helloTime);
+  const helloTop = el('div', 'cd-hello-top'); helloTop.append(helloMain, helloPlace);
+  const quote = el('p', 'cd-quote', '"A more capable you, every day."'); quote.append(el('small', '', '- JARVIS'));
+  hello.append(helloTop, quote);
 
-  const [voicePanel, voiceMeta] = panel('Voice input', 'cd-fixed');
-  const voiceBox = el('div', 'cd-voice'); const mic = el('div', 'cd-mic'); mic.append(icon('mic'));
-  const wave = el('canvas', 'cd-wave'); wave.width = 360; wave.height = 46; const voiceHint = el('p');
-  voiceBox.append(mic, wave, voiceHint); voicePanel.append(voiceBox);
-  const [diagPanel, diagMeta] = panel('Live diagnostics', 'cd-fixed'); const diag = el('div', 'cd-diagnostics');
-  const metric = (label, spark) => { const box = el('div', 'cd-metric'); const value = el('b', '', '-'); const note = el('em', '', '');
-    box.append(el('small', '', label), value); let canvas = null; if (spark) { canvas = el('canvas'); canvas.width = 120; canvas.height = 20; box.append(canvas); } else box.append(note);
-    diag.append(box); return {value, note, canvas, history: []}; };
-  const m = {cpu: metric('Processor', true), memory: metric('Memory', true), disk: metric('Disk'), uptime: metric('Core uptime'),
-    response: metric('Last reply'), model: metric('AI model')};
-  diagPanel.append(diag, el('p', 'cd-note', 'Graphics, temperature and network are not measured.'));
-  const [projectPanel, projectMeta] = panel('Active projects', 'cd-grow'); const projects = el('ul', 'cd-list'); projectPanel.append(projects);
-  const [upcomingPanel, upcomingMeta] = panel('Upcoming', 'cd-fixed'); const upcoming = el('ul', 'cd-list'); upcomingPanel.append(upcoming);
-  right.append(voicePanel, diagPanel, projectPanel, upcomingPanel);
+  const [activityPanel, activityMeta] = panel('Recent activity', 'cd-grow'); const activityList = el('ul', 'cd-list cd-activity-list');
+  activityPanel.append(activityList, linkButton('View all activity', () => go('mission')));
 
-  const frame = el('div', 'cd-core-frame');
-  const labelsLeft = el('ul', 'cd-labels left'); const labelsRight = el('ul', 'cd-labels right');
-  const foot = el('div', 'cd-core-foot'); const activity = el('div', 'cd-activity'); activity.append(el('i'));
-  const coreMode = el('p', 'cd-mode'); coreMode.setAttribute('aria-live', 'polite');
-  foot.append(el('small', '', 'HUMAN POTENTIAL. AMPLIFIED.'), activity, coreMode);
-  frame.append(labelsLeft, labelsRight, foot);
+  const [perfPanel, perfMeta] = panel('System performance', 'cd-fixed'); const rings = el('div', 'cd-rings');
+  const ring = label => { const box = el('div', 'cd-ring');
+    box.innerHTML = '<svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="50"></circle><circle class="value" cx="60" cy="60" r="50"></circle></svg>';
+    const value = el('b', '', '-'); const inner = el('div'); inner.append(value); const cell = el('div', 'cd-ring-cell'); const note = el('small', '', label);
+    box.append(inner); cell.append(box, note); rings.append(cell);
+    return {value, circle: box.querySelector('.value'), cell, note}; };
+  const r = {cpu: ring('CPU'), memory: ring('MEMORY'), disk: ring('STORAGE'), ready: ring('CONFIGURED')};
+  const perfFacts = el('p', 'cd-facts');
+  perfPanel.append(rings, perfFacts, el('p', 'cd-note', 'Configured is not the same as tested: Settings runs the live checks. Network, graphics and temperature are not measured.'));
+  left.append(hello, activityPanel, perfPanel);
 
-  const tiles = el('nav', 'cd-tiles'); tiles.setAttribute('aria-label', 'Sections');
-  for (const [name, target, label] of TILES) {
-    const b = el('button', target === 'command' ? 'active' : ''); b.type = 'button'; b.append(icon(name), el('span', '', label));
-    b.addEventListener('click', () => { const nav = document.querySelector(`.nav[data-view="${target}"]`);
-      if (nav) nav.click(); else if (typeof window.view === 'function') window.view(target); });
-    tiles.append(b);
+  const [overviewPanel, overviewMeta] = panel('Core overview', 'cd-fixed'); const overview = el('div', 'cd-overview');
+  const devices = el('div', 'cd-devices'), knowledge = el('div', 'cd-knowledge'); overview.append(devices, knowledge); overviewPanel.append(overview);
+  const [projectPanel, projectMeta] = panel('Projects', 'cd-grow'); const projects = el('ul', 'cd-list');
+  projectPanel.append(projects, linkButton('Open projects', () => go('projects')));
+  const [schedulePanel, scheduleMeta] = panel("Today's schedule", 'cd-grow'); const schedule = el('ul', 'cd-list');
+  schedulePanel.append(schedule, linkButton('Open tasks', () => go('focus')));
+  const [toolsPanel, toolsMeta] = panel('Quick tools', 'cd-fixed'); const tools = el('div', 'cd-tools'); toolsMeta.textContent = 'ON THIS PC';
+  for (const [name, label, action] of [['note', 'New note', () => press('#quickNote')], ['analyse', 'Analyse', () => press('#captureScreen')],
+    ['timer', 'Timer', () => press('#timerButton')], ['search', 'Search', () => { go('web'); const box = document.querySelector('#webQuery'); if (box) box.focus(); }],
+    ['settings', 'Settings', () => go('settings')]]) {
+    const b = el('button'); b.type = 'button'; b.append(icon(name), el('span', '', label)); b.addEventListener('click', action); tools.append(b);
   }
-  view.append(header, left, frame, tiles, right);
+  toolsPanel.append(tools);
+  right.append(overviewPanel, projectPanel, schedulePanel, toolsPanel);
+
+  // Centre: an overlay on the cell that holds the existing canvas.
+  const frame = el('div', 'cd-core-frame');
+  const meters = el('ul', 'cd-meters'); const meter = {};
+  for (const key of ['online', 'listening', 'thinking', 'speaking']) { const li = el('li'); const bars = el('span', 'cd-bars'); for (let i = 0; i < 7; i++) bars.append(el('i'));
+    li.append(el('b', '', key === 'online' ? 'ONLINE' : key.toUpperCase()), bars); meters.append(li); meter[key] = li; }
+  const systems = el('div', 'cd-systems'); const systemsHead = el('div', 'cd-systems-head'); const systemsState = el('b');
+  systemsHead.append(el('small', '', 'SYSTEMS'), systemsState); const rows = el('ul', 'cd-rows'); systems.append(systemsHead, rows);
+  const stack = el('div', 'cd-stack'); const greetLine = el('p', 'cd-greet'), serviceLine = el('p', 'cd-service', 'At your service.');
+  const coreMode = el('p', 'cd-mode'); coreMode.setAttribute('role', 'status'); coreMode.setAttribute('aria-live', 'polite');
+  const wave = el('canvas', 'cd-wave'); wave.width = 520; wave.height = 40; wave.setAttribute('aria-hidden', 'true');
+  const voiceHint = el('p', 'cd-voice-hint');
+  const chips = el('div', 'cd-chips'); chips.setAttribute('role', 'group'); chips.setAttribute('aria-label', 'Suggested requests');
+  for (const text of PROMPTS) { const b = el('button', '', text); b.type = 'button'; b.addEventListener('click', () => ask(text)); chips.append(b); }
+  const screenChip = el('button', '', 'Analyse my screen'); screenChip.type = 'button'; screenChip.addEventListener('click', () => press('#captureScreen')); chips.append(screenChip);
+  stack.append(greetLine, serviceLine, coreMode, wave, voiceHint, el('small', 'cd-prompt', 'What can I help you with?'), chips);
+  frame.append(meters, systems, stack);
+
+  // Bottom band: brand, the ask bar, and what stays true of this installation.
+  const foot = el('div', 'cd-foot');
+  const footBrand = el('div', 'cd-foot-brand'); const footMark = el('img'); footMark.src = '/assets/branding/teague/teague-mark.svg'; footMark.alt = '';
+  const footText = el('div'); footText.append(el('b', '', 'TEAGUE INDUSTRIES'), el('small', '', 'A BRIGHTER TOMORROW')); footBrand.append(footMark, footText);
+  const askForm = el('form', 'cd-ask'); askForm.setAttribute('aria-label', 'Ask JARVIS');
+  const micToggle = el('button', 'cd-ask-mic'); micToggle.type = 'button'; micToggle.append(icon('voice')); micToggle.addEventListener('click', () => press('#micButton'));
+  const askInput = el('input'); askInput.type = 'text'; askInput.maxLength = 12000; askInput.placeholder = 'Ask JARVIS anything...'; askInput.setAttribute('aria-label', 'Ask JARVIS anything');
+  askInput.autocomplete = 'off';
+  const askSend = el('button', 'cd-ask-send'); askSend.type = 'submit'; askSend.setAttribute('aria-label', 'Send to JARVIS'); askSend.append(icon('send'));
+  askForm.append(micToggle, askInput, askSend);
+  askForm.addEventListener('submit', e => { e.preventDefault(); const text = askInput.value; if (!text.trim()) return; askInput.value = ''; ask(text); });
+  const footFacts = el('div', 'cd-foot-facts');
+  ['LOCAL', 'PRIVATE', 'ALWAYS WITH YOU'].forEach((text, i) => { if (i) footFacts.append(el('b', 'cd-sep', '/')); footFacts.append(el('span', '', text)); });
+  const footDot = el('b', 'cd-foot-dot'); footFacts.append(footDot);
+  foot.append(footBrand, askForm, footFacts);
+  view.append(left, frame, right, foot);
 
   // ---- render from real data ----
   let metrics = null, metricsOk = false, metricsTried = false, workspaces = null;
   const list = (target, items, empty) => { target.replaceChildren(...(items.length ? items : [el('li', 'cd-empty', empty)])); };
+  const setRing = (item, percent, text) => { const length = 2 * Math.PI * 50; item.circle.style.strokeDasharray = String(length);
+    item.circle.style.strokeDashoffset = String(length * (1 - Math.max(0, Math.min(100, percent == null ? 0 : percent)) / 100));
+    item.value.replaceChildren(text); item.cell.classList.toggle('unknown', percent == null); };
+  const percentText = value => { const f = document.createDocumentFragment(); f.append(String(Math.round(value)), el('span', '', '%')); return f; };
+  const activityIcon = entry => { const t = (entry.status + ' ' + entry.action).toLowerCase();
+    return /voice|speech|micro|wake/.test(t) ? 'voice' : /memory|remember|note/.test(t) ? 'memory' : /file|document|upload|export|backup/.test(t) ? 'file'
+      : /chat|message|conversation|run|answer/.test(t) ? 'message' : /privacy|approval|permission|security|session/.test(t) ? 'shield' : /search|web/.test(t) ? 'search'
+      : /task|timer|reminder/.test(t) ? 'timer' : 'system'; };
 
   function render() {
-    const now = new Date();
-    timeText.textContent = now.toLocaleTimeString(undefined, {hour: 'numeric', minute: '2-digit'}).toUpperCase();
-    const zone = new Intl.DateTimeFormat(undefined, {timeZoneName: 'short'}).formatToParts(now).find(p => p.type === 'timeZoneName');
-    dateText.textContent = now.toLocaleDateString(undefined, {weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'}).toUpperCase() + (zone ? DOT + zone.value : '');
-    const d = data(); const caps = (d && d.capabilities) || {};
+    const now = new Date(), hour = now.getHours();
+    const d = data(); const settings = (d && d.settings) || {};
     const connection = (document.querySelector('#connection') || {}).textContent || '';
-    const online = !!d && connection !== 'CONNECTION LOST';
-    const brain = caps.brain || '';
-    const aiOk = configured(brain);
-    const settings = (d && d.settings) || {};
-    const voiceKind = settings.voice_profile && settings.voice_profile !== 'auto' ? settings.voice_profile : caps.voice_provider;
-    const deviceList = (d && d.devices) || [];
+    // Three states: not heard from the Core yet, connected, and lost (what was read before is then stale).
+    const lost = connection === 'CONNECTION LOST', online = !!d && !lost, live = online ? d : null;
+    const caps = (live && live.capabilities) || {};
+    view.classList.toggle('cd-offline', !online);
+    const brain = caps.brain || '', aiOk = configured(brain);
+
+    const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+    set(helloEyebrow, greeting.toUpperCase());
+    set(helloDate, now.toLocaleDateString(undefined, {month: 'long', day: 'numeric', year: 'numeric'}));
+    set(helloTime, now.toLocaleDateString(undefined, {weekday: 'long'}) + ', ' + now.toLocaleTimeString(undefined, {hour: '2-digit', minute: '2-digit'}));
+    const place = ((document.querySelector('#clockLocation') || {}).textContent || '').replace(/\s*↗\s*$/, '').trim();
+    const hasPlace = !!place && !/^set location/i.test(place);
+    helloPlace.hidden = !hasPlace; if (hasPlace) { set(placeName, place); set(placeNote, 'YOUR LOCATION LABEL'); }
+    set(greetLine, greeting + (settings.name ? ', ' + settings.name + '.' : '.') + " I'm JARVIS.");
+
+    // Systems: a row is green only when the thing it names is set up; nothing here is a live test.
+    const profile = settings.voice_profile && settings.voice_profile !== 'auto' ? settings.voice_profile : caps.voice_provider;
+    const voiceReady = {qwen: !!caps.qwen_voice, fish: !!caps.fish, openai: !!caps.transcription || /^openai configured/i.test(brain), browser: true}[profile];
+    const voiceName = ({qwen: 'QWEN VOICE', fish: 'FISH AUDIO', openai: 'OPENAI VOICE', browser: 'BROWSER VOICE'})[profile];
+    const deviceList = (live && live.devices) || [];
     const connected = deviceList.filter(x => x.connected && !x.simulated);  // a simulated device is shown, never counted
-    const searchName = /serpapi/i.test(caps.search || '') ? 'SERPAPI READY' : /brave/i.test(caps.search || '') ? 'BRAVE READY' : caps.search ? 'BEST EFFORT' : 'UNKNOWN';
-    const statusRows = [
-      ['Core', online ? 'ok' : 'off', online ? 'ONLINE' : 'OFFLINE'],
-      ['AI provider', aiOk ? 'ok' : 'warn', aiOk ? brain.split(' ')[0].toUpperCase() + ' READY' : /unsupported/i.test(brain) ? 'CHECK SETTING' : 'NO KEY'],
-      ['Memory', d ? 'ok' : 'off', d ? (d.memory || []).length + ' SAVED' : 'UNKNOWN'],
-      ['Voice', voiceKind ? 'ok' : 'off', ({qwen: 'QWEN VOICE', fish: 'FISH AUDIO', openai: 'OPENAI VOICE', browser: 'BROWSER VOICE'})[voiceKind] || 'UNKNOWN'],
-      ['Web search', caps.search ? 'ok' : 'off', searchName],
-      ['Devices', connected.length ? 'ok' : 'off', connected.length + ' ONLINE']];
+    const searchName = /serpapi/i.test(caps.search || '') ? 'SERPAPI' : /brave/i.test(caps.search || '') ? 'BRAVE' : caps.search ? 'BEST EFFORT' : 'UNKNOWN';
+    const unknown = name => [name, 'off', 'UNKNOWN'];
+    const statusRows = !d && !lost ? [['Core', 'off', 'CONNECTING'], unknown('AI'), unknown('Memory'), unknown('Voice'), unknown('Search'), unknown('Devices')]
+      : !online ? [['Core', 'warn', 'OFFLINE'], unknown('AI'), unknown('Memory'), unknown('Voice'), unknown('Search'), unknown('Devices')]
+      : [['Core', 'ok', 'ONLINE'],
+        ['AI', aiOk ? 'ok' : 'warn', aiOk ? brain.split(' ')[0].toUpperCase() : /unsupported/i.test(brain) ? 'CHECK SETTING' : 'NO KEY'],
+        ['Memory', 'ok', (live.memory || []).length + ' SAVED'],
+        ['Voice', !voiceName ? 'off' : voiceReady ? 'ok' : 'warn', !voiceName ? 'UNKNOWN' : voiceReady ? voiceName : voiceName.split(' ')[0] + ' NOT SET UP'],
+        ['Search', caps.search ? 'ok' : 'off', searchName],
+        ['Devices', connected.length ? 'ok' : 'off', connected.length + ' ONLINE']];
     rows.replaceChildren(...statusRows.map(([name, cls, text]) => { const li = el('li', cls); li.append(el('i'), el('span', '', name), el('em', '', text)); return li; }));
-    const ready = statusRows.filter(r => r[1] === 'ok').length;
-    ringValue.textContent = ready + '/' + statusRows.length;
-    const circle = ring.querySelector('.value'); const length = 2 * Math.PI * 50;
-    circle.style.strokeDasharray = String(length); circle.style.strokeDashoffset = String(length * (1 - ready / statusRows.length));
-    statusMeta.textContent = ready === statusRows.length ? 'ALL SYSTEMS READY' : (statusRows.length - ready) + ' NEED ATTENTION';
+    const ready = statusRows.filter(x => x[1] === 'ok').length, total = statusRows.length;
+    set(systemsState, !d && !lost ? 'CONNECTING' : !online ? 'CORE OFFLINE' : ready === total ? 'ALL CONFIGURED' : (total - ready) + ' TO CHECK');
+    systemsState.className = online && ready === total ? '' : 'warn';
+    setRing(r.ready, online ? ready * 100 / total : null, online ? ready + '/' + total : '-');
 
+    // Mode: announced only when it changes.
+    const mode = (typeof state !== 'undefined' && state.mode) || 'standby';
+    set(coreMode, !d && !lost ? 'CONNECTING' : online ? MODES[mode] || mode.toUpperCase() : 'CORE OFFLINE');
+    coreMode.classList.toggle('offline', !online);
+    meter.online.className = online ? 'on' : ''; meter.listening.className = online && mode === 'listening' ? 'on live' : '';
+    meter.thinking.className = online && (mode === 'thinking' || mode === 'processing') ? 'on live' : ''; meter.speaking.className = online && mode === 'speaking' ? 'on live' : '';
+    footDot.className = 'cd-foot-dot' + (online ? ' on' : ''); footDot.title = online ? 'Core connected' : 'Core not connected';
+
+    // Voice line: the wake word only applies when the microphone is waiting for it.
+    const micOn = typeof state !== 'undefined' && !!state.mic;
+    const armed = typeof voice !== 'undefined' && !!voice.armed, manual = typeof voice !== 'undefined' && !!voice.manual;
+    set(voiceHint, armed && manual ? 'Listening while you hold to talk.' : armed ? 'Listening.' : micOn ? 'Say "Hey Jarvis", then your request.' : 'Microphone off. Press F4 to turn it on.');
+    micToggle.setAttribute('aria-pressed', String(micOn)); micToggle.setAttribute('aria-label', micOn ? 'Turn the microphone off' : 'Turn the microphone on');
+    micToggle.title = micOn ? 'Microphone on (F4)' : 'Microphone off (F4)';
+
+    // Recent activity: the same entries as the activity log (this session's events and the Core's audit trail).
+    const local = (typeof state !== 'undefined' && state.localLogs) || [];
+    const entries = [...local, ...((live && live.logs) || [])].filter(x => x && x.action).sort((a, b) => b.created - a.created).slice(0, 5);
+    list(activityList, entries.map(entry => { const li = el('li', 'cd-activity-row'); const box = el('div'); const mark = el('span', 'cd-activity-icon'); mark.append(icon(activityIcon(entry)));
+      box.append(el('b', '', String(entry.action).replaceAll('_', ' ')), el('small', '', String(entry.status || '').toLowerCase()));
+      li.append(mark, box, el('time', '', new Date(entry.created * 1000).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: false}))); return li; }),
+      'Nothing recorded yet in this session.');
+    set(activityMeta, online ? 'LIVE' : 'THIS SESSION');
+
+    // Performance: this PC, read by the Core.
+    const fresh = online && metricsOk && metrics && !metrics.omitted ? metrics : null;
+    const cpu = fresh ? fresh.cpu_percent : null, memory = fresh && fresh.memory ? fresh.memory.used_percent : null, disk = fresh && fresh.disk ? fresh.disk.used_percent : null;
+    setRing(r.cpu, cpu, cpu == null ? '-' : percentText(cpu)); setRing(r.memory, memory, memory == null ? '-' : percentText(memory)); setRing(r.disk, disk, disk == null ? '-' : percentText(disk));
+    r.disk.cell.title = fresh && fresh.disk ? gb(fresh.disk.free_bytes) + ' GB free on the JARVIS data drive' : '';
+    const facts = [];
+    if (fresh) { facts.push('Core up ' + duration(fresh.core_uptime_seconds));
+      facts.push(fresh.last_response_ms == null ? 'No reply yet' : 'Last reply ' + (fresh.last_response_ms / 1000).toFixed(1) + ' s'); }
+    if (aiOk && caps.model) facts.push(caps.model);
+    set(perfFacts, facts.join(DOT)); perfFacts.hidden = !facts.length;
+    set(perfMeta, fresh ? 'THIS PC' + DOT + 'LIVE' : metrics && metrics.omitted ? 'NOT READ' : !online && (d || lost) ? 'CORE OFFLINE' : metricsTried ? 'NOT READING' : 'READING...');
+
+    // Core overview: devices and what JARVIS keeps on this PC.
     const find = re => deviceList.find(x => re.test(x.device_id));
-    const deviceTiles = [['workstation', 'Workstation', find(/^pc$/)], ['mobile', 'Mobile', find(/phone|mobile/i)], ['glasses', 'Glasses', find(/glass|wear/i)]];
+    const deviceTiles = [['workstation', 'This PC', find(/^pc$/)], ['mobile', 'Phone', find(/phone|mobile/i)], ['glasses', 'Glasses', find(/glass|wear/i)]];
     devices.replaceChildren(...deviceTiles.map(([kind, name, device]) => {
-      const ok = device && device.connected && !device.simulated; const tile = el('div', 'cd-device' + (ok ? ' ok' : ''));
+      const ok = !!device && device.connected && !device.simulated; const tile = el('div', 'cd-device' + (ok ? ' ok' : ''));
       tile.append(icon(kind), el('b', '', name.toUpperCase()),
-        el('small', '', ok ? 'Online' : device && device.connected ? 'Simulated only' : device ? 'Offline' : 'Not paired'));
+        el('small', '', !online ? 'Unknown' : !device ? 'Not paired' : device.simulated ? 'Simulated only' : device.connected ? 'Online' : 'Offline'));
       return tile; }));
-    deviceMeta.textContent = connected.length + ' CONNECTED';
-
-    const count = key => d && Array.isArray(d[key]) ? String(d[key].length) : '-';
+    set(overviewMeta, online ? connected.length + ' DEVICE' + (connected.length === 1 ? '' : 'S') + ' ONLINE' : 'UNKNOWN');
+    // The Core lists at most 100 conversations, so 100 means "100 or more".
+    const count = key => { if (!live || !Array.isArray(live[key])) return '-'; const n = live[key].length; return key === 'conversations' && n >= 100 ? '100+' : String(n); };
     knowledge.replaceChildren(...[['memory', 'Memories'], ['documents', 'Documents'], ['notes', 'Notes'], ['conversations', 'Conversations']].map(([key, label]) => {
       const box = el('div'); box.append(el('b', '', count(key)), el('small', '', label)); return box; }));
 
-    const mode = (typeof state !== 'undefined' && state.mode) || 'standby';
-    coreMode.classList.toggle('offline', !online);
-    coreMode.textContent = online ? MODES[mode] || mode.toUpperCase() : 'CORE OFFLINE';
-    activity.className = 'cd-activity ' + mode;
-    const label = ([text, on]) => el('li', on ? '' : 'off', text);
-    labelsLeft.replaceChildren(...[['ANALYZE', !!caps.vision], ['SYNTHESIZE', aiOk], ['REASON', aiOk], ['EXECUTE', online], ['REMEMBER', !!d]].map(label));
-    labelsRight.replaceChildren(...[['VISION', !!caps.vision], ['VOICE', !!voiceKind], ['LANGUAGE', aiOk], ['RESEARCH', !!caps.search], ['APPROVALS', online]].map(label));
-
-    const micOn = typeof state !== 'undefined' && !!state.mic;
-    const armed = typeof voice !== 'undefined' && !!voice.armed;
-    voiceBox.classList.toggle('on', micOn);
-    voiceMeta.textContent = armed ? 'LISTENING' : micOn ? 'WAITING FOR WAKE WORD' : 'MIC OFF';
-    voiceHint.textContent = micOn ? 'Say "Hey Jarvis", then your command.' : 'The microphone is off.';
-
-    if (metrics) {
-      const cpu = metrics.cpu_percent, memory = metrics.memory, disk = metrics.disk;
-      m.cpu.value.replaceChildren(cpu == null ? '-' : String(Math.round(cpu)), el('span', '', cpu == null ? '' : '%'));
-      m.memory.value.replaceChildren(memory ? String(memory.used_percent) : '-', el('span', '', memory ? '%' : ''));
-      m.disk.value.replaceChildren(disk ? String(Math.round(disk.used_percent)) : '-', el('span', '', disk ? '%' : ''));
-      m.disk.note.textContent = disk ? gb(disk.free_bytes) + ' GB free' : 'not readable';
-      m.uptime.value.textContent = duration(metrics.core_uptime_seconds); m.uptime.note.textContent = 'this Core session';
-      m.response.value.textContent = metrics.last_response_ms == null ? '-' : (metrics.last_response_ms / 1000).toFixed(1) + ' s';
-      m.response.note.textContent = metrics.last_response_ms == null ? 'no reply yet' : 'last completed request';
-    }
-    m.model.value.textContent = aiOk && caps.model ? caps.model : '-'; m.model.value.title = aiOk ? caps.model || '' : '';
-    m.model.note.textContent = aiOk ? brain.split(' ')[0] : 'AI not configured';
-    diagMeta.textContent = metricsOk ? 'THIS PC' + DOT + 'LIVE' : metricsTried ? 'NOT READING' : 'READING...';
-    for (const item of [m.cpu, m.memory]) spark(item);
-
-    const tasks = (d && d.tasks) || [];
-    const projectItems = (workspaces || []).slice(0, 5).map(p => {
-      const linked = (p.links || []).filter(x => x.kind === 'task');
-      const done = linked.filter(x => (tasks.find(t => t.id === x.ref) || {}).completed).length;
-      const li = el('li', 'cd-project'); const name = el('div'); name.append(el('b', '', p.name),
-        el('small', '', linked.length ? done + ' of ' + linked.length + ' tasks done' : (p.links || []).length + ' linked items' + DOT + 'no tasks'));
-      const bar = el('div', 'cd-bar'); const fill = el('i'); bar.append(fill);
-      const pct = linked.length ? Math.round(done * 100 / linked.length) : null;
-      if (pct === null) bar.hidden = true; else fill.style.width = pct + '%';
-      li.append(name, bar, el('em', '', pct === null ? '' : pct + '%')); return li; });
-    list(projects, projectItems, workspaces ? 'No projects yet. Create one in Projects.' : 'Loading projects...');
-    projectMeta.textContent = workspaces ? workspaces.length + ' SAVED' : '';
+    // Projects: progress only where linked tasks that still exist allow it to be counted.
+    const tasks = (live && live.tasks) || [];
+    const shownProjects = online ? workspaces : null;
+    const projectItems = (shownProjects || []).slice(0, 4).map(p => {
+      const linked = (p.links || []).filter(x => x.kind === 'task').map(x => tasks.find(t => t.id === x.ref)).filter(Boolean);
+      const done = linked.filter(t => t.completed).length; const pct = linked.length ? Math.round(done * 100 / linked.length) : null;
+      const li = el('li', 'cd-project'); const mark = el('span', 'cd-activity-icon'); mark.append(icon('project'));
+      const name = el('div'); name.append(el('b', '', p.name), el('small', '', linked.length ? done + ' of ' + linked.length + ' tasks done' : (p.links || []).length + ' linked items' + DOT + 'no tasks'));
+      const bar = el('div', 'cd-bar'); const fill = el('i'); bar.append(fill); if (pct === null) bar.style.visibility = 'hidden'; else fill.style.width = pct + '%';
+      const stateText = pct === null ? 'NO TASKS' : pct === 100 ? 'DONE' : 'IN PROGRESS';
+      li.append(mark, name, bar, el('em', '', pct === null ? '' : pct + '%'), el('small', 'cd-chip' + (pct === 100 ? ' done' : pct === null ? ' off' : ''), stateText)); return li; });
+    list(projects, projectItems, !online ? 'Unknown while the Core is not connected.' : shownProjects ? 'No projects yet. Create one in Projects.' : 'Loading projects...');
+    set(projectMeta, shownProjects ? shownProjects.length + ' SAVED' : '');
 
     const nowS = Date.now() / 1000; const end = new Date(); end.setHours(24, 0, 0, 0); const endS = end.getTime() / 1000;
-    const events = [...((d && d.reminders) || []).filter(r => !r.fired && r.due >= nowS && r.due < endS).map(r => [r.due, r.title, 'Reminder']),
+    const events = [...((live && live.reminders) || []).filter(x => !x.fired && x.due >= nowS && x.due < endS).map(x => [x.due, x.title, 'Reminder']),
       ...tasks.filter(t => !t.completed && t.due && t.due >= nowS && t.due < endS).map(t => [t.due, t.body, 'Task'])].sort((a, b) => a[0] - b[0]);
-    list(upcoming, events.slice(0, 4).map(([due, text, kind]) => { const li = el('li', 'cd-event'); const t = el('time', '', clock(due));
-      li.append(t, el('span', '', text), el('small', '', kind)); return li; }), 'Nothing scheduled for the rest of today.');
-    upcomingMeta.textContent = events.length + ' TODAY';
-  }
-
-  function spark(item) {
-    const c = item.canvas; if (!c) return; const g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height);
-    const h = item.history; if (h.length < 2) return;
-    g.strokeStyle = '#3ed1ff'; g.lineWidth = 1.5; g.beginPath();
-    h.forEach((v, i) => { const x = i * c.width / (h.length - 1), y = c.height - 2 - v / 100 * (c.height - 4); i ? g.lineTo(x, y) : g.moveTo(x, y); });
-    g.stroke();
+    list(schedule, events.slice(0, 5).map(([due, text, kind]) => { const li = el('li', 'cd-event'); li.append(el('time', '', clock(due)), el('span', '', text), el('small', '', kind)); return li; }),
+      online ? 'Nothing scheduled for the rest of today.' : 'Unknown while the Core is not connected.');
+    set(scheduleMeta, online ? events.length + ' TODAY' : '');
   }
 
   async function poll(force) {
     if (!force && !visible()) return;
-    try {
-      metrics = await api('/api/metrics'); metricsOk = true;
-      if (metrics.cpu_percent != null) m.cpu.history.push(metrics.cpu_percent);
-      if (metrics.memory) m.memory.history.push(metrics.memory.used_percent);
-      for (const item of [m.cpu, m.memory]) if (item.history.length > 40) item.history.shift();
-    } catch (e) { metricsOk = false; }
+    try { metrics = await api('/api/metrics'); metricsOk = true; } catch (e) { metricsOk = false; }
     metricsTried = true; render();
   }
   async function pollProjects(force) {
@@ -223,15 +275,17 @@
   }
   function drawWave() {
     const g = wave.getContext('2d'); const w = wave.width, h = wave.height; g.clearRect(0, 0, w, h);
-    g.strokeStyle = '#3ed1ff'; g.lineWidth = 1.5; g.shadowColor = '#3ed1ff'; g.shadowBlur = 6; g.beginPath();
-    const live = typeof state !== 'undefined' && state.mic ? analyserFor() : null;
+    const micOn = typeof state !== 'undefined' && !!state.mic;
+    g.strokeStyle = micOn ? '#5cc8ff' : '#2a5b85'; g.lineWidth = 1.5; g.shadowColor = '#38b6ff'; g.shadowBlur = micOn ? 6 : 0; g.beginPath();
+    const live = micOn ? analyserFor() : null;
     if (live) {
       live.getFloatTimeDomainData(samples);
       for (let i = 0; i < samples.length; i += 4) { const x = i / (samples.length - 1) * w, y = h / 2 + samples[i] * h * 2.2; i ? g.lineTo(x, y) : g.moveTo(x, y); }
     } else {
-      const fresh = typeof voiceDiagnostic !== 'undefined' && voiceDiagnostic.frameAt && performance.now() - voiceDiagnostic.frameAt < 400;
-      levels.push(fresh ? Math.min(1, (voiceDiagnostic.level || 0) * 8) : 0); if (levels.length > 72) levels.shift();
-      levels.forEach((v, i) => { const x = i * w / 71, a = v * h / 2; g.moveTo(x, h / 2 - a); g.lineTo(x, h / 2 + a + 0.5); });
+      // voiceDiagnostic.frameAt is a Date.now() stamp (app.js); with the microphone off the line stays flat.
+      const fresh = micOn && typeof voiceDiagnostic !== 'undefined' && voiceDiagnostic.frameAt && Date.now() - voiceDiagnostic.frameAt < 400;
+      levels.push(fresh ? Math.min(1, (voiceDiagnostic.level || 0) * 8) : 0); if (levels.length > 96) levels.shift();
+      levels.forEach((v, i) => { const x = i * w / 95, a = v * h / 2; g.moveTo(x, h / 2 - a); g.lineTo(x, h / 2 + a + 0.5); });
     }
     g.stroke();
   }
@@ -243,7 +297,7 @@
 
   render(); poll(true); pollProjects(true);
   setInterval(render, 1500); setInterval(poll, 3000); setInterval(pollProjects, 20000);
-  // Coming back to the Command view or to the window: read at once rather than at the next interval.
+  // Coming back to the dashboard or to the window: read at once rather than at the next interval.
   let wasVisible = visible();
   const resume = () => { const now = visible(); if (now && !wasVisible) { poll(); pollProjects(); render(); } wasVisible = now; };
   document.addEventListener('visibilitychange', resume);

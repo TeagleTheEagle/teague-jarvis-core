@@ -46,5 +46,21 @@ class InspectionBrowserTests(unittest.TestCase):
         self.assertEqual(p.chromium.tried, ['msedge', 'msedge', 'chrome', 'chrome'])
 
 
+class InspectionAssets(unittest.TestCase):
+    def test_every_file_the_page_loads_is_available_to_the_inspection_renderer(self):
+        # The renderer serves only inspection_runtime.STATIC; a script or stylesheet index.html loads but the
+        # list lacks would be refused, and the inspected picture would differ from the real interface.
+        import pathlib, re
+        static = pathlib.Path(inspection_runtime.__file__).resolve().parent / 'static'
+        page = (static / 'index.html').read_text(encoding='utf-8')
+        loaded = set(re.findall(r'<(?:script|img)[^>]*\ssrc="/([^"]+)"', page)) | set(re.findall(r'<link[^>]*\shref="/([^"]+)"', page))
+        self.assertIn('command-dashboard.js', loaded)
+        self.assertEqual(sorted(loaded - set(inspection_runtime.STATIC)), [])
+        for name in inspection_runtime.STATIC:
+            self.assertTrue((static / name).is_file(), name)
+        for key in ('cpu_percent', 'memory', 'disk', 'core_uptime_seconds', 'last_response_ms'):
+            self.assertIsNone(inspection_runtime.METRICS_OMITTED[key])
+
+
 if __name__ == '__main__':
     unittest.main()

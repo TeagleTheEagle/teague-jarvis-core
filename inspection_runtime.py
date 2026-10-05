@@ -20,7 +20,13 @@ IMAGE_LOCK = threading.Lock()
 MAX_CAPTURES = 6
 STATIC = ('index.html','app.js','voice.js','style.css','pro.css','gallery.css',
           'diagrams.js','workspaces.js','reliability.js','reliability.css',
-          'latency.js','voice-core.js','teague.js','teague.css','maps.js','maps.css','recovery.js','voice-preview.js','inspection-client.js','desktop-updates.js','assistant-controls.js')
+          'latency.js','voice-core.js','teague.js','teague.css','maps.js','maps.css','recovery.js','voice-preview.js','inspection-client.js','desktop-updates.js','assistant-controls.js',
+          'command-dashboard.js','command-dashboard.css','horizon.js','horizon.css',
+          'assets/branding/teague/teague-mark.svg','assets/branding/teague/jarvis-mark.svg')
+# test_inspection_browser.py keeps this list in step with the files index.html loads.
+# PC readings are not part of an inspection snapshot: the dashboard shows them as not read.
+METRICS_OMITTED = {'omitted': True, 'cpu_percent': None, 'memory': None, 'disk': None, 'core_uptime_seconds': None,
+                   'last_response_ms': None, 'responses_measured': 0, 'scope': 'Omitted during read-only inspection.'}
 
 
 def stamp():
@@ -154,7 +160,7 @@ def capture(root, origin, request, data):
                 if path in assets and assets[path].is_file() and not url.query:
                     return route.fulfill(body=assets[path].read_bytes(),content_type=mimetypes.guess_type(str(assets[path]))[0] or 'text/plain')
                 payload = {'/api/state':data['state'], '/api/history':{'messages':data['messages']},
-                           '/api/workspaces':{'projects':data['projects']},
+                           '/api/workspaces':{'projects':data['projects']}, '/api/metrics':METRICS_OMITTED,
                            '/api/maps/config':{'available':False,'error':'External maps omitted during inspection'}}.get(path)
                 if payload is not None:
                     return route.fulfill(json=payload)

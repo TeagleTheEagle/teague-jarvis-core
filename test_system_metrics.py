@@ -28,7 +28,8 @@ class SystemMetricsTests(unittest.TestCase):
             self.assertIsNone(system_metrics.cpu_percent())
 
     def test_snapshot_reports_scope_and_last_completed_response(self):
-        timings = [{'elapsed_ms': 900, 'cancelled': False}, {'elapsed_ms': 7237, 'cancelled': False}, {'elapsed_ms': 50, 'cancelled': True}]
+        timings = [{'elapsed_ms': 900, 'cancelled': False}, {'elapsed_ms': 7237, 'cancelled': False, 'completed': True},
+                   {'elapsed_ms': 50, 'cancelled': True}, {'elapsed_ms': 310, 'cancelled': False, 'completed': False}]  # a failed run is not a reply
         with tempfile.TemporaryDirectory() as folder:
             result = system_metrics.snapshot(folder, time.time() - 65, timings)
         self.assertEqual(result['last_response_ms'], 7237)
