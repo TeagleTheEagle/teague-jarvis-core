@@ -30,3 +30,21 @@ connected". Configured is not the same as tested (`verified_status.GUIDANCE`); t
 | Upcoming (meetings) | Reminders and timers due today; "Nothing scheduled" when empty | `/api/state` reminders |
 
 Out of scope for 1.0.15: phone and glasses clients, network and graphics telemetry, calendar integration.
+
+## As built (2026-10-05)
+
+- `static/command-dashboard.css` and `static/command-dashboard.js` (new, loaded after `teague.css` / `teague.js`;
+  registered in the server's static allowlist). They add `.cd-on` to `#commandView` and build the header band, side
+  panels, centre overlay and tiles around the existing `.core-panel` / `canvas#core`, which stay where `app.js`
+  expects them (one canvas, moved to the companion area on other views and back). No element `app.js` or `teague.js`
+  looks up was removed.
+- Data: `/api/state` (now also `devices` from the device registry), `/api/metrics`, `/api/workspaces`, `state.mode`,
+  the microphone (an `AnalyserNode` on the capture source while listening, otherwise the level the voice front end
+  already reports). A simulated device (the wearables test device) is shown as "Simulated only" and never counted.
+- The old Command background image (`command-background.png`, never shipped, a 404) is no longer requested.
+- Window sizes: full panels from 1500 px wide, compact panels down to 1181 px, core and tiles only below that; the
+  header band hides below 960 px high. The side columns scroll if a short window cannot hold every panel.
+- Checked in a sandbox Core (synthetic data, no keys, port 8799) at 1920x1080, 1280x900 and 760x560: no page
+  errors, no horizontal overflow, the core canvas centred within 1 px, navigation to Communications and back keeps
+  one canvas. Screenshots: `command-dashboard-preview-1920x1080.png`, `command-dashboard-preview-1280x900.png`.
+  369 Python tests and the 17 interface scripts pass.

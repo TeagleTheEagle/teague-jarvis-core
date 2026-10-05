@@ -260,6 +260,24 @@ class HTTPTests(unittest.TestCase):
             self.req('/.env')
         self.assertEqual(error.exception.code, 404)
 
+    def test_command_dashboard_is_served_and_its_readings_need_the_session(self):
+        for path in ('/command-dashboard.js', '/command-dashboard.css'):
+            with self.req(path) as response:
+                self.assertEqual(response.status, 200)
+        with self.req('/') as response:
+            page = response.read().decode()
+        self.assertIn('/command-dashboard.js', page)
+        with self.assertRaises(urllib.error.HTTPError) as error:
+            self.req('/api/metrics', cookie=False)
+        self.assertEqual(error.exception.code, 401)
+        with self.req('/api/metrics') as response:
+            metrics = json.load(response)
+        for key in ('cpu_percent', 'memory', 'disk', 'core_uptime_seconds', 'last_response_ms', 'scope'):
+            self.assertIn(key, metrics)
+        with self.req('/api/state') as response:
+            devices = json.load(response)['devices']
+        self.assertIn('pc', [d['device_id'] for d in devices])
+
     def test_file_traversal(self):
         with self.assertRaises(urllib.error.HTTPError) as error:
             self.req('/api/files/..%2F..%2F.env')
