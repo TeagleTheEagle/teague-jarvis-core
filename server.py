@@ -60,6 +60,7 @@ from local_stt import LocalSTT
 import conversation_context
 import maps
 import providers
+import system_metrics
 from ollama_shadow import ShadowObserver, observe as observe_shadow
 import memory
 import workspaces
@@ -743,6 +744,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, maps.configuration())
             if path == '/api/state':
                 return self.send(200, self.app.state())
+            if path == '/api/metrics':
+                with self.app.lock:
+                    timings = list(self.app.timings)
+                return self.send(200, system_metrics.snapshot(self.app.store.root, self.app.started, timings))
             if path == '/api/workspaces':
                 return self.send(200, {'projects': workspaces.listing(self.app.store)})
             if path == '/api/history':
