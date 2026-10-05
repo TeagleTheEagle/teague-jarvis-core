@@ -9,7 +9,7 @@ Base: `http://127.0.0.1:8765`. Load `/` first for a random process-scoped HttpOn
 | POST | `/api/chat` | `{text, conversation, attachment?: uploadId}` returns `{run_id}` |
 | GET | `/api/runs/ID/events?after=-1` | `{events, done}`, waits up to 10 seconds for new events |
 | POST | `/api/cancel` | `{run_id}` |
-| POST | `/api/settings` | Subset of `{name, voice, continuous, response_length}` |
+| POST | `/api/settings` | Subset of `{name, voice, continuous, response_length, answer_mode, tone, humor, speech_rate, wake_sensitivity, quiet_hours, briefing_time, proactive, voice_profile}` |
 | POST | `/api/item` | `{kind: memory|note|task, body, id?: existingId}` |
 | POST | `/api/item/delete` | `{kind, id}` |
 | POST | `/api/reminder` | `{title, seconds}` |

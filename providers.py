@@ -24,6 +24,9 @@ class ProviderError(Exception):
 
 AI_PROVIDERS = ('openai', 'qwen')  # Groq, Gemini and ElevenLabs were removed in 1.0.15 (owner decision 2026-10-05)
 VOICE_PROFILES = ('auto', 'fish', 'openai', 'qwen')
+ANSWER_MODES = ('auto', 'deep', 'economy')  # Settings > Answer speed; see qwen_plan()
+# What 1.0.14 did (Qwen thinks before every answer), until the owner chooses another default.
+DEFAULT_ANSWER_MODE = 'deep'
 
 
 def provider():
@@ -146,12 +149,14 @@ def request(url, data=None, headers=None, method=None, raw=False, timeout=35):
         raise ProviderError(prefix + 'Invalid response received from provider.') from None
 
 
-def capabilities():
+def capabilities(mode=None):
+    """What is configured. mode is the saved answer mode (Settings > Answer speed): with Qwen the
+    model named here is the one that answers in that mode, so labels and checks match the answers."""
     result = _base_capabilities()
     if provider() == 'qwen':
         configured = bool(os.getenv('DASHSCOPE_API_KEY'))
         result.update(brain='Qwen configured' if configured else 'Qwen not configured',
-                      model=os.getenv('QWEN_MODEL', QWEN_DEFAULT_MODEL),
+                      model=qwen_plan(mode)[0],
                       vision_provider='Qwen', vision=configured and bool(os.getenv('QWEN_VISION_MODEL')))
     elif provider() == 'openai':
         configured = bool(os.getenv('OPENAI_API_KEY'))
@@ -177,10 +182,10 @@ def _base_capabilities():
         'spotify': bool(os.getenv('SPOTIFY_CLIENT_ID')),
     }
 
-def live_health():
+def live_health(mode=None):
     checks = {}
     targets = []
-    caps = capabilities()
+    caps = capabilities(mode)
     use_qwen = provider() == 'qwen'
     key = os.getenv('DASHSCOPE_API_KEY') if use_qwen else os.getenv('OPENAI_API_KEY') if provider() == 'openai' else None
     if provider() not in AI_PROVIDERS:
@@ -221,11 +226,13 @@ def live_health():
     return checks
 
 
-def chat(messages, tools, emit, cancel, vision=False):
+def chat(messages, tools, emit, cancel, vision=False, mode=None, text=''):
+    """One model request. mode (Settings > Answer speed; None means the default) and text (the
+    user's own words) only steer Qwen today: see qwen_plan()."""
     if cancel.is_set():
         return None
     if provider() == 'qwen':
-        return qwen_chat(messages, tools, emit, cancel, vision)
+        return qwen_chat(messages, tools, emit, cancel, vision, mode, text)
     if provider() != 'openai':
         raise unsupported_error()
     key = os.getenv('OPENAI_API_KEY')
@@ -332,18 +339,72 @@ def qwen_base():
     return base
 
 
-def qwen_chat(messages, tools, emit, cancel, vision=False):
+# Qwen 3.8 models think before every answer unless told not to (Alibaba's default). Measured on
+# the owner's account on 2026-10-05 with a full JARVIS request: a 150-word answer took 11.9 s with
+# thinking and 5.8 s without (docs/CAPABILITY-PLAN.md section 3). These words in the user's own
+# message ask for a considered answer; in every mode they get the main model with thinking on.
+QWEN_FAST_MODEL = 'qwen3.8-flash'
+# "enable_thinking": false together with an image was accepted on the owner's account on 2026-10-05
+# (Test-AiSpeed picture run, qwen3.8-max: 5.6 s against 7.1 s with thinking). False restores the
+# request 1.0.14 sent for pictures, should another vision model refuse the field; so does Deep.
+QWEN_PICTURES_WITHOUT_THINKING = True
+_DEPTH_REQUEST = re.compile(
+    r'\b(?:think(?:ing)?\s+(?:(?:very|really|real|extra|more|long\s+and)\s+)?'
+    r'(?:hard(?!\s+(?:drive|disk|work)s?\b)|harder|carefully|deeply|(?:it|this|that)\s+through|step[\s-]by[\s-]step)'
+    r'|think\s+about\s+(?:it|this|that)\s+(?:(?:very|really|more)\s+)?(?:carefully|hard|deeply)'
+    r'|take\s+your\s+time(?!\s+off\b)|deep[\s-](?:dive|analysis)\s+(?:into|on|of)'
+    r'|reason\s+(?:carefully|step[\s-]by[\s-]step))\b', re.I)
+# "don't think hard about it, just answer": the words just before a match can turn it around.
+_DEPTH_DECLINED = re.compile(r"(?:\b(?:don'?t|do\s+not|no\s+need\s+to|needn'?t|without|never|not)\s+(?:\w+\s+){0,2})$", re.I)
+
+
+def wants_depth(text):
+    """True when the user's own words ask JARVIS to think first ("think hard about ..."). A miss
+    costs a quicker answer and a false hit a slower one; neither changes what JARVIS may do."""
+    text = text or ''
+    return any(not _DEPTH_DECLINED.search(text[max(0, match.start() - 40):match.start()])
+               for match in _DEPTH_REQUEST.finditer(text))
+
+
+def qwen_plan(mode=None, text='', vision=False):
+    """Which Qwen model answers and whether it thinks first: (model, thinking).
+    deep (the default, also for None or an unknown mode): the main model, thinking before every
+        answer, which is what 1.0.14 and older always did.
+    auto: the main model without thinking.
+    economy: the cheaper fast model without thinking, for everything except pictures.
+    A request for depth in the user's own words gets the main model with thinking in every mode."""
+    main = os.getenv('QWEN_VISION_MODEL') if vision else os.getenv('QWEN_MODEL', QWEN_DEFAULT_MODEL)
+    if mode not in ANSWER_MODES:
+        mode = DEFAULT_ANSWER_MODE
+    if mode == 'deep' or wants_depth(text) or (vision and not QWEN_PICTURES_WITHOUT_THINKING):
+        return main, True
+    if mode == 'economy' and not vision:
+        return os.getenv('QWEN_FAST_MODEL') or QWEN_FAST_MODEL, False
+    return main, False
+
+
+def chat_options(mode, text):
+    """Keyword arguments for chat() that carry the saved answer mode and the user's own words.
+    Empty when they would change nothing, so that the Core's everyday call to chat() keeps its
+    five arguments (test doubles and the Stage 4 harness replace chat() with that shape)."""
+    mode = mode if mode in ANSWER_MODES else DEFAULT_ANSWER_MODE
+    if mode == DEFAULT_ANSWER_MODE and (mode == 'deep' or not wants_depth(text)):
+        return {}
+    return {'mode': mode, 'text': text}
+
+
+def qwen_chat(messages, tools, emit, cancel, vision=False, mode=None, text=''):
     """Qwen through Model Studio; results still pass through server evidence/action guards."""
     key = os.getenv('DASHSCOPE_API_KEY')
     if not key:
         raise ProviderError('Qwen is selected. Add DASHSCOPE_API_KEY locally and restart JARVIS.')
-    model = os.getenv('QWEN_VISION_MODEL') if vision else os.getenv('QWEN_MODEL', QWEN_DEFAULT_MODEL)
+    model, thinking = qwen_plan(mode, text, vision)
     if not model:
         raise ProviderError('Image understanding needs a Qwen vision model. Authorise one for your key and set QWEN_VISION_MODEL.')
-    return _compatible_chat('Qwen', qwen_base() + '/chat/completions', key, model, messages, tools, emit, cancel, vision)
+    return _compatible_chat('Qwen', qwen_base() + '/chat/completions', key, model, messages, tools, emit, cancel, vision, thinking)
 
 
-def _compatible_chat(service, endpoint, key, model, messages, tools, emit, cancel, vision):
+def _compatible_chat(service, endpoint, key, model, messages, tools, emit, cancel, vision, thinking=False):
     """Non-streaming OpenAI-compatible adapter (Qwen)."""
     if cancel.is_set():
         return None
@@ -351,6 +412,10 @@ def _compatible_chat(service, endpoint, key, model, messages, tools, emit, cance
     # content and tool results when changing provider within an existing session.
     clean = [{k: v for k, v in m.items() if not k.startswith('_')} for m in messages]
     body = {'model': model, 'messages': clean, 'stream': False, 'max_completion_tokens': 8192}
+    # "Off" is sent explicitly. "On" is left to Alibaba's default, so that a thinking request is
+    # exactly the request 1.0.14 sent (the shape proven on the owner's account).
+    if not thinking:
+        body['enable_thinking'] = False
     if tools and not vision:
         body.update(tools=tools, tool_choice='auto')
     result = request(endpoint, body, {'Authorization': f'Bearer {key}'}, timeout=120)

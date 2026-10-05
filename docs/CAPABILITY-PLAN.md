@@ -66,8 +66,12 @@ What is true today (code and Alibaba's pages, read 2026-10-05):
   thinking off 5.8 s; `qwen3.8-flash` with thinking off 5.8 s. A question that needs a tool: 2.3, 3.1, 3.4 (a cold
   request) and 2.0 s. So the wait is mostly the default thinking, and `qwen3.8-flash` is cheaper but not faster.
 
-Proposed (**Decision D3**). Built in the repo for 1.0.15 on 2026-10-05 as Settings > Answer speed, with Auto as the
-default; the owner may change the default or the wording:
+  A second run the same evening gave 16.9 s against 6.2 s, and for a picture 7.1 s with thinking against 5.6 s
+  without (so "thinking off" is accepted together with an image on this account).
+
+Proposed (**Decision D3**). Built in the repo for 1.0.15 on 2026-10-05 as Settings > Answer speed. **The default
+stays Deep, which is today's behaviour, until the owner says yes to Auto** ("auto default"); the wording is the
+owner's to change:
 
 | Job | Proposed |
 |---|---|
@@ -81,9 +85,9 @@ default; the owner may change the default or the wording:
 How JARVIS chooses, as built: one visible setting, Answer speed: Auto / Deep / Economy. Auto keeps the main model
 and answers without thinking first; "think hard about ..." (or "take your time", "think it through") gets a
 thinking answer for that one question in every mode. Deep is exactly what 1.0.14 does. Economy uses
-`qwen3.8-flash` for everyday answers. Auto is the default on the strength of the measurement above; whether it
-loses anything against Deep on everyday questions is what the stage 1 question set will show ("let's not minimise
-or make jarvis less"), and Deep is one click away until then. Not proposed:
+`qwen3.8-flash` for everything except pictures. Auto is recommended as the default on the strength of the
+measurement above; whether it loses anything against Deep on everyday questions is what the stage 1 question set
+will show ("let's not minimise or make jarvis less"), and each mode is one click away. Not proposed:
 asking both companies at once (double cost, no better answer) or OpenAI for everyday questions (about ten times
 Qwen's price). A later step for speed: showing a reply while it is being written; it needs the checks that guard
 JARVIS's claims to work on partial text, so it is not part of 1.0.15.

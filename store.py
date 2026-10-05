@@ -9,6 +9,8 @@ from pathlib import Path
 from contextlib import contextmanager
 
 VOICE_PROFILES = ('auto', 'fish', 'openai', 'qwen')  # the same as providers.VOICE_PROFILES
+ANSWER_MODES = ('auto', 'deep', 'economy')  # the same as providers.ANSWER_MODES
+DEFAULT_ANSWER_MODE = 'deep'  # the same as providers.DEFAULT_ANSWER_MODE
 
 
 class Store:
@@ -189,15 +191,17 @@ class Store:
             db.execute('DELETE FROM reminders WHERE id=?', (item_id,))
 
     def settings(self):
-        result = {'name': '', 'voice': False, 'continuous': False, 'response_length': 'balanced', 'tone': 'cinematic', 'humor': True, 'speech_rate': 'natural', 'wake_sensitivity': 'normal', 'quiet_hours': False, 'briefing_time': '', 'proactive': False}
+        result = {'name': '', 'voice': False, 'continuous': False, 'response_length': 'balanced', 'tone': 'cinematic', 'humor': True, 'speech_rate': 'natural', 'wake_sensitivity': 'normal', 'quiet_hours': False, 'briefing_time': '', 'proactive': False, 'answer_mode': DEFAULT_ANSWER_MODE}
         with self.connect() as db:
             result.update({r['key']: json.loads(r['value']) for r in db.execute('SELECT * FROM settings')})
         if result.get('voice_profile', 'auto') not in VOICE_PROFILES:  # e.g. an ElevenLabs choice saved before 1.0.15
             result['voice_profile'] = 'auto'
+        if result.get('answer_mode') not in ANSWER_MODES:  # a value this version does not know
+            result['answer_mode'] = DEFAULT_ANSWER_MODE
         return result
 
     def save_settings(self, values):
-        permitted = {'voice_profile': str, 'name': str, 'voice': bool, 'continuous': bool, 'response_length': str, 'tone': str, 'humor': bool, 'speech_rate': str, 'wake_sensitivity': str, 'quiet_hours': bool, 'briefing_time': str, 'proactive': bool}
+        permitted = {'voice_profile': str, 'name': str, 'voice': bool, 'continuous': bool, 'response_length': str, 'tone': str, 'humor': bool, 'speech_rate': str, 'wake_sensitivity': str, 'quiet_hours': bool, 'briefing_time': str, 'proactive': bool, 'answer_mode': str}
         with self.connect() as db:
             for key, val in values.items():
                 if key not in permitted or not isinstance(val, permitted[key]):
@@ -208,6 +212,7 @@ class Store:
                 if key == 'response_length' and val not in ('brief', 'balanced', 'detailed'):
                     raise ValueError('Invalid response length.')
                 if key == 'tone' and val not in ('cinematic','professional','casual'): raise ValueError('Invalid tone.')
+                if key == 'answer_mode' and val not in ANSWER_MODES: raise ValueError('Invalid answer speed.')
                 if key == 'speech_rate' and val not in ('slow','natural','fast'): raise ValueError('Invalid speech rate.')
                 if key == 'wake_sensitivity' and val not in ('low','normal','high'): raise ValueError('Invalid wake sensitivity.')
                 if key == 'briefing_time' and val and not re.fullmatch(r'([01]\d|2[0-3]):[0-5]\d', val): raise ValueError('Briefing time must use HH:MM.')
@@ -253,7 +258,7 @@ class Store:
                 self.put(row['kind'], row.get('body',''), row.get('id'), row.get('item_key'), row.get('category'), row.get('source','backup'), row.get('confidence',1.0)); count += 1
         with self.connect() as db:
             for row in payload.get('settings', []):
-                if row.get('key') in ('name','voice','continuous','response_length'):
+                if row.get('key') in ('name','voice','continuous','response_length') or (row.get('key') == 'answer_mode' and row.get('value') in [json.dumps(m) for m in ANSWER_MODES]):
                     db.execute('INSERT OR REPLACE INTO settings VALUES (?,?)', (row['key'], row['value']))
         return {'status':'restored','items':count}
 

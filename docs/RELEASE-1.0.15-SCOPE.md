@@ -19,7 +19,7 @@ In this order. "Section" is the master document's section.
 
 | # | What | Section | Today | State |
 |---|---|---|---|---|
-| 1 | **The right Qwen model for each job, and speed.** Settings > Answer speed: Auto (quick answers, thinks first when asked), Deep (thinks before every answer), Economy (`qwen3.8-flash`). | 3 | One model for everything; Qwen thought before every answer (11.9 s against 5.8 s without, measured on the owner's account) | Built 2026-10-05, in review |
+| 1 | **The right Qwen model for each job, and speed.** Settings > Answer speed: Deep (thinks before every answer, as today), Auto (quick answers, thinks first when asked), Economy (`qwen3.8-flash`). | 3 | One model for everything; Qwen thought before every answer (11.9 and 16.9 s against 5.8 and 6.2 s without, measured twice on the owner's account) | Built and reviewed 2026-10-05. **Open: the default.** It is Deep (nothing changes) until the owner says "auto default". |
 | 2 | **OpenAI and Qwen as each other's backup.** When the chosen provider refuses or cannot be reached, the other one answers that question and the reply says so. Never after a tool has already acted in that question, so nothing is done twice. | 3 | No fallback: on 2026-10-05 a billing block left JARVIS unable to answer | Next |
 | 3 | **Permissions in one place.** A table for every tool: reads only or changes something, can it be undone, does it ask first; enforced where every tool call passes. JARVIS's changes to its own personality and style ask first and never touch the installed program files. An emergency stop that holds (everything paused until the owner resumes) and is shown on screen. Audit rows name the run and the device. | 6, 18 | Policy is spread over five hard-coded lists; two files change with no approval; the stop is momentary | |
 | 4 | **Devices the right way round.** A registry that survives a restart; a device has a name, a type and its own key; pairing by a code the owner reads from the PC; capabilities declared per device and allowed per device; revoke at any time; a Devices panel. A client can no longer declare itself "real". "Meta glasses" becomes Halo. | 5, 19 | In memory only; one shared token; no pairing, no revoke, no panel | |
@@ -46,9 +46,9 @@ Done in the repo: the new look for the whole interface, the dashboard, formatted
 
 Still to do: plain messages for HTTP 413 and `AccessDenied.Unpurchased`; a full-size connection check in Settings; the
 Alibaba "maintenance mode" check; three reviewer notes (`static/teague.js:37` fixed "CORE LINK NOMINAL";
-`command-background.png` missing; stale values when the connection is lost); a layout fault seen in Settings on
-2026-10-05 (three tick boxes drawn large and away from their labels); the new header checked in the desktop app
-itself; the version 3 Stage 7 guest driver; the release notes.
+`command-background.png` missing; stale values when the connection is lost); in Settings the SAVE button floats
+over the row beneath it (seen 2026-10-05; three tick boxes drawn away from their labels were fixed the same day);
+the new header checked in the desktop app itself; the version 3 Stage 7 guest driver; the release notes.
 
 Then, as for every release: build, comparison with 1.0.14, regression, zip install, sandbox Stage 7, the VM check on
 the owner's approval, and the update of the everyday JARVIS on the owner's approval.

@@ -7,14 +7,15 @@ import providers
 import maps
 
 
-def check(service):
+def check(service, mode=None):
+    """mode is the saved answer mode (Settings > Answer speed), so the chat check asks the model that answers."""
     if service not in ('chat', 'voice', 'search', 'maps'):
         raise ValueError('Choose chat, voice, search or maps.')
     start = time.perf_counter()
     result = {'service': service, 'checked_at': time.time()}
     try:
         if service == 'chat':
-            reply = providers.chat([{'role': 'user', 'content': 'Connection test. Reply with only READY.'}], [], lambda *args: None, threading.Event())
+            reply = providers.chat([{'role': 'user', 'content': 'Connection test. Reply with only READY.'}], [], lambda *args: None, threading.Event(), **providers.chat_options(mode, ''))
             if not reply.get('content'):
                 raise ValueError('The model returned no text.')
             detail = 'The configured chat model generated text. Tool use and vision were not tested.'
