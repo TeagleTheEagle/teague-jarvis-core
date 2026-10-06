@@ -1,0 +1,14 @@
+{
+  "schema": "stage6-evidence-manifest-addendum-v1",
+  "written_utc": "2026-10-06T02:48:44Z",
+  "manifest": "MANIFEST.json",
+  "manifest_sha256": "7c266dfaf57bc798c2ea97e7f551388f9c6b43adc4bdb25d7785561072a9ca5f",
+  "note": "File added to the evidence folder after MANIFEST.json was written: the owner's decision on the timing deviation. MANIFEST.json itself is unchanged and still describes the 9 files it lists.",
+  "entries": [
+    {
+      "file": "evidence/owner-decision-01-timing-install.json",
+      "bytes": 2478,
+      "sha256": "91eff4b01f818d3bd32968dfa20518e0cbf988a5777ec21eadcc5a9064a83cba"
+    }
+  ]
+}
