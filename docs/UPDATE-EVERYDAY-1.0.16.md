@@ -1,7 +1,9 @@
 # Updating your everyday JARVIS to 1.0.16
 
-Status: **READY FOR YOUR APPROVAL (2026-10-06, Claude Code). Rehearsed in a sandbox: see "This launcher, rehearsed"
-below. Nothing has run on your real JARVIS.** Updating the everyday JARVIS is your decision (`CLAUDE.md`). 1.0.16
+Status: **APPROVED BY THE OWNER 2026-10-06** ("I approve the update of my everyday JARVIS to 1.0.16", first clock
+reading 2026-10-06T09:11:04Z; record `../governance/UPDATE-1.0.16-APPROVAL-RECORD.json`, repo copy
+`docs/update-1.0.16-evidence/`; the launcher placed in `D:\JARVIS-update-1.0.16\tools\` with `update-authorized.json`).
+Rehearsed in a sandbox: see "This launcher, rehearsed" below. Updating the everyday JARVIS is your decision (`CLAUDE.md`). 1.0.16
 passed its Stage 7 check in the test VM on 2026-10-06 (`STAGE_7_COMPLETE`, 27 of 27 checks,
 `docs/stage7-1.0.16-evidence/`).
 
