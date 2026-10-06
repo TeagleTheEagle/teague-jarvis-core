@@ -35,3 +35,17 @@ assert.equal(d.remainingText(now-30,now),'This code has run out. Start again.');
 for(const kind of ['pc','phone','glasses','computer','other'])assert.ok(d.KINDS[kind],kind);
 for(const capability of ['microphone','camera','speakers','display'])assert.ok(d.CAPABILITIES[capability],capability);
 console.log('devices view: ok');
+// 1.0.16: the private-network door and the "may save memories and tasks" tick, in words from the Core's own answer.
+assert.equal(d.doorText({enabled:false,open:false,message:'Off. JARVIS listens only on this PC.'}),'Off. JARVIS listens only on this PC.');
+assert.equal(d.doorText({enabled:true,open:false}),'On, but nothing is open.');
+assert.equal(d.doorText({enabled:true,open:true}),'Open.');
+assert.equal(d.doorText(null),'The private-network door is not available in this view.');
+assert.equal(d.doorClass({enabled:true,open:true}),'ok');
+assert.equal(d.doorClass({enabled:true,open:false}),'warn','a switch that is on with nothing open is a warning, never "online"');
+assert.equal(d.doorClass({enabled:false,open:false}),'off');
+assert.equal(d.doorClass(null),'off');
+assert.equal(d.writesText({writes:true}),'May save memories and tasks');
+assert.equal(d.writesText({writes:false}),'Reads only');
+assert.equal(d.writesText({writes:true,revoked:1}),'Revoked: nothing','a revoked device may change nothing whatever its row once said');
+assert.equal(d.WRITES_LABEL,'May save memories and tasks');
+console.log('devices view (1.0.16): ok');

@@ -5,7 +5,9 @@ One Service is one device's session: its questions, its limit of requests a minu
 import base64
 import io
 import json
+import os
 from pathlib import Path
+import re
 import secrets
 import threading
 import time
@@ -16,8 +18,10 @@ import providers
 
 
 class Service:
-    def __init__(self, app, device_id='local-wearable-client', *, simulated=True, prefix='wearable-', register=True):
+    def __init__(self, app, device_id='local-wearable-client', *, simulated=True, prefix='wearable-', register=True, writes=False):
         self.app = app
+        self.writes = writes      # the owner's tick for a paired device: may it save memories and tasks? (1.0.16)
+        self.reads = []           # the light reads (conversations, history, metrics, overview) have their own limit
         self.token = secrets.token_urlsafe(32)
         self.runs = set()
         self.lock = threading.Lock()
@@ -39,8 +43,9 @@ class Service:
             self.runs={r for r in self.runs if r in self.app.runs}
             conversation=body.get('conversation')
             if not isinstance(conversation,str) or not conversation.startswith(self.prefix):conversation=self.prefix+'local'
-            result=self.app.start_run({'text':body['text'],'conversation':conversation},wearable=True,device=self.device_id)
+            result=self.app.start_run({'text':body['text'],'conversation':conversation},wearable=True,device=self.device_id,writes=self.writes)
             self.runs.add(result['run_id']);return result
+        if op=='events' and 'after' in body: return self.events_after(body)  # waits outside the lock (below)
         if not self.lock.acquire(blocking=False): raise ValueError('Wearable service busy.')
         try:
             self.app.devices.heartbeat('pc')
@@ -63,6 +68,12 @@ class Service:
                 now=time.monotonic();self.calls=[t for t in self.calls if now-t<60]
                 if len(self.calls)>=20: raise ValueError('Wearable request limit reached. Wait one minute.')
                 self.calls.append(now)
+            if op in ('conversations','history','metrics','overview'):
+                if not self.paired: raise ValueError('Operation unavailable.')  # the same-PC test client stays as it was
+                now=time.monotonic();self.reads=[t for t in self.reads if now-t<60]
+                if len(self.reads)>=120: raise ValueError('Wearable request limit reached. Wait one minute.')
+                self.reads.append(now)
+                return self.read(op,body)
             if op=='start':
                 if set(body)-{'text','image','conversation'}: raise ValueError('Unknown fields.')
                 text=body.get('text'); conversation=body.get('conversation',self.prefix+'local')
@@ -84,7 +95,7 @@ class Service:
                 with self.app.lock:
                     if attachment:self.app.attachments[attachment['id']]=attachment
                     try:
-                        result=self.app.start_run({'text':text,'conversation':conversation,**({'attachment':attachment['id']} if attachment else {})},wearable=True,device=self.device_id)
+                        result=self.app.start_run({'text':text,'conversation':conversation,**({'attachment':attachment['id']} if attachment else {})},wearable=True,device=self.device_id,writes=self.writes)
                     finally:
                         if attachment:self.app.attachments.pop(attachment['id'],None)
                 self.runs={r for r in self.runs if r in self.app.runs}
@@ -98,6 +109,7 @@ class Service:
                     return {'done':run.done,'events':list(run.events),'measurements':list(run.measurements)}
             if op=='transcribe':
                 if set(body)!={'data'}:raise ValueError('Expected PCM data.')
+                self.app.require_running()  # while the emergency stop holds, no device's recording is turned into text (1.0.16)
                 return self.app.local_stt.transcribe(body)
             if op=='speech':
                 if set(body)!={'text'} or not isinstance(body['text'],str) or not 1<=len(body['text'])<=12000:raise ValueError('Invalid speech text.')
@@ -109,6 +121,53 @@ class Service:
             if op=='status':return {'available':True,'protocol':1,'scope':'same-PC wearable analysis','voice_profile':self.app.store.settings().get('voice_profile','auto')}
             raise ValueError('Operation unavailable.')
         finally:self.lock.release()
+
+    def events_after(self, body):
+        """The events of one of this device's questions after a cursor, waiting up to ten seconds for new ones (as the
+        PC window's /api/runs/<id>/events does): a phone on cellular asks a few times, not every tenth of a second.
+        Outside the service lock, so a cancel or a stop is never held up by the wait."""
+        if set(body)!={'run_id','after'} or body['run_id'] not in self.runs: raise ValueError('Unknown wearable run.')
+        after=body['after']
+        if type(after) is not int or after<-1: raise ValueError('Supply only run_id and after.')
+        run=self.app.runs.get(body['run_id'])
+        if not run: raise ValueError('Run expired.')
+        with run.condition:
+            if len(run.events)<=after+1 and not run.done: run.condition.wait(10)
+            return {'done':run.done,'events':list(run.events[max(0,after+1):]),'measurements':list(run.measurements)}
+
+    def read(self, op, body):
+        """What a paired device may read about itself and the PC (1.0.16, docs/PHONE-CORE-1.0.16.md): its own
+        conversations, one of them, the PC's health as the dashboard has it, and an overview of tasks and reminders.
+        Never another device's conversations and never the PC's chats."""
+        store=self.app.store
+        if op=='conversations':
+            if body: raise ValueError('Unknown fields.')
+            return {'conversations':store.conversations_for(self.prefix)}
+        if op=='history':
+            if set(body)-{'conversation','limit'} or 'conversation' not in body: raise ValueError('Unknown fields.')
+            conversation=body['conversation'];limit=body.get('limit',60)
+            if not isinstance(conversation,str) or not conversation.startswith(self.prefix) or not re.fullmatch(r'[a-zA-Z0-9_-]{1,80}',conversation): raise ValueError('Wearable conversation required.')
+            if type(limit) is not int or not 1<=limit<=100: raise ValueError('Unknown fields.')
+            return {'conversation':conversation,'messages':[{k:m[k] for k in ('id','role','content','created')} for m in store.history(conversation,limit)]}
+        if op=='metrics':
+            if body: raise ValueError('Unknown fields.')
+            import system_metrics,runtime_paths
+            with self.app.lock: timings=list(self.app.timings)
+            reading=system_metrics.snapshot(store.root,self.app.started,timings)
+            chosen=providers.provider()
+            key=os.getenv('DASHSCOPE_API_KEY') if chosen=='qwen' else os.getenv('OPENAI_API_KEY') if chosen=='openai' else None
+            reading.update(core_version=runtime_paths.release_id() or 'development '+str(self.app.backend_revision)[:12],ai_ready=bool(key),stopped=self.app.stopped is not None)
+            return reading
+        if op=='overview':
+            if body: raise ValueError('Unknown fields.')
+            import workspaces
+            open_tasks=store.tasks(include_completed=False);open_ids={t['id'] for t in open_tasks}
+            projects=[{'id':p['id'],'name':p['name'],'open_tasks':len([l for l in p['links'] if l['kind']=='task' and l['ref'] in open_ids])} for p in workspaces.listing(store)]
+            now=time.time()
+            reminders=[{'title':r['title'],'due':r['due'],'fired':bool(r['fired'])} for r in store.reminders() if r['due']<=now+86400]
+            return {'tasks_open':len(open_tasks),'projects':projects[:20],'reminders':reminders[:20],'conversations':len(store.conversations_for(self.prefix,1000)),
+                    'scope':'Open tasks, projects and the reminders due within 24 hours, from the PC; the conversations are this device\'s own.'}
+        raise ValueError('Operation unavailable.')
 
 
 def handle(handler):

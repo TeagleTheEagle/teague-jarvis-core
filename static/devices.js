@@ -1,9 +1,11 @@
-// Devices (1.0.15, docs/DEVICES.md): the owner's panel for the devices of the one Core. Settings > Devices.
-// The Core keeps the list and decides everything (devices.py, server.App); this file shows it and sends the
-// owner's clicks. A device is never shown as online, real or allowed unless the Core says so.
+// Devices (1.0.15, docs/DEVICES.md; 1.0.16, docs/PHONE-CORE-1.0.16.md): the owner's panel for the devices of the
+// one Core. Settings > Devices. The Core keeps the list and decides everything (devices.py, remote_devices.py,
+// server.App); this file shows it and sends the owner's clicks. A device is never shown as online, real or allowed
+// unless the Core says so, and the private-network door is never shown as open unless the Core says so.
 const JarvisDevices = {
   KINDS: {pc: 'This PC', phone: 'Phone', glasses: 'Glasses', computer: 'Computer', other: 'Other device'},
   CAPABILITIES: {microphone: 'Microphone', camera: 'Camera', speakers: 'Speakers', display: 'Display'},
+  WRITES_LABEL: 'May save memories and tasks',
   // One line of state for a row as the Core lists it.
   stateText(d) {
     if (d.revoked) return 'Revoked';
@@ -27,6 +29,15 @@ const JarvisDevices = {
     const left = Math.max(0, Math.round(expires - nowSeconds));
     return left ? 'Good for ' + Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0') : 'This code has run out. Start again.';
   },
+  // The private-network door (remote_devices.py): the Core's own sentence, and a class for its colour. Open only
+  // when the Core says open; a switch that is on with nothing open is a warning, never "online".
+  doorText(remote) {
+    if (!remote) return 'The private-network door is not available in this view.';
+    return remote.message || (remote.open ? 'Open.' : remote.enabled ? 'On, but nothing is open.' : 'Off.');
+  },
+  doorClass(remote) { return remote && remote.open ? 'ok' : remote && remote.enabled ? 'warn' : 'off'; },
+  // What the Core says a device may change, from its row: never inferred from the kind of device.
+  writesText(d) { return d.revoked ? 'Revoked: nothing' : d.writes ? 'May save memories and tasks' : 'Reads only'; },
 };
 if (typeof module !== 'undefined') module.exports = JarvisDevices;
 
@@ -43,11 +54,12 @@ if (typeof document !== 'undefined') (() => {
   const panel = el('section', 'devices-panel');
   const intro = el('p', '', 'The devices of your one JARVIS. A device pairs with a code that you read here, and pairing gives it a key of its own. ' +
     'What a device says it can do is listed; what it may use is your choice, and you can revoke a device at any time. ' +
-    'A paired device can ask questions and read; it cannot change saved things.');
-  const reach = el('p', 'devices-note', 'Today JARVIS listens only on this PC. Programs on this PC can pair now; a phone or glasses can pair once you decide how JARVIS is reached from other devices.');
-  const pairBox = el('div', 'devices-pair'), list = el('div', 'devices-list');
+    'A paired device can ask questions and read; it changes nothing saved unless you tick "' + JarvisDevices.WRITES_LABEL + '" for it.');
+  const reach = el('p', 'devices-note', 'JARVIS listens on this PC. Programs on this PC can pair now; your phone and other devices can pair over your ' +
+    'private network once the door below is on.');
+  const pairBox = el('div', 'devices-pair'), doorBox = el('div', 'devices-door'), list = el('div', 'devices-list');
   list.setAttribute('aria-live', 'polite');
-  panel.append(intro, reach, pairBox, list);
+  panel.append(intro, reach, pairBox, doorBox, list);
   const category = q('.ti-settings-group[data-setting="Devices"]'), settingsView = q('#settingsView');
   if (category) category.append(panel); else if (settingsView) { panel.prepend(el('h2', '', 'Devices')); settingsView.prepend(panel); }
 
@@ -75,6 +87,37 @@ if (typeof document !== 'undefined') (() => {
     tick(); clearInterval(countdown); countdown = setInterval(async () => { tick(); await load(); }, 2000);
   }
 
+  // ---- the private-network door (1.0.16) ----
+  let doorBusy = false;
+  function renderDoor(remote) {
+    if (doorBox.contains(document.activeElement) || doorBusy) return;  // not redrawn under the owner's hands
+    if (!remote) { doorBox.replaceChildren(); doorBox.hidden = true; return; }
+    doorBox.hidden = false;
+    const title = el('h3', '', 'Private network');
+    const label = el('label', 'check-label'), box = el('input'); box.type = 'checkbox'; box.checked = !!remote.enabled;
+    box.setAttribute('aria-label', 'Reach JARVIS from paired devices over the private network');
+    label.append(box, el('span', '', 'Reach JARVIS from paired devices over the private network (Tailscale)'));
+    const portLabel = el('label', 'devices-port'), port = el('input'); port.type = 'number'; port.min = 1024; port.max = 65535; port.step = 1;
+    port.value = remote.port; port.setAttribute('aria-label', 'Port of the private-network door');
+    portLabel.append(el('span', '', 'Port'), port);
+    const status = el('p', 'devices-door-status ' + JarvisDevices.doorClass(remote), JarvisDevices.doorText(remote));
+    const note = el('p', 'devices-note', 'Off by default. On, JARVIS opens a second door at this PC\'s Tailscale address for paired devices only: ' +
+      'the device routes, each request with the device\'s own key, and nothing else of JARVIS. Your settings, keys and RESUME stay on this PC. ' +
+      'Turning it on is your decision; it needs Tailscale running and signed in on this PC.');
+    const save = async () => {
+      if (doorBusy) return;  // one change at a time: a port change and a switch click cannot race each other
+      doorBusy = true; box.disabled = port.disabled = true;
+      try {
+        const answer = await api('/api/remote-devices', {enabled: box.checked, port: Number(port.value)});
+        toast(answer.message);
+      } catch (e) { toast(e.message, true); }
+      doorBusy = false; await load();
+    };
+    box.onchange = save;
+    port.onchange = () => { if (box.checked) save(); };
+    doorBox.replaceChildren(title, label, portLabel, status, note);
+  }
+
   // ---- the list ----
   function row(d) {
     const node = el('article', 'device-row ' + JarvisDevices.stateClass(d));
@@ -94,7 +137,7 @@ if (typeof document !== 'undefined') (() => {
       box.onchange = async () => {
         // What is ticked now, read from the row itself, and no second click in this row until the Core has answered:
         // two quick clicks cannot undo each other.
-        const boxes = [...caps.querySelectorAll('input')], wanted = boxes.filter(b => b.checked).map(b => b.value);
+        const boxes = [...caps.querySelectorAll('input')].filter(b => b.value !== 'writes'), wanted = boxes.filter(b => b.checked).map(b => b.value);
         boxes.forEach(b => { b.disabled = true; });
         try { await api('/api/devices', {action: 'allow', id: d.device_id, capabilities: wanted}); toast(d.name + ': ' + JarvisDevices.CAPABILITIES[name] + (box.checked ? ' allowed.' : ' not allowed.')); }
         catch (e) { toast(e.message, true); }
@@ -102,6 +145,16 @@ if (typeof document !== 'undefined') (() => {
       };
       label.append(box, el('span', '', JarvisDevices.CAPABILITIES[name] || name)); caps.append(label);
     }
+    // The owner's tick (1.0.16): may this device save memories, notes, tasks and timers? Off for every new device.
+    const writesLabel = el('label', 'check-label device-writes'), writes = el('input'); writes.type = 'checkbox'; writes.value = 'writes';
+    writes.checked = !!d.writes; writes.disabled = !!d.revoked;
+    writes.onchange = async () => {
+      writes.disabled = true;
+      try { await api('/api/devices', {action: 'writes', id: d.device_id, allowed: writes.checked}); toast(d.name + (writes.checked ? ' may save memories and tasks.' : ' only reads again.')); }
+      catch (e) { toast(e.message, true); }
+      await load();
+    };
+    writesLabel.append(writes, el('span', '', JarvisDevices.WRITES_LABEL)); caps.append(writesLabel);
     const actions = el('div', 'device-actions');
     actions.append(button('RENAME', 'text-button', () => {
       if (head.querySelector('input')) return;
@@ -129,6 +182,7 @@ if (typeof document !== 'undefined') (() => {
   }
   let renaming = () => !!list.querySelector('input:not([type=checkbox])');
   function render(data) {
+    renderDoor(data && data.remote);
     if (renaming()) return;  // do not take the text box away while the owner types a name
     const devices = (data && data.devices) || [];
     // The count is of paired devices only: this PC and the simulated test client are listed, not counted.

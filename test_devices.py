@@ -56,7 +56,7 @@ class DeviceBookTests(unittest.TestCase):
         for _ in range(devices.PAIRING_ATTEMPTS - 1):
             with self.assertRaises(DeviceError): self.book.finish_pairing(wrong, [])
         self.assertIsNotNone(self.book.pairing())
-        with self.assertRaises(DeviceError): self.book.finish_pairing(wrong, [])  # the fifth wrong code ends the pairing
+        with self.assertRaises(devices.WrongCode): self.book.finish_pairing(wrong, [])  # the last wrong code in all ends the pairing (per caller: device_gateway.py)
         self.assertIsNone(self.book.pairing())
         with self.assertRaises(DeviceError): self.book.finish_pairing(code, [])  # even the right code is now too late
         code = self.book.begin_pairing('Phone', 'phone')['code']
@@ -137,6 +137,24 @@ class DeviceBookTests(unittest.TestCase):
         # The secret is a private file name that backups and git leave out.
         self.assertTrue(devices.SECRET_FILE.startswith('.env'))
         self.assertTrue(re.fullmatch(r'[a-f0-9]{64}\n', (self.root / 'config' / devices.SECRET_FILE).read_text()))
+
+    def test_the_owners_tick_may_save_memories_and_tasks_is_off_until_ticked_and_goes_with_a_revoke(self):
+        phone = self.pair('Phone')
+        ident = phone['device_id']
+        self.assertFalse(phone['writes'])
+        self.assertFalse(self.book.authenticate(phone['credential'])['writes'])
+        self.assertTrue(self.book.set_writes(ident, True)['writes'])
+        self.assertTrue(self.book.authenticate(phone['credential'])['writes'])
+        self.assertFalse(self.book.set_writes(ident, False)['writes'])
+        with self.assertRaises(DeviceError): self.book.set_writes(ident, 'yes')
+        with self.assertRaises(DeviceError): self.book.set_writes('f' * 16, True)
+        self.book.set_writes(ident, True)
+        self.book.revoke(ident)
+        self.assertFalse(self.book.get(ident)['writes'])
+        with self.assertRaises(DeviceError): self.book.set_writes(ident, True)
+        # A database from 1.0.15 (no column yet) is brought up to date, with the tick off for every device.
+        with self.store.connect() as db:
+            self.assertIn('writes', {row[1] for row in db.execute('PRAGMA table_info(devices)')})
 
     def test_there_is_a_limit_and_last_seen_is_kept(self):
         phone = self.pair('Phone')

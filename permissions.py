@@ -28,16 +28,18 @@ NEVER = 'no'
 WORDS = 'your own words'          # runs only when the owner's own words in the question ask for exactly this
 ALWAYS = 'always'                 # the owner approves on screen, seeing exactly what will happen, before it does
 
-Rule = namedtuple('Rule', 'label effect reach undo asks repeat_adds wearable evidence receipt preview read_actions note')
+Rule = namedtuple('Rule', 'label effect reach undo asks repeat_adds wearable evidence receipt preview read_actions note device_writes')
 
 
 def _rule(label, effect=READS, reach=LOCAL, undo='', asks=NEVER, repeat_adds=False, wearable=False,
-          evidence=False, receipt=False, preview=False, read_actions=(), note=''):
+          evidence=False, receipt=False, preview=False, read_actions=(), note='', device_writes=False):
+    # device_writes (1.0.16): a paired device the owner ticked "may save memories and tasks" may call it too
+    # (docs/PHONE-CORE-1.0.16.md). Only the saving of memories, notes, tasks and timers is marked.
     if effect == READS:
         undo = undo or 'Nothing to undo.'
     elif not undo:
         raise ValueError('A tool that changes something must say whether it can be undone: ' + label)
-    return Rule(label, effect, reach, undo, asks, repeat_adds, wearable, evidence, receipt, preview, tuple(read_actions), note)
+    return Rule(label, effect, reach, undo, asks, repeat_adds, wearable, evidence, receipt, preview, tuple(read_actions), note, device_writes)
 
 
 TABLE = {
@@ -57,15 +59,15 @@ TABLE = {
         'No: the history is kept; a later entry corrects it.'),
     # ---- saved things ----
     'save_item': _rule('Save a note, a task or a fact', CHANGES, LOCAL, 'Yes: delete it in Memory or Tasks.',
-        repeat_adds=True, evidence=True, receipt=True, preview=True,
+        repeat_adds=True, evidence=True, receipt=True, preview=True, device_writes=True,
         note='A fact is saved only when your own words ask JARVIS to remember it.'),
     'list_items': _rule('Read saved facts, notes or tasks', wearable=True),
     'manage_saved_memory': _rule('Change or delete a saved fact', CHANGES, LOCAL,
-        'No: a deleted fact is gone (your last backup still has it).', asks=WORDS, receipt=True),
+        'No: a deleted fact is gone (your last backup still has it).', asks=WORDS, receipt=True, device_writes=True),
     'set_timer': _rule('Set a timer', CHANGES, LOCAL, 'Yes: cancel the timer.', repeat_adds=True,
-        evidence=True, receipt=True, preview=True),
+        evidence=True, receipt=True, preview=True, device_writes=True),
     'manage_timer': _rule('List, cancel or change timers', CHANGES, LOCAL,
-        'No: a cancelled timer is gone; set it again.', asks=WORDS, receipt=True, read_actions=('list',)),
+        'No: a cancelled timer is gone; set it again.', asks=WORDS, receipt=True, read_actions=('list',), device_writes=True),
     'create_file': _rule('Create a document file', CHANGES, LOCAL,
         'No automatic undo: the file stays in the generated folder.', repeat_adds=True,
         evidence=True, receipt=True, preview=True),
@@ -120,6 +122,7 @@ TABLE = {
 
 # Lists other modules used to keep for themselves.
 WEARABLE_TOOLS = frozenset(name for name, rule in TABLE.items() if rule.wearable)
+DEVICE_WRITE_TOOLS = frozenset(name for name, rule in TABLE.items() if rule.device_writes)  # with the owner's tick only
 ACTION_TOOLS = frozenset(name for name, rule in TABLE.items() if rule.receipt)
 EVIDENCE_TOOLS = frozenset(name for name, rule in TABLE.items() if rule.evidence)
 PREVIEW_TOOLS = ('save_item', 'set_timer', 'create_file')
@@ -166,12 +169,13 @@ def modes_for(name):
     return (DEFAULT, ASK, OFF) if rule.effect == CHANGES and rule.asks == NEVER and rule.reach != SCREEN else (DEFAULT, OFF)
 
 
-def decide(name, args=None, *, stopped=False, by_jarvis=True, wearable=False, mode=DEFAULT, approved=False):
+def decide(name, args=None, *, stopped=False, by_jarvis=True, wearable=False, mode=DEFAULT, approved=False, writes=False):
     """('run' | 'ask' | 'refuse', message) for one tool call.
 
     by_jarvis: the call belongs to a question JARVIS is answering (the AI model or a typed or spoken
     command). False for the owner's own click in the interface, which is its own approval.
     approved: the owner has just approved exactly this call on screen.
+    writes: the question comes from a paired device the owner ticked "may save memories and tasks" for.
     """
     rule = TABLE.get(name)
     if rule is None:
@@ -179,7 +183,10 @@ def decide(name, args=None, *, stopped=False, by_jarvis=True, wearable=False, mo
     does = effect(name, args)
     if stopped and (by_jarvis or does != READS or rule.reach not in (LOCAL, SELF)):
         return 'refuse', STOPPED_MESSAGE
-    if wearable and not rule.wearable:
+    if wearable and not rule.wearable and not (writes and rule.device_writes):
+        if rule.device_writes:  # a device without the owner's tick: say what would allow it
+            return 'refuse', ('This operation is unavailable from the wearable client: this device may not save memories or tasks. '
+                              'The owner allows that in Settings > Devices on the PC.')
         return 'refuse', 'This operation is unavailable from the wearable client.'
     if by_jarvis and mode == OFF:
         return 'refuse', f'"{rule.label}" is switched off in Settings > Permissions. Only the owner can switch it on.'
@@ -215,5 +222,5 @@ def listing(modes=None):
         mode = modes.get(name) if modes.get(name) in modes_for(name) else DEFAULT
         rows.append({'name': name, 'label': rule.label, 'effect': rule.effect, 'reach': rule.reach, 'undo': rule.undo,
                      'asks': rule.asks, 'repeat_adds': rule.repeat_adds, 'wearable': rule.wearable, 'note': rule.note,
-                     'reads_for': list(rule.read_actions), 'mode': mode, 'modes': list(modes_for(name))})
+                     'reads_for': list(rule.read_actions), 'mode': mode, 'modes': list(modes_for(name)), 'device_writes': rule.device_writes})
     return rows

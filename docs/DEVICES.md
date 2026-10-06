@@ -15,6 +15,12 @@ counted it as a real online device.
 how JARVIS is reached from other devices (section B of `docs/RELEASE-1.0.15-SCOPE.md`); the pairing, the keys and
 the device-facing routes they will use are what this item builds.
 
+**Release 1.0.16 (`docs/PHONE-CORE-1.0.16.md`, on the approved `docs/PHONE-PLAN.md`) builds on this record:** a switch in
+Settings > Devices, off by default, opens a second door for the device routes only at the PC's Tailscale address
+(`remote_devices.py`); wrong codes and wrong keys are counted per caller; a device may read its own conversations,
+the PC's health and an overview; the answer route waits for news; and a per-device tick "may save memories and
+tasks" lets the owner's own phone save things. Where that record and this one differ, the 1.0.16 record is current.
+
 ## 1. Who the devices are: `devices.py` (the device book)
 
 Kept in the Core's database (table `devices`), so pairing survives a restart. A device has:
@@ -42,17 +48,21 @@ in the database; it is unchanged and nothing starts it.)
 ## 2. Pairing: a code the owner reads from the PC
 
 1. Owner, Settings > Devices: a name, a kind, PAIR A DEVICE. The Core shows an eight-digit code once. One pairing at
-   a time; the code is good for five minutes and for one use; five wrong codes end the pairing.
+   a time; the code is good for five minutes and for one use. (1.0.15: five wrong codes ended the pairing. Since
+   1.0.16 five wrong codes from one caller lock that caller out for fifteen minutes while the pairing keeps waiting,
+   and the pairing ends after 25 wrong codes in all: `docs/PHONE-CORE-1.0.16.md` section 2.)
 2. The device sends the code and what it declares (`POST /api/device/pair`). It gets its id and its key, once.
 3. What it declared at that moment is allowed (the owner just paired it, on the PC); each item has a tick box in the
    panel. Anything it declares later is not allowed until the owner ticks it.
 
-No pairing starts while the emergency stop holds. At most 20 devices; ten pairing attempts a minute. The code is
-for whoever hands it over first: the owner reads it to their own device and to nobody else.
+No pairing starts while the emergency stop holds. At most 20 devices; ten pairing attempts a minute (since 1.0.16 per
+caller, and 60 a minute in all). The code is for whoever hands it over first: the owner reads it to their own device
+and to nobody else.
 
-**Known limit, fine while the Core listens on this PC only, to be changed before it is reachable from elsewhere:**
-anyone who can reach the pairing route can end a pairing with five wrong codes, or use up the ten attempts a minute
-so that the right code has to wait. Guessing the code itself is not practical (five tries in a hundred million).
+**Known limit of 1.0.15, changed in 1.0.16 before the Core became reachable from elsewhere:** anyone who could reach
+the pairing route could end a pairing with five wrong codes, or use up the ten attempts a minute so that the right
+code had to wait. Since 1.0.16 the counts are per caller (`docs/PHONE-CORE-1.0.16.md` section 2). Guessing the code
+itself is not practical (25 tries in a hundred million).
 
 ## 3. What a paired device can do: `device_gateway.py`
 
@@ -67,7 +77,7 @@ desktop app's token, and a device's key opens none of the owner's routes. Decide
 | `events`, `cancel` | | only for its own questions. Its conversations are its own too: each starts with the device's id, and no device can write into or continue another's |
 | `transcribe` | microphone allowed | local speech recognition |
 | `speech` | speakers allowed | speaks a text the device sends (up to 12,000 characters) with the voice JARVIS uses; meant for the reply |
-| `stop` | | the emergency stop (docs/PERMISSIONS.md). Any paired device may stop; **none can resume**. A stop is handled before anything else about the request, also as the stop words in a question: it is not turned away because a picture came with it, a capability is not allowed, or the database is busy |
+| `stop` | | the emergency stop (docs/PERMISSIONS.md). Any paired device may stop; **none can resume**. A stop is handled before anything else about the request, also as the stop words in a question: it is not turned away because a picture came with it, a capability is not allowed, or the database is busy. (1.0.16: a stop with a valid key is never turned away by the per-caller lockout either; only a wrong key is counted) |
 | `bye` | | marks it disconnected |
 
 Each device has its own session (`wearables.service.Service`): its own questions, its own limit of 20 requests a

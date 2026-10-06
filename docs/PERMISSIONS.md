@@ -27,6 +27,7 @@ One row for each of the 45 tools (`permissions.TABLE`). `test_permissions.py` ho
 | `asks` | `no`; `your own words` (the Core checks the owner's own words in the question); `always` (approval on screen first). |
 | `repeat_adds` | Done twice, it happens twice (a second note, timer, file, window). Within one question an identical call is never run twice (unchanged rule in `server.App.work`). |
 | `wearable` | A wearable client may call it. Only reads are marked. |
+| `device_writes` | (1.0.16) A paired device whose owner ticked "may save memories and tasks" may call it too: `save_item`, `set_timer`, `manage_timer`, `manage_saved_memory` (`docs/PHONE-CORE-1.0.16.md` section 4). |
 | `evidence`, `receipt`, `preview` | Kept for the next question; counts as a receipt for the claim check; can be drafted with `preview_action`. |
 
 The four lists other modules kept are now read from the table (`WEARABLE_TOOLS`, `ACTION_TOOLS`, `EVIDENCE_TOOLS`,
@@ -38,7 +39,8 @@ Every tool call passes `App.tool`: the AI model's, a typed or spoken command's, 
 (`POST /api/tool`, no question attached) and an approval being carried out. Before anything runs:
 
 1. **Emergency stop** (section 3): refused. Only the owner's own interface may still read JARVIS's own records.
-2. **Device:** a wearable's question may call only the tools marked for it (as before).
+2. **Device:** a wearable's question may call only the tools marked for it (as before); since 1.0.16 a paired device
+   with the owner's tick "may save memories and tasks" may also call the four saving tools marked `device_writes`.
 3. **The owner's switch for the tool** (Settings > Permissions, table `tool_modes` in the database):
    - **Allowed** (default): as the table says.
    - **Ask first:** JARVIS keeps the exact call and asks on screen; it runs once on approval (5 minutes, single use).

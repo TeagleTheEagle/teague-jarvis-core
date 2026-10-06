@@ -1,0 +1,12 @@
+{
+  "door_text": "Off. JARVIS listens only on this PC.",
+  "door_class": "devices-door-status off",
+  "switch_checked": false,
+  "port_value": "8790",
+  "reach_note": "JARVIS listens on this PC. Programs on this PC can pair now; your phone and other devices can pair over your private network once the door below is on.",
+  "row_writes_label": "May save memories and tasks",
+  "row_writes_checked_before": false,
+  "row_writes_checked_after": true,
+  "hello_scope": "Questions, reading, and saving memories, notes, tasks and timers.",
+  "rows_after_cleanup": 2
+}

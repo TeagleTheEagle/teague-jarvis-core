@@ -174,6 +174,17 @@ class Store:
         with self.connect() as db:
             return [dict(r) for r in db.execute("SELECT conversation AS id, MIN(created) AS created, MAX(created) AS updated, (SELECT substr(content,1,60) FROM messages m2 WHERE m2.conversation=m.conversation AND role='user' ORDER BY id LIMIT 1) AS title FROM messages m GROUP BY conversation ORDER BY updated DESC LIMIT 100")]
 
+    def conversations_for(self, prefix, limit=50):
+        """A device's own conversations (the ids that start with its prefix), newest first, with its first question,
+        the last line and the message count (1.0.16, for the phone's Chats screen)."""
+        pattern = prefix.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_') + '%'
+        with self.connect() as db:
+            return [dict(r) for r in db.execute(
+                "SELECT conversation AS id, MIN(created) AS created, MAX(created) AS updated, COUNT(*) AS messages, "
+                "(SELECT substr(content,1,80) FROM messages m2 WHERE m2.conversation=m.conversation AND role='user' ORDER BY id LIMIT 1) AS title, "
+                "(SELECT substr(content,1,160) FROM messages m3 WHERE m3.conversation=m.conversation ORDER BY id DESC LIMIT 1) AS last "
+                "FROM messages m WHERE conversation LIKE ? ESCAPE '\\' GROUP BY conversation ORDER BY updated DESC LIMIT ?", (pattern, limit))]
+
     def clear_conversation(self, conversation):
         with self.connect() as db:
             db.execute('DELETE FROM messages WHERE conversation=?', (conversation,))
@@ -279,6 +290,21 @@ class Store:
     def set_auto_backup_state(self, value):
         with self.connect() as db:
             db.execute("INSERT OR REPLACE INTO control VALUES ('auto_backup',?)", (json.dumps(value),))
+
+    # The private-network door for paired devices (remote_devices.py, 1.0.16): off by default. Kept with the stop
+    # and the switches, out of reach of the settings page, the JSON export and a restored JSON backup.
+    def remote_devices_state(self):
+        with self.connect() as db:
+            row = db.execute("SELECT value FROM control WHERE key='remote_devices'").fetchone()
+        try:
+            value = json.loads(row['value']) if row else None
+        except ValueError:
+            value = None
+        return value if isinstance(value, dict) else None
+
+    def set_remote_devices_state(self, value):
+        with self.connect() as db:
+            db.execute("INSERT OR REPLACE INTO control VALUES ('remote_devices',?)", (json.dumps(value),))
 
     def tool_modes(self):
         with self.connect() as db:

@@ -14,6 +14,10 @@ installation brings no working device keys with it: those devices pair again.
 
 Revoking is remembered twice: in the database, and in a small list beside the secret. So an older copy of the
 database put back into the same installation (a restore) does not bring a revoked device back to life.
+
+1.0.16 (docs/PHONE-CORE-1.0.16.md): a device also has the owner's tick "may save memories and tasks" (`writes`),
+off for every new device; and a wrong pairing code is its own error (WrongCode), so that device_gateway.py can
+count wrong codes per caller once the Core is reachable from other devices.
 """
 import hashlib
 import hmac
@@ -27,7 +31,7 @@ from pathlib import Path
 KINDS = ('phone', 'glasses', 'computer', 'other')            # what the owner can pair; 'pc' is the Core's own PC
 CAPABILITIES = ('microphone', 'camera', 'speakers', 'display')
 PAIRING_SECONDS = 300
-PAIRING_ATTEMPTS = 5
+PAIRING_ATTEMPTS = 25   # wrong codes in all before a pairing ends (25 tries in a hundred million); device_gateway.py locks each caller out after 5
 MAX_DEVICES = 20
 SECRET_FILE = '.env.device-secret'    # .env-prefixed: never in a backup, never in git
 REVOKED_FILE = '.env.device-revoked'  # the ids of revoked devices, beside the secret (see above)
@@ -36,6 +40,10 @@ _CREDENTIAL = re.compile(r'([a-f0-9]{16})\.([A-Za-z0-9_-]{43})')
 
 class DeviceError(ValueError):
     """A request about devices that cannot be carried out; the message is fit to show."""
+
+
+class WrongCode(DeviceError):
+    """The pairing code handed over is not the one waiting. Counted per caller by device_gateway.py."""
 
 
 class DeviceRefused(PermissionError):
@@ -67,6 +75,10 @@ class DeviceBook:
             db.execute('''CREATE TABLE IF NOT EXISTS devices (
                 id TEXT PRIMARY KEY, name TEXT NOT NULL, kind TEXT NOT NULL, key_hash TEXT NOT NULL, secret_id TEXT NOT NULL,
                 declared TEXT NOT NULL, allowed TEXT NOT NULL, created REAL NOT NULL, last_seen REAL, revoked REAL)''')
+            # 1.0.16: the owner's tick "may save memories and tasks". An older database gets the column (0 for every
+            # device); an older JARVIS (after a rollback) ignores it.
+            if 'writes' not in {row[1] for row in db.execute('PRAGMA table_info(devices)')}:
+                db.execute('ALTER TABLE devices ADD COLUMN writes INTEGER NOT NULL DEFAULT 0')
 
     # ---- the secret that binds device keys to this installation ----
     def _secret(self, create=False):
@@ -173,8 +185,8 @@ class DeviceBook:
             matches = bool(re.fullmatch(r'\d{8}', digits)) and hmac.compare_digest(hashlib.sha256(digits.encode()).hexdigest(), pending['code_hash'])
             if not matches:
                 if pending['attempts'] >= PAIRING_ATTEMPTS:
-                    self.pending = None  # a wrong code five times ends this pairing; the owner starts a new one
-                raise DeviceError('That code is not right. Check the code on the PC.')
+                    self.pending = None  # 25 wrong codes in all end this pairing (each caller is locked out after 5 by device_gateway.py)
+                raise WrongCode('That code is not right. Check the code on the PC.')
             self.pending = None  # single use
             device_id, key = secrets.token_hex(8), secrets.token_urlsafe(32)
             now = self.clock()
@@ -184,7 +196,7 @@ class DeviceBook:
                             json.dumps(declared), json.dumps(declared), now, now))
             # The owner started this pairing on the PC for this device: what it declares now is allowed, and each
             # item can be switched off in the Devices panel. Anything it declares later is not allowed by itself.
-            return {'device_id': device_id, 'key': key, 'credential': device_id + '.' + key, 'name': pending['name'], 'kind': pending['kind'], 'allowed': declared}
+            return {'device_id': device_id, 'key': key, 'credential': device_id + '.' + key, 'name': pending['name'], 'kind': pending['kind'], 'allowed': declared, 'writes': False}
 
     # ---- every request of a paired device ----
     def authenticate(self, credential):
@@ -231,6 +243,8 @@ class DeviceBook:
         usable = not revoked and secret is not None and row['secret_id'] == self._secret_id(secret)
         return {'device_id': row['id'], 'name': row['name'], 'kind': row['kind'], 'declared': json.loads(row['declared']),
                 'allowed': [] if revoked else json.loads(row['allowed']), 'created': row['created'], 'last_seen': row['last_seen'], 'revoked': revoked,
+                # The owner's tick (1.0.16): may this device save memories and tasks? Never for a revoked device.
+                'writes': bool(row['writes']) and not revoked,
                 # False: the key was made for another installation (restored data); the device pairs again.
                 'key_valid': usable}
 
@@ -267,11 +281,24 @@ class DeviceBook:
             db.execute('UPDATE devices SET allowed=? WHERE id=?', (json.dumps(capabilities), device_id))
         return self.get(device_id)
 
+    def set_writes(self, device_id, allowed):
+        """The owner's tick: may this device save memories and tasks? Off for every new device."""
+        if type(allowed) is not bool:
+            raise DeviceError('Say whether the device may save memories and tasks.')
+        with self.lock, self.store.connect() as db:
+            row = db.execute('SELECT id, revoked FROM devices WHERE id=?', (device_id,)).fetchone()
+            if not row:
+                raise DeviceError('Device not found.')
+            if self._revoked(row):
+                raise DeviceError('This device is revoked. Pair it again to use it.')
+            db.execute('UPDATE devices SET writes=? WHERE id=?', (int(allowed), device_id))
+        return self.get(device_id)
+
     def revoke(self, device_id):
         """From now on the device's key is refused. The row stays, so the activity log keeps its name."""
         now = self.clock()
         with self.store.connect() as db:
-            changed = db.execute('UPDATE devices SET revoked=?, allowed=? WHERE id=? AND revoked IS NULL', (now, '[]', device_id)).rowcount
+            changed = db.execute('UPDATE devices SET revoked=?, allowed=?, writes=0 WHERE id=? AND revoked IS NULL', (now, '[]', device_id)).rowcount
             if not changed and not db.execute('SELECT 1 FROM devices WHERE id=?', (device_id,)).fetchone():
                 raise DeviceError('Device not found.')
         try:
