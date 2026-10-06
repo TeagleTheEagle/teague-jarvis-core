@@ -107,6 +107,21 @@ failure); the rerun was started from PowerShell.
   (`JARVIS-STAGE7-<id>.iso`) when that build has no package disc: 1.0.14 never had one, and its Stage 7 disc carries
   its zip and record at the root. Not run here (it needs VirtualBox); its syntax was checked.
 
+## Everyday update 1.0.14 -> 1.0.15, rehearsed in a sandbox (2026-10-06, after the VM check)
+
+`rehearse-everyday-update-1015.ps1` is the 1.0.14 harness (`docs/release-rehearsal-20261005-1014/rehearse-everyday-update.ps1`)
+with the build names and ids changed and the launcher taken from `tools/host/update-1.0.15/` (the 1.0.14 launcher
+copied unchanged except its default folder and the plan it names; the 1.0.14 files stay as their approval recorded
+them). Records in `update-rehearsal/` (`rehearsal-summary.json`, `rehearsal.output.txt`, `evidence/`). **13 of 13
+checks PASS** (13:00-13:03 local): 1.0.14 installed into `D:\JARVIS-release-work\update-rehearsal-1.0.15\home` and
+started once; the launcher refused without an approval file and refused while the sandbox JARVIS ran; step 1
+(package hash, 1.0.14 verified, unpack 16 s); step 2 (backup with 1.0.14's own code, 156 files, verified, test
+restore passed, hash-checked copy); step 3 (update 27.2 s: verify package 7.6 s, copy 9.3 s, verify copy 9.2 s, stop
+0.8 s, switch 0.3 s; verified; database byte-for-byte unchanged); 1.0.15 started on the same data; a rerun changed
+nothing; rollback with its approval file PASS (1.0.14 verified); a rerun after it changed nothing. The owner's
+installed JARVIS ran throughout with 8 processes before and after and was never addressed; no sandbox process was
+left. The plan for the owner: `docs/UPDATE-EVERYDAY-1.0.15.md`.
+
 ## Not checked here
 
 Anything in VirtualBox; a real Windows restart (the restart check was exercised with what Windows really says, and
