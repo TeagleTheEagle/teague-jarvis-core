@@ -126,6 +126,11 @@ TABLE = {
 # Lists other modules used to keep for themselves.
 WEARABLE_TOOLS = frozenset(name for name, rule in TABLE.items() if rule.wearable)
 DEVICE_WRITE_TOOLS = frozenset(name for name, rule in TABLE.items() if rule.device_writes)  # with the owner's tick only
+# Tools whose result only the JARVIS window that asked carries out (opening a section, starting an inspection,
+# loading a video): a device has no asking window, so even with "may use this PC's tools" (1.0.17) they are
+# refused and not offered. The window's controls (assistant_control) are carried to the window for a device's
+# question instead (docs/PHONE-ACCESS-1.0.17.md item C).
+WINDOW_TOOLS = frozenset(('navigate_panel', 'inspect_interface', 'youtube'))
 ACTION_TOOLS = frozenset(name for name, rule in TABLE.items() if rule.receipt)
 EVIDENCE_TOOLS = frozenset(name for name, rule in TABLE.items() if rule.evidence)
 PREVIEW_TOOLS = ('save_item', 'set_timer', 'create_file')
@@ -172,13 +177,15 @@ def modes_for(name):
     return (DEFAULT, ASK, OFF) if rule.effect == CHANGES and rule.asks == NEVER and rule.reach != SCREEN else (DEFAULT, OFF)
 
 
-def decide(name, args=None, *, stopped=False, by_jarvis=True, wearable=False, mode=DEFAULT, approved=False, writes=False):
+def decide(name, args=None, *, stopped=False, by_jarvis=True, wearable=False, mode=DEFAULT, approved=False, writes=False, tools=False):
     """('run' | 'ask' | 'refuse', message) for one tool call.
 
     by_jarvis: the call belongs to a question JARVIS is answering (the AI model or a typed or spoken
     command). False for the owner's own click in the interface, which is its own approval.
-    approved: the owner has just approved exactly this call on screen.
+    approved: the owner has just approved exactly this call on screen (on the PC or, 1.0.17, from a device).
     writes: the question comes from a paired device the owner ticked "may save memories and tasks" for.
+    tools: the question comes from a paired device the owner ticked "may use this PC's tools" for (1.0.17,
+    docs/PHONE-ACCESS-1.0.17.md): it may call every tool the PC's question may, under the same switches.
     """
     rule = TABLE.get(name)
     if rule is None:
@@ -186,7 +193,9 @@ def decide(name, args=None, *, stopped=False, by_jarvis=True, wearable=False, mo
     does = effect(name, args)
     if stopped and (by_jarvis or does != READS or rule.reach not in (LOCAL, SELF)):
         return 'refuse', STOPPED_MESSAGE
-    if wearable and not rule.wearable and not (writes and rule.device_writes):
+    if wearable and name in WINDOW_TOOLS:
+        return 'refuse', 'This needs the JARVIS window on the PC.'
+    if wearable and not tools and not rule.wearable and not (writes and rule.device_writes):
         if rule.device_writes:  # a device without the owner's tick: say what would allow it
             return 'refuse', ('This operation is unavailable from the wearable client: this device may not save memories or tasks. '
                               'The owner allows that in Settings > Devices on the PC.')

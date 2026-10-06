@@ -51,6 +51,8 @@ Response as today plus:
 - `tools`: the owner's tick "May use this PC's tools" for this device (off by default; set only on the PC).
 - `approve`: the owner's tick "May approve for JARVIS" (off by default; set only on the PC).
 - `waiting`: how many approvals are waiting for an answer, counted only when `approve` is true (else 0).
+- `writes` is true when either "May save memories and tasks" or "May use this PC's tools" is ticked (the PC's
+  tools include saving).
 - `notices`: how many notices this device has not read yet (see `notices`).
 - `scope` (the sentence) changes with the ticks; show it as today.
 
@@ -68,7 +70,9 @@ Request `{}`. Response:
 ```
 
 - `kind`: `tool` (a tool the owner set to Ask first), `memory` (an exact memory command: "remember that ..."),
-  `self_change` (JARVIS's change to its own personality or style; `detail` is the diff, up to 20,000 characters),
+  `self_change` (JARVIS's change to its own personality or style; `detail` is the reason, then the difference, up to
+  20,000 characters; for `memory`, `label` is the tool's name, "Save a note, a task or a fact" or "Change or delete a
+  saved fact", and `detail` the command with the line it saves),
   `draft` (a drafted action). `label` is one line of what will happen; `detail` is the exact call in plain lines.
 - `device`: the id of the device whose question raised it, or `"pc"`; `device_name` is its name or "this PC".
   `conversation` is the conversation the question belongs to (the app's own when it starts with `device-<id>-`),
@@ -85,11 +89,15 @@ Request `{"id": "f3a1..."}`. Response:
 ```
 
 - `approve` statuses: `applied` (with `result`, the receipt in plain words, possibly empty), `failed` (with
-  `result`, one fixed sentence), `expired`, `unknown`. `reject` statuses: `denied`, `expired`, `unknown`.
-- While the emergency stop holds: HTTP 403 with the stopped sentence; the item stays waiting.
+  `result`, one fixed sentence: "Refused or failed on the PC; nothing was changed."), `expired`, `unknown`.
+  `reject` statuses: `denied`, `expired`, `unknown`. An `id` that is not 32 hex characters: HTTP 400
+  `{"error": "Unknown fields."}`.
+- While the emergency stop holds: HTTP 400 with the stopped sentence (as every device request is refused then);
+  the stop drops every waiting approval, so after a stop nothing waits and `approve` answers `unknown`.
 - After `applied`, the Core also writes one assistant line into the raising question's conversation ("Approved
-  from <device name>: <label>. Result: <receipt>."): if that conversation is the app's own, re-read `history` to
-  show it; if it is the PC's, nothing more to show.
+  from <device name>: <label>. Result: <receipt>."; for a `memory` item "Approved from <device name>. Remembered:
+  ...", the command's own answer): if that conversation is the app's own, re-read `history` to show it; if it is
+  the PC's, nothing more to show.
 - Every answer writes an activity row on the PC naming this device.
 
 ### `start` (changed: one optional field)
@@ -162,7 +170,9 @@ Response as today plus:
 
 With `tools` true, a question from the phone may run any tool the PC's question may, under the PC's Settings >
 Permissions switches: Allowed runs at once; Ask first makes it wait (it appears in `approvals`; the reply says it
-is waiting); Off is refused. The `events` stream carries `tool.started`/`tool.completed` for those tools as it does
+is waiting); Off is refused. Three tools only the PC's own window can carry out stay out of reach (opening a
+section of the interface, starting an interface inspection, loading a YouTube video): refused with "This needs
+the JARVIS window on the PC." and not offered to the model. The `events` stream carries `tool.started`/`tool.completed` for those tools as it does
 today for reads. With `tools` false, nothing changes from 1.0.16.
 
 ## 3. The app's half, item by item

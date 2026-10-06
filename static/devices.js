@@ -6,6 +6,10 @@ const JarvisDevices = {
   KINDS: {pc: 'This PC', phone: 'Phone', glasses: 'Glasses', computer: 'Computer', other: 'Other device'},
   CAPABILITIES: {microphone: 'Microphone', camera: 'Camera', speakers: 'Speakers', display: 'Display'},
   WRITES_LABEL: 'May save memories and tasks',
+  // 1.0.17 (docs/PHONE-ACCESS-1.0.17.md): the two further ticks, off for every new device.
+  TOOLS_LABEL: "May use this PC's tools",
+  APPROVE_LABEL: 'May approve for JARVIS',
+  FLAGS: ['writes', 'tools', 'approve'],
   // One line of state for a row as the Core lists it.
   stateText(d) {
     if (d.revoked) return 'Revoked';
@@ -38,6 +42,13 @@ const JarvisDevices = {
   doorClass(remote) { return remote && remote.open ? 'ok' : remote && remote.enabled ? 'warn' : 'off'; },
   // What the Core says a device may change, from its row: never inferred from the kind of device.
   writesText(d) { return d.revoked ? 'Revoked: nothing' : d.writes ? 'May save memories and tasks' : 'Reads only'; },
+  // All three ticks in one line (1.0.17): the PC's tools include saving; approving is said last.
+  accessText(d) {
+    if (d.revoked) return 'Revoked: nothing';
+    const parts = [d.tools ? "May use this PC's tools (and save)" : d.writes ? 'May save memories and tasks' : 'Reads only'];
+    if (d.approve) parts.push('may approve for JARVIS');
+    return parts.join('; ');
+  },
 };
 if (typeof module !== 'undefined') module.exports = JarvisDevices;
 
@@ -54,7 +65,9 @@ if (typeof document !== 'undefined') (() => {
   const panel = el('section', 'devices-panel');
   const intro = el('p', '', 'The devices of your one JARVIS. A device pairs with a code that you read here, and pairing gives it a key of its own. ' +
     'What a device says it can do is listed; what it may use is your choice, and you can revoke a device at any time. ' +
-    'A paired device can ask questions and read; it changes nothing saved unless you tick "' + JarvisDevices.WRITES_LABEL + '" for it.');
+    'A paired device can ask questions and read; it changes nothing saved unless you tick "' + JarvisDevices.WRITES_LABEL + '" for it. ' +
+    '"' + JarvisDevices.TOOLS_LABEL + '" gives its questions every tool yours have, under your switches in Permissions; ' +
+    '"' + JarvisDevices.APPROVE_LABEL + '" lets it answer what waits for your approval.');
   const reach = el('p', 'devices-note', 'JARVIS listens on this PC. Programs on this PC can pair now; your phone and other devices can pair over your ' +
     'private network once the door below is on.');
   const pairBox = el('div', 'devices-pair'), doorBox = el('div', 'devices-door'), list = el('div', 'devices-list');
@@ -137,7 +150,7 @@ if (typeof document !== 'undefined') (() => {
       box.onchange = async () => {
         // What is ticked now, read from the row itself, and no second click in this row until the Core has answered:
         // two quick clicks cannot undo each other.
-        const boxes = [...caps.querySelectorAll('input')].filter(b => b.value !== 'writes'), wanted = boxes.filter(b => b.checked).map(b => b.value);
+        const boxes = [...caps.querySelectorAll('input')].filter(b => !JarvisDevices.FLAGS.includes(b.value)), wanted = boxes.filter(b => b.checked).map(b => b.value);
         boxes.forEach(b => { b.disabled = true; });
         try { await api('/api/devices', {action: 'allow', id: d.device_id, capabilities: wanted}); toast(d.name + ': ' + JarvisDevices.CAPABILITIES[name] + (box.checked ? ' allowed.' : ' not allowed.')); }
         catch (e) { toast(e.message, true); }
@@ -145,16 +158,25 @@ if (typeof document !== 'undefined') (() => {
       };
       label.append(box, el('span', '', JarvisDevices.CAPABILITIES[name] || name)); caps.append(label);
     }
-    // The owner's tick (1.0.16): may this device save memories, notes, tasks and timers? Off for every new device.
-    const writesLabel = el('label', 'check-label device-writes'), writes = el('input'); writes.type = 'checkbox'; writes.value = 'writes';
-    writes.checked = !!d.writes; writes.disabled = !!d.revoked;
-    writes.onchange = async () => {
-      writes.disabled = true;
-      try { await api('/api/devices', {action: 'writes', id: d.device_id, allowed: writes.checked}); toast(d.name + (writes.checked ? ' may save memories and tasks.' : ' only reads again.')); }
-      catch (e) { toast(e.message, true); }
-      await load();
+    // The owner's ticks: may this device save memories, notes, tasks and timers (1.0.16)? May it use this PC's tools,
+    // and may it approve what waits for the owner (1.0.17)? All off for every new device.
+    const tick = (flag, label, onText, offText) => {
+      const wrap = el('label', 'check-label device-' + flag), box = el('input'); box.type = 'checkbox'; box.value = flag;
+      box.checked = !!d[flag]; box.disabled = !!d.revoked;
+      box.onchange = async () => {
+        box.disabled = true;
+        try { await api('/api/devices', {action: flag, id: d.device_id, allowed: box.checked}); toast(d.name + (box.checked ? onText : offText)); }
+        catch (e) { toast(e.message, true); }
+        await load();
+      };
+      wrap.append(box, el('span', '', label)); caps.append(wrap);
     };
-    writesLabel.append(writes, el('span', '', JarvisDevices.WRITES_LABEL)); caps.append(writesLabel);
+    tick('writes', JarvisDevices.WRITES_LABEL, ' may save memories and tasks.', ' only reads again.');
+    tick('tools', JarvisDevices.TOOLS_LABEL, " may use this PC's tools, under your switches in Permissions.", " may no longer use this PC's tools.");
+    tick('approve', JarvisDevices.APPROVE_LABEL, ' may approve what waits for you.', ' may no longer approve.');
+    // What the ticks add up to, in the Core's words; the tools tick includes saving, so the row says so.
+    caps.append(el('p', 'devices-note device-access', JarvisDevices.accessText(d) + (d.tools && !d.revoked ?
+      '. The PC\'s tools include saving. For a change you would rather see first, set that tool to Ask first in Permissions.' : '.')));
     const actions = el('div', 'device-actions');
     actions.append(button('RENAME', 'text-button', () => {
       if (head.querySelector('input')) return;

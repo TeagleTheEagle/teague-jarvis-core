@@ -40,10 +40,13 @@ Every tool call passes `App.tool`: the AI model's, a typed or spoken command's, 
 
 1. **Emergency stop** (section 3): refused. Only the owner's own interface may still read JARVIS's own records.
 2. **Device:** a wearable's question may call only the tools marked for it (as before); since 1.0.16 a paired device
-   with the owner's tick "may save memories and tasks" may also call the four saving tools marked `device_writes`.
+   with the owner's tick "may save memories and tasks" may also call the four saving tools marked `device_writes`;
+   since 1.0.17 a paired device with the tick "may use this PC's tools" may call every tool, under the same
+   switches as the PC's own question (`docs/PHONE-ACCESS-1.0.17.md`, item A).
 3. **The owner's switch for the tool** (Settings > Permissions, table `tool_modes` in the database):
    - **Allowed** (default): as the table says.
-   - **Ask first:** JARVIS keeps the exact call and asks on screen; it runs once on approval (5 minutes, single use).
+   - **Ask first:** JARVIS keeps the exact call and asks on screen; it runs once on approval (single use; 15 minutes
+     since 1.0.17, 5 before, so that an answer from a paired device is possible: `docs/PHONE-ACCESS-1.0.17.md`).
      Offered for changes that today happen at once; not for a read, not for a tool that already asks or already
      needs the owner's exact words, not for what happens inside the window that asked.
    - **Off:** refused when JARVIS is answering, with a plain message, and the tool is not offered to the AI model.
@@ -329,3 +332,10 @@ or deleted; an installed layout writes no program file; no untouched line change
 **Not reached by this review:** the running desktop app (the new dialogs, repeated shortcut presses); a real
 microphone or a rendered page for the style examples; the full test set beyond six modules; whether the everyday
 JARVIS's personality copy equals the listed baseline text (the live installation was not touched).
+
+## 11. 1.0.17: approvals answered from a paired device (`docs/PHONE-ACCESS-1.0.17.md`, item A)
+
+A paired device the owner ticked "May approve for JARVIS" lists what waits (`approvals`) and answers it (`approve`,
+`reject`) through the same `App.approve` as the PC window; the activity row and the conversation line name the
+device ("approved from My phone"). A device ticked "May use this PC's tools" gets the whole table under the owner's
+switches. The emergency stop refuses both as it refuses everything, and only the PC resumes.

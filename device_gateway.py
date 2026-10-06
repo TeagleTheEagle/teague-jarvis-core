@@ -6,6 +6,10 @@ What it may do is decided here, on every request, from what the owner allows for
 
   - a question may call only the tools marked for other devices in permissions.py (reads); with the owner's tick
     "may save memories and tasks" (1.0.16) also the few saving tools marked for that, and its memory commands work;
+    with "may use this PC's tools" (1.0.17, docs/PHONE-ACCESS-1.0.17.md) every tool the PC's question may, under
+    the owner's switches in Settings > Permissions (Ask first waits, Off is refused);
+  - with "may approve for JARVIS" (1.0.17) it may list and answer what waits for the owner's approval: the same
+    list and the same decision as the PC window, with an activity row naming the device;
   - a picture needs the camera to be allowed, a transcription the microphone, a spoken reply the speakers;
   - it may read its own conversations, the PC's health and an overview of tasks and reminders (1.0.16); never
     another device's conversations and never the PC's chats;
@@ -27,7 +31,7 @@ import permissions
 from devices import DeviceError, DeviceRefused, WrongCode
 
 OPS = ('hello', 'status', 'start', 'events', 'cancel', 'transcribe', 'speech', 'stop', 'bye',
-       'conversations', 'history', 'metrics', 'overview')
+       'conversations', 'history', 'metrics', 'overview', 'approvals', 'approve', 'reject')
 NEEDS = {'transcribe': 'microphone', 'speech': 'speakers'}
 PAIR_CALLS_A_MINUTE = 10          # per caller
 PAIR_CALLS_A_MINUTE_IN_ALL = 60   # everyone together
@@ -139,7 +143,11 @@ class Gateway:
                 # Every conversation of a device starts with its own id: no device writes into another's.
                 session = self.sessions[ident] = Service(self.app, ident, simulated=False, prefix='device-' + ident + '-', register=False)
             if isinstance(device, dict):
-                session.writes = bool(device.get('writes'))  # the owner's tick, as it stands at this request
+                # The owner's ticks, as they stand at this request (1.0.16, 1.0.17). "May use this PC's tools"
+                # includes saving: a device given the PC's tools may save memories and tasks too.
+                session.tools = bool(device.get('tools'))
+                session.writes = bool(device.get('writes')) or session.tools
+                session.approve = bool(device.get('approve'))
             return session
 
     def present(self, device):
@@ -161,12 +169,19 @@ class Gateway:
                 self.seen_at.pop(device_id, None)
 
     @staticmethod
-    def describe(device, stopped):
-        writes = bool(device.get('writes'))
+    def describe(device, stopped, waiting=0):
+        tools, approve = bool(device.get('tools')), bool(device.get('approve'))
+        writes = bool(device.get('writes')) or tools
+        scope = ("Questions, reading, saving, and this PC's tools under the owner's switches." if tools
+                 else 'Questions, reading, and saving memories, notes, tasks and timers.' if writes
+                 else 'Questions and reading. Saved things are changed only on the PC.')
+        if approve:
+            scope += ' May approve what waits for the owner.'
+        # 1.0.17: tools, approve and waiting (how many approvals wait, counted only for a device that may approve);
+        # notices is 0 until the Core keeps notices (docs/MAC-REQUESTS-20261007.md).
         return {'device_id': device['device_id'], 'name': device['name'], 'kind': device['kind'], 'declared': device['declared'],
-                'allowed': device['allowed'], 'writes': writes, 'stopped': stopped, 'protocol': 2,
-                'scope': 'Questions, reading, and saving memories, notes, tasks and timers.' if writes
-                         else 'Questions and reading. Saved things are changed only on the PC.'}
+                'allowed': device['allowed'], 'writes': writes, 'tools': tools, 'approve': approve,
+                'waiting': int(waiting) if approve else 0, 'notices': 0, 'stopped': stopped, 'protocol': 2, 'scope': scope}
 
     def dispatch(self, credential, op, body, caller=None):
         now = time.monotonic()
@@ -207,7 +222,7 @@ class Gateway:
             raise DeviceRefused()
         stopped = self.app.stopped is not None
         if op in ('hello', 'status'):
-            return self.describe(device, stopped)
+            return self.describe(device, stopped, self.app.approvals_waiting() if device.get('approve') else 0)
         if op == 'bye':
             self.app.devices.disconnect(ident)
             return {'disconnected': True}

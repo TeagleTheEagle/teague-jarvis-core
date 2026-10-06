@@ -352,3 +352,20 @@ zip here; this session checks the hash, keeps the copy unedited under `phone/ios
   stamp. The owner decided in this session, at about 01:50 local, with five screenshots of JARVIS's list: "give jarvis all
   these permissions and make everything he said he didn't have make him have it"; the build order is
   `docs/PHONE-ACCESS-PLAN.md`. Anything the Core reads goes to its AI provider (Qwen on Alibaba).
+
+### 10.2 The Mac's `STATUS.md` of 02:31 (received 2026-10-07, 02:32 local; not a milestone zip)
+
+Kept as `phone/ios/mac/STATUS-20261007-0231.md` (sha256 b56ce610758b1adc8654c9eff0f6fe26bd15e0b7111caa44967386b3b6f89049;
+the file's own "Last updated" line still says 00:25). What it adds to 10.1: **round 4**, a lock-screen and Control
+Center button ("Ask JARVIS", a widget extension target `JARVISControls`, the URL scheme `jarvis://listen` and
+`jarvis://stop`, hands-free listening; reviewed there 3 high, 4 medium, 7 low, all applied; the extension's bundle
+id registered in the owner's Apple developer account; the owner's check at 02:31 "yes it did"); **round 5**, the
+app's half of `docs/MAC-REQUESTS-20261007.md` (R1 to R6) built against the form, every piece reading "not on this
+Core yet" against 1.0.16 (reviewed there 1 high, 3 medium, 12 low, all applied; the high one, the location field
+sent to a 1.0.16 Core which refuses the question with "Unknown fields.", also seen by the owner at 02:24 and fixed
+at 02:30); the real checks of R1 to R6 follow the install of 1.0.17. A newer milestone copy exists on the Mac,
+`JARVIS-ios-mac-20261007-0227.zip` (sha256 d19b0583…, commit 93162f5 there, with `JARVISControls/`, `JARVISShared/`,
+`Config/` and the round 4 and 5 records), **not yet carried here**: the owner was asked to send it. Three changes to
+the form since the Mac built round 5, told to the owner with the corrected file: a stopped Core answers the three
+approval ops with HTTP 400 (not 403) and the stopped sentence; a `memory` item's `label` is the tool's name; three
+window-only tools are refused from a device with "This needs the JARVIS window on the PC.".

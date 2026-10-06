@@ -192,3 +192,11 @@ build can put the secret into the repository or a release.
 
 **Not reached by the review:** the panel in a real browser (done afterwards by the author, section 7); real audio
 playback of a WAV voice by the glasses client; the full test set (run by the author); timing of the key check.
+
+## 9. 1.0.17: the PC's tools and approvals from a device (`docs/PHONE-ACCESS-1.0.17.md`, item A)
+
+Two more ticks on a device's row, off for every device and cleared by a revoke: **May use this PC's tools** (its
+questions get every tool the PC's do, under Settings > Permissions; includes saving) and **May approve for JARVIS**
+(it may list and answer what waits for the owner). Three more ops behind the approve tick: `approvals`, `approve
+{id}`, `reject {id}` (shapes in `docs/MAC-REQUESTS-20261007.md`); `hello` and `status` carry `tools`, `approve`,
+`waiting` and `notices`. Set only on the PC (`POST /api/devices {action: 'tools' | 'approve', id, allowed}`).

@@ -15,12 +15,15 @@ import uuid
 
 import permissions
 import providers
+from devices import DeviceError
 
 
 class Service:
-    def __init__(self, app, device_id='local-wearable-client', *, simulated=True, prefix='wearable-', register=True, writes=False):
+    def __init__(self, app, device_id='local-wearable-client', *, simulated=True, prefix='wearable-', register=True, writes=False, tools=False, approve=False):
         self.app = app
         self.writes = writes      # the owner's tick for a paired device: may it save memories and tasks? (1.0.16)
+        self.tools = tools        # the owner's tick: may it use this PC's tools? (1.0.17; set per request by device_gateway.py)
+        self.approve = approve    # the owner's tick: may it approve what waits for the owner? (1.0.17)
         self.reads = []           # the light reads (conversations, history, metrics, overview) have their own limit
         self.token = secrets.token_urlsafe(32)
         self.runs = set()
@@ -43,9 +46,10 @@ class Service:
             self.runs={r for r in self.runs if r in self.app.runs}
             conversation=body.get('conversation')
             if not isinstance(conversation,str) or not conversation.startswith(self.prefix):conversation=self.prefix+'local'
-            result=self.app.start_run({'text':body['text'],'conversation':conversation},wearable=True,device=self.device_id,writes=self.writes)
+            result=self.app.start_run({'text':body['text'],'conversation':conversation},wearable=True,device=self.device_id,writes=self.writes,tools=self.tools)
             self.runs.add(result['run_id']);return result
         if op=='events' and 'after' in body: return self.events_after(body)  # waits outside the lock (below)
+        if op in ('approve','reject'): return self.answer_approval(op,body)  # the approved tool runs outside the lock (below)
         if not self.lock.acquire(blocking=False): raise ValueError('Wearable service busy.')
         try:
             self.app.devices.heartbeat('pc')
@@ -68,11 +72,8 @@ class Service:
                 now=time.monotonic();self.calls=[t for t in self.calls if now-t<60]
                 if len(self.calls)>=20: raise ValueError('Wearable request limit reached. Wait one minute.')
                 self.calls.append(now)
-            if op in ('conversations','history','metrics','overview'):
-                if not self.paired: raise ValueError('Operation unavailable.')  # the same-PC test client stays as it was
-                now=time.monotonic();self.reads=[t for t in self.reads if now-t<60]
-                if len(self.reads)>=120: raise ValueError('Wearable request limit reached. Wait one minute.')
-                self.reads.append(now)
+            if op in ('conversations','history','metrics','overview','approvals'):
+                self.count_read()
                 return self.read(op,body)
             if op=='start':
                 if set(body)-{'text','image','conversation'}: raise ValueError('Unknown fields.')
@@ -95,7 +96,7 @@ class Service:
                 with self.app.lock:
                     if attachment:self.app.attachments[attachment['id']]=attachment
                     try:
-                        result=self.app.start_run({'text':text,'conversation':conversation,**({'attachment':attachment['id']} if attachment else {})},wearable=True,device=self.device_id,writes=self.writes)
+                        result=self.app.start_run({'text':text,'conversation':conversation,**({'attachment':attachment['id']} if attachment else {})},wearable=True,device=self.device_id,writes=self.writes,tools=self.tools)
                     finally:
                         if attachment:self.app.attachments.pop(attachment['id'],None)
                 self.runs={r for r in self.runs if r in self.app.runs}
@@ -121,6 +122,22 @@ class Service:
             if op=='status':return {'available':True,'protocol':1,'scope':'same-PC wearable analysis','voice_profile':self.app.store.settings().get('voice_profile','auto')}
             raise ValueError('Operation unavailable.')
         finally:self.lock.release()
+
+    def count_read(self):
+        """The light reads' limit (1.0.16): 120 a minute, paired devices only. Must hold the lock."""
+        if not self.paired: raise ValueError('Operation unavailable.')  # the same-PC test client stays as it was
+        now=time.monotonic();self.reads=[t for t in self.reads if now-t<60]
+        if len(self.reads)>=120: raise ValueError('Wearable request limit reached. Wait one minute.')
+        self.reads.append(now)
+
+    def answer_approval(self, op, body):
+        """An approval answered from this device (1.0.17 item A): counted under the lock like the other light reads and
+        carried out outside it, so that the approved tool (a file, a song, a page) does not make this device's other
+        requests "busy" meanwhile. The stop is never held up either way."""
+        if not self.lock.acquire(blocking=False): raise ValueError('Wearable service busy.')
+        try: self.count_read()
+        finally: self.lock.release()
+        return self.read(op,body)
 
     def events_after(self, body):
         """The events of one of this device's questions after a cursor, waiting up to ten seconds for new ones (as the
@@ -167,6 +184,18 @@ class Service:
             reminders=[{'title':r['title'],'due':r['due'],'fired':bool(r['fired'])} for r in store.reminders() if r['due']<=now+86400]
             return {'tasks_open':len(open_tasks),'projects':projects[:20],'reminders':reminders[:20],'conversations':len(store.conversations_for(self.prefix,1000)),
                     'scope':'Open tasks, projects and the reminders due within 24 hours, from the PC; the conversations are this device\'s own.'}
+        if op in ('approvals','approve','reject'):
+            # 1.0.17 (docs/PHONE-ACCESS-1.0.17.md): what waits for the owner, and the owner's answer from the pocket.
+            # Only with the tick "may approve for JARVIS"; the same list and the same decision as the PC window
+            # (server.App.approve). While the emergency stop holds nothing is listed or answered (the stop has
+            # dropped every approval anyway): the stopped sentence, as for every device request.
+            if not self.approve: raise DeviceError('Approving is not allowed for this device.')
+            self.app.require_running()
+            if op=='approvals':
+                if body: raise ValueError('Unknown fields.')
+                return {'items':self.app.approval_rows()}
+            if set(body)!={'id'} or not isinstance(body['id'],str) or not re.fullmatch(r'[a-f0-9]{32}',body['id']): raise ValueError('Unknown fields.')
+            return self.app.approve_from_device(body['id'],op=='approve',self.device_id)
         raise ValueError('Operation unavailable.')
 
 

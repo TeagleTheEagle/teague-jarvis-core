@@ -16,7 +16,7 @@ Base: `http://127.0.0.1:8765`. Load `/` first for a random process-scoped HttpOn
 | POST | `/api/reminder/dismiss` | `{id}`, also cancels pending timers |
 | POST | `/api/upload` | `{name, data: base64}` returns ID/type/character count/truncation |
 | POST | `/api/tool` | `{name, args}`; schemas in actions.py |
-| POST | `/api/approval` | `{id, approved: boolean}`; single-use; expires after 5 minutes (a draft or an "ask first" tool) or 30 minutes (a change to JARVIS itself); refused while the emergency stop holds |
+| POST | `/api/approval` | `{id, approved: boolean}`; single-use; expires after 15 minutes (a draft or an "ask first" tool; 5 before 1.0.17) or 30 minutes (a change to JARVIS itself); refused while the emergency stop holds |
 | GET | `/api/permissions` | The table of every tool (`permissions.py`) with the owner's switch for each, and the emergency stop state |
 | POST | `/api/permissions` | `{tool, mode: default\|ask\|off}`; only positions the table offers for that tool |
 | POST | `/api/emergency-stop` | `{reason?}`; cancels everything, drops waiting approvals and holds until resumed; returns `{stopped, since, device, reason, saved}` |

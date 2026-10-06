@@ -49,3 +49,14 @@ assert.equal(d.writesText({writes:false}),'Reads only');
 assert.equal(d.writesText({writes:true,revoked:1}),'Revoked: nothing','a revoked device may change nothing whatever its row once said');
 assert.equal(d.WRITES_LABEL,'May save memories and tasks');
 console.log('devices view (1.0.16): ok');
+// 1.0.17: the two further ticks, in one line of words from the Core's row.
+assert.equal(d.accessText({writes:false}),'Reads only');
+assert.equal(d.accessText({writes:true}),'May save memories and tasks');
+assert.equal(d.accessText({tools:true}),"May use this PC's tools (and save)",'the PC\'s tools include saving');
+assert.equal(d.accessText({tools:true,approve:true}),"May use this PC's tools (and save); may approve for JARVIS");
+assert.equal(d.accessText({writes:true,approve:true}),'May save memories and tasks; may approve for JARVIS');
+assert.equal(d.accessText({tools:true,approve:true,revoked:1}),'Revoked: nothing','a revoked device may do nothing whatever its row once said');
+assert.equal(d.TOOLS_LABEL,"May use this PC's tools");
+assert.equal(d.APPROVE_LABEL,'May approve for JARVIS');
+assert.deepEqual(d.FLAGS,['writes','tools','approve']);
+console.log('devices view (1.0.17): ok');
