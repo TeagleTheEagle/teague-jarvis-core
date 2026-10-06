@@ -192,6 +192,8 @@ class App:
         self.check_results = {}
         self.last_health = None
         self.backend_revision = 'STAGE4_TEST' if self.stage4 else update_history.snapshot(ROOT)["revision"]
+        # 1.0.17 item E: what a saved thing is stamped with: the installed release, or the development revision.
+        self.store.release = runtime_paths.release_id() or ('development ' + str(self.backend_revision)[:12])
         self.update_record = {'revision': 'STAGE4_TEST'} if self.stage4 else update_history.history(ROOT, self.store.root, self.backend_revision)
         self.update_checked = time.monotonic()
         self.voice_engine = VoiceEngine()
@@ -1260,7 +1262,9 @@ class App:
                 run.emit('assistant.delta', {'text': answer})
             else:
                 settings = self.store.settings()
-                context = {'preferred_name': settings['name'], 'response_length': settings['response_length'], 'tone': settings['tone'], 'humor': settings['humor'], 'proactive': settings.get('proactive', False), 'saved_facts': [r['body'] for r in memory.relevant(self.store.items('memory'), text)]}
+                facts = memory.relevant(self.store.items('memory'), text)
+                context = {'preferred_name': settings['name'], 'response_length': settings['response_length'], 'tone': settings['tone'], 'humor': settings['humor'], 'proactive': settings.get('proactive', False), 'saved_facts': [memory.stamped(r) for r in facts],
+                           **({'saved_facts_note': memory.STAMP_NOTE} if any(r.get('release') for r in facts) else {})}  # 1.0.17 item E: the rule only when a stamped fact is there
                 if os.getenv('JARVIS_DESKTOP_TOKEN'):
                     context['desktop_capabilities'] = {'screen_vision': 'Live local sharing on explicit start; AI receives changed frames periodically and notes are saved in Communications. Screenshot commands request one immediate frame. Commands: analyse my screen, take a screenshot Jarvis, start screen sharing, stop sharing.', 'companion': 'Floating hologram with analyse screen, microphone and stop controls. Command: show hologram.', 'limits': 'AI receives sampled images, not every video frame. No arbitrary mouse/keyboard control. Only claim to see supplied images. Screen observations are analysis-only; separate explicit user commands can use existing tools.'}
                 context['recent_research'] = self.store.recent_research(run.conversation)

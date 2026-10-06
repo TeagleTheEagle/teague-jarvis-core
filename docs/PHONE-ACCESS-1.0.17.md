@@ -288,3 +288,46 @@ permission pins, the briefing, the phone and the inspection suites unchanged in 
     date, a VALARM, a DURATION, an odd zone name, a broken event, one failing feed of two; a failing background read
     and none while stopped, the owner's own button, a denied mail, the tools tick taken back, a failing and a stale
     calendar in the briefing, the guard on a "sent" claim.
+
+## 5. Item E: memory with a release stamp (2026-10-07)
+
+JARVIS's own wish ("so 1.0.11 retires the day 1.0.15 lands and I stop contradicting myself"):
+
+- Every saved thing (a memory, a note, a task, a project) now records the release it was saved under: a `release`
+  column on `items`, added to an older database at start (older rows stay without one), stamped by `Store.put`
+  with `Store.release`, which `server.App` sets to the installed release id or, in development, to
+  "development <revision>". An edit re-stamps with the release that runs now. A restored backup keeps each row's
+  stamp; a backup made before 1.0.17 has none, so its rows are marked "before 1.0.17 (restored)".
+- The model sees each fact as "<fact> [saved under <release>]" (`memory.stamped`) and one rule in the question's
+  context (`memory.STAMP_NOTE`): a fact without a release was saved before 1.0.17 and counts as the oldest; a fact
+  about the owner holds whatever the release; when two facts about JARVIS itself disagree, the one saved under the
+  newer release is right and the older is out of date, to be said so if asked and never argued from. Nothing is
+  deleted by itself: the owner's Memory page still decides.
+- The Memory page shows "· saved under <release>" after each entry's date, and "· saved before 1.0.17" on an
+  unstamped memory; the Notes and Projects pages show the stamp too (they share the drawing code).
+- Deliberate exceptions: the offline answer path (the local model) still gets plain facts and no note; the older
+  TLS task bridge (`phone_bridge.py`, which nothing starts) inserts tasks without a stamp. A development build's
+  stamp reads "development <revision>"; the rule says such a stamp is newer than any numbered release.
+
+Checked: `test_memory_stamp.py` (4: every saved thing stamped and an edit re-stamped; an older database gaining the
+column with its rows unstamped; a restored backup keeping or marked; the Core stamping with its release and the
+model told the facts with their stamps and the rule, the page rows carrying it). The memory, recall, recovery,
+reliability and phone suites unchanged in meaning.
+
+### Independent review of item E (one reviewer, 2026-10-07): no high finding; 2 medium and 8 low, all applied
+
+1. Medium: a correction made through JARVIS's own memory tool kept the stamp of the release it was first saved
+   under, so the owner's correction would have lost to a later fact. Fixed: that update re-stamps too; a test.
+2. Medium: a development build's stamp could not be ordered against a release. Fixed: the rule says a
+   "development" stamp is newer than any numbered release.
+3. Low: the rule's wording. Fixed: an ambiguous fact is kept and its age said; the older fact stays saved and is
+   never removed by the model; the stamps are not read back unasked; the rule is sent only when a stamped fact is
+   in the context; a test.
+4. Low: a backup's stamp was taken as it came. Fixed: blank or not text means "pre-1.0.17 backup"; cut at 80; a test.
+5. Low: the derived "Preferred name" row kept its old stamp on a rename. Fixed; a test.
+6. Low: the old task bridge inserts without a stamp. Recorded as outside the item (nothing starts it).
+7. Low: the page's unstamped memories showed nothing. Fixed: "saved before 1.0.17".
+8. Low: the offline answer path gets plain facts. Recorded as deliberate.
+9. Low: the code cited a record section not yet written. Written.
+10. Low: test gaps. Added: a re-said memory, the correction through JARVIS, the name row, a client's own stamp
+    ignored by the item route, the export carrying the column, a backup's blank, non-text and long stamps.

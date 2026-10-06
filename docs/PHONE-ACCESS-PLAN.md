@@ -79,7 +79,7 @@ record in `docs/`, committed by file list. Device routes are defined here and ha
   ("the phone reports ...") and to `get_directions` as the starting point. The Core stores nothing unless the
   owner's words ask it to remember (the save tick and the memory commands apply, as for any memory). No history.
 
-**E. Memory with a release stamp** (JARVIS's third wish)
+**E. Memory with a release stamp** (JARVIS's third wish). **Built 2026-10-07** (`docs/PHONE-ACCESS-1.0.17.md` section 5).
 - Every saved memory records the release it was saved under (`items.release`, a schema step with a migration for old
   rows). The Memory page shows it; the model sees it ("saved under 1.0.11") with one standing rule: when two memories
   about JARVIS itself disagree, the newer release's wins. Nothing is deleted by itself.

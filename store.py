@@ -17,6 +17,9 @@ DEFAULT_ANSWER_MODE = 'deep'  # the same as providers.DEFAULT_ANSWER_MODE
 class Store:
     def __init__(self, root):
         self.root = Path(root).resolve()
+        # 1.0.17 item E (docs/PHONE-ACCESS-1.0.17.md section 5): every saved thing records the release it was saved under;
+        # server.App sets the real value (the installed release, or the development revision) after making the store.
+        self.release = 'development'
         self.root.mkdir(parents=True, exist_ok=True)
         self.path = self.root / 'jarvis.sqlite3'
         with self.connect() as db:
@@ -66,7 +69,8 @@ class Store:
                     try: db.execute(f'ALTER TABLE {table} ADD COLUMN {column} {definition}')
                     except sqlite3.OperationalError as exc:
                         if 'duplicate column' not in str(exc).lower(): raise
-            add_columns('items', [('item_key','TEXT'),('category','TEXT'),('source','TEXT'),('confidence','REAL NOT NULL DEFAULT 1.0')])
+            add_columns('items', [('item_key','TEXT'),('category','TEXT'),('source','TEXT'),('confidence','REAL NOT NULL DEFAULT 1.0'),
+                                  ('release','TEXT')])  # 1.0.17 item E: the release a thing was saved under; empty on older rows
             # Which question and which device an activity row belongs to (1.0.15). Both stay empty on older rows,
             # and an older JARVIS that writes only action and status still works on this database.
             add_columns('audit', [('run_id','TEXT'),('device','TEXT')])
@@ -107,7 +111,7 @@ class Store:
                 db.execute('UPDATE task_meta SET completed=?,completed_at=? WHERE item_id=?', (int(completed), time.time() if completed else None, item_id))
             return True
 
-    def put(self, kind, body, item_id=None, item_key=None, category=None, source='user', confidence=1.0):
+    def put(self, kind, body, item_id=None, item_key=None, category=None, source='user', confidence=1.0, release=None):
         if kind not in ('memory', 'note', 'task', 'project'):
             raise ValueError('Unknown item type.')
         if not isinstance(body, str) or not body.strip() or len(body) > 12000:
@@ -125,7 +129,7 @@ class Store:
             existing = db.execute('SELECT kind FROM items WHERE id=?', (item_id,)).fetchone()
             if existing and existing['kind'] != kind:
                 raise ValueError('Item type mismatch.')
-            db.execute('INSERT INTO items(id,kind,body,created,updated,item_key,category,source,confidence) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET body=excluded.body, updated=excluded.updated, item_key=excluded.item_key, category=excluded.category, source=excluded.source, confidence=excluded.confidence', (item_id, kind, body.strip(), now, now, item_key or memory.key(body), category or ('project' if kind == 'project' else 'fact'), source, float(confidence)))
+            db.execute('INSERT INTO items(id,kind,body,created,updated,item_key,category,source,confidence,release) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET body=excluded.body, updated=excluded.updated, item_key=excluded.item_key, category=excluded.category, source=excluded.source, confidence=excluded.confidence, release=excluded.release', (item_id, kind, body.strip(), now, now, item_key or memory.key(body), category or ('project' if kind == 'project' else 'fact'), source, float(confidence), str(release or self.release)[:80]))
             if kind == 'memory' and memory.key(body) == 'profile:name':
                 name = re.sub(r'^(?:my name is|call me|preferred name:)\s*', '', body.strip(), flags=re.I).rstrip('.')[:100]
                 db.execute('INSERT OR REPLACE INTO settings VALUES (?,?)', ('name', json.dumps(name)))
@@ -249,7 +253,7 @@ class Store:
                     for row in db.execute("SELECT id,body FROM items WHERE kind='memory'").fetchall():
                         if memory.key(row['body']) == 'profile:name':
                             if val.strip():
-                                db.execute('UPDATE items SET body=?,updated=? WHERE id=?', ('Preferred name: '+val.strip(), time.time(), row['id']))
+                                db.execute('UPDATE items SET body=?,updated=?,release=? WHERE id=?', ('Preferred name: '+val.strip(), time.time(), str(self.release)[:80], row['id']))
                             else:
                                 db.execute('DELETE FROM items WHERE id=?', (row['id'],))
         return self.settings()
@@ -346,7 +350,10 @@ class Store:
         count = 0
         for row in payload.get('items', []):
             if row.get('kind') in ('memory','note','task','project'):
-                self.put(row['kind'], row.get('body',''), row.get('id'), row.get('item_key'), row.get('category'), row.get('source','backup'), row.get('confidence',1.0)); count += 1
+                # 1.0.17 item E: a restored thing keeps the release it was saved under; a backup made before 1.0.17 has none.
+                stamp = row.get('release')
+                stamp = stamp.strip() if isinstance(stamp, str) and stamp.strip() else 'pre-1.0.17 backup'
+                self.put(row['kind'], row.get('body',''), row.get('id'), row.get('item_key'), row.get('category'), row.get('source','backup'), row.get('confidence',1.0), release=stamp); count += 1
         with self.connect() as db:
             for row in payload.get('settings', []):
                 if row.get('key') in ('name','voice','continuous','response_length') or (row.get('key') == 'answer_mode' and row.get('value') in [json.dumps(m) for m in ANSWER_MODES]):

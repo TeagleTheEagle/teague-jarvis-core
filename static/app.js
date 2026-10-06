@@ -128,7 +128,7 @@ async function refresh(){
 function duration(seconds){return [Math.floor(seconds/3600),Math.floor(seconds/60)%60,Math.floor(seconds)%60].map(x=>String(x).padStart(2,'0')).join(':');}
 function renderItems(kind,selector,items){
   const container=$(selector);if(!container)return;container.replaceChildren();if(!items.length){const p=document.createElement('p');p.className='empty';p.textContent=kind==='memory'?'No saved facts yet. Add something you would like JARVIS to remember.':kind==='project'?'No projects saved yet.':'A place for ideas, plans, and things worth keeping.';container.append(p);return;}
-  items.forEach(item=>{const row=document.createElement('div');row.className='saved-item';const main=document.createElement('div');const p=document.createElement('p');p.textContent=item.body;const date=document.createElement('small');date.textContent=new Date(item.updated*1000).toLocaleString();main.append(p,date);row.append(main);
+  items.forEach(item=>{const row=document.createElement('div');row.className='saved-item';const main=document.createElement('div');const p=document.createElement('p');p.textContent=item.body;const date=document.createElement('small');date.textContent=new Date(item.updated*1000).toLocaleString()+(item.release?' \u00b7 saved under '+item.release:(kind==='memory'?' \u00b7 saved before 1.0.17':''));main.append(p,date);row.append(main);
     const edit=document.createElement('button');edit.textContent='EDIT';edit.onclick=()=>entry(kind,item);const del=document.createElement('button');del.textContent='DELETE';del.onclick=async()=>{try{await api('/api/item/delete',{kind,id:item.id});await refresh();}catch(e){toast(e.message,true);}};row.append(edit,del);container.append(row);});
 }
 function renderTasks(){

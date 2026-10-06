@@ -214,7 +214,8 @@ def manage_memory(store, action, item_id, body=None):
         key = memory.key(body)
         for row in db.execute("SELECT id,body FROM items WHERE kind='memory' AND id<>?", (item_id,)):
             if memory.key(row['body']) == key: raise ValueError('A matching memory already exists; select that record rather than creating a duplicate.')
-        db.execute('UPDATE items SET body=?,item_key=?,updated=? WHERE id=?', (body.strip(), key, time.time(), item_id))
+        # 1.0.17 item E: a correction made through JARVIS is saved under the release that runs now, like every other edit.
+        db.execute('UPDATE items SET body=?,item_key=?,updated=?,release=? WHERE id=?', (body.strip(), key, time.time(), str(getattr(store, 'release', 'development'))[:80], item_id))
         if memory.key(old['body']) == 'profile:name': db.execute("DELETE FROM settings WHERE key='name'")
         if key == 'profile:name':
             name = re.sub(r'^(?:my name is|call me|preferred name:)\s*', '', body.strip(), flags=re.I).rstrip('.')[:100]

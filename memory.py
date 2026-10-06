@@ -29,6 +29,22 @@ def key(body):
     return 'text:' + text
 
 
+# 1.0.17 item E (docs/PHONE-ACCESS-1.0.17.md section 5): the model is told the release each fact was saved under, and
+# one rule, so an older release's note about JARVIS itself stops arguing with today's build.
+STAMP_NOTE = ('Each saved fact ends with the JARVIS release it was saved under; one without a release was saved before 1.0.17 and'
+              ' counts as the oldest; a stamp beginning with "development" is a build newer than any numbered release. A fact'
+              ' about the owner holds whatever the release. When two facts about JARVIS itself (what it can do, how it is set'
+              ' up) disagree, the one saved under the newer release is right and the older one is out of date but stays saved:'
+              ' say so if asked, never argue from the older one, never remove it yourself. When unsure whether a fact is about'
+              ' the owner or about JARVIS, keep it and say which is older. Do not repeat the stamps unless asked.')
+
+
+def stamped(item):
+    """A saved fact as the model sees it, with the release it was saved under."""
+    release = item.get('release') if isinstance(item, dict) else None
+    return str(item['body']) + (' [saved under ' + str(release) + ']' if release else '')
+
+
 def relevant(items, query, limit=20):
     words = _terms(query) - {'the', 'and', 'what', 'about', 'remember'}
     def score(item):
