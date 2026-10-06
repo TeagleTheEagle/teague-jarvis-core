@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import re
+import unicodedata
 import secrets
 import threading
 import time
@@ -44,6 +45,8 @@ class Service:
         self.writes = writes      # the owner's tick for a paired device: may it save memories and tasks? (1.0.16)
         self.tools = tools        # the owner's tick: may it use this PC's tools? (1.0.17; set per request by device_gateway.py)
         self.approve = approve    # the owner's tick: may it approve what waits for the owner? (1.0.17)
+        self.notices_seen = time.time()   # notices before this moment count as read (1.0.17 item F); a Core restart starts afresh
+        self.announces = []       # the announce op's own limit
         self.reads = []           # the light reads (conversations, history, metrics, overview) have their own limit
         self.token = secrets.token_urlsafe(32)
         self.runs = set()
@@ -92,7 +95,13 @@ class Service:
                 now=time.monotonic();self.calls=[t for t in self.calls if now-t<60]
                 if len(self.calls)>=20: raise ValueError('Wearable request limit reached. Wait one minute.')
                 self.calls.append(now)
-            if op in ('conversations','history','metrics','overview','approvals'):
+            if op=='announce':
+                if not self.paired: raise ValueError('Operation unavailable.')
+                now=time.monotonic();self.announces=[t for t in self.announces if now-t<60]
+                if len(self.announces)>=6: raise ValueError('Announcement limit reached. Wait one minute.')
+                self.announces.append(now)
+                return self.announce(body)
+            if op in ('conversations','history','metrics','overview','approvals','notices'):
                 self.count_read()
                 return self.read(op,body)
             if op=='start':
@@ -143,6 +152,35 @@ class Service:
             if op=='status':return {'available':True,'protocol':1,'scope':'same-PC wearable analysis','voice_profile':self.app.store.settings().get('voice_profile','auto')}
             raise ValueError('Operation unavailable.')
         finally:self.lock.release()
+
+    def notice_kinds(self):
+        """The notices this device may see: an approval notice only when it may approve."""
+        import nudges
+        return set(nudges.KINDS) if self.approve else set(nudges.KINDS)-{'approval'}
+
+    def unread_notices(self):
+        return self.app.notices.count_after(self.notices_seen,self.notice_kinds()) if getattr(self.app,'notices',None) else 0
+
+    def announce(self, body):
+        """A device's announcement (1.0.17 item F, docs/MAC-REQUESTS-20261007.md): the PC speaks it in JARVIS's voice
+        (window open or not, unless quiet hours), and it is kept as a notice. Refused while the emergency stop holds."""
+        self.app.require_running()
+        if set(body)-{'sender','text','kind'} or 'sender' not in body or 'text' not in body: raise ValueError('Invalid announcement.')
+        sender,text,kind=body['sender'],body['text'],body.get('kind','other')
+        if (not isinstance(sender,str) or not 1<=len(sender.strip())<=80 or not isinstance(text,str) or not 1<=len(text.strip())<=400
+                or kind not in ('text','call','other') or any(unicodedata.category(c)[0]=='C' for c in sender+text)): raise ValueError('Invalid announcement.')
+        sender,text=' '.join(sender.split()),' '.join(text.split())
+        settings=self.app.store.settings()
+        name=(settings.get('name') or '').strip() or 'Sir'
+        line={'text':f'{name}, {sender} texted you: {text}','call':f'{name}, {sender} is calling you. {text}','other':f'{name}, {sender} says: {text}'}[kind]
+        # Said near the PC's own microphone: a text carrying the wake word or a stop phrase is kept in full in the notice
+        # but only announced, never read out (a stranger's text must not become a question or a stop).
+        words=line if self.app.speakable(sender) and self.app.speakable(text) else {'text':f'{name}, {sender} texted you. The message is on your phone.',
+            'call':f'{name}, {sender} is calling you.','other':f'{name}, {sender} sent a message. It is on your phone.'}[kind]
+        notice=self.app.notices.add('announce',line) if getattr(self.app,'notices',None) else None
+        if notice is None: return {'announced':False,'spoken':False}
+        spoken=self.app.notify(notice,speak=not settings.get('quiet_hours'),device=self.device_id,words=words)
+        return {'announced':True,'spoken':bool(spoken)}
 
     def count_read(self):
         """The light reads' limit (1.0.16): 120 a minute, paired devices only. Must hold the lock."""
@@ -210,6 +248,20 @@ class Service:
             return {'tasks_open':len(open_tasks),'projects':projects[:20],'reminders':reminders[:20],'conversations':len(store.conversations_for(self.prefix,1000)),
                     'calendar_connected':calendar_feed.configured(),'calendar':calendar,'mail_unread':self.app.mail_unread.get() if mail.configured() else None,
                     'scope':'Open tasks, projects and the reminders due within 24 hours, from the PC; the conversations are this device\'s own.'}
+        if op=='notices':
+            # 1.0.17 item F: what JARVIS said on its own, newest first; reading marks everything returned as read for this
+            # device, so status.notices then counts only newer ones.
+            if set(body)-{'after'}: raise ValueError('Unknown fields.')
+            after=body.get('after')
+            if after is not None and (isinstance(after,bool) or not isinstance(after,(int,float))): raise ValueError('Unknown fields.')
+            if not getattr(self.app,'notices',None): return {'items':[],'unread':0}
+            kinds=self.notice_kinds()
+            unread=self.app.notices.count_after(self.notices_seen,kinds)
+            # The newest 50, or all the unread ones when there are more (up to 200), so that marking what was returned as
+            # read never marks what was not; a listing of newer items only (`after` past the mark) moves the mark nowhere.
+            items=[{k:n[k] for k in ('id','kind','text','created')} for n in self.app.notices.recent(min(200,max(50,unread)),after,kinds)]
+            if after is None or after<=self.notices_seen: self.notices_seen=time.time()
+            return {'items':items,'unread':unread}
         if op in ('approvals','approve','reject'):
             # 1.0.17 (docs/PHONE-ACCESS-1.0.17.md): what waits for the owner, and the owner's answer from the pocket.
             # Only with the tick "may approve for JARVIS"; the same list and the same decision as the PC window

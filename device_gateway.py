@@ -31,7 +31,7 @@ import permissions
 from devices import DeviceError, DeviceRefused, WrongCode
 
 OPS = ('hello', 'status', 'start', 'events', 'cancel', 'transcribe', 'speech', 'stop', 'bye',
-       'conversations', 'history', 'metrics', 'overview', 'approvals', 'approve', 'reject')
+       'conversations', 'history', 'metrics', 'overview', 'approvals', 'approve', 'reject', 'notices', 'announce')
 NEEDS = {'transcribe': 'microphone', 'speech': 'speakers'}
 PAIR_CALLS_A_MINUTE = 10          # per caller
 PAIR_CALLS_A_MINUTE_IN_ALL = 60   # everyone together
@@ -47,7 +47,7 @@ SHOWABLE = frozenset((
     'Too many pairing attempts. Wait one minute.', 'Wearable request limit reached. Wait one minute.', 'Wearable service busy.',
     'Wearable conversation required.', 'Unknown wearable run.', 'Run expired.', 'Unknown fields.', 'Image too large.', 'Unsupported image.',
     'Invalid speech text.', 'Expected PCM data.', 'A request is already running. Stop it or wait for completion.',
-    'Supply only run_id and after.', 'Invalid location.', LOCKED_MESSAGE))
+    'Supply only run_id and after.', 'Invalid location.', 'Invalid announcement.', 'Announcement limit reached. Wait one minute.', LOCKED_MESSAGE))
 GENERAL = 'Invalid, busy, expired or unavailable device request.'
 
 
@@ -169,7 +169,7 @@ class Gateway:
                 self.seen_at.pop(device_id, None)
 
     @staticmethod
-    def describe(device, stopped, waiting=0):
+    def describe(device, stopped, waiting=0, notices=0):
         tools, approve = bool(device.get('tools')), bool(device.get('approve'))
         writes = bool(device.get('writes')) or tools
         scope = ("Questions, reading, saving, and this PC's tools under the owner's switches." if tools
@@ -178,10 +178,10 @@ class Gateway:
         if approve:
             scope += ' May approve what waits for the owner.'
         # 1.0.17: tools, approve and waiting (how many approvals wait, counted only for a device that may approve);
-        # notices is 0 until the Core keeps notices (docs/MAC-REQUESTS-20261007.md).
+        # notices: how many this device has not read (docs/MAC-REQUESTS-20261007.md; item F).
         return {'device_id': device['device_id'], 'name': device['name'], 'kind': device['kind'], 'declared': device['declared'],
                 'allowed': device['allowed'], 'writes': writes, 'tools': tools, 'approve': approve,
-                'waiting': int(waiting) if approve else 0, 'notices': 0, 'location': True,  # start.location is accepted (1.0.17 item D)
+                'waiting': int(waiting) if approve else 0, 'notices': int(notices), 'location': True,  # start.location is accepted (1.0.17 item D)
                 'stopped': stopped, 'protocol': 2, 'scope': scope}
 
     def dispatch(self, credential, op, body, caller=None):
@@ -223,7 +223,7 @@ class Gateway:
             raise DeviceRefused()
         stopped = self.app.stopped is not None
         if op in ('hello', 'status'):
-            return self.describe(device, stopped, self.app.approvals_waiting() if device.get('approve') else 0)
+            return self.describe(device, stopped, self.app.approvals_waiting() if device.get('approve') else 0, self.session(device).unread_notices())
         if op == 'bye':
             self.app.devices.disconnect(ident)
             return {'disconnected': True}

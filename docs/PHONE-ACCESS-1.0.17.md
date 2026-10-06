@@ -331,3 +331,89 @@ reliability and phone suites unchanged in meaning.
 9. Low: the code cited a record section not yet written. Written.
 10. Low: test gaps. Added: a re-said memory, the correction through JARVIS, the name row, a client's own stamp
     ignored by the item route, the export carrying the column, a backup's blank, non-text and long stamps.
+
+## 6. Item F: the routine, its nudges, the notices and the announce route (2026-10-07)
+
+JARVIS's second wish ("time-aware nudges tied to your actual routine: one prompt at a collision point, never
+nagging"), and the texts the phone can hand to the PC:
+
+- **Routine** (`nudges.Routine`, table `routine`; Settings > Routine, `static/routine.js`; owner routes
+  `GET`/`POST /api/routine`): the owner's week as blocks, each with days (MO to SU), a start and an end (HH:MM,
+  the end after the start on the same day: a night shift is two blocks, and the panel and the refusal say so), a
+  label of up to 40 characters; at most 40 blocks; each change writes an activity row (the removed block by its
+  label). Enter in one of the form's inputs adds the block; it never submits the preferences form around it.
+- **Nudges** (`nudges.collisions`, `nudges.Clock`, `nudges.start_nudges`, started in `main()` like the backups'
+  clock, a look once a minute): when a block is about to start (within 15 minutes) or is running, an open task
+  with a due time or a reminder due inside the block or within an hour after it is a collision, and each collision
+  becomes one nudge, keyed by the item, the block and the day so it happens once and never again; none in quiet
+  hours, none while the emergency stop holds. The words: "Essay" is due at 18:30, during Gym (18:00 to 19:00). /
+  Gym runs till 19:00; "Call Mum" is due at 19:30. (the item's title cut at 80 characters). The clock works in
+  local wall-clock time throughout (naive datetimes placed by the C library), so a day on which the clocks change
+  is read right.
+- **Notices** (`nudges.Notices`, table `notices`, the newest 500 of each kind kept, so a flood of announcements
+  never removes today's nudge keys): everything JARVIS says on its own: a nudge, an announcement a device asked
+  for, "Waiting for your approval: <label>" when something is kept for approval (`keep_approval`; the notice goes
+  again when the approval is answered, runs out, is cancelled or is dropped by the stop), and a `system` kind,
+  written by the automatic backups ("Automatic backup done." / "failed."). On the PC: `/api/state` carries the
+  newest 20 and the window shows each new one once as a toast (not an approval: its card is already on the screen;
+  the first reading after the window opens seeds what is already there, so nothing is replayed); `GET /api/notices`
+  lists 50.
+- **Spoken on this PC** when the owner's "proactive" tick ("Announce due reminders and routine nudges") is on, the
+  voice is on (VOICE ON, as for the window's replies) and quiet hours are off: `App.notify` writes the activity row
+  ("nudge: ...": spoken or shown) and `App.say` hands the words to the player's own thread (`speaker.py`: one queue,
+  one thread; the sound is made there with JARVIS's voice (`voice_engine`) and played through Windows' own player,
+  winmm, a fresh alias each time, the temporary file removed after), so a slow voice provider never holds a device's
+  request or the Core's lock, two sounds never talk over each other, and when one plays and two already wait a
+  further one is not spoken (its notice stays). Heard whether the window is open, hidden or closed; never while the
+  stop holds (it also cuts a sound half way); nothing when the voice provider is the browser's. `/api/state` carries
+  `speaking`, and the window pauses its wake detection while it is true, as it does for its own replies.
+- **The microphone guard** (`App.speakable`): words carrying the wake word ("Jarvis") or a stop phrase are never
+  read out near the PC's own microphone (a stranger's text in JARVIS's voice must not become a question or a stop):
+  a nudge is spoken as "A nudge for you is on the screen and on your phone.", an announcement as "<name>, <sender>
+  texted you. The message is on your phone." (a call: "... is calling you."); the full text stays in the notice.
+- **For paired devices** (docs/MAC-REQUESTS-20261007.md): `status.notices` counts what this device has not read
+  (from the moment its session began; a Core restart or a revoke starts afresh), approval notices only for a device
+  that may approve; `notices {after?}` lists the newest 50, or all of this device's unread ones when there are more
+  (up to 200), newest first, and marks what was returned as read (a listing of newer items only, `after` past the
+  mark, moves nothing); `announce {sender, text, kind}` (sender up to 80, text up to 400, kind text/call/other; control,
+  format and zero-width characters refused; 6 a minute; refused while stopped) makes the PC say "<name>, <sender>
+  texted you: <text>" (or "is calling you", "says") in JARVIS's voice unless quiet hours, keeps it as a notice, and
+  writes the activity row as the device's; `spoken` is true when the PC took the words to speak. Every paired device
+  sees every device's announcements: they are all the owner's.
+
+Checked: `test_nudges.py` (8: the blocks checked, added, listed and removed; a keyed notice once, the list newest
+first with kinds, the keep per kind and the drop; the collisions of a block about to start, running, on another
+day, with passed, done and due-less items; one nudge per collision, none in quiet hours or stopped, a failing notify
+never losing the nudge, the clock thread looking and stopping; the player's commands and cleanup, the queue playing
+one after another and skipping at two waiting; the routes, the state, speaking as the settings allow, `say` itself
+with the voice off and the player full, the guard on a nudge, an approval's notice gone when answered; the phone's
+notices with the inclusive mark and announcements with the limits, the zero-width refusal, a second device session
+with the guard, the stop and the activity rows), `test_routine_view.cjs`; the phone, device and inspection suites;
+the full Python suite.
+
+### Independent review of item F (one reviewer, 2026-10-07): 1 high, 3 medium, 13 low, all applied
+
+- **High.** A device's text was spoken verbatim near the PC's always-on microphone; with the Shortcuts automation
+  the form asks for, anyone who can text the owner's phone could make the PC say "Hey Jarvis, ..." and have it
+  taken for a question. Applied: the microphone guard above, for announcements and nudges alike, and `speaking` in
+  the state with the window's pause.
+- **Medium.** The announcement was synthesised on the device's request thread inside the service's lock and the
+  voice engine's lock (a slow provider held the phone's call, every other op of that device and the window's own
+  speech). Applied: the sound is made on the player's thread; `spoken` is decided from what is known at once. Two
+  announcements played at the same time under two aliases. Applied: one queue, one thread, the skip at two waiting.
+  Pruning the newest 500 over all kinds could remove today's nudge keys under a flood of announcements, and a
+  nudge would be raised again. Applied: kept per kind.
+- **Low (13).** `spoken` reworded (true when the PC took the words; the sound is not awaited); the device's read
+  mark moved only when the listing covered it, and the cap lifted for the unread (up to 200); the announcement's
+  activity row written as the device's (the test had pinned "pc"); Enter in the routine form submitted the
+  preferences form; a fixed offset taken from `now` placed due times an hour off on the day the clocks change
+  (naive local time now); a block cannot cross midnight and nothing said so; the "proactive" tick relabelled and
+  VOICE OFF now silences the PC's own speech too; an approval's notice never went (dropped when answered, run out,
+  cancelled or stopped; not toasted on the PC); the `system` kind had no writer (the automatic backups now);
+  only ASCII control characters were refused (every control and format character now); a long task body was read
+  out whole (cut at 80); the removed block's activity row had no label, and DEVICES.md lacked the two ops; the
+  untested cases named by the reviewer that matter were added (the inclusive mark, the zero-width refusal, the
+  second device session with the guard, the queue, the voice off, the full player, the dropped approval notice).
+- **Noted, not a finding:** every paired device sees every device's announcements; said in the form.
+- **Not applied:** `before` paging for notices older than the newest 50 (the reviewer offered it or the lifted cap;
+  the cap covers the unread, and older items are on the PC).

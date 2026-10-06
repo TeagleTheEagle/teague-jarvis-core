@@ -69,6 +69,8 @@ import conversation_context
 import maps
 import mail
 import calendar_feed
+import nudges
+import speaker
 import providers
 import system_metrics
 from ollama_shadow import ShadowObserver, observe as observe_shadow
@@ -176,13 +178,14 @@ class App:
         self.runs = {}
         self.lock = threading.RLock()
         self.approvals = {}
+        self.approval_notices_gone = set()  # 1.0.17 item F: whose "waiting for your approval" notice is already dropped
         # Automatic backups (auto_backup.py): off until the owner picks a folder in Settings > Backups. Made by the
         # same code as a backup made by hand; never while JARVIS answers a question or the emergency stop holds.
         self.auto_backup = None if self.stage4 else auto_backup.AutoBackup(
             load=self.store.auto_backup_state, save=self.store.set_auto_backup_state,
             make=self.automatic_backups_in,
             idle=lambda: not any(not run.done for run in list(self.runs.values())),
-            stopped=lambda: self.stopped is not None, note=lambda action, status: self.audit(action, status))
+            stopped=lambda: self.stopped is not None, note=self.backup_note)
         # The emergency stop holds until the owner resumes, also across a restart of the Core (it is saved).
         self.stopped = self.store.stop_state()
         self.controls = companion_tools.Controls()
@@ -206,6 +209,14 @@ class App:
                                  allowed=lambda: self.stopped is None, note=lambda status: self.audit('mail unread count (background)', status))
         self.calendar_day = Fresh(600, lambda: calendar_feed.upcoming(1)[0] if calendar_feed.configured() else None,
                                   allowed=lambda: self.stopped is None, note=lambda status: self.audit('calendar day (background)', status))
+        # The owner's routine, its nudges and the notices JARVIS keeps (1.0.17 item F, nudges.py). The clock that looks
+        # once a minute is started in main(); an App made by a test starts nothing by itself.
+        if self.stage4:
+            self.routine = self.notices = self.nudge_clock = None
+        else:
+            self.routine, self.notices = nudges.Routine(self.store), nudges.Notices(self.store)
+            self.nudge_clock = nudges.Clock(self.routine, self.notices, lambda: self.store.tasks(include_completed=False), self.store.reminders,
+                                            self.store.settings, lambda: self.stopped is not None, self.notify)
         self.ollama_shadow = ShadowObserver(self.store.root)
         self.started = time.time()
         self.wake = WakeDetector((self.store.root if self.stage4 else runtime_paths.models_dir()) / 'wake-models')
@@ -234,7 +245,9 @@ class App:
                 self.store.due()
             except sqlite3.OperationalError:
                 pass
-        return {'control': self.control(), 'permissions': permissions.changed(self.store.tool_modes()), 'updates': {k:v for k,v in self.update_record.items() if k not in ('releases','observations')}, 'capabilities': caps, 'settings': self.store.settings(), 'memory': self.store.items('memory'), 'projects': self.store.items('project'), 'notes': self.store.items('note'), 'tasks': self.store.tasks(), 'documents': self.store.documents(), 'reminders': self.store.reminders(), 'logs': self.store.logs(), 'uptime': int(time.time() - self.started), 'conversations': self.store.conversations(), 'devices': self.device_rows()}
+        return {'control': self.control(), 'permissions': permissions.changed(self.store.tool_modes()), 'updates': {k:v for k,v in self.update_record.items() if k not in ('releases','observations')}, 'capabilities': caps, 'settings': self.store.settings(), 'memory': self.store.items('memory'), 'projects': self.store.items('project'), 'notes': self.store.items('note'), 'tasks': self.store.tasks(), 'documents': self.store.documents(), 'reminders': self.store.reminders(), 'logs': self.store.logs(), 'uptime': int(time.time() - self.started), 'conversations': self.store.conversations(), 'devices': self.device_rows(),
+                'notices': self.notices.recent(20) if self.notices else [],  # 1.0.17 item F: what JARVIS said on its own, newest first
+                'speaking': speaker.speaking()}  # the PC is making or playing a sound of its own: the window pauses its wake detection
 
     def health(self):
         logs = self.store.logs()
@@ -469,13 +482,15 @@ class App:
             experiment = getattr(self, 'repair_experiment', None)
             if experiment:
                 experiment['cancel'].set()  # a running repair experiment stops as well
-            dropped = len(self.approvals)
+            dropped_ids = list(self.approvals)
+            dropped = len(dropped_ids)
             self.approvals = {}  # nothing that was waiting may go ahead later without being asked again
             if not already:
                 try:
                     self.store.set_stop(self.stopped)
                 except Exception:
                     self.stopped['saved'] = False
+        self.forget_approval_notices(dropped_ids)  # their "waiting for your approval" notices go with them (1.0.17 item F)
         try:
             inspection_jobs.cancel_all()
         except Exception:
@@ -667,8 +682,32 @@ class App:
         lock that drops the waiting approvals, so none can slip in at the moment a stop arrives."""
         with self.lock:
             self.require_running()
-            self.approvals = {k:v for k,v in self.approvals.items() if v['expires'] > time.time()}
+            expired = [k for k, v in self.approvals.items() if v['expires'] <= time.time()]
+            for k in expired:
+                self.approvals.pop(k, None)
             self.approvals[approval['id']] = approval
+        self.forget_approval_notices(expired)
+        if self.notices:  # 1.0.17 item F: a device that may approve learns of it through its notices (nudges.py)
+            try:
+                self.notices.add('approval', 'Waiting for your approval: ' + str(approval.get('label') or 'a change to JARVIS'), key='approval:' + approval['id'])
+            except Exception:
+                pass
+
+    def forget_approval_notices(self, ids):
+        """The "waiting for your approval" notices of approvals answered or run out go (1.0.17 item F), so no device
+        is told something waits when it does not."""
+        if not self.notices:
+            return
+        for id in ids:
+            if id in self.approval_notices_gone:
+                continue
+            try:
+                self.notices.drop('approval:' + str(id))
+                if len(self.approval_notices_gone) > 2000:
+                    self.approval_notices_gone.clear()
+                self.approval_notices_gone.add(id)
+            except Exception:
+                pass
 
     def ask_first(self, name, args, run, memory_command=None, memory_line=None):
         """The owner set this tool to "ask first": keep the exact call for the owner's approval on screen."""
@@ -1089,6 +1128,74 @@ class App:
         response = providers.chat(messages, [], lambda *_: None, run.cancel, True, **depth)
         return str((response or {}).get('content') or '')
 
+    @staticmethod
+    def speakable(text):
+        """Words the PC may say aloud near its own microphone: nothing that carries the wake word or a stop phrase (a
+        stranger's text, read out in JARVIS's voice, must never become a question or a stop)."""
+        text = str(text or '')
+        return not re.search(r'jarvis', text, re.IGNORECASE) and not permissions.stop_phrase(text) and 'emergency stop' not in text.lower()
+
+    def say(self, text):
+        """Speak on this PC without the window (1.0.17 item F): JARVIS's voice through speaker.py, made and played on the
+        player's own thread, one sound after another. True when the PC took the words to speak; False when the owner's
+        voice is off or set to the browser, the emergency stop holds, or too many sounds already wait."""
+        if self.stage4 or self.stopped is not None:
+            return False
+        try:
+            settings = self.store.settings()
+            if not settings.get('voice', True) or providers.capabilities(settings.get('answer_mode')).get('voice_provider') == 'browser':
+                return False
+            words, profile = str(text)[:600], settings.get('voice_profile', 'auto')
+            handed = speaker.play_later(make_audio=lambda: self.voice_engine.synthesize(words, profile), mime_of=providers.audio_mime,
+                                        blocked=lambda: self.stopped is not None)
+            return handed is not None
+        except Exception:
+            return False
+
+    def notify(self, notice, speak=None, device=None, words=None):
+        """A notice JARVIS raised on its own (a nudge, a system note; nudges.py): an activity row, and spoken on this PC
+        when the owner's "proactive" setting is on and quiet hours are off. An announcement a device asked for passes
+        its own decision in `speak`, its id in `device` (the activity row is its) and, when the text itself must not be
+        said near the microphone, the words to say instead in `words`. A nudge is guarded here the same way."""
+        settings = self.store.settings()
+        if speak is None:
+            speak = bool(settings.get('proactive')) and not settings.get('quiet_hours')
+        if words is None:
+            words = notice['text'] if self.speakable(notice['text']) else 'A nudge for you is on the screen and on your phone.'
+        spoken = self.say(words) if speak else False
+        if spoken and self.notices:
+            self.notices.mark_spoken(notice['id'])
+        self.audit(notice['kind'] + ': ' + notice['text'][:80], 'spoken' if spoken else 'shown', None, device or 'pc')
+        return spoken
+
+    def backup_note(self, action, status):
+        """What the automatic backups report: the activity row as before and, for a backup made or failed (1.0.17 item
+        F), a `system` notice for the PC and the devices."""
+        self.audit(action, status)
+        if action == 'automatic backup' and self.notices:
+            try:
+                status = str(status)
+                self.notices.add('system', 'Automatic backup failed.' if status.startswith('failed') else
+                                 'Automatic backup done.' if status.startswith('verified') else 'Automatic backup: ' + status)
+            except Exception:
+                pass
+
+    def routine_action(self, body):
+        """The owner's clicks in Settings > Routine (1.0.17 item F). Only the signed-in interface on the PC reaches this."""
+        if self.routine is None:
+            raise ValueError('The routine is not available here.')
+        action = body.get('action')
+        if action == 'add':
+            block = self.routine.add(body.get('days'), body.get('start'), body.get('end'), body.get('label'))
+            self.audit('routine block added: ' + block['label'], block['days'] + ' ' + block['start'] + ' to ' + block['end'])
+        elif action == 'remove':
+            label = next((b['label'] for b in self.routine.blocks() if b['id'] == body.get('id')), None)
+            self.routine.remove(body.get('id'))
+            self.audit('routine block removed: ' + str(label or body.get('id'))[:80], 'completed')
+        else:
+            raise ValueError('Unknown routine action.')
+        return {'blocks': self.routine.blocks(), 'days': list(nudges.DAYS)}
+
     def approvals_waiting(self):
         """How many approvals wait for the owner right now (1.0.17: told to a device that may approve)."""
         return len(self.approval_items())
@@ -1096,7 +1203,13 @@ class App:
     def approval_items(self):
         """The approvals still waiting: not expired, and not of a question that was cancelled."""
         with self.lock:
-            return [v for v in self.approvals.values() if v['expires'] > time.time() and not (self.runs.get(v['run_id']) and self.runs[v['run_id']].cancel.is_set())]
+            now = time.time()
+            # An item run out or cancelled stays in the dict until an answer or the next keep_approval meets it (a late
+            # answer from a device is still told "expired"); only its notice goes, once.
+            gone = [k for k, v in self.approvals.items() if v['expires'] <= now or (self.runs.get(v['run_id']) and self.runs[v['run_id']].cancel.is_set())]
+            items = [v for k, v in self.approvals.items() if k not in gone]
+        self.forget_approval_notices(gone)
+        return items
 
     def approval_rows(self):
         """The waiting approvals as a paired device that may approve sees them (1.0.17, docs/MAC-REQUESTS-20261007.md):
@@ -1137,9 +1250,12 @@ class App:
             item = self.approvals.get(id)
             if item is None:
                 return {'status': 'unknown'}
-            if item['expires'] < time.time():
+            expired = item['expires'] < time.time()
+            if expired:
                 self.approvals.pop(id, None)
-                return {'status': 'expired'}
+        if expired:
+            self.forget_approval_notices([id])
+            return {'status': 'expired'}
         try:
             done = self.approve(id, approved, by=device_id)
         except ValueError as exc:
@@ -1191,6 +1307,7 @@ class App:
             if approved:
                 self.require_running()  # refused while the emergency stop holds; the approval stays unused
             self.approvals.pop(id, None)  # single use, whatever happens next
+        self.forget_approval_notices([id])
         device = item.get('device') or 'pc'
         if not approved:
             self.audit(item['tool'], 'denied' if by == 'pc' else 'denied ' + who, run, device)
@@ -1666,6 +1783,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, self.app.permissions_listing())
             if path == '/api/devices':
                 return self.send(200, self.app.devices_listing())
+            if path == '/api/routine':
+                if self.app.routine is None:
+                    return self.send(404, {'error': 'Unknown endpoint.'})
+                return self.send(200, {'blocks': self.app.routine.blocks(), 'days': list(nudges.DAYS)})
+            if path == '/api/notices':
+                return self.send(200, {'items': self.app.notices.recent(50) if self.app.notices else []})
             if path == '/api/control-requests':
                 # 1.0.17 item C: what other devices' questions ask this window to do (the signed-in interface only).
                 names = self.app.device_book.names() if self.app.device_book else {}
@@ -1724,7 +1847,7 @@ class Handler(BaseHTTPRequestHandler):
                 # a style change has been approved; the program's own style files are never changed.
                 file = runtime_paths.config_dir_for(ROOT) / 'owner-style.css'
                 return self.send(200, file.read_bytes() if file.is_file() else b'', 'text/css; charset=utf-8')
-            mapping = {'/permissions.js':'permissions.js','/permissions.css':'permissions.css','/devices.js':'devices.js','/devices.css':'devices.css','/music.js':'music.js','/music.css':'music.css','/connectors.js':'connectors.js','/connectors.css':'connectors.css','/latency.js':'latency.js','/voice-core.js':'voice-core.js','/teague.js':'teague.js','/teague.css':'teague.css','/command-dashboard.js':'command-dashboard.js','/command-dashboard.css':'command-dashboard.css','/horizon.js':'horizon.js','/horizon.css':'horizon.css','/world-map.js':'world-map.js','/dashboard-model.js':'dashboard-model.js','/markdown-view.js':'markdown-view.js','/assets/branding/teague/jarvis-mark.svg':'assets/branding/teague/jarvis-mark.svg','/recovery.js':'recovery.js', '/assistant-controls.js':'assistant-controls.js', '/desktop-updates.js':'desktop-updates.js', '/inspection-client.js':'inspection-client.js', '/voice-lab.html': 'voice-lab.html', '/voice-lab.js': 'voice-lab.js', '/voice-lab.css': 'voice-lab.css', '/': 'index.html', '/app.js': 'app.js', '/diagrams.js': 'diagrams.js', '/workspaces.js': 'workspaces.js', '/voice-preview.js': 'voice-preview.js', '/maps.js': 'maps.js', '/reliability.js': 'reliability.js', '/reliability.css': 'reliability.css', '/maps.css': 'maps.css', '/map-canvas.html': 'map-canvas.html', '/map-canvas.js': 'map-canvas.js', '/map-canvas.css': 'map-canvas.css', '/style.css': 'style.css', '/gallery.css': 'gallery.css', '/pro.css': 'pro.css', '/voice.js': 'voice.js', '/mic-worklet.js': 'mic-worklet.js', '/assets/branding/teague/teague-mark.svg': 'assets/branding/teague/teague-mark.svg', '/assets/branding/teague/command-background.png': 'assets/branding/teague/command-background.png'}
+            mapping = {'/permissions.js':'permissions.js','/permissions.css':'permissions.css','/devices.js':'devices.js','/devices.css':'devices.css','/music.js':'music.js','/music.css':'music.css','/connectors.js':'connectors.js','/connectors.css':'connectors.css','/routine.js':'routine.js','/routine.css':'routine.css','/latency.js':'latency.js','/voice-core.js':'voice-core.js','/teague.js':'teague.js','/teague.css':'teague.css','/command-dashboard.js':'command-dashboard.js','/command-dashboard.css':'command-dashboard.css','/horizon.js':'horizon.js','/horizon.css':'horizon.css','/world-map.js':'world-map.js','/dashboard-model.js':'dashboard-model.js','/markdown-view.js':'markdown-view.js','/assets/branding/teague/jarvis-mark.svg':'assets/branding/teague/jarvis-mark.svg','/recovery.js':'recovery.js', '/assistant-controls.js':'assistant-controls.js', '/desktop-updates.js':'desktop-updates.js', '/inspection-client.js':'inspection-client.js', '/voice-lab.html': 'voice-lab.html', '/voice-lab.js': 'voice-lab.js', '/voice-lab.css': 'voice-lab.css', '/': 'index.html', '/app.js': 'app.js', '/diagrams.js': 'diagrams.js', '/workspaces.js': 'workspaces.js', '/voice-preview.js': 'voice-preview.js', '/maps.js': 'maps.js', '/reliability.js': 'reliability.js', '/reliability.css': 'reliability.css', '/maps.css': 'maps.css', '/map-canvas.html': 'map-canvas.html', '/map-canvas.js': 'map-canvas.js', '/map-canvas.css': 'map-canvas.css', '/style.css': 'style.css', '/gallery.css': 'gallery.css', '/pro.css': 'pro.css', '/voice.js': 'voice.js', '/mic-worklet.js': 'mic-worklet.js', '/assets/branding/teague/teague-mark.svg': 'assets/branding/teague/teague-mark.svg', '/assets/branding/teague/command-background.png': 'assets/branding/teague/command-background.png'}
             if path not in mapping:
                 return self.send(404, {'error': 'Not found.'})
             file = ROOT / 'static' / mapping[path]
@@ -1863,6 +1986,8 @@ class Handler(BaseHTTPRequestHandler):
                 result = self.app.set_permission(body.get('tool'), body.get('mode'))
             elif path == '/api/devices':
                 result = self.app.devices_action(body)
+            elif path == '/api/routine':
+                result = self.app.routine_action(body)
             elif path == '/api/remote-devices':
                 result = self.app.remote_devices_action(body)
             elif path == '/api/music':
@@ -2064,6 +2189,7 @@ def main():
     from wearables.service import publish_connection
     wearable_connection = publish_connection(server)
     start_auto_backups(server.app)
+    nudges.start_nudges(server.app.nudge_clock)   # the routine's nudges, once a minute (1.0.17 item F)
     if os.getenv('JARVIS_DESKTOP_TOKEN'):
         # Windows native numeric imports must precede the blocking stdin reader.
         try:

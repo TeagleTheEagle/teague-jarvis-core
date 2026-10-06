@@ -22,6 +22,10 @@ Base: `http://127.0.0.1:8765`. Load `/` first for a random process-scoped HttpOn
 | POST | `/api/emergency-stop` | `{reason?}`; cancels everything, drops waiting approvals and holds until resumed; returns `{stopped, since, device, reason, saved}` |
 | POST | `/api/resume` | `{}`; ends the emergency stop (only the signed-in interface on the PC reaches it) |
 | POST | `/api/cancel-all` | `{}`; cancels what runs now and nothing more |
+| GET | `/api/routine` | The owner's week as blocks for the nudges (1.0.17): `{blocks, days}` |
+| POST | `/api/routine` | `{action: add, days: "MO,WE", start: "18:00", end: "19:00", label}` or `{action: remove, id}`; at most 40 blocks; returns `{blocks, days}` |
+| GET | `/api/notices` | The newest 50 things JARVIS said on its own (1.0.17): nudges, announcements a device asked for, approval waits; `/api/state` carries the newest 20 |
+| GET | `/api/control-requests` | The window controls a paired device asked for, waiting for the PC's answer (1.0.17); only the signed-in interface on the PC reaches it |
 | GET | `/owner-style.css` | The owner's own style sheet from the config folder; empty until a style change is approved |
 | POST | `/api/speech` | `{text}` returns `audio/mpeg` |
 | POST | `/api/speech-to-text` | `{data: base64}` (16 kHz mono PCM16, at most 30 s) returns the transcript for the window's microphone: made on this PC, or by the chosen AI provider when the owner chose that in Settings (docs/SPEECH.md) |

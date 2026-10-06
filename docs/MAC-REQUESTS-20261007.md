@@ -116,7 +116,7 @@ Request `{"id": "f3a1..."}`. Response:
 
 ### `notices` (new; paired; 120 a minute)
 
-Request `{}` or `{"after": 1759800000.0}` (only items created after that time). Response:
+Request `{}` or `{"after": 1759800000.0}` (only items created at or after that time). Response:
 
 ```json
 {"items": [{"id": "...", "kind": "nudge", "text": "Work runs till eight; the essay is due at nine.", "created": 1759800000.1}],
@@ -124,9 +124,11 @@ Request `{}` or `{"after": 1759800000.0}` (only items created after that time). 
 ```
 
 - `kind`: `nudge` (a routine collision, item F), `announce` (an announcement the PC spoke, R4), `approval` (something
-  new is waiting; only when `approve` is true), `system` (the Core has something to say: a backup done, a provider
-  down). Newest first, at most 50. Reading marks everything returned as read for this device; `status.notices`
-  then counts only newer ones.
+  new is waiting; only when `approve` is true), `system` (the Core's own notes: for now the automatic backups,
+  "Automatic backup done." or "Automatic backup failed."). Newest first: the newest 50, or all of this device's
+  unread ones when there are more (up to 200). Reading marks everything returned as read for this device;
+  `status.notices` then counts only newer ones (a request with `after` later than that mark moves nothing).
+  Every paired device sees every device's announcements: they are all the owner's.
 
 ### `announce` (new; paired; 6 a minute)
 
@@ -137,8 +139,14 @@ up to 80 characters, `text` up to 400). Response:
 {"announced": true, "spoken": true}
 ```
 
-- The PC speaks it in JARVIS's voice ("Mr Teague, Jack texted you: running late"), window open or not, and shows
-  it as a notice on the PC and in `notices`. `spoken` is false when the PC could not speak (no voice configured).
+- The PC speaks it in JARVIS's voice ("<the owner's name>, Jack texted you: running late"; a call: "... is calling
+  you."), window open or not, and shows it as a notice on the PC and in `notices`. `spoken` is true when the PC took the words to speak (its voice on and
+  not the browser's, quiet hours off, not stopped, no queue of sounds already waiting); the sound itself is not
+  awaited. `announced` is true whenever the notice was kept.
+- A `sender` or `text` carrying the wake word ("Jarvis") or a stop phrase is kept in full in the notice but only
+  announced, never read out: "<name>, Jack texted you. The message is on your phone." (the PC's own microphone
+  must not take a stranger's text for a question). Control, format and zero-width characters anywhere in them:
+  HTTP 400 `{"error": "Invalid announcement."}`.
 - Over the limit: HTTP 400 `{"error": "Announcement limit reached. Wait one minute."}`. While stopped: refused.
 
 ### `devices` (new; paired; 120 a minute)
@@ -234,3 +242,14 @@ owner's Google sign-in.
 
 Write them in the Mac's STATUS.md under "Requests for the PC" and the owner carries them; a field or op the app
 needs that is not above is a request, not something to build around.
+
+## 6. Changes after the copy the owner carried (2026-10-07, after item F's review)
+
+- `notices`: the newest 50, or all of this device's unread ones when there are more (up to 200); a request with
+  `after` later than the read mark moves the mark nowhere. Every paired device sees every device's announcements.
+  The `system` kind is written by the automatic backups ("Automatic backup done." / "Automatic backup failed.").
+- `announce`: `spoken` is true when the PC took the words to speak (voice on, quiet hours off, not stopped, no
+  queue of sounds already waiting); the sound itself is not awaited. A `sender` or `text` carrying the wake word
+  ("Jarvis") or a stop phrase is kept in full in the notice but only announced, never read out ("<name>, Jack
+  texted you. The message is on your phone."). Control, format and zero-width characters anywhere: `Invalid
+  announcement.`

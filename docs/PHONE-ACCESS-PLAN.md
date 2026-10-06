@@ -84,7 +84,7 @@ record in `docs/`, committed by file list. Device routes are defined here and ha
   rows). The Memory page shows it; the model sees it ("saved under 1.0.11") with one standing rule: when two memories
   about JARVIS itself disagree, the newer release's wins. Nothing is deleted by itself.
 
-**F. Time-aware nudges** (JARVIS's second wish)
+**F. Time-aware nudges** (JARVIS's second wish). **Built 2026-10-07** with the notices and the announce route (`docs/PHONE-ACCESS-1.0.17.md` section 6).
 - Settings > Routine: the owner's week as blocks (days, start, end, a label: work, gym, school). A Core thread (like
   the backup thread, once a minute) looks for a collision: an open task or reminder due inside or right after a
   block. One nudge per collision, never repeated, none in quiet hours. On the PC: a notice and a spoken line when

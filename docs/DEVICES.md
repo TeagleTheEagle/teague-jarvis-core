@@ -200,3 +200,7 @@ questions get every tool the PC's do, under Settings > Permissions; includes sav
 (it may list and answer what waits for the owner). Three more ops behind the approve tick: `approvals`, `approve
 {id}`, `reject {id}` (shapes in `docs/MAC-REQUESTS-20261007.md`); `hello` and `status` carry `tools`, `approve`,
 `waiting` and `notices`. Set only on the PC (`POST /api/devices {action: 'tools' | 'approve', id, allowed}`).
+Item F adds two ops for every paired device, no tick needed: `notices` (what JARVIS said on its own, newest first;
+reading marks what was returned as read for that device) and `announce` (the PC speaks a text or a call from the
+phone in JARVIS's voice, 6 a minute, never while stopped, never words that carry the wake word); the activity row
+of an announcement is the device's. Shapes in `docs/MAC-REQUESTS-20261007.md`.
