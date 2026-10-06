@@ -93,7 +93,7 @@ before. Uninstall removes it as before.
   right; the shipped root launchers (`Start-JARVIS.ps1` and the like) are development files that never worked from
   an installation, unchanged.
 
-## 3. Item 3.4: JARVIS-Setup.exe (written, not yet built)
+## 3. Item 3.4: JARVIS-Setup.exe (built and rehearsed 2026-10-07; that rehearsal is superseded: section 6)
 
 `tools/setup/JARVIS-Setup.iss.in` (the Inno Setup script template) and `tools/setup/build_setup.py` (fills it for a
 built package, verifies the package against its manifest first, runs Inno Setup's compiler, records the Setup's hash).
@@ -118,6 +118,7 @@ Teague Industries" present in this account's hive with the sandbox uninstaller; 
 uninstall through the entry's own uninstaller in 18.3 s: the installer answered "uninstalled" (10,709 program files
 removed, data, config and profile kept), the entry gone, the package folder gone, 0 processes. The entry existed in
 the owner's registry hive for the minutes between, as the plan allows for a sandbox test that cleans up after itself.
+**This rehearsal also wrote and then removed the owner's real shortcuts, unnoticed at the time: section 6.**
 Not yet independently reviewed (the next session, with the version 4 scripts).
 
 ## 4. Still to do in this release
@@ -138,3 +139,49 @@ restored by hand to exactly what the 1.0.16 installer writes (powershell.exe, `-
 folder the home, window style 7, description JARVIS), read back and equal. The installed JARVIS itself was not
 touched (its launcher's presence was read only). Since then every test in `test_installer.py` records shortcut writes
 instead of running them, so no test can reach the real folders again; the reviewer was asked to confirm it.
+
+## 6. Disclosure: the Setup rehearsal and the owner's shortcuts, 2026-10-07 01:37 to 01:39 (found 06:04)
+
+**What happened.** The sandbox rehearsal of item 3.4 (`docs/release-rehearsal-20261007-1017/rehearse-setup.ps1`,
+record `setup-rehearsal-09fed5f.json`) ran `JARVIS-Setup-1.0.17-09fed5f54c31.exe` with `/NOSHORTCUTS`, `/DIR` and
+`/HOME` pointing at a sandbox on D:. The Setup's own logs on D: show that the switch never reached the package's
+installer: the silent install at 01:37:49 and the reinstall at 01:39:22 ran `installer.py install --package ...
+--home <sandbox>` without `--no-shortcuts`, and the uninstall at 01:39:47 ran `installer.py uninstall --home
+<sandbox>` without it (its answer, `package-uninstall-result.json`, has a `shortcuts` lap). `installer.py` writes
+and removes the shortcuts in the real Desktop and Startup folders of the account whatever `--home` says. So the
+rehearsal's install wrote the owner's real `JARVIS.lnk` on the Desktop and in Startup pointing at the sandbox's
+1.0.17 `JARVIS.exe`, the reinstall wrote them again, and the uninstall removed both. Nobody noticed: the record of
+the rehearsal checked the sandbox and the Installed-apps entry, not the real shortcut folders; the restore of 01:10
+(section 5) had happened before, so the status of 01:41 said the shortcuts were in order. The owner's JARVIS kept
+running until the PC was shut down at 02:40; after the restart it did not start at sign-in, and the owner's
+screenshot of the Desktop at 06:04 showed no JARVIS shortcut.
+
+**Why the switch was lost.** The Setup script read the switch with Inno Setup's `{param:NOSHORTCUTS|}`, which
+returns a value only for the `/NAME=value` form; a bare `/NOSHORTCUTS` reads as empty, so neither the marker file
+`setup-noshortcuts.txt` was written nor `--no-shortcuts` passed. The record of item 3.4 (section 3) and the
+build tool's own text said the switch protected the build PC; that was never tested against the real folders.
+
+**Put right (06:10).** The two shortcuts were written again from this repository's `installer.write_shortcuts`
+with the 1.0.16 launcher values (the same PowerShell the 1.0.16 installer runs: `powershell.exe -NoProfile
+-WindowStyle Hidden -ExecutionPolicy Bypass -File "%LOCALAPPDATA%\JARVIS\JARVIS.ps1"`, the Startup one with
+`-LoginLaunch`, window style 7, the install home as the working folder) and read back. The installed JARVIS itself
+was not touched (its `current.json`, launcher, releases, data and config are as the 1.0.16 update left them).
+
+**Fixes, in this commit.** (1) `installer.py` writes or removes the real shortcuts only when the home is this PC's
+own install home (`own_home`, `%LOCALAPPDATA%\JARVIS`): a home that is anywhere else (a rehearsal, a sandbox, a
+test) never touches them, whatever the switches say. The rule is the default of `install`, `rollback` and
+`uninstall` themselves (`shortcuts=None`), not only of the command line, so a Python caller that forgets the
+keyword is safe too (the incident of section 5 was such a call); the command line's answer says `shortcuts:
+written | removed | skipped (--no-shortcuts) | withheld (the home is not this PC's own install home)`; no
+`%LOCALAPPDATA%` means never "own". `test_installer.py` proves install, the legacy removal, rollback and
+uninstall with another home record no shortcut write or removal, and with the own home the four writes and
+removals as before. (2) The Setup script reads the switch with a `HasSwitch` function that accepts the bare form
+and the `=value` form, for the marker file and for every installer call; the script was compiled once from the
+rehearsal package to prove it (the exe is a compile check only, not offered). Independent review of the fix:
+1 high (a brace inside the new Pascal comment, which would not have compiled), 2 medium, 6 low, all applied.
+
+**Still open.** The Setup built at 01:35 (`JARVIS-Setup-1.0.17-09fed5f54c31.exe` on D:) carries the old script and
+must not be run again on this PC; the real build of 1.0.17 gets the fixed script. The next sandbox rehearsal
+(a new copy of `rehearse-setup.ps1`) records the real Desktop and Startup folders before and after each step
+(hash or absence) and fails on any change, which this one did not. The owner's Desktop shortcut's
+icon is PowerShell's, as 1.0.16 had it.

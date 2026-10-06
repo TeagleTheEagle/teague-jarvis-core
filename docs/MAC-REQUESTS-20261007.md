@@ -45,7 +45,7 @@ on the PC; this is its mirror for the app.
 Response as today plus:
 
 ```json
-{"tools": false, "approve": false, "waiting": 0, "notices": 0}
+{"tools": false, "approve": false, "waiting": 0, "notices": 0, "location": true}
 ```
 
 - `tools`: the owner's tick "May use this PC's tools" for this device (off by default; set only on the PC).
@@ -54,6 +54,8 @@ Response as today plus:
 - `writes` is true when either "May save memories and tasks" or "May use this PC's tools" is ticked (the PC's
   tools include saving).
 - `notices`: how many notices this device has not read yet (see `notices`).
+- `location`: true when this Core accepts `start.location` (1.0.17 or later). An older Core has no such field and
+  refuses a `start` that carries `location` with 400 "Unknown fields.": send the field only when `location` is true.
 - `scope` (the sentence) changes with the ticks; show it as today.
 
 ### `approvals` (new; needs `approve`; 120 a minute)
@@ -106,8 +108,8 @@ Request `{"id": "f3a1..."}`. Response:
 {"text": "...", "conversation": "...", "image": "...", "location": {"lat": -33.86, "lon": 151.21, "accuracy_m": 12, "label": "Home"}}
 ```
 
-- `location` is optional; `lat` −90..90, `lon` −180..180, `accuracy_m` 0..100000 (optional), `label` up to 80
-  characters (optional). Anything else: HTTP 400 `{"error": "Invalid location."}`.
+- `location` is optional (leave the field out; `null` is refused); `lat` −90..90, `lon` −180..180, `accuracy_m`
+  0..100000 (optional), `label` up to 80 characters (optional). Anything else: HTTP 400 `{"error": "Invalid location."}`.
 - The Core gives it to the AI model for that answer and to directions as the starting point. **Nothing is stored
   unless the owner's words ask JARVIS to remember it** (the save tick and the memory rules apply). No history.
 - Send it only while the app's location switch is on (R3).
@@ -210,8 +212,11 @@ paired device with online/offline, kind and allowances, this phone marked, the s
 "simulated". No invented devices, no network tiles.
 
 **R7. Screen analysis.** Nothing to build: with the tools tick on, "analyse my screen" (typed or spoken) is
-answered from the PC's screen; the reply may say the PC's window is not open. A suggestion chip may offer the
-words.
+answered from the PC's screen; the reply may say the PC's window is not open or did not answer, that no display is
+authorised there, or that no vision model is configured. A suggestion chip may offer the words. The phone can also
+ask the window's state ("microphone status", "sharing status") and switch things off ("mute", "stop sharing"); it
+cannot start sharing, the microphone or the hologram on the PC: those words are refused with "This needs the
+JARVIS window on the PC."
 
 Suggested order on the Mac: R1 and R2 as soon as 1.0.17 is on the PC (they need a real approval to test); R3, R4
 and R6 can be built against the shapes above now, with the "not on this Core yet" state until then; R5 after the

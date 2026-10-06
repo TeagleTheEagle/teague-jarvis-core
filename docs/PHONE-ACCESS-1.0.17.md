@@ -99,3 +99,91 @@ A device still sees only its own conversations. The owner's buttons on the PC, `
    approve tick while something waits; `reject` expired and unknown; a cancelled question's item; the PC answering
    a device's item ("Approved on screen" in the device's conversation, the list emptied); the same-PC test client
    refused; the window's tools refused.
+
+## 2. Item C: screen analysis from the phone (2026-10-07)
+
+"Analyse my screen" (or "take a screenshot") from a paired device with the tools tick now works, and nothing
+streams the display:
+
+- The device's question calls `assistant_control(analyse_screen)` as the PC's own would (the owner's own words are
+  still required: `Controls.request` checks them). For a device's question `App.device_control` allows only the
+  window controls in `server.DEVICE_CONTROLS`: reads of the window's state (`hologram_status`, `screen_status`,
+  `microphone_status`), what switches something off (`mute`, `stop_speaking`, `stop_sharing`, `hide_hologram`), and
+  `analyse_screen`. Starting sharing, the microphone or the hologram from another device is refused with "This
+  needs the JARVIS window on the PC." before anything reaches the window.
+- The Core lists a device's request at the new owner route `GET /api/control-requests` (`Controls.for_window`: id,
+  run, action, the device's name), and the PC window reads that list every three seconds (`static/app.js`, also
+  while the window is hidden; not during an inspection, not before the first state), does what is asked (the same
+  list, checked again there), and answers through `/api/control-result` as it answers its own question's
+  `control.requested` events. A device's request waits 45 s (`Controls.DEVICE_TIMEOUT`) instead of the window's 30.
+- For `analyse_screen` the Core first checks that a vision model is configured ("No vision model is configured on
+  the PC." otherwise, before any capture). The window captures one picture the way its own CAPTURE button does
+  (the authorised display on the desktop app, or the shared screen in a browser), after discarding any earlier
+  preview, uploads it as `screen-capture.jpg`, answers with the upload's id (`result.attachment`, accepted by
+  `Controls.acknowledge`), and discards the preview again. The Core takes that picture out of the uploads only if
+  it is the window's own capture (`screen-capture.jpg`, an image; a picture waiting in the PC's chat is left where it
+  is), asks the AI model to describe it with no tools (`App.describe_picture`), and returns the description as the
+  tool's result (`App.device_control_result`); the model then answers the phone. The picture is kept nowhere: a
+  capture whose request is gone (cancelled, timed out, answered already) is dropped by `/api/control-result` and by
+  the window (`/api/upload/discard`).
+- No display authorised on the PC: the window answers `unavailable` with the sentence to show; no screen shared in a
+  browser: likewise; nothing pops up on the PC by itself. No window, or no answer within the wait: "The PC's window
+  is not open or did not answer, so this cannot be done from here." A busy window: `failed` ("The PC window is busy.").
+
+Checked: `test_phone_access.py` `ScreenTests` and `ReviewTests` (a window thread that reads the list, uploads a
+capture and answers; the description reaching the phone with the capture taken from the uploads; without the tools
+tick refused; no window: the sentence after the wait; no vision model: said before any capture; an answer without
+a capture: `failed`; a non-capture upload named as the capture: `failed` and left in place; a malformed id: HTTP 400;
+a PC question's own control not listed and not rewritten; a late answer refused and its capture dropped; starting
+sharing, the microphone or the hologram refused; the route needs the owner's session). The interface script tests
+(24) pass with the window change.
+
+## 3. Item D: location with a question (2026-10-07)
+
+- `start` accepts `location {lat, lon, accuracy_m?, label?}` from a paired device (`wearables.service._location`:
+  lat −90..90, lon −180..180, accuracy 0..100,000 m, label up to 80 characters; anything else, `null` included, is
+  HTTP 400 `{"error": "Invalid location."}`). `hello` and `status` say `location: true` so the app sends the field
+  only to a Core that takes it (an older Core refuses the whole question with "Unknown fields."). The phone sends it
+  only while its own location switch is on (the Mac's half).
+- The position is kept on the question in memory only (`run.location`, cleared when the question is answered) and
+  given to the AI model in that answer's context as `device_location` with the note that it is current, not stored
+  and not tracked, to be named by its label or in words and never repeated as coordinates; and to `get_directions` as
+  the starting point when the owner says "from here" / "current location" / "my location" (`maps.directions(location=)`:
+  the route starts at the coordinates, the result names the label or "your location", the Maps link carries the
+  coordinates, which is the one place they can reach a reply). Without a position "from here" still asks the owner to
+  use the Maps page, as before.
+- Nowhere else: not in the conversation, the saved things, the activity rows, the tool evidence or the question's
+  events (pinned by a test). A memory of a place is saved only on the owner's own words, through the memory commands
+  and the save tick as for any memory.
+
+Checked: `test_phone_access.py` `LocationTests` and `ReviewTests` (eight bad shapes and `null` refused; a minimal
+position accepted; the position in the context of that answer only and in nothing kept, and gone from the question
+afterwards; directions from "here" starting at the position, both in `maps.directions` and through a device's
+question, and asking the owner without one).
+
+### Independent review of items C and D (one reviewer, 2026-10-07): no high finding; 2 medium and 8 low, all applied
+
+1. Medium: every window control was carried to the PC window for a device's question, so "start screen sharing" or
+   "unmute" from the phone could start sharing or the PC's microphone, against the plan's "nothing streams the
+   display". Fixed: `server.DEVICE_CONTROLS` (reads, switching off, one capture) in the Core and the same list in the
+   window; the rest refused with "This needs the JARVIS window on the PC."; a test.
+2. Medium: a capture whose acknowledgement was refused (the request cancelled, timed out or answered already) stayed
+   in the Core's uploads for its lifetime. Fixed: `/api/control-result` drops a named capture when it refuses the
+   answer; the window discards its upload when the answer fails; a test.
+3. Low: the Core took whatever image the window named. Fixed: only an image named `screen-capture.jpg`; otherwise
+   `failed` and the upload left in place; a test.
+4. Low: the window could upload an earlier preview as "right now", toast on the PC when nothing was shared, and leave
+   the capture in the Screen Vision dialog. Fixed: the preview is discarded before and after; a browser with no shared
+   screen answers `unavailable` without calling the capture.
+5. Low: "not open" could be false for a window that did not answer in time. Fixed: "not open or did not answer".
+6. Low: vision was not checked before the capture. Fixed: "No vision model is configured on the PC." before anything
+   is asked of the window; a test.
+7. Low: `run.location` stayed on the finished question in memory for up to 30 minutes. Fixed: cleared when answered.
+8. Low: the model would quote the coordinates in the Maps link. Fixed in the note (label or words, never the
+   coordinates); the link itself keeps them, as the form says.
+9. Low: wording (the plan's sentence; a comment pointing at sections not yet written; an item F sentence in the
+   gateway's list; no "not on this Core yet" signal for the location field; `null`). Fixed: the sentence, the list,
+   `hello`/`status` `location: true`, the form.
+10. Low: test gaps. Added: the minimal position, directions from "here" through a device's question, the tool
+    evidence in the "kept nowhere" check, the non-capture upload, the malformed id, the PC question's own control, the
+    late answer, the refused controls.

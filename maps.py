@@ -24,11 +24,19 @@ def waypoint(value):
     return {'address': value}
 
 
-def directions(origin, destination, mode='DRIVE'):
+def directions(origin, destination, mode='DRIVE', location=None):
+    """location (1.0.17, docs/PHONE-ACCESS-1.0.17.md item D): the position a paired device sent with its question
+    ({'lat', 'lon', 'label'?}); it is the starting point when the owner says "from here". Used for this route only."""
     start, end = waypoint(origin), waypoint(destination)
     if mode not in ('DRIVE', 'WALK', 'BICYCLE'):
         raise ValueError('Choose driving, walking, or cycling.')
-    if origin.strip().lower() in ('current location', 'my location', 'here'):
+    here = origin.strip().lower() in ('current location', 'my location', 'here')
+    map_origin = origin
+    if here and location:
+        start = waypoint(f"{float(location['lat'])},{float(location['lon'])}")
+        map_origin = f"{float(location['lat'])},{float(location['lon'])}"
+        origin = str(location.get('label') or '').strip() or 'your location'
+    elif here:
         return {'needs_location': True, 'destination': destination, 'mode': mode,
                 'message': 'Open Maps and choose Use my location or enter a starting address, then calculate the route. Location has not been accessed and no route is calculated yet.'}
     key = os.getenv('GOOGLE_MAPS_ROUTES_KEY', '')
@@ -52,4 +60,4 @@ def directions(origin, destination, mode='DRIVE'):
             'checked_at': time.time(), 'provider': 'Google Maps',
             'polyline': route.get('polyline', {}).get('encodedPolyline', ''),
             'steps': [step['navigationInstruction']['instructions'] for leg in route.get('legs', []) for step in leg.get('steps', []) if step.get('navigationInstruction', {}).get('instructions')],
-            'url': 'https://www.google.com/maps/dir/?' + urllib.parse.urlencode({'api': 1, 'origin': origin, 'destination': destination, 'travelmode': {'DRIVE': 'driving', 'WALK': 'walking', 'BICYCLE': 'bicycling'}[mode]})}
+            'url': 'https://www.google.com/maps/dir/?' + urllib.parse.urlencode({'api': 1, 'origin': map_origin, 'destination': destination, 'travelmode': {'DRIVE': 'driving', 'WALK': 'walking', 'BICYCLE': 'bicycling'}[mode]})}

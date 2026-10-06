@@ -18,6 +18,24 @@ import providers
 from devices import DeviceError
 
 
+def _location(value):
+    """A device's position sent with a question (1.0.17, docs/PHONE-ACCESS-1.0.17.md item D): checked here, given to
+    that one answer and to directions, kept by the Core nowhere."""
+    if not isinstance(value,dict) or set(value)-{'lat','lon','accuracy_m','label'} or 'lat' not in value or 'lon' not in value: raise ValueError('Invalid location.')
+    lat,lon=value['lat'],value['lon']
+    if any(isinstance(v,bool) or not isinstance(v,(int,float)) for v in (lat,lon)) or not -90<=lat<=90 or not -180<=lon<=180: raise ValueError('Invalid location.')
+    out={'lat':float(lat),'lon':float(lon)}
+    if 'accuracy_m' in value:
+        accuracy=value['accuracy_m']
+        if isinstance(accuracy,bool) or not isinstance(accuracy,(int,float)) or not 0<=accuracy<=100000: raise ValueError('Invalid location.')
+        out['accuracy_m']=float(accuracy)
+    if 'label' in value:
+        label=value['label']
+        if not isinstance(label,str) or len(label)>80 or re.search(r'[\x00-\x1f]',label): raise ValueError('Invalid location.')
+        out['label']=label.strip()
+    return out
+
+
 class Service:
     def __init__(self, app, device_id='local-wearable-client', *, simulated=True, prefix='wearable-', register=True, writes=False, tools=False, approve=False):
         self.app = app
@@ -76,8 +94,9 @@ class Service:
                 self.count_read()
                 return self.read(op,body)
             if op=='start':
-                if set(body)-{'text','image','conversation'}: raise ValueError('Unknown fields.')
+                if set(body)-{'text','image','conversation','location'}: raise ValueError('Unknown fields.')
                 text=body.get('text'); conversation=body.get('conversation',self.prefix+'local')
+                location=_location(body['location']) if 'location' in body else None
                 if not isinstance(conversation,str) or not conversation.startswith(self.prefix): raise ValueError('Wearable conversation required.')
                 attachment=None
                 if body.get('image'):
@@ -96,7 +115,7 @@ class Service:
                 with self.app.lock:
                     if attachment:self.app.attachments[attachment['id']]=attachment
                     try:
-                        result=self.app.start_run({'text':text,'conversation':conversation,**({'attachment':attachment['id']} if attachment else {})},wearable=True,device=self.device_id,writes=self.writes,tools=self.tools)
+                        result=self.app.start_run({'text':text,'conversation':conversation,**({'attachment':attachment['id']} if attachment else {})},wearable=True,device=self.device_id,writes=self.writes,tools=self.tools,location=location)
                     finally:
                         if attachment:self.app.attachments.pop(attachment['id'],None)
                 self.runs={r for r in self.runs if r in self.app.runs}

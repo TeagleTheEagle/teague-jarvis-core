@@ -223,11 +223,24 @@ def manage_memory(store, action, item_id, body=None):
 
 
 class Controls:
+    # A paired device's question (1.0.17, docs/PHONE-ACCESS-1.0.17.md item C) is answered by the PC window through
+    # /api/control-requests, which it reads every few seconds: it gets longer than the window's own 30 s.
+    DEVICE_TIMEOUT = 45
+
     def __init__(self):
         self.lock, self.pending = threading.Lock(), {}
 
-    def request(self, action, run, timeout=30):
+    def for_window(self, names=None):
+        """The requests of other devices' questions that wait for the PC window (1.0.17 item C): the window does them
+        and answers through /api/control-result, as it answers its own question's control.requested events."""
+        names = names or {}
+        with self.lock:
+            return [{'id': ident, 'run_id': item['run'].id, 'action': item['action'], 'device': names.get(getattr(item['run'], 'device', ''), getattr(item['run'], 'device', ''))}
+                    for ident, item in self.pending.items() if getattr(item['run'], 'wearable', False) and not item['event'].is_set() and not item['run'].cancel.is_set()]
+
+    def request(self, action, run, timeout=None):
         if action not in CONTROL_ACTIONS or run is None: raise ValueError('A connected conversation is required.')
+        if timeout is None: timeout = self.DEVICE_TIMEOUT if getattr(run, 'wearable', False) else 30
         text = re.sub(r'[,.!?]', '', run.user_text.lower()).strip()
         text = re.sub(r'^(?:hey )?jarvis\s+|\s+jarvis$', '', text)
         text = re.sub(r'^(?:please |can you |could you )', '', text)
@@ -250,7 +263,8 @@ class Controls:
         with self.lock:
             item = self.pending.get(ident)
             if not item or item['run'].id != run_id or item['run'].cancel.is_set() or item['event'].is_set(): raise ValueError('Control request expired or already acknowledged.')
-            if not isinstance(result, dict) or set(result)-{'status','active','error','sampling','image_submitted'}: raise ValueError('Invalid control result.')
+            if not isinstance(result, dict) or set(result)-{'status','active','error','sampling','image_submitted','attachment'}: raise ValueError('Invalid control result.')
+            if 'attachment' in result and not (isinstance(result['attachment'], str) and re.fullmatch(r'[a-f0-9]{32}', result['attachment'])): raise ValueError('Invalid control result.')
             if result.get('status') not in ('completed','failed','permission_required','unavailable','requested'): raise ValueError('Invalid control status.')
             for key in ('active','sampling','image_submitted'):
                 if key in result and type(result[key]) is not bool: raise ValueError('Invalid control state.')

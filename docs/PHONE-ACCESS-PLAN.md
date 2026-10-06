@@ -70,8 +70,9 @@ record in `docs/`, committed by file list. Device routes are defined here and ha
 **C. Screen analysis from the phone** (item 8)
 - "Analyse my screen" from a device with the tools tick: the Core asks the open PC window for a capture (the same
   30 s request the window answers today, now also for a device's question), runs the vision step on the picture,
-  and answers on the phone. If no window is open: "The PC's window is not open, so the screen cannot be captured."
-  The picture is not kept beyond the answer. Nothing streams the display.
+  and answers on the phone. If no window is open: "The PC's window is not open or did not answer, so this cannot be
+  done from here." The picture is not kept beyond the answer. Nothing streams the display, and nothing starts
+  sharing, the microphone or the hologram from the phone: only reads, switching off, and one capture.
 
 **D. Location with a question** (item 9)
 - `start` accepts `location {lat, lon, accuracy_m, label}` from a device. It is given to the AI model for that answer

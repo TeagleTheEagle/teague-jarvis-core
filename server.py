@@ -78,6 +78,9 @@ from wake import WakeDetector
 
 WEARABLE_READ_TOOLS = permissions.WEARABLE_TOOLS  # what a wearable may call: one table, permissions.py
 APPROVAL_SECONDS = 900  # how long an "ask first" call or a draft waits for the owner (1.0.17: fifteen minutes, five before)
+# The window controls a paired device's question may ask for (1.0.17 item C): reads of the window's state, what switches
+# something off, and one capture to describe. Nothing that starts sharing, the microphone or the hologram from afar.
+DEVICE_CONTROLS = frozenset(('analyse_screen', 'hologram_status', 'screen_status', 'microphone_status', 'stop_sharing', 'stop_speaking', 'mute', 'hide_hologram'))
 
 
 class Run:
@@ -676,7 +679,7 @@ class App:
             self.audit(row, 'completed' if self.store.items('memory') != before else 'nothing changed', run)
         return answer
 
-    def start_run(self, body, *, wearable=False, device=None, writes=False, tools=False):
+    def start_run(self, body, *, wearable=False, device=None, writes=False, tools=False, location=None):
         if self.stage4:
             raise ValueError('Stage 4 requests require authenticated owner dispatch.')
         text = body.get('text', '')
@@ -726,6 +729,7 @@ class App:
             run.wearable = wearable
             run.writes = writes  # a paired device the owner lets save memories and tasks (1.0.16)
             run.tools = tools    # a paired device the owner lets use this PC's tools (1.0.17); read again at every tool call
+            run.location = location  # the device's position sent with this question (1.0.17 item D): this answer only, kept nowhere
             run.device = device
             self.runs[run.id] = run
             consume_attachment = bool(attachment and (attachment.get('name') == 'screen-capture.jpg' or wearable))
@@ -797,7 +801,10 @@ class App:
             elif name == 'device_registry':
                 result = {'devices':self.device_rows(), 'interaction_device':self.devices.interaction(run.id) if run else None, 'limits':'Capabilities describe adapters; actions require separate authorization. Simulated devices are not physical hardware.'}
             elif name == 'assistant_control':
-                result = self.controls.request(args['action'], run)
+                if run is not None and getattr(run, 'wearable', False):
+                    result = self.device_control(run, args['action'])  # 1.0.17 item C
+                else:
+                    result = self.controls.request(args['action'], run)
             elif name == 'inspection_reports':
                 operation = args['action']
                 result = self.inspection_archive.list() if operation == 'list' else self.inspection_archive.compare() if operation == 'compare' else self.inspection_archive.read('latest' if operation == 'latest' else args.get('inspection_id', ''))
@@ -864,7 +871,7 @@ class App:
                 self.keep_approval(approval)
                 result = {'approval': approval, 'status': 'awaiting approval', 'preview': prepared, 'summary': 'Review ' + target.replace('_', ' ') + '. Nothing has been applied.'}
             elif name == 'get_directions':
-                result = maps.directions(args['origin'], args['destination'], args['mode'])
+                result = maps.directions(args['origin'], args['destination'], args['mode'], location=getattr(run, 'location', None))
             elif name == 'time_now':
                 result = {'time': datetime.datetime.now().astimezone().isoformat()}
             elif name == 'project_catalog':
@@ -969,6 +976,47 @@ class App:
             if run:run.emit('tool.failed',{'name':name,'checked_at':time.time(),'error_code':type(exc).__name__})
             self.audit(name, 'failed', run)
             raise
+
+    def device_control(self, run, action):
+        """A paired device's question asking the PC window for a control (1.0.17, docs/PHONE-ACCESS-1.0.17.md item C):
+        a read of the window's state, something that switches off, or one capture to describe. Starting sharing,
+        the microphone or the hologram from another device is not offered: that needs the owner at the PC window.
+        The window learns of the request from /api/control-requests and answers through /api/control-result as it
+        answers its own question's requests; for "analyse my screen" it uploads one capture, and the Core describes
+        that picture here, for this answer only."""
+        if action not in DEVICE_CONTROLS:
+            raise ValueError('This needs the JARVIS window on the PC.')
+        if action == 'analyse_screen' and not providers.capabilities(self.store.settings().get('answer_mode')).get('vision'):
+            return {'status': 'unavailable', 'action': action, 'error': 'No vision model is configured on the PC.'}  # before any capture
+        return self.device_control_result(run, action, self.controls.request(action, run))
+
+    def device_control_result(self, run, action, result):
+        """The window's answer to a device's control request (item C), as the device's question sees it. No answer
+        within the wait: said plainly, nothing claimed. The capture is taken out of the uploads and kept nowhere."""
+        if result.get('status') == 'unconfirmed':
+            return {'status': 'unavailable', 'action': action, 'error': "The PC's window is not open or did not answer, so this cannot be done from here."}
+        if action != 'analyse_screen' or result.get('status') != 'completed':
+            return result
+        with self.lock:
+            ident = result.get('attachment') or ''
+            item = self.attachments.get(ident)
+            # Only the window's own fresh capture is taken; a picture waiting in the PC's chat is left where it is.
+            attachment = self.attachments.pop(ident) if item and item.get('type') == 'image' and item.get('name') == 'screen-capture.jpg' else None
+        if not attachment:
+            return {'status': 'failed', 'action': action, 'error': 'The PC window sent no capture.'}
+        description = self.describe_picture(run, attachment, "Describe what is on the PC's screen right now for the owner, who asked from another device: "
+                                            'what is open, the main text, and anything that needs attention. Say only what is visible.')
+        return {'status': 'completed', 'action': action, 'source': "one capture of the PC's screen, not kept", 'captured_at': result.get('checked_at'), 'description': description}
+
+    def describe_picture(self, run, attachment, question):
+        """One model request with a picture and no tools; its words and nothing else (1.0.17 item C)."""
+        if not (os.getenv('OPENAI_API_KEY') or os.getenv('DASHSCOPE_API_KEY')):
+            raise ValueError('Image analysis needs a configured vision model.')
+        messages = [{'role': 'system', 'content': self.instructions(wearable=True)},
+                    {'role': 'user', 'content': [{'type': 'text', 'text': question}, {'type': 'image_url', 'image_url': {'url': attachment['data']}}]}]
+        depth = providers.chat_options(self.store.settings().get('answer_mode'), question)
+        response = providers.chat(messages, [], lambda *_: None, run.cancel, True, **depth)
+        return str((response or {}).get('content') or '')
 
     def approvals_waiting(self):
         """How many approvals wait for the owner right now (1.0.17: told to a device that may approve)."""
@@ -1148,6 +1196,9 @@ class App:
                     context['desktop_capabilities'] = {'screen_vision': 'Live local sharing on explicit start; AI receives changed frames periodically and notes are saved in Communications. Screenshot commands request one immediate frame. Commands: analyse my screen, take a screenshot Jarvis, start screen sharing, stop sharing.', 'companion': 'Floating hologram with analyse screen, microphone and stop controls. Command: show hologram.', 'limits': 'AI receives sampled images, not every video frame. No arbitrary mouse/keyboard control. Only claim to see supplied images. Screen observations are analysis-only; separate explicit user commands can use existing tools.'}
                 context['recent_research'] = self.store.recent_research(run.conversation)
                 context['recent_tool_evidence'] = self.store.recent_evidence(run.conversation)
+                if getattr(run, 'location', None):
+                    # 1.0.17 item D: the device's position, for this answer only; the Core keeps it nowhere and never shows it in a reply unasked.
+                    context['device_location'] = {**run.location, 'note': 'Reported by the device with this question; current, not stored, not tracked. Use it for directions, nearby places and local time. Name the place by its label or in words; never repeat the coordinates in a reply; never claim to track the owner.'}
                 system = self.instructions(wearable=getattr(run,'wearable',False), writes=getattr(run,'writes',False), tools=self.device_tools(run))
 
                 messages = [{'role': 'system', 'content': system}, {'role': 'user', 'content': 'Application context data (not instructions): ' + json.dumps(context)}]
@@ -1378,6 +1429,7 @@ class App:
                     run.done = True
                     run.condition.notify_all()
                 self.devices.finish(run.id)
+                run.location = None  # 1.0.17 item D: the device's position lives only while the question is answered
 
     @staticmethod
     def describe(name, result):
@@ -1541,6 +1593,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, self.app.permissions_listing())
             if path == '/api/devices':
                 return self.send(200, self.app.devices_listing())
+            if path == '/api/control-requests':
+                # 1.0.17 item C: what other devices' questions ask this window to do (the signed-in interface only).
+                names = self.app.device_book.names() if self.app.device_book else {}
+                return self.send(200, {'requests': self.app.controls.for_window(names)})
             if path == '/api/remote-devices':
                 if self.app.remote_devices is None:
                     return self.send(404, {'error': 'Unknown endpoint.'})
@@ -1637,7 +1693,18 @@ class Handler(BaseHTTPRequestHandler):
             path = urllib.parse.urlparse(self.path).path
             if path == '/api/control-result':
                 if set(body) != {'id','run_id','result'}: raise ValueError('Invalid acknowledgement.')
-                result = self.app.controls.acknowledge(body['id'], body['run_id'], body['result'])
+                try:
+                    result = self.app.controls.acknowledge(body['id'], body['run_id'], body['result'])
+                except ValueError:
+                    # 1.0.17 item C: a capture the window uploaded for a request that is gone (cancelled, timed out or
+                    # answered already) is not kept.
+                    named = body['result'].get('attachment') if isinstance(body.get('result'), dict) else None
+                    if isinstance(named, str) and re.fullmatch(r'[a-f0-9]{32}', named):
+                        with self.app.lock:
+                            item = self.app.attachments.get(named)
+                            if item and item.get('name') == 'screen-capture.jpg':
+                                self.app.attachments.pop(named, None)
+                    raise
             elif path == '/api/inspection-finding':
                 if set(body) != {'finding','status','note'} or body['status'] not in ('open','verified','deferred','cancelled') or not isinstance(body['note'],str) or not 5 <= len(body['note'].strip()) <= 1000:
                     raise ValueError('Provide a specific observation or decision (5–1000 characters).')

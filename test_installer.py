@@ -264,7 +264,8 @@ class InstallerTests(unittest.TestCase):
         self.install(self.v1)
         self.install(self.v2)
         self.assertEqual(set(installer.rollback(self.home, stop=self.stop, shortcuts=False)['seconds']), {'verify_target', 'stop', 'switch'})
-        self.assertEqual(set(installer.rollback(self.home, stop=self.stop)['seconds']), {'verify_target', 'stop', 'switch', 'shortcuts'})  # 1.0.17: the shortcuts follow the program
+        self.assertEqual(set(installer.rollback(self.home, stop=self.stop, shortcuts=True)['seconds']), {'verify_target', 'stop', 'switch', 'shortcuts'})  # 1.0.17: the shortcuts follow the program
+        self.assertEqual(set(installer.rollback(self.home, stop=self.stop)['seconds']), {'verify_target', 'stop', 'switch'})  # the default: a home that is not this PC's own gets none
         self.assertEqual(set(installer.uninstall(self.home, shortcuts=False, stop=self.stop)['seconds']), {'stop', 'remove_program'})
 
     def test_install_rollback_uninstall_refuse_with_the_installed_python(self):
@@ -491,6 +492,37 @@ class InstallerTests(unittest.TestCase):
         self.assertGreaterEqual(time.monotonic() - started, 0.9)
         self.assertTrue(link.exists())
 
+    def test_the_command_line_never_touches_real_shortcuts_for_a_home_that_is_not_this_pcs_own(self):
+        # 2026-10-07: a sandbox Setup rehearsal whose /NOSHORTCUTS never reached this script wrote and then removed the
+        # owner's real shortcuts. Now the command line writes or removes them only for this PC's own install home.
+        answers = []
+
+        def run(*argv):
+            with patch('sys.stdout', new=io.StringIO()) as out:
+                self.assertEqual(installer.main(list(argv)), 0)
+            answers.append(json.loads(out.getvalue()).get('shortcuts'))
+        home = str(self.home)
+        run('install', '--package', str(self.v1), '--home', home)
+        run('install', '--package', str(self.v2), '--home', home, '--replace-legacy-shortcuts')
+        run('rollback', '--home', home)
+        run('uninstall', '--home', home)
+        self.assertEqual(self.shortcut_writes, [])  # a home that is not this PC's own: nothing written, nothing removed
+        self.assertEqual(set(answers), {"withheld (the home is not this PC's own install home)"})
+        with patch.object(installer, 'default_home', return_value=self.home):
+            run('install', '--package', str(self.v1), '--home', home)
+            run('install', '--package', str(self.v2), '--home', home, '--replace-legacy-shortcuts')
+            run('rollback', '--home', home)
+            run('uninstall', '--home', home)
+        self.assertEqual([(w[0], w[1].split('-')[0]) if w[0] != 'remove' else w for w in self.shortcut_writes],
+                         [(home, '1.0.0'), (home, '1.1.0'), ('remove', installer.LEGACY_SHORTCUT), (home, '1.0.0'), ('remove', installer.SHORTCUT)])
+        self.assertEqual(answers[4:], ['written', 'written', 'written', 'removed'])
+        with patch.object(installer, 'default_home', return_value=self.home):
+            run('install', '--package', str(self.v1), '--home', home, '--no-shortcuts')
+        self.assertEqual((len(self.shortcut_writes), answers[-1]), (5, 'skipped (--no-shortcuts)'))  # --no-shortcuts still holds for the PC's own home
+        self.assertFalse(installer.own_home(self.home))
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertFalse(installer.own_home(self.home))  # no %LOCALAPPDATA%: never "own", never a traceback
+
 
 if __name__ == '__main__':
     unittest.main()
@@ -543,7 +575,7 @@ class OwnAppTests(unittest.TestCase):
         installer.install(self.new, self.home, shortcuts=True, stop=self.stop)
         self.assertFalse((self.home / 'JARVIS.ps1').exists())          # decision D6: its text would start an electron.exe 1.0.17 has not
         self.assertIn('JARVIS.exe', self.scripts[-1])
-        result = installer.rollback(self.home, stop=self.stop)
+        result = installer.rollback(self.home, stop=self.stop, shortcuts=True)  # on: the shortcuts follow the program
         self.assertEqual(result['release'], '1.0.16-abc')
         self.assertIn('shortcuts', result['seconds'])
         self.assertEqual((self.home / 'JARVIS.ps1').read_text(encoding='utf-8'), installer.LAUNCHER)

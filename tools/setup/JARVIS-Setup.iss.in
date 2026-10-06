@@ -114,10 +114,24 @@ begin
   if Home <> '' then Result := ' --home "' + Home + '"' else Result := '';
 end;
 
+{ A switch given on the command line, bare (/NOSHORTCUTS) or with a value (/NOSHORTCUTS=1). Inno's own param:
+  constant reads only the /NAME=value form: a bare switch read as empty, so the 2026-10-07 rehearsal's install
+  and uninstall ran the package's installer without --no-shortcuts (docs/OWN-APP-1.0.17.md section 6). The
+  installer itself now also refuses to touch the real shortcuts for a home that is not the PC's own install
+  home. No brace inside this comment: a Pascal comment ends at the first closing brace. }
+function HasSwitch(const Name: String): Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := 1 to ParamCount do
+    if (CompareText(ParamStr(I), '/' + Name) = 0) or (Pos(UpperCase('/' + Name + '='), UpperCase(ParamStr(I))) = 1) then Result := True;
+end;
+
 { /NOSHORTCUTS: rehearsals on the build PC never touch its real Desktop and Startup folders (remembered for the uninstall). }
 function NoShortcutsArgument(): String;
 begin
-  if (ExpandConstant('{param:NOSHORTCUTS|}') <> '') or FileExists(ExpandConstant('{app}\setup-noshortcuts.txt')) then Result := ' --no-shortcuts' else Result := '';
+  if HasSwitch('NOSHORTCUTS') or FileExists(ExpandConstant('{app}\setup-noshortcuts.txt')) then Result := ' --no-shortcuts' else Result := '';
 end;
 
 { The package's installer, with the package's own Python; its JSON answer goes to a file beside the package. }
@@ -141,7 +155,7 @@ begin
   begin
     { The install home is remembered for the uninstall (a sandbox home never touches the real JARVIS). }
     SaveStringToFile(ExpandConstant('{app}\setup-home.txt'), HomeOverride(), False);
-    if ExpandConstant('{param:NOSHORTCUTS|}') <> '' then SaveStringToFile(ExpandConstant('{app}\setup-noshortcuts.txt'), '1', False);
+    if HasSwitch('NOSHORTCUTS') then SaveStringToFile(ExpandConstant('{app}\setup-noshortcuts.txt'), '1', False);
     RunInstaller('install --package "' + ExpandConstant('{app}') + '"', HomeOverride(), ExpandConstant('{app}\setup-result.json'), Code);
     Installed := Code = 0;
     if not Installed then

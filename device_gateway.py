@@ -47,7 +47,7 @@ SHOWABLE = frozenset((
     'Too many pairing attempts. Wait one minute.', 'Wearable request limit reached. Wait one minute.', 'Wearable service busy.',
     'Wearable conversation required.', 'Unknown wearable run.', 'Run expired.', 'Unknown fields.', 'Image too large.', 'Unsupported image.',
     'Invalid speech text.', 'Expected PCM data.', 'A request is already running. Stop it or wait for completion.',
-    'Supply only run_id and after.', LOCKED_MESSAGE))
+    'Supply only run_id and after.', 'Invalid location.', LOCKED_MESSAGE))
 GENERAL = 'Invalid, busy, expired or unavailable device request.'
 
 
@@ -181,7 +181,8 @@ class Gateway:
         # notices is 0 until the Core keeps notices (docs/MAC-REQUESTS-20261007.md).
         return {'device_id': device['device_id'], 'name': device['name'], 'kind': device['kind'], 'declared': device['declared'],
                 'allowed': device['allowed'], 'writes': writes, 'tools': tools, 'approve': approve,
-                'waiting': int(waiting) if approve else 0, 'notices': 0, 'stopped': stopped, 'protocol': 2, 'scope': scope}
+                'waiting': int(waiting) if approve else 0, 'notices': 0, 'location': True,  # start.location is accepted (1.0.17 item D)
+                'stopped': stopped, 'protocol': 2, 'scope': scope}
 
     def dispatch(self, credential, op, body, caller=None):
         now = time.monotonic()

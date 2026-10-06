@@ -110,6 +110,21 @@ def default_home():
     return Path(os.environ['LOCALAPPDATA']) / 'JARVIS'
 
 
+def own_home(home):
+    """Is this home this PC's own install home (default_home)? Only that home has real Desktop and Startup
+    shortcuts to write or remove: a rehearsal, a sandbox or a test home never touches them, whatever the switches
+    say (2026-10-07, docs/OWN-APP-1.0.17.md section 6). False when %LOCALAPPDATA% is not set."""
+    try:
+        return Path(home).resolve() == default_home().resolve()
+    except (KeyError, OSError, ValueError):
+        return False  # no %LOCALAPPDATA%, or a path that cannot be resolved: never "own"
+
+
+def shortcuts_for(home, shortcuts):
+    """The shortcuts switch of install, rollback and uninstall: None means "for this PC's own install home only"."""
+    return own_home(home) if shortcuts is None else bool(shortcuts)
+
+
 def read_manifest(release):
     manifest = json.loads((Path(release) / 'manifest.json').read_text(encoding='utf-8'))
     require(manifest.get('product') == 'JARVIS' and manifest.get('format') == 1, 'Not a JARVIS release manifest.')
@@ -273,8 +288,9 @@ def remove_shortcuts(name=SHORTCUT):
     subprocess.run(['powershell', '-NoProfile', '-Command', script], capture_output=True, timeout=60)
 
 
-def install(package, home, shortcuts=True, stop=stop_running_jarvis, replace_legacy_shortcuts=False):
+def install(package, home, shortcuts=None, stop=stop_running_jarvis, replace_legacy_shortcuts=False):
     package, home = Path(package), Path(home)
+    shortcuts = shortcuts_for(home, shortcuts)
     refuse_if_run_from_installation(home, 'install --package "<package>"')
     source = package / 'release'
     lap = Laps()
@@ -328,8 +344,9 @@ def install(package, home, shortcuts=True, stop=stop_running_jarvis, replace_leg
     return {'status': 'installed', 'release': release_id, 'previous': previous, 'home': str(home), 'seconds': lap.seconds}
 
 
-def rollback(home, stop=stop_running_jarvis, shortcuts=True):
+def rollback(home, stop=stop_running_jarvis, shortcuts=None):
     home = Path(home)
+    shortcuts = shortcuts_for(home, shortcuts)
     refuse_if_run_from_installation(home, 'rollback')
     lap = Laps()
     current = read_current(home)
@@ -363,8 +380,9 @@ def remove_program_file(path, wait=10):
             time.sleep(0.2)
 
 
-def uninstall(home, remove_data=None, shortcuts=True, stop=stop_running_jarvis):
+def uninstall(home, remove_data=None, shortcuts=None, stop=stop_running_jarvis):
     home = Path(home)
+    shortcuts = shortcuts_for(home, shortcuts)
     refuse_if_run_from_installation(home, 'uninstall')
     require(remove_data in (None, CONFIRM_DATA_REMOVAL), f'To delete data too, pass --remove-data {CONFIRM_DATA_REMOVAL}')
     lap = Laps()
@@ -425,21 +443,32 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('action', choices=['install', 'rollback', 'uninstall', 'verify', 'status'])
     parser.add_argument('--package', help='Release folder containing release\\ (install)')
-    parser.add_argument('--home', help='Install location (default %%LOCALAPPDATA%%\\JARVIS)')
-    parser.add_argument('--no-shortcuts', action='store_true')
+    parser.add_argument('--home', help='Install location (default %%LOCALAPPDATA%%\\JARVIS). The real Desktop and Startup shortcuts '
+                                       'are written or removed for that default home only; any other home never touches them')
+    parser.add_argument('--no-shortcuts', action='store_true', help='Write or remove no shortcuts (for the default home; another home never does)')
     parser.add_argument('--replace-legacy-shortcuts', action='store_true',
                         help='Switch-over only: also remove the old "JARVIS Desktop" shortcuts')
     parser.add_argument('--remove-data')
     args = parser.parse_args(argv)
     home = Path(args.home) if args.home else default_home()
+    # The real Desktop and Startup shortcuts belong to this PC's own install home only (own_home): a home given
+    # with --home that is not that home (a rehearsal, a sandbox, a test) never writes or removes them, whatever
+    # the other switches say. On 2026-10-07 a sandbox Setup rehearsal whose /NOSHORTCUTS never reached this script
+    # wrote and then removed the owner's real shortcuts (docs/OWN-APP-1.0.17.md section 6).
+    mine = own_home(home)
+    shortcuts = not args.no_shortcuts and mine
+    evidence = 'written' if shortcuts else 'skipped (--no-shortcuts)' if mine else 'withheld (the home is not this PC\'s own install home)'
     try:
         if args.action == 'install':
-            result = install(args.package or Path(__file__).resolve().parent, home, shortcuts=not args.no_shortcuts,
+            result = install(args.package or Path(__file__).resolve().parent, home, shortcuts=shortcuts,
                              replace_legacy_shortcuts=args.replace_legacy_shortcuts)
+            result['shortcuts'] = evidence
         elif args.action == 'rollback':
-            result = rollback(home, shortcuts=not args.no_shortcuts)
+            result = rollback(home, shortcuts=shortcuts)
+            result['shortcuts'] = evidence
         elif args.action == 'uninstall':
-            result = uninstall(home, args.remove_data, shortcuts=not args.no_shortcuts)
+            result = uninstall(home, args.remove_data, shortcuts=shortcuts)
+            result['shortcuts'] = evidence.replace('written', 'removed')
         elif args.action == 'verify':
             current = read_current(home)
             require(current, 'JARVIS is not installed here.')
