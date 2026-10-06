@@ -1,9 +1,11 @@
 # JARVIS for iPhone, version 1: the result record (docs/PHONE-PLAN.md step 10)
 
-Status: **IN PROGRESS, 2026-10-06 evening. The phone is paired and talking to the one Core over the private network;
-the plan's section 10 checks are partly done.** Everything here was done by the owner on the PC, the Mac and the
-phone; Claude read records and process lists on the PC and the owner's screenshots. Networking (Tailscale, the
-switch) was the owner's act throughout.
+Status: **VERSION 1 CHECKED, 2026-10-06, 22:32 local: nine of the ten checks of the plan's section 10 met; check 3
+(the conversation continues after the app is closed and reopened) FAILS and is fixed in the app's next round** (the
+owner's ticks and screenshots; the physically-away case of check 1 ran on cellular from home, the same route).
+Everything here was done by the owner on the PC, the Mac and the phone; Claude read records and process lists on the PC
+and the owner's screenshots. Networking (Tailscale, the switch) was the owner's act throughout. Defects for the app's
+next round are in section 2 (items 4, 5, 7, 9 and 10); version 2 is listed in section 4 for the owner's decision.
 
 ## 1. What was reached tonight (2026-10-06, 21:45 to 22:15 local)
 
@@ -45,6 +47,14 @@ switch) was the owner's act throughout.
    `status` says the stop has lifted. Fix in the next app round with the header layout.
 8. **Storage 92 %** on the Status screen is the PC's C: drive, as JARVIS measures it (15.7 GB free of 238 at the
    update). Not an app matter; the C: cleanup steps are parked on the owner's word.
+9. **"Remember that" saves the word "that".** The exact memory command (the same on the PC) stores the words after
+   "remember"; a spoken "remember that" after a statement does not reach back to the statement. The owner's intent is
+   plain; a Core-side improvement (resolve "that", "this" or "it" to the previous line of the conversation) for a
+   later Core release, on the owner's word. The saved memory "that." can be deleted on the PC's Memory page.
+10. **The conversation looks fresh after a relaunch** (check 3): the app restores the conversation id but not its
+    lines. Fix: at launch, when a conversation id was restored, load its history from the Core (the same route Chats
+    uses for CONTINUE) and show the last lines on Ask. The re-pair-after-revoke case (a new device id, the old
+    conversations not listed) is by design of the Core's device book; said plainly here.
 
 ## 3. The plan's section 10 checks
 
@@ -52,18 +62,27 @@ switch) was the owner's act throughout.
 |---|---|---|
 | 1 | Away from home, Wi-Fi off, cellular on: a typed question answered | **done on cellular (5G, no Wi-Fi symbol) at 22:20 local**, from home: a spoken question answered, link 183 to 215 ms (22 ms on Wi-Fi). The path away from home is the same one (Tailscale over cellular); the physically-away case stays to be seen but adds nothing to the route. Screenshots `docs/phone-evidence/phone-app-cellular-*-20261006-2220.png` |
 | 2 | Hold to speak: words as text, answered, the reply spoken in JARVIS's voice | **done at 22:20 local on cellular**: "Hey Jarvis, can you still hear me?" heard by the Core's speech recognition and shown as text, THINKING "On the PC", then SPEAKING "In JARVIS's voice" (the speakers tick on the PC and Speak replies in the app), then STANDING BY with the answer; a second exchange answered |
-| 3 | Close and reopen: still paired, the conversation continues | not yet |
+| 3 | Close and reopen: still paired, the conversation continues | **FAILS** (the owner, 22:32: "When you close out of the app, mid-conversation, it resets you to a fresh one"; `phone-app-after-relaunch-20261006-2232.png`: the Ask screen STANDING BY with no lines). Still paired, yes. The conversation id is kept in the app's settings and restored at launch, so the next question would go on in the same conversation on the Core; but the Ask screen's lines are never reloaded from the Core after a relaunch, so it looks and feels like a fresh one. Also, pairing again after a revoke clears the id and gives the phone a new device id, so the conversations of the old pairing are not listed for the new one. Fix in the app's next round (section 2, item 10) |
 | 4 | Chats lists the phone's conversations; search finds one | **done 22:23**: "1 CONVERSATIONS FROM THIS PHONE", the conversation ACTIVE with its last line, 11 messages, TODAY; opened, every message with its time, CONTINUE offered (`phone-app-chats-20261006-2223.png`, `phone-app-conversation-view-20261006-2223.png`). Search not tried |
 | 5 | Status shows live CPU, memory, storage, Core version, round trip, stop state | **done 22:23**: THIS PHONE reached, PAIRED, 24 ms round trip, address `thegrizzlybear:8790`, Core 1.0.16-fccde24e2cc6, emergency stop not stopped, may save memories and tasks (ticked on the PC); SYSTEM HEALTH CPU 5 %, memory 27 %, storage 92 % (red: the PC's C: drive is that full), link 24 ms, Core up 1 h 42 min, last reply 3.9 s; OVERVIEW 4 open tasks, three projects, nothing upcoming; read at 22:23:53 (`phone-app-status-20261006-2223.png`) |
 | 6 | STOP on the phone stops the PC's JARVIS; RESUME on the PC restores both | **done 22:24**: STOP ALL on the phone: EMERGENCY STOP, STOP ON, red ring, "Press RESUME on the PC"; after RESUME on the PC: STANDING BY, STOP CLEAR, the ring cyan (`phone-app-emergency-stop-20261006-2224.png`, `phone-app-after-resume-20261006-2224.png`). Whether the PC's banner named the phone was not photographed. **Defect:** after the resume the yellow note "Emergency stop is on ..." stayed on the Ask screen until the next action (section 2, item 7) |
-| 7 | REVOKE on the PC: "pair again"; pairing again works | not yet |
-| 8 | Switch off, or Tailscale off: "Core cannot be reached" | the message was seen while the door was still closed (before the switch was on); the deliberate test not yet |
-| 9 | With the D2 tick, "remember ..." is known on the PC; without it, refused plainly | the tick is on (Status shows it); "remember ..." not yet tried |
+| 7 | REVOKE on the PC: "pair again"; pairing again works | **done 22:28**: after REVOKE the app returned to the pairing screen with "Device key invalid or revoked. Pair this device again on the PC.", the address kept (`thegrizzlybear`, 8790); paired again with a new code and ONLINE by 22:31 (`phone-app-revoked-20261006-2228.png`) |
+| 8 | Switch off, or Tailscale off: "Core cannot be reached" | **done 22:29**: with Tailscale off on the phone the Ask screen read NOT REACHED, CORE NOT REACHED with the three things to check, the ring grey, the last readouts kept; back on again afterwards (`phone-app-core-not-reached-20261006-2229.png`) |
+| 9 | With the D2 tick, "remember ..." is known on the PC; without it, refused plainly | **done 22:30, with the tick**: "Remember that." from the phone answered "Remembered: that." and the PC's Memory page shows the saved memory "that." at 22:30:34 (`phone-app-remember-20261006-2231.png`, `pc-memory-remember-from-phone-20261006-2230.jpg`). The path works; the content is the word "that" because the exact memory command saves the words after "remember" and does not resolve "that" to the line before it, on the PC exactly as on the phone (section 2, item 9). The without-the-tick refusal was not tried |
 | 10 | The desktop JARVIS works as before; the activity log and Settings > Devices name the phone | **Settings > Devices done 22:23**: the Private network line green "Open at 100.103.95.28:8790 (thegrizzlybear.tail806593.ts.net)"; DEVICES (1 PAIRED): This PC, the glasses test client, and `phone` PHONE Online "Last seen just now" with microphone, speakers, display and "May save memories and tasks" ticked, RENAME and REVOKE (`pc-devices-phone-paired-20261006-2223.jpg`). The desktop JARVIS answering as before and the activity log not photographed |
 | 11 | Said plainly: cellular versus Wi-Fi, fix rounds on the Mac | the pairing and the first conversation on home Wi-Fi (22:15); checks 1 and 2 on cellular with Wi-Fi off (22:20), from home; fix rounds: the look (one zip), the icon fix (one zip), the Info entry (by hand) |
 
-## 4. Next
+## 4. Next, and version 2 for the owner's decision
 
-The owner, when convenient: the ticks for microphone and speakers in the phone's row on the PC (and "May save
-memories and tasks" if wanted), then checks 2 to 10 in any order, with a photo of each; check 1 away from home. Claude
-then completes this record. The header layout (section 2, item 4) and the icon are the next fix round on the Mac.
+**The app's next round on the Mac** (one zip, as before): the conversation lines reloaded after a relaunch (item 10,
+check 3), the header at the phone's width (item 4), the stale stop note (item 7), the icon (item 5). Then check 3 is
+run again and this record closed.
+
+**Version 2** (plan section 11, each on the owner's word): camera and photos ("look at this"), the PC's chats on the
+phone, replies appearing while written, a Siri shortcut, notifications, the Dynamic Island, pairing by QR code, HTTPS
+through Tailscale, the Halo glasses with the phone as their bridge, a faster start of JARVIS at sign-in, the always-on
+mini PC question. The owner's wish list of 2026-10-06 (texts, calls, contacts, Gmail, calendar, maps) is its own plan:
+contacts, Gmail and calendar are possible with permission; texts and calls only through Windows Phone Link on the PC.
+
+**TestFlight** (plan step 9) is still open: today the app runs from Xcode's own install, which lasts a year with the
+owner's paid membership; TestFlight makes it independent of the Mac and is the owner's steps in `phone/ios/README.md`.
