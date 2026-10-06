@@ -1,0 +1,6 @@
+# Update of the everyday JARVIS to 1.0.15-63362929d7ad, launcher placed by Claude Code on the owner's approval (record: C:\Users\jonny\JARVIS-claude-workspace\governance\UPDATE-1.0.15-APPROVAL-RECORD.json)
+1c555b022337865c1734b7e9908c5baf66eb96bc33b74d29d97e6e8c0ea952d2  D:\JARVIS-update-1.0.15\tools\Invoke-EverydayUpdate.ps1
+9c469bd44002e59066f5b8e7e2b077173826780840b37e7f4151e99be86d3388  D:\JARVIS-update-1.0.15\tools\update-step.cmd
+d76cd04ade3f240db8a9a114a0d7efea10752d99291d1f14a548b45689e2bfde  D:\JARVIS-update-1.0.15\tools\update-authorized.json
+83bd07c14be1b4a9eff97ab65b5ac384651e845aa80f5ca7e8952e6d359735cb  C:\Users\jonny\JARVIS-claude-workspace\governance\UPDATE-1.0.15-APPROVAL-RECORD.json
+5d7580113cc3c62000a46835eadc4e2cd5cf1bb9c06ed9f6bad549367bf55fd5  C:\Users\jonny\JARVIS-claude-workspace\repo\docs\UPDATE-EVERYDAY-1.0.15.md
