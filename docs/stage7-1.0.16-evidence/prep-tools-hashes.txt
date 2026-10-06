@@ -1,0 +1,10 @@
+# Stage 7 check 1.0.16-fccde24e2cc6, tools placed by Claude Code on the owner's approval (record: C:\Users\jonny\JARVIS-claude-workspace\governance\STAGE7-1.0.16-APPROVAL-RECORD.json)
+25f636f52c6823d1aba8ad79617967aec46b4013b8f20b2615581c886765b7e9  D:\JARVIS-S6-FRESHVM	ools\stage7-1.0.16\Invoke-Stage7Step.ps1
+2128827d54d979aa25cb760f25c46fbe2e4075636fa9a69af792100255a6df98  D:\JARVIS-S6-FRESHVM	ools\stage7-1.0.16\New-Stage7Disc.ps1
+71bec341feaf332d332905ae622a02fc2befc1427db27f89bda3a39a0d60f15d  D:\JARVIS-S6-FRESHVM	ools\stage7-1.0.16\Start-Stage7Vm.ps1
+c10f0b213a37635b547ae8e1ac6766e5ec3ee422829d91928e8217430cac7a34  D:\JARVIS-S6-FRESHVM	ools\stage7-1.0.16\stage7-step.cmd
+d456da091c335e74c2f057068409cb5fe1a44ef3dcc156d780a83f16868a59a2  D:\JARVIS-S6-FRESHVM	ools\stage7-1.0.16\Start-FreshVm.ps1
+f4065b26a4abecf0bc71e6b219ee423832775ce822bde3588a764608bca3cad8  D:\JARVIS-S6-FRESHVM	ools\stage7-1.0.16\Take-FreshVmSnapshot.ps1
+e898add17598edb9d9f99dbc5531a824f5e50c9821fd5af3328e6bffbc71bd57  D:\JARVIS-S6-FRESHVM	ools\stage7-1.0.16\stage7-authorized.json
+a97b1b43530ea1984d80862c11a09f1060a31bc865e1bfd1733674c324f9cce6  C:\Users\jonny\JARVIS-claude-workspace\governance\STAGE7-1.0.16-APPROVAL-RECORD.json
+13ac32cde37d8977156d46cd457b7b87b07dbfef2461c44e353226f190212ed0  C:\Users\jonny\JARVIS-claude-workspaceepo\docs\STAGE7-CHECK-1.0.16.md
