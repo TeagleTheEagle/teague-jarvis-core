@@ -1,0 +1,12 @@
+{
+  "schema": "jarvis-everyday-update-owner-check-v1",
+  "step": 4,
+  "utc": "2026-10-06T09:25:56Z",
+  "owner_message": "step 4 done",
+  "owner_message_utc_basis": "received by Claude on 2026-10-06 at about 20:25 local, after the owner was given the seven-point check list of docs/UPDATE-EVERYDAY-1.0.16.md (About shows 1.0.16; memories and conversations present; a question answered and voice working; Settings > Devices with the Private network switch off and the Tailscale line; Settings > Music with the folder and an empty list; Settings > Voice > VOICE PREVIEW offering Qwen; a quiet quit)",
+  "result": "PASS (owner-reported)",
+  "photos_received": "none with this message; the owner reported the step done in words only",
+  "claude_read_only_look": "recorded in the same minute from this PC: the JARVIS process count and the installed release's current.json and release folders (see claude_observation); config\\.env, the database and the backup contents were not read",
+  "claude_observation": "0 JARVIS processes (the owner had quit it, as the list ends); current.json: release 1.0.16-fccde24e2cc6, previous 1.0.15-63362929d7ad, switched_at 1791278379 (step 3); release folders 1.0.11, 1.0.14, 1.0.15, 1.0.16; the folder config\\music exists, which 1.0.16 creates at its first start, so the owner did start 1.0.16 at least once before quitting",
+  "recorded_by": "Claude Code (Claude Fable 5.1). This record documents the owner's report; the owner's own check is the evidence for step 4."
+}

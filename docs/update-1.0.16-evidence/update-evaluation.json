@@ -1,0 +1,28 @@
+{
+  "schema": "jarvis-everyday-update-evaluation-v1",
+  "verdict": "EVERYDAY_UPDATE_COMPLETE",
+  "evaluated_utc": "2026-10-06T09:52:58Z",
+  "from": "1.0.15-63362929d7ad",
+  "to": "1.0.16-fccde24e2cc6",
+  "to_zip_sha256": "58bba7423cf0668ff7684e9370865b9951e473eb1e0818c9437bf4287032d23a",
+  "install_home": "%LOCALAPPDATA%\\JARVIS (the owner's everyday JARVIS)",
+  "approval": { "owner_text": "I approve the update of my everyday JARVIS to 1.0.16", "issued_utc": "2026-10-06T09:11:04Z", "record": "C:\\Users\\jonny\\JARVIS-claude-workspace\\governance\\UPDATE-1.0.16-APPROVAL-RECORD.json", "plan": "docs/UPDATE-EVERYDAY-1.0.16.md", "plan_sha256": "6d7e5e7b09061705352423ff23046793396e3426a3bbd478c064aa949dc307e6", "repo_commit": "47cca56" },
+  "preconditions": { "stage7": "STAGE_7_COMPLETE for 1.0.16 (27 of 27; the first install's 646 s against the Gate 20 bound dispositioned as a VM limitation under the owner's rule of 2026-10-06)", "sandbox_rehearsal": "13 of 13 PASS (docs/release-rehearsal-20261006-1016/update-rehearsal/)" },
+  "launcher": { "path": "D:\\JARVIS-update-1.0.16\\tools\\Invoke-EverydayUpdate.ps1", "sha256": "1abb0be581ee425dcbfdbbae4835511158a8950d96fbb5ae83a0d3626532b20a", "equal_to_approval": true, "note": "the 1.0.15 launcher copied unchanged except its header, its default folder and the plan it names" },
+  "steps": [
+    { "step": 1, "record": "check.json", "utc": "2026-10-06T09:16:28Z", "result": "PASS", "notes": "owner account THEGRIZZLYBEAR\\jonny, not elevated, launcher hash equal to the approval; package hash equal; 1.0.15 current (1.0.14 behind it, 1.0.11 kept) and verified; 0 JARVIS processes; 15.7 GB free on C:; both shortcuts present; package unpacked in 15.6 s" },
+    { "step": 2, "record": "backup.json", "utc": "2026-10-06T09:17:20Z", "result": "PASS", "notes": "backup 4134e30f1bd7471e8e6fabda65cd0deb with 1.0.15's own backup code: 351 files, 3,171,478 bytes, verified; test restore passed with all 21 table counts equal (1,361 messages, 12 items, 0 devices); copy on D: hash-equal (70e4d4f9…); program still verified" },
+    { "step": 3, "record": "update.json", "utc": "2026-10-06T09:19:48Z", "result": "PASS", "notes": "installed 1.0.16 in 108.5 s wall (verify package 7.2 s, copy 89.9 s, verify copy 9.4 s, stop 0.7 s, switch 1.1 s), verified; current 1.0.16, previous 1.0.15 kept; database file byte-for-byte unchanged (91aef489…); shortcuts kept; JARVIS not started" },
+    { "step": 4, "record": "owner-check.json", "utc": "2026-10-06T09:25:56Z", "result": "PASS (owner-reported)", "notes": "the owner reported 'step 4 done' after the seven-point list (About 1.0.16, memories and conversations, a question and voice, Devices with the switch off, Music, Voice preview with Qwen, a quiet quit); no photo; Claude's read-only look in the same minute: 0 processes after the quit, current.json on 1.0.16 with 1.0.15 previous, four release folders, the config\\music folder present (made by 1.0.16 at its first start)" },
+    { "step": 5, "record": "restart-check.json", "utc": "2026-10-06T09:52:58Z", "result": "PASS", "notes": "after a PC restart (boot 20:28:18 local, sign-in 20:34:35) JARVIS 1.0.16 started by itself from the Startup shortcut at 20:40:19 (--login-launch), 5.7 minutes after sign-in; all 8 processes from the 1.0.16 release" }
+  ],
+  "rollback": "not used; 1.0.15 stays installed beside 1.0.16 (releases folder), 1.0.14 and 1.0.11 stay too; the launcher's rollback runs only with rollback-approved.json on the owner's word",
+  "now_installed": "1.0.16-fccde24e2cc6 current, previous 1.0.15-63362929d7ad; release folders 1.0.11, 1.0.14, 1.0.15, 1.0.16",
+  "open_items": [
+    "the Private network switch stays off until the owner has set up Tailscale (docs/PHONE-TAILSCALE-STEPS.md) and turns it on",
+    "removing the 1.0.11 and 1.0.14 release folders later (about 2.4 GB) on the owner's word",
+    "the Qwen cloned voice: the owner chooses it under Settings > Voice when wanted; not reported either way at step 4"
+  ],
+  "claude_actions_on_the_live_installation": "none: every step was run by the owner; Claude read records, process lists, current.json, the release folder names, the music folder's existence and the Startup folder only, never config\\.env, the database or the backup's contents",
+  "evaluated_by": "Claude Code (Claude Fable 5.1)"
+}

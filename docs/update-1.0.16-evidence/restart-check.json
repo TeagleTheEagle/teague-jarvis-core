@@ -1,0 +1,18 @@
+{
+  "schema": "jarvis-everyday-update-restart-check-v1",
+  "step": 5,
+  "utc": "2026-10-06T09:52:58Z",
+  "owner_message": "step 5 done",
+  "result": "PASS",
+  "read_by_claude": "read-only, from this PC after the restart: Win32_OperatingSystem.LastBootUpTime, the first explorer.exe start (the owner's sign-in), the JARVIS processes under %LOCALAPPDATA%\\JARVIS\\releases with their start times and command lines, the Startup folder shortcut",
+  "boot_local": "2026-10-06 20:28:18",
+  "sign_in_local": "2026-10-06 20:34:35",
+  "jarvis_first_process_local": "2026-10-06 20:40:19",
+  "minutes_after_sign_in": 5.7,
+  "started_by_login_launch": true,
+  "processes": 8,
+  "processes_release": "all 8 from releases\\1.0.16-fccde24e2cc6 (electron.exe x 7, python.exe x 1, started 20:40:19 to 20:42:00)",
+  "startup_shortcut_present": true,
+  "note": "for 1.0.15 the same start took 5.4 minutes after sign-in; Windows delays Startup-folder programs, not JARVIS",
+  "recorded_by": "Claude Code (Claude Fable 5.1)"
+}
