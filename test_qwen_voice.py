@@ -65,11 +65,36 @@ class QwenVoiceTests(unittest.TestCase):
         self.assertEqual(request.call_count, 1)
 
     def test_audio_links_outside_alibaba_cloud_are_refused(self):
-        for url in ('https://evil.example/a.wav', 'http://x.aliyuncs.com/a.wav', ''):
+        for url in ('https://evil.example/a.wav', 'http://evil.example/a.wav', 'https://aliyuncs.com.evil.example/a.wav',
+                    'https://x.aliyuncs.com:8443/a.wav', 'ftp://x.aliyuncs.com/a.wav', 'http://aliyuncs.com/a.wav',
+                    'http://[x.aliyuncs.com/a.wav', 5, ''):
             with patch.object(providers, 'request', return_value={'output': {'audio': {'url': url}}}) as request, \
                     self.assertRaises(providers.ProviderError):
                 providers.speech('Hello.', 'qwen')
             self.assertEqual(request.call_count, 1)
+        with patch.object(providers, 'request', return_value={'output': {'audio': {}}}) as request, \
+                self.assertRaises(providers.ProviderError):
+            providers.speech('Hello.', 'qwen')  # neither sound nor link in the answer
+        self.assertEqual(request.call_count, 1)
+
+    def test_plain_http_link_to_an_alibaba_file_server_is_fetched_over_https(self):
+        # Seen on 2026-10-06: Alibaba's Beijing result server answers with http:// links; it speaks https at the same name.
+        link = 'http://dashscope-result-bj.oss-cn-beijing.aliyuncs.com/1d/a1/sound.wav?Expires=1&OSSAccessKeyId=k&Signature=s%2F'
+        calls = []
+        def fake_request(url, data=None, headers=None, method=None, raw=False, timeout=35):
+            calls.append((url, headers, raw))
+            return wav(bytes([1, 0]) * 100) if raw else {'output': {'audio': {'url': link}}}
+        with patch.object(providers, 'request', side_effect=fake_request):
+            audio = providers.speech('Hello.', 'qwen')
+        self.assertEqual(audio[:4], b'RIFF')
+        self.assertEqual(calls[1], ('https://dashscope-result-bj.oss-cn-beijing.aliyuncs.com/1d/a1/sound.wav?Expires=1&OSSAccessKeyId=k&Signature=s%2F', None, True))
+        self.assertEqual(providers.qwen_result_link('https://dashscope-result-sgp.oss-ap-southeast-1.aliyuncs.com/a.wav'),
+                         'https://dashscope-result-sgp.oss-ap-southeast-1.aliyuncs.com/a.wav')
+        self.assertIsNone(providers.qwen_result_link('http://dashscope-result-bj.oss-cn-beijing.aliyuncs.com:99999/a.wav'))
+        self.assertEqual(providers.qwen_result_link('http://x.aliyuncs.com:80/A/B.wav?k=V'), 'https://x.aliyuncs.com/A/B.wav?k=V')
+        self.assertEqual(providers.qwen_result_link('https://x.aliyuncs.com:443/a.wav'), 'https://x.aliyuncs.com/a.wav')
+        self.assertIsNone(providers.qwen_result_link(None))
+        self.assertIsNone(providers.qwen_result_link(['https://x.aliyuncs.com/a.wav']))
 
     def test_auto_prefers_qwen_only_when_configured(self):
         os.environ.update(FISH_API_KEY='fish-key', FISH_VOICE_ID='fish-voice')

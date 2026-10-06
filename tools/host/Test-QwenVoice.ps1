@@ -50,6 +50,16 @@ function Alibaba($address) {
     $uri = $null
     [Uri]::TryCreate($address, [UriKind]::Absolute, [ref]$uri) -and $uri.Scheme -eq 'https' -and $uri.Host.EndsWith('.aliyuncs.com', [StringComparison]::Ordinal)
 }
+function ResultLink($link) {
+    # As providers.qwen_result_link: the link in Alibaba's answer to a finished sound is fetched over https from an
+    # Alibaba file server (*.aliyuncs.com) whatever scheme the answer names. Alibaba's Beijing result server hands
+    # out plain http links (seen 2026-10-06); its file servers answer at the same name over https and the link's
+    # signature does not depend on the scheme. Anything else gives $null: refused, nothing fetched.
+    $where = $null
+    if (-not [Uri]::TryCreate([string]$link, [UriKind]::Absolute, [ref]$where)) { return $null }
+    if (($where.Scheme -ne 'http' -and $where.Scheme -ne 'https') -or -not $where.Host.EndsWith('.aliyuncs.com', [StringComparison]::Ordinal) -or ($where.Port -ne 80 -and $where.Port -ne 443)) { return $null }
+    return 'https://' + $where.Host + $where.PathAndQuery
+}
 
 $key = $values['DASHSCOPE_API_KEY']
 Write-Host "Key file: $EnvFile"
@@ -183,8 +193,16 @@ if ($spoken.output.audio.data) { $sound = [Convert]::FromBase64String($spoken.ou
 elseif ($spoken.output.audio.url) {
     # A link to the finished sound, good for a short time. Fetched without the key, and only from Alibaba.
     $link = [string]$spoken.output.audio.url
-    if (-not ($TestEndpoint -or (Alibaba $link))) { Write-Host 'qwen voice  DOES NOT SPEAK: the answer held no usable sound link.'; exit 1 }
-    try { $sound = (New-Object Net.WebClient).DownloadData($link) } catch { Write-Host ('qwen voice  DOES NOT SPEAK: the sound could not be fetched: ' + $_.Exception.Message); exit 1 }
+    $fetch = $link   # with -TestEndpoint: the stand-in's own link, taken as it is
+    if (-not $TestEndpoint) {
+        $fetch = ResultLink $link
+        if (-not $fetch) {
+            $where = $null
+            $at = if ([Uri]::TryCreate([string]$link, [UriKind]::Absolute, [ref]$where)) { $where.GetLeftPart([UriPartial]::Authority) } else { 'something that is not a web address' }
+            Write-Host "qwen voice  DOES NOT SPEAK: the answer's sound link is at $at, which is not an http or https link to an Alibaba file server (*.aliyuncs.com) on the usual port, so it was not fetched."; exit 1
+        }
+    }
+    try { $sound = (New-Object Net.WebClient).DownloadData($fetch) } catch { Write-Host ('qwen voice  DOES NOT SPEAK: the sound could not be fetched: ' + $_.Exception.Message); exit 1 }
 }
 $clock.Stop()
 if (-not $sound -or $sound.Length -lt 100) { Write-Host 'qwen voice  DOES NOT SPEAK: the answer held no sound.'; exit 1 }

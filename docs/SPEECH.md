@@ -77,6 +77,15 @@ powershell -ExecutionPolicy Bypass -File C:\Users\jonny\JARVIS-claude-workspace\
 After the key file has the voice ID: quit JARVIS completely, start it again, and choose Settings > Voice > VOICE
 PREVIEW > Qwen.
 
+**The link to the finished sound (found 2026-10-06):** Alibaba answers a synthesis request with a short-lived signed
+link to the sound on one of its file servers. The owner's account (one cloned voice, made 2026-09-18) received plain
+`http://` links from `dashscope-result-bj.oss-cn-beijing.aliyuncs.com`; JARVIS and the tool accepted https links
+only, so both refused them and the voice did not speak ("the answer held no usable sound link"). Since then both
+fetch such a link over `https://` from the same Alibaba server (`providers.qwen_result_link`; the server answers at
+the same name over https and the link's signature does not depend on the scheme). A server that is not
+`*.aliyuncs.com`, a scheme other than http or https, or an unusual port is still refused, and the download carries no
+key.
+
 The requests are Alibaba's documented ones (voice list and creation: `.../api/v1/services/audio/tts/customization`,
 model `qwen-voice-enrollment`; the spoken test: the same request JARVIS sends). The key is only ever sent to an
 `https://*.aliyuncs.com` address, and a redirect answer ends the request: neither the key nor the recording is sent

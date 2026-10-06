@@ -208,6 +208,24 @@ def main():
         code, out, _ = run([key_line, 'DASHSCOPE_TTS_URL=https://example.com/tts'], endpoint=False)
         check('refused speech address that is not Alibaba', code == 2 and 'DASHSCOPE_TTS_URL' in out, out)
         check('none of the guards sent anything', len(STATE['requests']) == before)
+        # 8. The link rule of the real-account branch (ResultLink), probed on its own: the stand-in cannot exercise it
+        # (its links are 127.0.0.1 and taken as they are), so the function's own text is cut out of the script.
+        text = SCRIPT.read_text(encoding='utf-8')
+        start = text.index('function ResultLink(')
+        function = text[start:text.index('\n}\n', start) + 3]
+        probes = ['http://dashscope-result-bj.oss-cn-beijing.aliyuncs.com/1d/a1/sound.wav?Expires=1&OSSAccessKeyId=k&Signature=s%2F',
+                  'https://dashscope-result-sgp.oss-ap-southeast-1.aliyuncs.com/a.wav', 'http://x.aliyuncs.com:80/A.wav',
+                  'https://x.aliyuncs.com:443/a.wav', 'https://evil.example/a.wav', 'http://evil.example/a.wav',
+                  'https://aliyuncs.com.evil.example/a.wav', 'https://x.aliyuncs.com:8443/a.wav', 'ftp://x.aliyuncs.com/a.wav',
+                  'http://aliyuncs.com/a.wav', 'not-a-link', '']
+        with tempfile.TemporaryDirectory() as temp:
+            probe = Path(temp) / 'result-link-probe.ps1'
+            probe.write_text(function + '\n' + '\n'.join(f"Write-Output ('{i}=' + [string](ResultLink '{p}'))" for i, p in enumerate(probes)) + '\n', encoding='utf-8')
+            got = subprocess.run(['powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', str(probe)], capture_output=True, text=True, timeout=120).stdout.split()
+        check('the link rule: Alibaba file servers over https on the usual port, everything else refused',
+              got == ['0=https://dashscope-result-bj.oss-cn-beijing.aliyuncs.com/1d/a1/sound.wav?Expires=1&OSSAccessKeyId=k&Signature=s%2F',
+                      '1=https://dashscope-result-sgp.oss-ap-southeast-1.aliyuncs.com/a.wav', '2=https://x.aliyuncs.com/A.wav',
+                      '3=https://x.aliyuncs.com/a.wav', '4=', '5=', '6=', '7=', '8=', '9=', '10=', '11='], ' '.join(got))
     server.shutdown()
     failed = [name for name, ok in checks if not ok]
     print(f'{len(checks) - len(failed)} of {len(checks)} checks passed')

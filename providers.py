@@ -739,6 +739,24 @@ def qwen_tts_url():
     return base[:-len('/compatible-mode/v1')] + '/api/v1/services/aigc/multimodal-generation/generation'
 
 
+def qwen_result_link(url):
+    """The link in Alibaba's answer to a finished sound, as JARVIS fetches it: an Alibaba file server
+    (*.aliyuncs.com) over https. Alibaba's Beijing result server hands out plain http links (seen on
+    2026-10-06); its file servers answer at the same name over https, and the link's signature does not
+    depend on the scheme, so the sound is fetched over https either way. Anything else is refused."""
+    if not isinstance(url, str):
+        return None
+    try:
+        parsed = urllib.parse.urlparse(url)
+        host = (parsed.hostname or '').lower()
+        port = parsed.port
+    except ValueError:
+        return None
+    if parsed.scheme not in ('http', 'https') or not host.endswith('.aliyuncs.com') or port not in (None, 80, 443):
+        return None
+    return urllib.parse.urlunparse(('https', host, parsed.path, parsed.params, parsed.query, ''))
+
+
 def qwen_speech(text):
     """Cloned JARVIS voice through Model Studio non-real-time Qwen-TTS."""
     key, voice = os.getenv('DASHSCOPE_API_KEY'), os.getenv('QWEN_TTS_VOICE')
@@ -754,11 +772,10 @@ def qwen_speech(text):
         if audio.get('data'):
             clips.append(base64.b64decode(audio['data']))
             continue
-        url = audio.get('url') or ''
-        parsed = urllib.parse.urlparse(url)
-        if parsed.scheme != 'https' or not (parsed.hostname or '').endswith('.aliyuncs.com'):
+        link = qwen_result_link(audio.get('url'))
+        if not link:
             raise ProviderError('Qwen voice returned no usable audio link.')
-        clips.append(request(url, raw=True, timeout=60))  # presigned link: no credentials sent
+        clips.append(request(link, raw=True, timeout=60))  # presigned link: no credentials sent
     if not clips:
         raise ValueError('No spoken text remains after formatting cleanup.')
     return join_audio(clips)
