@@ -44,8 +44,8 @@ switch) was the owner's act throughout.
 
 | # | Check | State |
 |---|---|---|
-| 1 | Away from home, Wi-Fi off, cellular on: a typed question answered | not yet |
-| 2 | Hold to speak: words as text, answered, the reply spoken in JARVIS's voice | the words-as-text and the answer seen (the first exchange reads like a transcription); the spoken reply not yet confirmed (microphone and speakers ticks on the PC, "Speak replies" in the app's settings) |
+| 1 | Away from home, Wi-Fi off, cellular on: a typed question answered | **done on cellular (5G, no Wi-Fi symbol) at 22:20 local**, from home: a spoken question answered, link 183 to 215 ms (22 ms on Wi-Fi). The path away from home is the same one (Tailscale over cellular); the physically-away case stays to be seen but adds nothing to the route. Screenshots `docs/phone-evidence/phone-app-cellular-*-20261006-2220.png` |
+| 2 | Hold to speak: words as text, answered, the reply spoken in JARVIS's voice | **done at 22:20 local on cellular**: "Hey Jarvis, can you still hear me?" heard by the Core's speech recognition and shown as text, THINKING "On the PC", then SPEAKING "In JARVIS's voice" (the speakers tick on the PC and Speak replies in the app), then STANDING BY with the answer; a second exchange answered |
 | 3 | Close and reopen: still paired, the conversation continues | not yet |
 | 4 | Chats lists the phone's conversations; search finds one | not yet |
 | 5 | Status shows live CPU, memory, storage, Core version, round trip, stop state | the Ask readouts show Core 1.0.16, CPU, memory, link 22 ms and STOP CLEAR; the Status screen itself not yet |
@@ -54,7 +54,7 @@ switch) was the owner's act throughout.
 | 8 | Switch off, or Tailscale off: "Core cannot be reached" | the message was seen while the door was still closed (before the switch was on); the deliberate test not yet |
 | 9 | With the D2 tick, "remember ..." is known on the PC; without it, refused plainly | not yet |
 | 10 | The desktop JARVIS works as before; the activity log and Settings > Devices name the phone | not yet looked at |
-| 11 | Said plainly: cellular versus Wi-Fi, fix rounds on the Mac | tonight everything ran on home Wi-Fi; fix rounds: the look (one zip), the icon fix (one zip), the Info entry (by hand) |
+| 11 | Said plainly: cellular versus Wi-Fi, fix rounds on the Mac | the pairing and the first conversation on home Wi-Fi (22:15); checks 1 and 2 on cellular with Wi-Fi off (22:20), from home; fix rounds: the look (one zip), the icon fix (one zip), the Info entry (by hand) |
 
 ## 4. Next
 
