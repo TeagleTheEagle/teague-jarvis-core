@@ -39,6 +39,12 @@ switch) was the owner's act throughout.
 6. **The Xcode asset steps** of the look (two image sets, the AppIcon) went wrong twice before they were right; the
    file-level fix (`JARVIS-ios-icon-fix-20261006-2127.zip`, the catalog folders replaced in Finder) is the method to
    use next time.
+7. **The stop note outlives the stop** (seen at 22:24): after RESUME on the PC the Ask screen read STANDING BY with
+   STOP CLEAR, but the yellow line "Emergency stop is on. JARVIS does nothing until RESUME is pressed on the PC."
+   stayed until the next action. The note is set from the Core's refusal and is not cleared when a later `hello` or
+   `status` says the stop has lifted. Fix in the next app round with the header layout.
+8. **Storage 92 %** on the Status screen is the PC's C: drive, as JARVIS measures it (15.7 GB free of 238 at the
+   update). Not an app matter; the C: cleanup steps are parked on the owner's word.
 
 ## 3. The plan's section 10 checks
 
@@ -47,13 +53,13 @@ switch) was the owner's act throughout.
 | 1 | Away from home, Wi-Fi off, cellular on: a typed question answered | **done on cellular (5G, no Wi-Fi symbol) at 22:20 local**, from home: a spoken question answered, link 183 to 215 ms (22 ms on Wi-Fi). The path away from home is the same one (Tailscale over cellular); the physically-away case stays to be seen but adds nothing to the route. Screenshots `docs/phone-evidence/phone-app-cellular-*-20261006-2220.png` |
 | 2 | Hold to speak: words as text, answered, the reply spoken in JARVIS's voice | **done at 22:20 local on cellular**: "Hey Jarvis, can you still hear me?" heard by the Core's speech recognition and shown as text, THINKING "On the PC", then SPEAKING "In JARVIS's voice" (the speakers tick on the PC and Speak replies in the app), then STANDING BY with the answer; a second exchange answered |
 | 3 | Close and reopen: still paired, the conversation continues | not yet |
-| 4 | Chats lists the phone's conversations; search finds one | not yet |
-| 5 | Status shows live CPU, memory, storage, Core version, round trip, stop state | the Ask readouts show Core 1.0.16, CPU, memory, link 22 ms and STOP CLEAR; the Status screen itself not yet |
-| 6 | STOP on the phone stops the PC's JARVIS; RESUME on the PC restores both | not yet |
+| 4 | Chats lists the phone's conversations; search finds one | **done 22:23**: "1 CONVERSATIONS FROM THIS PHONE", the conversation ACTIVE with its last line, 11 messages, TODAY; opened, every message with its time, CONTINUE offered (`phone-app-chats-20261006-2223.png`, `phone-app-conversation-view-20261006-2223.png`). Search not tried |
+| 5 | Status shows live CPU, memory, storage, Core version, round trip, stop state | **done 22:23**: THIS PHONE reached, PAIRED, 24 ms round trip, address `thegrizzlybear:8790`, Core 1.0.16-fccde24e2cc6, emergency stop not stopped, may save memories and tasks (ticked on the PC); SYSTEM HEALTH CPU 5 %, memory 27 %, storage 92 % (red: the PC's C: drive is that full), link 24 ms, Core up 1 h 42 min, last reply 3.9 s; OVERVIEW 4 open tasks, three projects, nothing upcoming; read at 22:23:53 (`phone-app-status-20261006-2223.png`) |
+| 6 | STOP on the phone stops the PC's JARVIS; RESUME on the PC restores both | **done 22:24**: STOP ALL on the phone: EMERGENCY STOP, STOP ON, red ring, "Press RESUME on the PC"; after RESUME on the PC: STANDING BY, STOP CLEAR, the ring cyan (`phone-app-emergency-stop-20261006-2224.png`, `phone-app-after-resume-20261006-2224.png`). Whether the PC's banner named the phone was not photographed. **Defect:** after the resume the yellow note "Emergency stop is on ..." stayed on the Ask screen until the next action (section 2, item 7) |
 | 7 | REVOKE on the PC: "pair again"; pairing again works | not yet |
 | 8 | Switch off, or Tailscale off: "Core cannot be reached" | the message was seen while the door was still closed (before the switch was on); the deliberate test not yet |
-| 9 | With the D2 tick, "remember ..." is known on the PC; without it, refused plainly | not yet |
-| 10 | The desktop JARVIS works as before; the activity log and Settings > Devices name the phone | not yet looked at |
+| 9 | With the D2 tick, "remember ..." is known on the PC; without it, refused plainly | the tick is on (Status shows it); "remember ..." not yet tried |
+| 10 | The desktop JARVIS works as before; the activity log and Settings > Devices name the phone | **Settings > Devices done 22:23**: the Private network line green "Open at 100.103.95.28:8790 (thegrizzlybear.tail806593.ts.net)"; DEVICES (1 PAIRED): This PC, the glasses test client, and `phone` PHONE Online "Last seen just now" with microphone, speakers, display and "May save memories and tasks" ticked, RENAME and REVOKE (`pc-devices-phone-paired-20261006-2223.jpg`). The desktop JARVIS answering as before and the activity log not photographed |
 | 11 | Said plainly: cellular versus Wi-Fi, fix rounds on the Mac | the pairing and the first conversation on home Wi-Fi (22:15); checks 1 and 2 on cellular with Wi-Fi off (22:20), from home; fix rounds: the look (one zip), the icon fix (one zip), the Info entry (by hand) |
 
 ## 4. Next
