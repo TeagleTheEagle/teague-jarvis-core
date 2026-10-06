@@ -128,6 +128,23 @@ Every run's first record (E0) notes the Windows build and the Administrators mem
   "operating system started" entry 17330, one PC restart since the 1.0.15 run). Both test scripts still carry the
   1.0.15 names as their fake data: they test the tools' decisions, not a release.
 
+## Everyday update 1.0.15 -> 1.0.16, rehearsed in a sandbox (2026-10-06, after the VM check)
+
+`rehearse-everyday-update-1016.ps1` is the 1.0.15 harness (`docs/release-rehearsal-20261006-1015/rehearse-everyday-update-1015.ps1`)
+with the build names and ids changed and the launcher taken from `tools/host/update-1.0.16/` (the 1.0.15 launcher
+copied unchanged except its default folder and the plan it names; the 1.0.14 and 1.0.15 files stay as their approvals
+recorded them; launcher sha256 `1abb0be581ee425dcbfdbbae4835511158a8950d96fbb5ae83a0d3626532b20a`, `update-step.cmd`
+byte for byte the 1.0.14 one). Records in `update-rehearsal/` (`rehearsal-summary.json`, `rehearsal.output.txt`,
+`evidence/`). **13 of 13 checks PASS** (20:06-20:09 local): 1.0.15 installed into
+`D:\JARVIS-release-work\update-rehearsal-1.0.16\home` and started once; the launcher refused without an approval file
+and refused while the sandbox JARVIS ran; step 1 (package hash, 1.0.15 verified, unpack 18.2 s); step 2 (backup with
+1.0.15's own code, 174 files, verified, test restore passed, hash-checked copy, program still verified); step 3
+(update 28.5 s: verify package 8.1 s, copy 11.0 s, verify copy 7.8 s, stop 0.7 s, switch 0.7 s; verified; database
+byte-for-byte unchanged; shortcuts kept; JARVIS not started); 1.0.16 started on the same data; a rerun changed nothing;
+rollback with its approval file PASS (1.0.15 verified, 7.4 s); a rerun after it changed nothing. The owner's installed
+JARVIS was not running (0 processes before and after) and was never addressed; no sandbox process was left. The plan
+for the owner: `docs/UPDATE-EVERYDAY-1.0.16.md`.
+
 ## Not checked here
 
 Anything in VirtualBox; a real Windows restart (the restart check was exercised with what Windows really says, and

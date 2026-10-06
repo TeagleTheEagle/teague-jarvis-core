@@ -1,0 +1,75 @@
+{
+    "base":  "D:\\JARVIS-release-work\\update-rehearsal-1.0.16",
+    "launcher_sha256":  "1abb0be581ee425dcbfdbbae4835511158a8950d96fbb5ae83a0d3626532b20a",
+    "checks":  [
+                   {
+                       "check":  "sandbox: 1.0.15 installed",
+                       "passed":  true,
+                       "detail":  "installed"
+                   },
+                   {
+                       "check":  "sandbox: 1.0.15 running on its data",
+                       "passed":  true,
+                       "detail":  "1.0.15-63362929d7ad"
+                   },
+                   {
+                       "check":  "refused without approval",
+                       "passed":  true,
+                       "detail":  "exit 2"
+                   },
+                   {
+                       "check":  "refused while JARVIS runs",
+                       "passed":  true,
+                       "detail":  "exit 2"
+                   },
+                   {
+                       "check":  "step 1 check",
+                       "passed":  true,
+                       "detail":  "exit 0"
+                   },
+                   {
+                       "check":  "step 2 backup",
+                       "passed":  true,
+                       "detail":  "exit 0"
+                   },
+                   {
+                       "check":  "step 3 update",
+                       "passed":  true,
+                       "detail":  "exit 0"
+                   },
+                   {
+                       "check":  "update: database unchanged",
+                       "passed":  true,
+                       "detail":  "17e732cd92d9a72ab28fd8eca2ad00d00e54f8f7517623f3f0eb8943ce814a13"
+                   },
+                   {
+                       "check":  "update: current is 1.0.16, previous 1.0.15",
+                       "passed":  true,
+                       "detail":  "1.0.16-fccde24e2cc6"
+                   },
+                   {
+                       "check":  "sandbox: 1.0.16 running on the same data",
+                       "passed":  true,
+                       "detail":  "1.0.16-fccde24e2cc6"
+                   },
+                   {
+                       "check":  "rerun changes nothing",
+                       "passed":  true,
+                       "detail":  "exit 0"
+                   },
+                   {
+                       "check":  "rollback to 1.0.15",
+                       "passed":  true,
+                       "detail":  "1.0.15-63362929d7ad"
+                   },
+                   {
+                       "check":  "rerun after rollback changes nothing",
+                       "passed":  true,
+                       "detail":  "exit 0"
+                   }
+               ],
+    "failed":  0,
+    "live_processes_before":  0,
+    "live_processes_after":  0,
+    "sandbox_processes_after":  0
+}
