@@ -90,9 +90,15 @@ run again and this record closed.
 phone, replies appearing while written, a Siri shortcut, notifications, the Dynamic Island, pairing by QR code, HTTPS
 through Tailscale, the Halo glasses with the phone as their bridge, a faster start of JARVIS at sign-in, the always-on
 mini PC question. App-only candidates offered to the owner on 2026-10-06 for the next round: replies appearing as they
-are written (the Core already streams the pieces), Bluetooth headsets and audio interruptions, the screen awake while
-listening or speaking, Face ID on open, the speak-replies button on the Ask screen with a vibration on the reply, the
-Siri shortcut, text size following the phone's setting.
+are written (offered in error: the Core keeps a device's answer whole, so this needs a Core change; `docs/PHONE-APP.md`
+section 7, item 10), Bluetooth headsets and audio interruptions, the screen awake while listening or speaking, Face ID
+on open, the speak-replies button on the Ask screen with a vibration on the reply, the Siri shortcut, text size
+following the phone's setting.
+
+**Round 2 was written on 2026-10-06 late evening** (the owner: "let's make some big moves on the app"): the four
+fixes above, headsets and interruptions, the screen awake, Face ID on open, the Voice button with a vibration, and
+Siri; `docs/PHONE-APP.md` section 7 is the record and `phone/ios/README-round2.md` the owner's Mac steps. Check 3 is
+run again by the owner once it is built; this record closes then.
 
 **Core-side findings from the phone checks, for a Core release on the owner's word:** "remember that" resolving to the
 line before it (item 9); the action guard's false positive (item 11); the camera route for "look at this"; pairing by

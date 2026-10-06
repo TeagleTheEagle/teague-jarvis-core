@@ -43,7 +43,8 @@ enum Keychain {
     }
 }
 
-/// What the app keeps outside the Keychain: the Core's address, the pairing's name, the conversation in progress.
+/// What the app keeps outside the Keychain: the Core's address, the pairing's name, the conversation in progress,
+/// the two choices of the settings sheet, and a question Siri took that the app has not sent yet.
 enum AppSettings {
     private static let defaults = UserDefaults.standard
 
@@ -75,10 +76,30 @@ enum AppSettings {
         set { defaults.set(newValue, forKey: "conversation.current") }
     }
 
-    /// Whether replies are spoken (on until the owner turns it off in the phone's settings sheet).
+    /// Whether replies are spoken (on until the owner turns it off in the settings sheet or with the Voice button).
     static var speakReplies: Bool {
         get { (defaults.object(forKey: "voice.speakReplies") as? Bool) ?? true }
         set { defaults.set(newValue, forKey: "voice.speakReplies") }
+    }
+
+    /// Face ID (or the passcode) before the screens show. Off until the owner turns it on in the settings sheet:
+    /// the Xcode project needs the Info entry "Privacy - Face ID Usage Description" first (phone/ios/README-round2.md),
+    /// and without that entry iOS ends the app at the first Face ID prompt.
+    static var lockEnabled: Bool {
+        get { defaults.bool(forKey: "lock.enabled") }
+        set { defaults.set(newValue, forKey: "lock.enabled") }
+    }
+
+    /// "Hey Siri, ask JARVIS": the question Siri took, kept until the app (in front and unlocked) sends it, and when
+    /// Siri took it (a question older than two minutes is dropped, not sent into a later conversation unasked).
+    static var siriQuestion: String? {
+        get { defaults.string(forKey: "siri.question") }
+        set { defaults.set(newValue, forKey: "siri.question") }
+    }
+
+    static var siriQuestionAt: Date? {
+        get { defaults.object(forKey: "siri.questionAt") as? Date }
+        set { defaults.set(newValue, forKey: "siri.questionAt") }
     }
 
     static func forgetPairing() {
@@ -86,5 +107,7 @@ enum AppSettings {
         deviceId = nil
         deviceName = nil
         conversation = nil
+        siriQuestion = nil
+        siriQuestionAt = nil
     }
 }

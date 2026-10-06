@@ -12,7 +12,7 @@ struct StatusView: View {
             PageBackground()
             VStack(spacing: 8) {
                 ScreenHeader(subtitle: "Status & profile") {
-                    HStack(spacing: 10) {
+                    HStack(spacing: 8) {
                         HStack(spacing: 6) {
                             StatusDot(color: session.reached ? Theme.good : Theme.muted)
                             Caption(session.reached ? "Online" : "Not reached", color: Theme.text, size: 9)

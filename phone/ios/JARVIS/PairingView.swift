@@ -55,7 +55,7 @@ struct PairingView: View {
                         .foregroundStyle(Theme.ground2)
                     }
                     .disabled(!canPair || working)
-                    Text("This phone declares its microphone, speakers and display. What the owner ticks on the PC is what it may use. The phone keeps only its key (in the Keychain), the Core's address and name, which conversation is open, and the speak-replies choice. The conversations themselves stay on the PC.")
+                    Text("This phone declares its microphone, speakers and display. What the owner ticks on the PC is what it may use. The phone keeps only its key (in the Keychain), the Core's address and name, which conversation is open, the speak-replies and Face ID choices, and a question Siri took until it is sent. The conversations themselves stay on the PC.")
                         .font(.system(size: 10)).foregroundStyle(Theme.muted.opacity(0.8)).multilineTextAlignment(.center)
                 }
                 .padding(.horizontal, 16).padding(.bottom, 24)
@@ -161,6 +161,20 @@ struct SettingsSheet: View {
                         }
                         Panel(marked: false) {
                             VStack(alignment: .leading, spacing: 8) {
+                                Toggle(isOn: $session.lockEnabled) {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Lock with Face ID").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text)
+                                        Text("Face ID, or the phone's passcode, before the screens show: at every open and after a minute away. STOP ALL works on the lock screen without unlocking.")
+                                            .font(.system(size: 10)).foregroundStyle(Theme.muted)
+                                    }
+                                }
+                                .tint(Theme.accent)
+                                Text("Turn this on only once the Face ID entry is in the Xcode project (the round-2 README says how). Without it iOS ends the app at the first prompt.")
+                                    .font(.system(size: 10)).foregroundStyle(Theme.warn.opacity(0.9))
+                            }
+                        }
+                        Panel(marked: false) {
+                            VStack(alignment: .leading, spacing: 8) {
                                 Text("THIS PAIRING").font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.text)
                                 Text("Forgetting removes the key from this phone. The PC still lists the device until the owner removes it there; pairing again gives a new key.")
                                     .font(.system(size: 10)).foregroundStyle(Theme.muted)
@@ -174,7 +188,7 @@ struct SettingsSheet: View {
                         Panel(marked: false) {
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("ABOUT").font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.text)
-                                Text("JARVIS for iPhone, version 1. One Core, one JARVIS: this phone is a client of the Core on the owner's PC over the owner's private network. The emergency stop can be raised here and lifted only on the PC.")
+                                Text("JARVIS for iPhone, version 1.1. One Core, one JARVIS: this phone is a client of the Core on the owner's PC over the owner's private network. The emergency stop can be raised here, from Siri (\"Hey Siri, stop JARVIS\") and from the lock screen, and lifted only on the PC. \"Hey Siri, ask JARVIS\" opens the app with your question.")
                                     .font(.system(size: 10)).foregroundStyle(Theme.muted)
                             }
                         }

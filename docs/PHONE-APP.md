@@ -13,7 +13,8 @@ scratch").
 
 ## 1. Where it is
 
-`phone/ios/JARVIS/`, twelve Swift files, SwiftUI, iPhone only, iOS 18 or later (decision D4). The three September
+`phone/ios/JARVIS/`, thirteen Swift files since round 2 (section 7; twelve in version 1), SwiftUI, iPhone only,
+iOS 18 or later (decision D4; the owner's project sets iOS 26 as the minimum). The three September
 files (`Domain.swift`, `SessionModel.swift`, `MockCoreClient.swift`) are kept beside it in `phone/ios/september-2026/`
 as the record of the first attempt; nothing of them is in the project (their state names and their rule "the Core
 decides, the phone shows" are kept in spirit). `phone/ios/README.md` is the Mac guide; `docs/PHONE-TAILSCALE-STEPS.md`
@@ -27,18 +28,19 @@ The owner moves it to the Mac by AirDrop, a USB stick or iCloud Drive; nothing i
 
 | File | What it is |
 |---|---|
-| `JARVISApp.swift` | the app, the three tabs, the pairing screen before them; `hello` whenever the app comes to the front |
+| `JARVISApp.swift` | the app, the three tabs, the pairing screen before them, the lock screen (round 2); `hello` whenever the app comes to the front |
 | `Theme.swift` | the brief's colours and the shared pieces: page ground, panel with corner marks, captions, header, STOP ALL |
 | `Models.swift` | the Core's answers as Swift types, named as the Core names them (`device_id`, `run_id`, `core_version`...) |
 | `CoreClient.swift` | the device routes: `POST /api/device/<op>`, JSON, `X-Jarvis-Device: <id>.<key>`, the Core's sentences shown as they are |
-| `Keychain.swift` | the key in the iPhone Keychain (this device only); the address, the pairing's name and the conversation in progress in the app's settings |
-| `SessionModel.swift` | what the phone is doing: pair, hello, a question (start, then events with a cursor until done), the reply spoken, hold to speak, STOP, new or continued conversation, the PC's health |
-| `AudioRecorder.swift` | hold to speak: the microphone as 16 kHz mono 16-bit PCM, at most 30 s (the Core's format) |
-| `AudioPlayer.swift` | plays the reply's sound (MP3 or WAV, whichever voice the owner uses) and waits for its end |
-| `AskView.swift` | screen 1: the Core ring with the state, the readouts, the state words, the last lines, TYPE, hold-to-speak MICROPHONE, cancel or new chat |
+| `Keychain.swift` | the key in the iPhone Keychain (this device only); the address, the pairing's name, the conversation in progress, the speak-replies and Face ID choices and a Siri question in transit (round 2) in the app's settings |
+| `SessionModel.swift` | what the phone is doing: pair, hello, a question (start, then events with a cursor until done), the reply spoken, hold to speak, STOP, new or continued conversation, the PC's health; round 2: the lines reloaded at launch, the lock, Siri's question, the vibrations, the screen kept awake |
+| `AudioRecorder.swift` | hold to speak: the microphone as 16 kHz mono 16-bit PCM, at most 30 s (the Core's format); Bluetooth headsets and a headset change mid-hold (round 2) |
+| `AudioPlayer.swift` | plays the reply's sound (MP3 or WAV, whichever voice the owner uses) and waits for its end; paused and resumed around a call, ended when a headset goes (round 2) |
+| `AskView.swift` | screen 1: the Core ring with the state, the readouts, the state words, the last lines, TYPE, hold-to-speak MICROPHONE, the Voice button (round 2), cancel or new chat |
 | `ChatsView.swift` | screen 2: this phone's conversations (`conversations`), search, one conversation (`history`), continue it |
 | `StatusView.swift` | screen 3: this phone's pairing and link, SYSTEM HEALTH (`metrics`), OVERVIEW (`overview`), settings |
-| `PairingView.swift` | the pairing screen (name or address, port, the eight-digit code) and the settings sheet (speak replies, forget this pairing, about) |
+| `PairingView.swift` | the pairing screen (name or address, port, the eight-digit code) and the settings sheet (speak replies, lock with Face ID, forget this pairing, about) |
+| `SiriIntents.swift` | round 2: "Hey Siri, ask JARVIS" (opens the app with the question) and "Hey Siri, stop JARVIS" (the emergency stop from the background); App Intents in the app target |
 
 ## 2. How it talks to the Core (docs/PHONE-CORE-1.0.16.md section 6, followed exactly)
 
@@ -47,7 +49,8 @@ The owner moves it to the Mac by AirDrop, a USB stick or iCloud Drive; nothing i
 - **Pair:** `pair {code, capabilities: [microphone, speakers, display]}`; the `credential` goes to the Keychain
   (`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`), the id and name to the app's settings. Shown once, never again.
 - **Hello:** `hello {capabilities}` when the app starts or comes to the front: the name, what the owner allows, the
-  tick, whether the stop holds. `status` for the Status screen's round trip.
+  tick, whether the stop holds. `status` for the Status screen's round trip. Since round 2, at a launch with a
+  conversation restored, `history` follows the first hello to put that conversation's lines back on the Ask screen.
 - **A question:** `start {text, conversation}` with a conversation id `device-<id>-<yyyyMMdd-HHmmss>` (every
   conversation of a device starts with its id; the Core refuses any other); then `events {run_id, after}` in a loop
   (the Core waits up to ten seconds for something new) until `done`. The reply is the text of `assistant.completed`
@@ -57,16 +60,21 @@ The owner moves it to the Mac by AirDrop, a USB stick or iCloud Drive; nothing i
   is then sent as a question. **Spoken reply:** `speech {text}` (up to 12,000 characters) and the returned sound
   played, when "Speak replies" is on and the owner allows the speakers.
 - **STOP ALL** (every screen, with a confirmation): `stop {}`. The phone shows EMERGENCY STOP and "Press RESUME on
-  the PC"; it cannot resume. While the stop holds, the Core's refusals are shown as they are.
+  the PC"; it cannot resume. While the stop holds, the Core's refusals are shown as they are. Since round 2 the same
+  `stop {}` goes from the lock screen (with the confirmation) and from "Hey Siri, stop JARVIS" in the background
+  (Siri's own confirmation, none in the app).
 - **Chats:** `conversations {}` and `history {conversation, limit: 100}`; search filters on the phone.
-- **Status:** `metrics {}` every 5 seconds while the Status screen is open (12 of the 120 calls a minute allowed),
-  `overview {}` every 30 seconds; the link time is the phone's own round trip of `status`/`hello`.
+- **Status:** `metrics {}` every 5 seconds while the Ask or the Status screen is open (12 of the 120 calls a minute
+  allowed), `overview {}` every 30 seconds; the link time is the phone's own round trip of `status`/`hello`. Since
+  round 2 a reading that says the stop has lifted also clears the stop note.
 - **Refusals:** 401 means revoked or lost ("pair again"): the key is removed from the phone and the pairing screen
   returns with the address kept; 403 (a capability not ticked, or not allowed) and 400 (the Core's sentence) are
   shown under the state; 429 (locked out) likewise; a connection failure reads CORE NOT REACHED with the three things
   to check (Tailscale on both, the switch on).
 - **Stored on the phone:** the key (Keychain), the address, the device id and name, the conversation in progress,
-  the "speak replies" choice. Nothing else: the lines on screen are the Core's record, read again from Chats.
+  the "speak replies" choice, the "lock with Face ID" choice (round 2) and a question Siri took that the app has
+  not sent yet (round 2; cleared once sent). Nothing else: the lines on screen are the Core's record, read again
+  from Chats (and, since round 2, read once more at launch for the conversation in progress).
 
 ## 3. The look (the canvas N7JboAbsdEFwPFhrFFdAcs, docs/PHONE-PLAN.md section 6)
 
@@ -89,11 +97,11 @@ Checked on this PC: that every route, field name and refusal the app uses is wha
 2026-10-06), and an independent review of the twelve files (section 5). The checks that count are the plan's section
 10, run by the owner with the app on the phone and 1.0.16 on the PC; the result record will be `docs/PHONE-V1-RESULT.md`.
 
-Known limits of version 1: no camera, no Siri, no notifications, no Dynamic Island, no glasses (version 2, plan
-section 11); the reply is not streamed (decision D3); a recording longer than 30 seconds is cut at 30; Bluetooth
-headsets are not routed for the microphone (the phone's own microphone and speaker are used); the app shows the last
-six lines on Ask and the whole conversation in Chats; the text sizes are fixed (no Dynamic Type); the tab bar's
-colours on iOS 26's new look are to be seen on the phone.
+Known limits of version 1 (as first built; round 2 in section 7 added Siri, headsets, Face ID and more): no camera,
+no notifications, no Dynamic Island, no glasses (version 2, plan section 11); the reply is not streamed (decision
+D3, and the Core keeps a device's answer whole: section 7, item 10); a recording longer than 30 seconds is cut at
+30; the app shows the last six lines on Ask and the whole conversation in Chats; the text sizes are fixed (no
+Dynamic Type); the tab bar's colours on iOS 26's new look are to be seen on the phone.
 
 ## 5. Independent review (one reviewer, 2026-10-06): no compile error found by reading; 1 high, 5 medium, 19 low, all applied
 
@@ -173,3 +181,95 @@ was told to delete the app from the phone and run it again from Xcode.
 
 **Not checked here:** no compiler on this PC (as section 4). The owner builds the changed files on the Mac; the zip for
 the Mac is named in `docs/CURRENT-STATUS.md`.
+
+## 7. Round 2 (2026-10-06, late evening; the owner's "let's make some big moves on the app")
+
+Status: **WRITTEN AND INDEPENDENTLY REVIEWED ON THIS PC, NOT YET BUILT ON THE MAC.** The zip for the Mac and the
+owner's steps are named in `docs/CURRENT-STATUS.md` and `phone/ios/README-round2.md` (thirteen Swift files, twelve
+replaced and one new, plus the icon's catalog folder). The agreed list came from the 22:55 handover (the four fixes of
+`docs/PHONE-V1-RESULT.md` plus six additions); every item is below, including the one that could not be done.
+
+1. **The conversation after a relaunch (check 3):** at the first hello after a launch with a restored conversation
+   id, `SessionModel.reloadLines` reads the lines with `history {conversation, limit: 100}` (the route Chats uses)
+   and keeps the last 80 on the Ask screen. Skipped when a question was typed before that hello (those earlier lines
+   are then in Chats); not done after New chat, Continue or a new pairing, which set their own lines.
+2. **The header at the phone's width:** `ScreenHeader` (Theme.swift) gives the right-hand items their full size
+   (`fixedSize`, layout priority 1) and lets the subtitle shrink to three quarters and then truncate; "JARVIS" stays on
+   one line; the Ask header's trailing spacing is 8 pt. The longest content (NOT REACHED, STOPPED, the menu icon)
+   fits a 393 pt phone.
+3. **The stale stop note:** the `stopped` property's observer clears a notice that mentions the emergency stop when
+   a later hello, status or metrics reading says the stop has lifted.
+4. **The icon:** the files are right (1024 x 1024 RGB, no transparency, the badge); what is left is on the Mac:
+   README-round2 section 3 (the AppIcon slot filled, the target's App Icon set to AppIcon, Clean Build Folder, the app
+   deleted from the phone before the run).
+5. **Bluetooth headsets and interruptions:** the recorder and the player set the audio session with
+   `allowBluetoothHFP` (named `allowBluetooth` before the iOS 26 SDK; `#if compiler(>=6.2)` picks the name the
+   compiler knows) and `allowBluetoothA2DP`. With both set, iOS keeps a headset that has both profiles on HFP while it is
+   connected (its microphone works; the reply is at call quality there, not stereo); headphones with A2DP only get
+   stereo and the phone's own microphone records. `allowBluetoothHFP` is available from iOS 26, the project's
+   minimum (review note: the compiler gate would not make the file build for an iOS 18 target). A headset
+   coming or going mid-hold ends the hold with a sentence (`AVAudioEngineConfigurationChange`); a call or another
+   app's sound ends a recording with a sentence and pauses the reply, which goes on when iOS says it may and ends
+   otherwise; a headset that goes away ends the reply (nothing plays on from the speaker unasked).
+6. **The screen stays awake** (`isIdleTimerDisabled`) while JARVIS listens, thinks, works or speaks; the phone's own
+   timer otherwise.
+7. **Face ID on open:** "Lock with Face ID" in the settings sheet, off until the owner turns it on; Face ID with the
+   passcode as the fallback (`LAContext`, `.deviceOwnerAuthentication`); locked at every launch and after more than a
+   minute in the background; the lock screen has UNLOCK and STOP ALL (the stop works without unlocking); a phone with
+   neither Face ID nor a passcode turns the switch off again and says so. The Info entry
+   `NSFaceIDUsageDescription` is the owner's Xcode step (README-round2 section 2) and the switch's own warning says so.
+8. **The Voice button and the vibration:** a fourth round button on the Ask screen mutes or unmutes the spoken reply
+   (the same setting as the sheet's switch); a short success vibration when a reply arrives, an error one when the
+   Core says the request failed, a warning one when the emergency stop is raised, and a light impact when a hold
+   takes.
+9. **Siri** (`SiriIntents.swift`, App Intents in the app target): `AskJarvisIntent` opens the app with the question
+   Siri took ("What should I ask JARVIS?"), stored in the app's settings and posted as a notification; the app sends
+   it as if typed once it is in front and unlocked, interrupting a question in progress; unpaired, Siri says to pair
+   first. `StopJarvisIntent` raises the emergency stop through the Core's `stop` route without opening the app and
+   repeats the Core's sentence on a refusal. `JarvisShortcuts` registers the phrases "Ask JARVIS", "Ask JARVIS a
+   question", "Talk to JARVIS", "Stop JARVIS", "JARVIS emergency stop", "Stop everything on JARVIS". Siri says only
+   "Asking JARVIS."; the reply is the app's, in JARVIS's voice, because the Core's answers take longer than Siri
+   waits for a spoken reply.
+10. **Replies appearing as they are written: NOT DONE, and not possible in the app alone.** `server.py` decides
+    streaming with `not getattr(run, 'wearable', False)` ("Not for another device's question (its client waits for
+    the finished reply)"), and the pieces of a streamed answer go to the PC window's drafts, not into the run's
+    events that the device route serves. The 22:55 handover's note that the Core sends `assistant.delta` to the phone
+    when the PC's streaming setting is on was wrong: the phone gets one `assistant.delta` with the checked answer. A
+    Core change (serve a device run's draft with `events`) is a candidate for a Core release on the owner's word.
+
+Independent review (one reviewer, 2026-10-06 late evening): section 8, every finding applied.
+
+Not checked here: no compiler on this PC; the owner builds on the Mac and runs the eight checks of README-round2
+section 5; check 3 of the plan is then run again and `docs/PHONE-V1-RESULT.md` closed.
+
+## 8. Independent review of round 2 (one reviewer, 2026-10-06 late evening): no compile error by reading; 1 high, 2 medium, 7 low, all applied
+
+The reviewer read the thirteen files against the iOS 26 SDK (Swift 5 mode, nonisolated default, iOS 26 minimum) and
+against `device_gateway.py` and `wearables/service.py`, and found every op, body, header and status code as the Core
+serves them (the one new call, `history` from the Ask screen, is the route Chats used already) and the stop sentences
+the app matches on real (`permissions.STOPPED_MESSAGE`, server.py's "Emergency stop is on"). Applied:
+
+- **High:** the lock re-prompted on every inactive-to-active cycle of the scene (the control centre, a call banner,
+  the Siri overlay, and the Face ID sheet itself), so "Not now" prompted again at once and the lock screen's STOP ALL
+  could never be tapped; after a successful Face ID a second prompt could follow. Now only a stay in the background
+  of more than a minute locks again, and the prompt comes from the lock screen alone (on appear and from UNLOCK).
+- **Medium:** a Siri question was kept with no age and sent only after a successful hello, so with the Core
+  unreachable it would have gone out hours later into whatever conversation was open; now it is sent at once,
+  reached or not (the "cannot be reached" sentence shows under it), and one older than two minutes is dropped with a
+  sentence. The "no passcode, so the lock is off" sentence was wiped by the next hello; a hello now clears only a
+  failure's sentence.
+- **Low:** nothing is spoken over the lock screen and a lost answer is picked up only once unlocked; the recorder's
+  configuration-change handler runs on the main queue, where `stop()` also talks to the engine (not thread-safe);
+  "JARVIS" in the header may shrink to 85 percent before truncating and the Status header's spacing now matches
+  Ask's, so the longest trailing content fits; muting with the Voice button mid-reply stops the sound; the User-Agent
+  says 1.1 and the pairing footer names the two new stored items; the headset wording corrected (section 7, item 5);
+  sections 1 and 2 brought up to date. Noted, no change: an interruption whose end never arrives leaves the state at
+  SPEAKING until the next action (nothing is blocked).
+
+**The zip for the Mac:** `D:\JARVIS-release-work\phone\JARVIS-ios-round2-20261006-2354.zip` (957,413 bytes, sha256
+d6ba967120f84d01fdcb7e3c463c0e798e255ee394f03ae9174acece1877ac77), sent to the owner in the chat. The 23:45 zip
+(`JARVIS-ios-round2-20261006-2345.zip`, sha256 b8ba29eb…) went out before the review at the owner's request and is
+superseded. The owner, on Claude Code on the Mac, was given a paste-ready brief for that session: verify the hash,
+delete the "Theme 2" and "PairingView 2" copies of the look round, place the thirteen files and the icon folder, add
+`INFOPLIST_KEY_NSFaceIDUsageDescription` beside the microphone key, `xcodebuild` for a device, then Xcode and
+Command-R; errors come back here.

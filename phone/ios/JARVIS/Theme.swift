@@ -114,14 +114,19 @@ struct ScreenHeader<Trailing: View>: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            HStack(alignment: .center, spacing: 11) {
+            HStack(alignment: .center, spacing: 10) {
                 JarvisMark().frame(width: 40, height: 40)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("JARVIS").font(.system(size: 20, weight: .light)).foregroundStyle(Theme.text)
-                    Caption(subtitle, color: Theme.accent, size: 8)
+                    Text("JARVIS").font(.system(size: 20, weight: .light)).foregroundStyle(Theme.text).lineLimit(1).minimumScaleFactor(0.85)
+                    Caption(subtitle, color: Theme.accent, size: 8).lineLimit(1).minimumScaleFactor(0.75)
                 }
-                Spacer()
+                .layoutPriority(0)
+                Spacer(minLength: 6)
+                // At the phone's width the right-hand items keep their full size and the subtitle gives way (shrunk,
+                // then cut): never a wrapped ONLINE or a STOP ALL squeezed to "S" (docs/PHONE-V1-RESULT.md, item 4).
                 trailing()
+                    .fixedSize(horizontal: true, vertical: false)
+                    .layoutPriority(1)
             }
             .frame(height: 44)
             HeaderRule()

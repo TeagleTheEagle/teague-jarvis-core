@@ -157,7 +157,7 @@ final class HTTPCoreClient: CoreClient {
         request.httpBody = data
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue("JARVIS-iPhone/1.0", forHTTPHeaderField: "User-Agent")
+        request.setValue("JARVIS-iPhone/1.1", forHTTPHeaderField: "User-Agent")
         if let credential { request.setValue(credential, forHTTPHeaderField: "X-Jarvis-Device") }
         let (answer, response): (Data, URLResponse)
         do {

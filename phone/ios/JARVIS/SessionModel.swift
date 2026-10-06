@@ -1,17 +1,29 @@
 import Foundation
 import Combine
+import UIKit
+import AVFoundation
+import LocalAuthentication
 
 /// What the phone is doing with the one Core: paired or not, the conversation in progress, the question running,
 /// what the Core said. Every change of what is saved happens on the PC; this is the screen's copy.
 @MainActor
 final class SessionModel: ObservableObject {
-    @Published private(set) var state: JarvisState = .offline
+    @Published private(set) var state: JarvisState = .offline {
+        // The screen stays awake while JARVIS listens, thinks, works or speaks; the phone's own timer otherwise.
+        didSet { UIApplication.shared.isIdleTimerDisabled = SessionModel.awakeStates.contains(state) }
+    }
     @Published private(set) var paired = false
     @Published private(set) var info: DeviceInfo?
     @Published private(set) var lines: [ChatLine] = []
     @Published private(set) var notice: String?          // the Core's sentence, or why something did not happen
     @Published private(set) var busy = false              // a question is running on the PC
-    @Published private(set) var stopped = false           // the emergency stop holds on the PC
+    @Published private(set) var stopped = false {         // the emergency stop holds on the PC
+        // When a later hello, status or metrics reading says the stop has lifted, the stop's note goes with it
+        // (docs/PHONE-V1-RESULT.md, item 7).
+        didSet {
+            if oldValue && !stopped, let note = notice, note.localizedCaseInsensitiveContains("emergency stop") { notice = nil }
+        }
+    }
     @Published private(set) var toolName: String?
     @Published private(set) var recording = false
     @Published private(set) var recordingSeconds = 0.0
@@ -24,14 +36,26 @@ final class SessionModel: ObservableObject {
     @Published private(set) var metrics: Metrics?          // the PC's health, as the dashboard has it
     @Published private(set) var overview: Overview?        // open tasks, projects, the day's reminders
     @Published private(set) var healthNote: String?
+    @Published private(set) var locked = false            // Face ID (or the passcode) before the screens show
     @Published var draft = ""
     @Published var speakReplies: Bool {
-        didSet { AppSettings.speakReplies = speakReplies }
+        didSet {
+            AppSettings.speakReplies = speakReplies
+            if !speakReplies { player.stop() }   // muted mid-reply: the voice stops; the text stays
+        }
+    }
+    @Published var lockEnabled: Bool {
+        didSet {
+            AppSettings.lockEnabled = lockEnabled
+            if !lockEnabled { locked = false }
+        }
     }
 
     let client: HTTPCoreClient
     private let recorder = AudioRecorder()
     private let player = AudioPlayer()
+    private let replyHaptic = UINotificationFeedbackGenerator()
+    private let holdHaptic = UIImpactFeedbackGenerator(style: .medium)
     private var work: Task<Void, Never>?
     private var healthTask: Task<Void, Never>?
     private var runId: String?
@@ -39,6 +63,18 @@ final class SessionModel: ObservableObject {
     /// A question whose answer the phone lost the link to (switched apps, no signal): the Core keeps the answer,
     /// and the phone picks it up when the link is back.
     private var resumable: (runId: String, after: Int)?
+    /// After a relaunch the conversation id comes back from the settings; its lines are read from the Core at the
+    /// first hello, so the Ask screen shows where the conversation stood (check 3 of the phone plan).
+    private var historyPending: Bool
+    private var hiddenAt: Date?
+    private var unlocking = false
+    private var observers: [NSObjectProtocol] = []
+    private static let awakeStates: Set<JarvisState> = [.listening, .thinking, .executing, .speaking]
+    /// Back within a minute (a call, the control centre, another app for a moment): no second Face ID.
+    static let lockGraceSeconds: TimeInterval = 60
+    /// A question Siri took is sent only within this time; later (the lock left on its screen, the app not opened)
+    /// it is dropped and said so, never sent into a later conversation unasked.
+    static let siriQuestionMaxAge: TimeInterval = 120
 
     init() {
         let address = AppSettings.address
@@ -46,9 +82,19 @@ final class SessionModel: ObservableObject {
         self.address = address
         self.deviceName = AppSettings.deviceName
         self.paired = address != nil && credential != nil && AppSettings.deviceId != nil
-        self.conversation = AppSettings.conversation ?? SessionModel.newConversationId(deviceId: AppSettings.deviceId)
+        let restored = AppSettings.conversation
+        self.conversation = restored ?? SessionModel.newConversationId(deviceId: AppSettings.deviceId)
+        self.historyPending = restored != nil
         self.speakReplies = AppSettings.speakReplies
+        self.lockEnabled = AppSettings.lockEnabled
         self.client = HTTPCoreClient(address: address, credential: credential)
+        self.locked = self.paired && self.lockEnabled   // on open: locked until Face ID or the passcode
+        watchAudio()
+        watchSiri()
+    }
+
+    deinit {
+        for observer in observers { NotificationCenter.default.removeObserver(observer) }
     }
 
     // MARK: pairing
@@ -83,6 +129,8 @@ final class SessionModel: ObservableObject {
         AppSettings.forgetPairing()
         client.credential = nil
         paired = false
+        locked = false
+        historyPending = false
         info = nil
         metrics = nil
         overview = nil
@@ -93,26 +141,44 @@ final class SessionModel: ObservableObject {
 
     // MARK: the Core
 
-    /// Say hello: who this phone is and what the owner allows; whether the emergency stop holds. Then pick up an
-    /// answer the phone lost the link to, if there is one.
+    /// Say hello: who this phone is and what the owner allows; whether the emergency stop holds. Then a question
+    /// Siri took (reached or not: it shows, with any "cannot be reached" sentence under it), the lines of a restored
+    /// conversation, and an answer the phone lost the link to.
     func connect() async {
         guard paired else { state = .offline; return }
         let started = Date()
+        var reachedCore = false
         do {
             let info = try await client.hello(capabilities: Capability.declared)
             self.info = info
             self.deviceName = info.name
             self.stopped = info.stopped
-            self.notice = nil
+            if state == .offline || state == .error { notice = nil }   // a failure's sentence; any other note stays until the next action
             noteReached(since: started)
             if !busy { state = info.stopped ? .stopped : .idle }
+            reachedCore = true
         } catch {
             fail(error)
-            return
         }
-        if let resumable, !busy {
+        pickUpSiriQuestion()
+        guard reachedCore, !busy else { return }
+        if historyPending {
+            historyPending = false
+            await reloadLines()
+        }
+        if let resumable, !locked {   // never spoken over the lock screen: picked up once unlocked
             await resume(resumable)
         }
+    }
+
+    /// The lines of the conversation in progress, read from the Core (the route Chats uses): after a relaunch the
+    /// Ask screen shows where the conversation stood, not a fresh one.
+    private func reloadLines() async {
+        let id = conversation
+        let ticket = generation
+        guard let history = try? await client.history(conversation: id, limit: 100) else { return }
+        guard generation == ticket, conversation == id, !busy, lines.isEmpty else { return }
+        lines = history.messages.map { ChatLine(isUser: $0.role == "user", text: $0.content) }.suffix(80).map { $0 }
     }
 
     /// A cheap round trip, for the Status screen's link time and the stop state.
@@ -279,7 +345,7 @@ final class SessionModel: ObservableObject {
                 }
                 if page.done { break }
                 if !page.events.isEmpty {
-                    // Pieces of a streamed answer arrive at once: a short pause keeps the calls few on cellular.
+                    // Pieces of an answer arrive at once: a short pause keeps the calls few on cellular.
                     try? await Task.sleep(for: .milliseconds(300))
                 }
             }
@@ -305,6 +371,7 @@ final class SessionModel: ObservableObject {
         if let failure {
             notice = failure
             state = .error
+            replyHaptic.notificationOccurred(.error)
             return
         }
         if cancelled {
@@ -318,8 +385,9 @@ final class SessionModel: ObservableObject {
         }
         lines.append(ChatLine(isUser: false, text: reply))
         lines = Array(lines.suffix(80))
+        replyHaptic.notificationOccurred(.success)   // the reply is here: a short vibration, with or without the voice
         if reply.localizedCaseInsensitiveContains("emergency stop is on") { stopped = true }
-        if speakReplies, info?.allows(.speakers) ?? false, !stopped {
+        if speakReplies, !locked, info?.allows(.speakers) ?? false, !stopped {   // nothing is read aloud over the lock screen
             await speak(reply, ticket: ticket)
         }
         guard generation == ticket else { return }
@@ -366,11 +434,27 @@ final class SessionModel: ObservableObject {
     /// The app left the front (a call, a system alert, another app): a recording in progress is dropped, a
     /// question in progress is left to the Core and picked up on return.
     func sceneInactive() {
-        if recording {
-            recorder.cancel()
-            recording = false
-            state = stopped ? .stopped : .idle
-        }
+        endRecording(saying: nil)
+    }
+
+    // MARK: sounds around the app (a call, another app's sound, a headset)
+
+    private func watchAudio() {
+        // A call or another app's sound while recording: the recording is dropped and the owner is told. (The
+        // reply's sound is the player's own business: paused by iOS and resumed or ended afterwards.)
+        observers.append(NotificationCenter.default.addObserver(forName: AVAudioSession.interruptionNotification, object: nil, queue: .main) { [weak self] note in
+            let began = (note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt) == AVAudioSession.InterruptionType.began.rawValue
+            guard began else { return }
+            Task { @MainActor in self?.endRecording(saying: "A call or another app interrupted the recording. Hold the microphone again.") }
+        })
+    }
+
+    private func endRecording(saying message: String?) {
+        guard recording else { return }
+        recorder.cancel()
+        recording = false
+        if let message { notice = message }
+        state = stopped ? .stopped : .idle
     }
 
     // MARK: hold to speak
@@ -386,6 +470,7 @@ final class SessionModel: ObservableObject {
         recording = true
         recordingSeconds = 0
         state = .listening
+        holdHaptic.impactOccurred()   // the hold has taken: felt, so the eyes can stay elsewhere
         recorder.start(
             progress: { [weak self] seconds in Task { @MainActor in self?.recordingSeconds = seconds } },
             limitReached: { [weak self] in Task { @MainActor in self?.holdToSpeakEnded() } },
@@ -447,15 +532,81 @@ final class SessionModel: ObservableObject {
             stopped = answer.stopped
             state = .stopped
             notice = "Emergency stop is on. JARVIS does nothing until RESUME is pressed on the PC."
+            replyHaptic.notificationOccurred(.warning)
         } catch {
             fail(error)
         }
+    }
+
+    // MARK: the lock (Face ID or the passcode before the screens show)
+
+    /// The app came to the front: locked at every open (init) and after more than a minute in the background, when
+    /// the lock is on. Only a stay in the background counts: the control centre, a call banner, the Siri overlay and
+    /// the Face ID sheet itself make the scene inactive and active again, and must not lock or prompt (review
+    /// finding 1). The prompt itself comes from LockView (on appear and from UNLOCK), never from here.
+    func cameToFront() {
+        defer { hiddenAt = nil }
+        guard lockEnabled, paired else { locked = false; return }
+        guard !locked, let hiddenAt, Date().timeIntervalSince(hiddenAt) >= SessionModel.lockGraceSeconds else { return }
+        locked = true   // RootView shows LockView, whose onAppear asks
+    }
+
+    func leftFront() {
+        hiddenAt = Date()
+    }
+
+    /// Face ID, or the phone's passcode when Face ID is not set up or does not match. A phone with neither cannot
+    /// lock: the switch goes off again and says so.
+    func unlock() async {
+        guard locked, !unlocking else { return }
+        unlocking = true
+        defer { unlocking = false }
+        let context = LAContext()
+        context.localizedCancelTitle = "Not now"
+        var unavailable: NSError?
+        guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &unavailable) else {
+            locked = false
+            lockEnabled = false
+            notice = "This phone has no passcode or Face ID set up, so the JARVIS lock is off."
+            return
+        }
+        let passed = (try? await context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: "Unlock JARVIS")) ?? false
+        if passed {
+            locked = false   // MainTabs appears and its first hello picks up a Siri question or a lost answer
+        }
+        // Cancelled or not matched: the lock screen stays, with its UNLOCK button and STOP ALL.
+    }
+
+    // MARK: Siri
+
+    private func watchSiri() {
+        observers.append(NotificationCenter.default.addObserver(forName: .jarvisSiriQuestion, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in self?.pickUpSiriQuestion() }
+        })
+    }
+
+    /// A question Siri took ("Hey Siri, ask JARVIS"): sent as if typed, once the app is in front and unlocked. A
+    /// question in progress gives way to it. Reached or not, it is sent at once (the "cannot be reached" sentence
+    /// then shows under it); one older than two minutes is dropped and said so.
+    func pickUpSiriQuestion() {
+        guard let question = AppSettings.siriQuestion else { return }
+        if locked { return }                 // sent right after the unlock
+        AppSettings.siriQuestion = nil
+        guard paired else { return }         // the intent itself says "pair first"; nothing is kept
+        let age = AppSettings.siriQuestionAt.map { Date().timeIntervalSince($0) } ?? 0
+        guard age < SessionModel.siriQuestionMaxAge else {
+            notice = "The question Siri took was not sent: it was more than two minutes ago. Ask again."
+            return
+        }
+        if busy || recording { interrupt() }
+        send(question)
     }
 
     // MARK: conversations
 
     func newConversation() {
         interrupt()
+        historyPending = false
         conversation = SessionModel.newConversationId(deviceId: AppSettings.deviceId)
         AppSettings.conversation = conversation
         lines = []
@@ -465,6 +616,7 @@ final class SessionModel: ObservableObject {
     /// Continue one of this phone's own conversations, as the Core keeps it.
     func open(_ summary: ConversationSummary, history: ConversationHistory) {
         interrupt()
+        historyPending = false
         conversation = summary.id
         AppSettings.conversation = conversation
         lines = history.messages.map { ChatLine(isUser: $0.role == "user", text: $0.content) }.suffix(80).map { $0 }
@@ -500,6 +652,7 @@ final class SessionModel: ObservableObject {
             client.credential = nil
             stopHealthPolling()
             paired = false
+            locked = false
             info = nil
             state = .offline
             return

@@ -13,7 +13,7 @@ struct AskView: View {
             PageBackground()
             VStack(spacing: 8) {
                 ScreenHeader(subtitle: "One Core // Private network") {
-                    HStack(spacing: 10) {
+                    HStack(spacing: 8) {
                         HStack(spacing: 6) {
                             StatusDot(color: dotColor)
                             Caption(dotText, color: Theme.text, size: 9)
@@ -142,17 +142,13 @@ struct AskView: View {
     }
 
     private var controls: some View {
-        HStack(alignment: .top, spacing: 30) {
+        HStack(alignment: .top, spacing: 22) {
             VStack(spacing: 6) {
                 Button {
                     typing.toggle()
                     fieldFocused = typing
                 } label: {
-                    Image(systemName: "keyboard").font(.system(size: 18)).foregroundStyle(Theme.accent)
-                        .frame(width: 52, height: 52)
-                        .background(RadialGradient(colors: [Color(hex: 0x0B2A44), Theme.ground], center: .init(x: 0.5, y: 0.4), startRadius: 2, endRadius: 40))
-                        .clipShape(Circle())
-                        .overlay(Circle().stroke(Theme.accent.opacity(0.35), lineWidth: 1))
+                    roundButton("keyboard", tint: Theme.accent)
                 }
                 .accessibilityLabel("Type a request")
                 Caption("Type", size: 8)
@@ -162,20 +158,36 @@ struct AskView: View {
                 Caption("Microphone", color: Theme.accent, size: 8)
             }
             VStack(spacing: 6) {
+                // Speak replies, on the screen itself (the settings sheet has the same switch): the reply is spoken
+                // in JARVIS's voice when on and the owner allows this phone's speakers; the text shows either way.
+                Button {
+                    session.speakReplies.toggle()
+                } label: {
+                    roundButton(session.speakReplies ? "speaker.wave.2.fill" : "speaker.slash.fill", tint: session.speakReplies ? Theme.accent : Theme.muted)
+                }
+                .accessibilityLabel(session.speakReplies ? "Replies are spoken. Tap to mute them" : "Replies are silent. Tap to speak them")
+                Caption(session.speakReplies ? "Voice on" : "Muted", color: session.speakReplies ? Theme.accent : Theme.muted, size: 8)
+            }
+            VStack(spacing: 6) {
                 Button {
                     if session.busy { session.interrupt() } else { session.newConversation() }
                 } label: {
-                    Image(systemName: session.busy ? "xmark" : "plus.bubble").font(.system(size: 18)).foregroundStyle(Theme.accent)
-                        .frame(width: 52, height: 52)
-                        .background(RadialGradient(colors: [Color(hex: 0x0B2A44), Theme.ground], center: .init(x: 0.5, y: 0.4), startRadius: 2, endRadius: 40))
-                        .clipShape(Circle())
-                        .overlay(Circle().stroke(Theme.accent.opacity(0.35), lineWidth: 1))
+                    roundButton(session.busy ? "xmark" : "plus.bubble", tint: Theme.accent)
                 }
                 .accessibilityLabel(session.busy ? "Cancel this question" : "New conversation")
                 Caption(session.busy ? "Cancel" : "New chat", size: 8)
             }
         }
         .padding(.top, 6)
+    }
+
+    /// The 52 pt round buttons beside the microphone (four of them fit a 393 pt phone with room to spare).
+    private func roundButton(_ system: String, tint: Color) -> some View {
+        Image(systemName: system).font(.system(size: 18)).foregroundStyle(tint)
+            .frame(width: 52, height: 52)
+            .background(RadialGradient(colors: [Color(hex: 0x0B2A44), Theme.ground], center: .init(x: 0.5, y: 0.4), startRadius: 2, endRadius: 40))
+            .clipShape(Circle())
+            .overlay(Circle().stroke(tint.opacity(0.35), lineWidth: 1))
     }
 
     // MARK: words
