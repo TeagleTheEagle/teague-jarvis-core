@@ -162,5 +162,14 @@ guard); (3) the TimelineView ticks at 30 fps while the pairing screen exists, ev
 accepted for a one-time screen that the app replaces once paired; (4) a non-square badge asset would overflow the
 circle, noted, the shipped asset is square.
 
+**Seen on the phone (2026-10-06, 21:12 local, the owner's screenshot `docs/phone-evidence/phone-app-look-20261006-2112.png`):**
+built on the Mac at the first attempt after the two image sets and the AppIcon were added to the asset catalog by hand
+(the first drag put the files into the file list instead, giving `PairingView 2` and `Theme 2` beside the old files
+and the pictures as loose files; fixed by deleting the old Swift files and the loose pictures and dragging the pictures
+into the Assets column; the "2" in the file names is harmless). The pairing screen shows the badge in a ring in the
+header, the space scene faint behind the screen and the orbital graphic, as the draft picture showed. The home-screen
+icon still showed iOS's placeholder grid right after the run: iOS keeps the icon of an app already installed; the owner
+was told to delete the app from the phone and run it again from Xcode.
+
 **Not checked here:** no compiler on this PC (as section 4). The owner builds the changed files on the Mac; the zip for
 the Mac is named in `docs/CURRENT-STATUS.md`.
