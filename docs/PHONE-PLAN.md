@@ -1,6 +1,9 @@
 # JARVIS for iPhone: the plan (version 1)
 
-Status: **PROPOSAL, READY FOR YOUR APPROVAL (2026-10-06, Claude Code, Fable 5.1).** Nothing in it has been built.
+Status: **APPROVED BY THE OWNER on 2026-10-06** ("I approve the phone plan", first clock reading 2026-10-06T03:09:22Z;
+record `../governance/PHONE-PLAN-APPROVAL-RECORD.json`, plan sha256 `89f061e2…` as committed in ac99cb6, with the
+recommended answers of section 9; Q1 and Q2 stay open until step 7). Written 2026-10-06 by Claude Code (Fable 5.1).
+This status line is the only change since the approval.
 Written on your word "write the phone plan" (2026-10-06), from the decisions you took on 2026-10-06, the recommendation
 you accepted ("go with your recommendation"), the three screens on the design canvas, the Devices and Speech parts
 of release 1.0.15 (`docs/DEVICES.md`, `docs/SPEECH.md`), Phase 4 of the approved roadmap (`docs/ROADMAP.md`), and
