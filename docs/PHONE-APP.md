@@ -1,8 +1,15 @@
 # JARVIS for iPhone, version 1: what was built (step 7 of docs/PHONE-PLAN.md)
 
-Status: **WRITTEN 2026-10-06, reviewed on this PC, NOT YET BUILT: there is no Swift compiler for iPhone apps here.**
-The owner builds it on the Mac (`phone/ios/README.md`); fix rounds are expected. Owner answers of 2026-10-06: the
-phone runs iOS 26; the September Xcode project is not reused ("make a new one from scratch").
+Status: **BUILT ON THE MAC AND RUNNING ON THE OWNER'S IPHONE, 2026-10-06.** Written and reviewed on this PC (no
+Swift compiler here; `phone/ios/README.md` is the Mac guide). The owner built it in Xcode on the Mac: Build Succeeded
+at the first attempt (18:46 local), no fix round. Xcode's prompt for an Objective-C bridging header after the drag was
+answered "Don't Create" (the twelve files are Swift only). Signing automatic: team Benjamin Teague, Xcode managed
+profile, Apple Development certificate, bundle id `com.teagueindustries.jarvis`. Product > Run installed the app on the
+owner's iPhone (iOS 26) after Xcode's one-time "Copying OS library symbols"; at 19:00 local the app opened and showed
+the pairing screen as designed (`docs/phone-evidence/phone-app-first-launch-20261006-1900.png`). Not yet paired: that
+needs 1.0.16 as the everyday JARVIS, Tailscale on both and the private-network switch (plan steps 5 and 6).
+Owner answers of 2026-10-06: the phone runs iOS 26; the September Xcode project is not reused ("make a new one from
+scratch").
 
 ## 1. Where it is
 
@@ -76,7 +83,8 @@ touch targets 44 pt or more).
 
 ## 4. Not checked here, and the owner's checks
 
-Not built, not run: no compiler. Checked on this PC: that every route, field name and refusal the app uses is what
+Not built or run on this PC (no compiler); built and run on the Mac and the phone on 2026-10-06 (the status above).
+Checked on this PC: that every route, field name and refusal the app uses is what
 `device_gateway.py`, `wearables/service.py`, `devices.py` and `store.py` really send and expect (read on
 2026-10-06), and an independent review of the twelve files (section 5). The checks that count are the plan's section
 10, run by the owner with the app on the phone and 1.0.16 on the PC; the result record will be `docs/PHONE-V1-RESULT.md`.
