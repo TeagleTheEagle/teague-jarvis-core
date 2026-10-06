@@ -273,3 +273,27 @@ superseded. The owner, on Claude Code on the Mac, was given a paste-ready brief 
 delete the "Theme 2" and "PairingView 2" copies of the look round, place the thirteen files and the icon folder, add
 `INFOPLIST_KEY_NSFaceIDUsageDescription` beside the microphone key, `xcodebuild` for a device, then Xcode and
 Command-R; errors come back here.
+
+## 9. The app moved to the Mac (owner decision 2026-10-07, "app on the mac")
+
+From 2026-10-07 the iPhone app's source of truth is the Xcode project on the owner's Mac
+(`/Users/Jonnyracs22/Documents/JARVIS`), written by the Claude Code session on the Mac under its own standing brief.
+The division: the Mac session writes the app (Swift, the asset catalog, project settings, builds, the simulator, the
+phone by cable, its own records); this PC session writes the Core, the desktop app, the releases and their records,
+and alone defines the Core's device routes, which the app calls as they are; a route or field the app needs is a
+request the owner carries from the Mac session to this one. The owner relays between the two and keeps the Apple
+account steps (TestFlight, certificates), keys, networking, push and sync. The repo's `phone/ios/` stays as the
+record of what was handed over (round 2, independently reviewed) and receives the Mac's copies at milestones
+(`JARVIS-ios-mac-<stamp>.zip`, carried by the owner); this session does not edit the app from here on.
+
+**The handover bundle** sent to the owner in the chat: `D:\JARVIS-release-work\phone\JARVIS-ios-handover-20261007-0015.zip` (103,181 bytes,
+sha256 5cef740afdee0a9fa6d60e18f27cc247f4f01a8fd56f323a2f9394bab1918080): the Mac's `CLAUDE.md` (role, the binding architecture, standing authority, owner-only list, working
+rules, copies back, the owner's style) and `STATUS.md` (where the app stands, the open checks, version 2 candidates,
+the contract, the copy rule), both kept here under `phone/ios/mac/`; the reference documents (this record, the phone
+plan, PHONE-CORE-1.0.16.md, DEVICES.md, PHONE-V1-RESULT.md, PHONE-TAILSCALE-STEPS.md, PHONE-ALWAYS-ON.md,
+PERMISSIONS.md, the master architecture, the three phone READMEs); the Core's device code for reading
+(`wearables/service.py`, `device_gateway.py`, `remote_devices.py`, `devices.py`); the design mock of 2026-10-06; and
+`sources-sha256.txt`, the hashes of the thirteen Swift files as this repository holds them, so the Mac can prove its
+copies equal the record. The state handed over: round 2 compiled on the Mac (compile-only build) on 2026-10-07, the
+project settings corrected there (App Icon = AppIcon in both configurations; the Face ID Info key), not yet run on the
+phone; the eight checks of README-round2 and plan check 3 are the Mac session's first open item.

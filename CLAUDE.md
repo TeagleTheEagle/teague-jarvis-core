@@ -39,6 +39,12 @@ OWNER-ONLY (stop and ask):
 
 CODEX: independent reviewer only, on owner request; never writes.
 
+PHONE APP (owner decision 2026-10-07, "app on the mac"): the iPhone app's source of truth is the Xcode
+project on the owner's Mac, written by the Claude Code session there under its own CLAUDE.md (repo copy
+phone\ios\mac\CLAUDE.md). This session keeps a copy under phone\ios, receives the Mac's zips at milestones,
+and does not edit the app. The Core's device routes stay this session's to define, on requests the owner
+carries from the Mac session.
+
 FIRST TASKS:
 (1) verify governance\VERIFICATION.json and fix anything INCOMPLETE that is in scope;
 (2) write .claude\settings.json;
