@@ -18,7 +18,7 @@ struct PairingView: View {
             ScrollView {
                 VStack(spacing: 14) {
                     ScreenHeader(subtitle: "Pair this phone") { EmptyView() }
-                    CoreRing(state: .idle, recordingSeconds: 0).frame(height: 180).padding(.top, 6)
+                    OrbitalGraphic().frame(height: 200).padding(.top, 6)
                     if let notice = session.notice {
                         Text(notice).font(.system(size: 11)).foregroundStyle(Theme.warn).multilineTextAlignment(.center)
                     }
@@ -92,6 +92,39 @@ struct PairingView: View {
         } catch {
             note = (error as? ClientFailure)?.errorDescription ?? "Pairing did not work."
         }
+    }
+}
+
+/// The orbital graphic of the pairing screen (the owner's "apply the look", 2026-10-06): a soft halo, three faint
+/// rings, three arcs turning slowly, a glowing core. Built like the Ask screen's CoreRing; still when the system's
+/// Reduce Motion is on.
+struct OrbitalGraphic: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: reduceMotion)) { context in
+            let t = reduceMotion ? 0 : context.date.timeIntervalSinceReferenceDate
+            ZStack {
+                Circle()
+                    .fill(RadialGradient(colors: [Theme.accent.opacity(0.30), .clear], center: .center, startRadius: 2, endRadius: 92))
+                    .padding(8)
+                Circle().stroke(Theme.accent.opacity(0.15), lineWidth: 1)
+                Circle().stroke(Theme.accent.opacity(0.25), lineWidth: 1).padding(22)
+                Circle().stroke(Theme.accent.opacity(0.35), lineWidth: 1).padding(48)
+                Circle().trim(from: 0, to: 0.28).stroke(Theme.accent, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                    .padding(10).rotationEffect(.degrees(t * 36))
+                Circle().trim(from: 0, to: 0.18).stroke(Theme.accent.opacity(0.8), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                    .padding(10).rotationEffect(.degrees(-t * 36 + 150))
+                Circle().trim(from: 0, to: 0.42).stroke(Theme.accent2.opacity(0.7), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                    .padding(32).rotationEffect(.degrees(-t * 24 + 95))
+                Circle()
+                    .fill(RadialGradient(colors: [Theme.accent.opacity(0.45), Theme.ground.opacity(0.1)], center: .center, startRadius: 2, endRadius: 40))
+                    .padding(60)   // a 200 pt graphic: the core is 80 pt across, so the glow ends at its edge (review note 1)
+                Circle().stroke(Theme.accent.opacity(0.5), lineWidth: 1).padding(71)
+            }
+        }
+        .aspectRatio(1, contentMode: .fit)
+        .accessibilityHidden(true)
     }
 }
 

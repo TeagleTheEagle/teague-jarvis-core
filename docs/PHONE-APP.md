@@ -123,3 +123,44 @@ and found every op, field, header, status code, body and cursor exactly as the C
   STOP ALL is also on the conversation screen; the iOS settings path and a button label corrected; the pairing
   footer says what is stored; the README marks the three build settings as required and names two things to look
   at on the phone.
+
+## 6. The look applied (2026-10-06, the owner's "apply the look")
+
+**What the owner supplied:** a zip `TeagueJARVIS-iOS.zip` (668,502 bytes, sha256 31906f3c982b92145d4d7d88c1d80c45c837b31b8055fa9ae09377f0d6dd9337)
+holding a SwiftUI mock-up of our pairing screen made elsewhere from a picture of it: four Swift files (an app entry,
+a theme, a spinning orbital graphic, a pairing view with our words copied and a PAIR button that only sets a flag) and
+two pictures (the Teague Industries badge as a JPEG, a space-station scene with the Earth horizon). Its own README says
+the pairing is UI-only and the Core connection, the credential and the Keychain are still to do. Applied as it was it
+would have replaced the working app with one screen that cannot pair; reported to the owner, who chose the look only.
+The supplied Swift files and README are kept as the design record in `docs/design/teague-ios-mock-20261006/`.
+
+**What was taken (three things, all looks), built into our files, nothing underneath changed:**
+
+1. The badge as the logo of every header (`JarvisMark` in `Theme.swift`): image set `TeagueBadge` in a cyan ring, 40 pt;
+   the drawn T mark stands in when the image set is missing. The asset is `phone/ios/assets/TeagueBadge.png` (512 px,
+   made from the owner's badge, sha256 0b205466fbad2a193c3b49c8b6899ad0edfb28bf4861dfb2e1bb2c1e3f2f95a5).
+2. The space scene faint behind every screen (`PageBackground` in `Theme.swift`): image set `JARVISBackground` at
+   12 percent under a vertical shade and the canvas's radial glow, so the text stays readable; the plain ground when
+   the image set is missing. The asset is `phone/ios/assets/JARVISBackground.jpeg` (1536 x 864, the owner's file
+   unchanged, sha256 190ff1c27c01c9124fe1964b215a6160630dcf13262ec5d7eeb974ce8eb98bf1).
+3. A slowly turning orbital graphic on the pairing screen (`OrbitalGraphic` in `PairingView.swift`) in place of the
+   still Core rings: built like the Ask screen's `CoreRing` (a `TimelineView`), in the brief's colours, still when the
+   system's Reduce Motion is on. The Ask screen's state ring is unchanged.
+
+Not taken: the mock's frosted-glass panels (the canvas's panels with corner marks stay), its progress bar, its app
+entry and its pairing logic. The image sets are added by hand in Xcode's asset catalog on the Mac (`phone/ios/
+README-look.md`); the app compiles and runs with or without them. A draft picture of the result was rendered on this
+PC from an HTML mock (Edge via Playwright, 393 x 852 at 3x) and sent to the owner before the Swift was written; the
+app's own look is to be seen on the phone.
+
+**Independent review (one reviewer, 2026-10-06):** no compile error found by reading (every API already used in the
+compiled files; `UIImage` reachable through SwiftUI on iOS; the `let t` arithmetic is `Double`; the overlay-and-clip
+background cannot grow any layout; Reduce Motion handled); no high or medium finding; four low: (1) the core's glow
+kept CoreRing's radius and was cut off in the smaller graphic, applied (end radius 40); (2) the background image was
+not guarded like the badge and would log once per evaluation without its image set, applied (the same `UIImage(named:)`
+guard); (3) the TimelineView ticks at 30 fps while the pairing screen exists, even with the graphic scrolled away,
+accepted for a one-time screen that the app replaces once paired; (4) a non-square badge asset would overflow the
+circle, noted, the shipped asset is square.
+
+**Not checked here:** no compiler on this PC (as section 4). The owner builds the changed files on the Mac; the zip for
+the Mac is named in `docs/CURRENT-STATUS.md`.

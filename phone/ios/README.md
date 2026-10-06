@@ -85,3 +85,12 @@ conversations as the PC keeps them, searchable; one can be continued. Status: th
 health as the dashboard shows it, open tasks, projects and the day's reminders. STOP ALL on every screen raises the
 emergency stop on the PC; only RESUME on the PC lifts it. The phone's key lives in its Keychain; the Core's address in
 the app's settings; nothing else is stored on the phone.
+
+## 7. The look of 2026-10-06 (badge logo, space background, orbital graphic)
+
+On the owner's "apply the look" (2026-10-06), after the first build ran on the phone: the header logo is the Teague
+Industries badge (image set `TeagueBadge`, from `phone/ios/assets/TeagueBadge.png`), every screen has the space scene
+faint behind it (image set `JARVISBackground`, from `phone/ios/assets/JARVISBackground.jpeg`), and the pairing screen
+shows a slowly turning orbital graphic. The two image sets are added in Xcode's Assets by hand (the asset catalog lives
+in the Xcode project on the Mac, not in this folder); the app runs without them, with the drawn T mark and the plain
+ground. The app icon is `phone/ios/AppIcon-1024.png` (Assets > AppIcon). Steps for the Mac: `README-look.md`.

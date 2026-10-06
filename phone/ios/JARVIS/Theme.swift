@@ -26,15 +26,26 @@ extension Color {
     }
 }
 
-/// The page ground with the canvas's faint radial glow.
+/// The page ground: the space scene the owner chose (2026-10-06, "apply the look"), shown faintly under a shade so
+/// the text stays readable, with the canvas's radial glow on top. Without the image set only the ground remains.
 struct PageBackground: View {
     var body: some View {
         ZStack {
             Theme.ground2.ignoresSafeArea()
+            if UIImage(named: "JARVISBackground") != nil {   // the same guard as the badge: no log line, no empty image, when the set is missing
+                Color.clear
+                    .overlay(Image("JARVISBackground").resizable().scaledToFill())
+                    .clipped()
+                    .opacity(0.12)
+                    .ignoresSafeArea()
+                LinearGradient(colors: [.clear, Theme.ground2.opacity(0.85)], startPoint: .top, endPoint: .bottom)
+                    .ignoresSafeArea()
+            }
             RadialGradient(colors: [Theme.accent.opacity(0.10), .clear], center: .init(x: 0.5, y: 0.38),
                            startRadius: 10, endRadius: 320)
                 .ignoresSafeArea()
         }
+        .accessibilityHidden(true)
     }
 }
 
@@ -104,7 +115,7 @@ struct ScreenHeader<Trailing: View>: View {
     var body: some View {
         VStack(spacing: 6) {
             HStack(alignment: .center, spacing: 11) {
-                JarvisMark().frame(width: 34, height: 34)
+                JarvisMark().frame(width: 40, height: 40)
                 VStack(alignment: .leading, spacing: 3) {
                     Text("JARVIS").font(.system(size: 20, weight: .light)).foregroundStyle(Theme.text)
                     Caption(subtitle, color: Theme.accent, size: 8)
@@ -118,13 +129,24 @@ struct ScreenHeader<Trailing: View>: View {
     }
 }
 
-/// The T mark in a ring (the JARVIS logo of the new look, simplified for the phone).
+/// The logo of every header: the Teague Industries badge in a cyan ring (the owner's choice of 2026-10-06). If the
+/// image set is missing from the project, the drawn T mark of the first build stands in.
 struct JarvisMark: View {
     var body: some View {
-        ZStack {
-            Circle().stroke(Theme.accent.opacity(0.6), lineWidth: 1)
-            Circle().stroke(Theme.accent.opacity(0.25), lineWidth: 1).padding(4)
-            Text("T").font(.system(size: 16, weight: .semibold, design: .serif)).foregroundStyle(Theme.text)
+        if UIImage(named: "TeagueBadge") != nil {
+            Image("TeagueBadge")
+                .resizable()
+                .scaledToFill()
+                .clipShape(Circle())
+                .overlay(Circle().stroke(Theme.accent.opacity(0.55), lineWidth: 1))
+                .shadow(color: Theme.accent.opacity(0.25), radius: 5)
+                .accessibilityLabel("Teague Industries")
+        } else {
+            ZStack {
+                Circle().stroke(Theme.accent.opacity(0.6), lineWidth: 1)
+                Circle().stroke(Theme.accent.opacity(0.25), lineWidth: 1).padding(4)
+                Text("T").font(.system(size: 16, weight: .semibold, design: .serif)).foregroundStyle(Theme.text)
+            }
         }
     }
 }
