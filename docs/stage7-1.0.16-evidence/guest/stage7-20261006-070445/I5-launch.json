@@ -1,0 +1,15 @@
+{
+    "status":  "PASS",
+    "launched_via":  "desktop shortcut",
+    "core_ready":  true,
+    "seconds_to_ready":  133.9,
+    "installed_release":  "1.0.16-fccde24e2cc6",
+    "source_revision":  "0c70a1b11fbb95ab",
+    "identity_matches_package":  true,
+    "memory_saved":  true,
+    "database_in_home":  true,
+    "processes":  8,
+    "process_images_outside_install":  [
+
+                                       ]
+}

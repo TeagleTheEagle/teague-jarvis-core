@@ -1,0 +1,53 @@
+{
+  "schema": "stage6-evidence-manifest-v1",
+  "generated_utc": "2026-10-06T09:02:54Z",
+  "root": "D:\\JARVIS-stage7\\1.0.16-fccde24e2cc6",
+  "folders": [
+    "evidence"
+  ],
+  "not_listed": "this manifest itself; the sealed P0 folder is never read",
+  "files": 8,
+  "bytes": 102286,
+  "entries": [
+    {
+      "file": "evidence/prep-tools-hashes.txt",
+      "bytes": 1364,
+      "sha256": "76ad150440fa86b3071c4c3f929be555ea3613fd1ff43f17b69bff883202dc3f"
+    },
+    {
+      "file": "evidence/STAGE7-1.0.16-APPROVAL-RECORD.json",
+      "bytes": 6593,
+      "sha256": "a97b1b43530ea1984d80862c11a09f1060a31bc865e1bfd1733674c324f9cce6"
+    },
+    {
+      "file": "evidence/stage7-disc-1.0.16-fccde24e2cc6.json",
+      "bytes": 2030,
+      "sha256": "2bd9ce4f1bf2906fdb25ffb29139c1b4160cdb249088bf5c709f0cabadec41f8"
+    },
+    {
+      "file": "evidence/stage7-evaluation.json",
+      "bytes": 12152,
+      "sha256": "b3c868eef349e9a18fb31800eb476f48bc467341be4d0590abbcf810707dbed1"
+    },
+    {
+      "file": "evidence/vm/JARVIS-S6-FRESH.vbox.STAGE7-PASS-1.0.16-fccde24e2cc6-copy",
+      "bytes": 67341,
+      "sha256": "eea64334aa02e8a1157ff1781f45962fd36e95c14eb6e341a86b341f771ab3f1"
+    },
+    {
+      "file": "evidence/vm/snapshot-STAGE7-PASS-1.0.16-fccde24e2cc6-20261006-085938.json",
+      "bytes": 8101,
+      "sha256": "5585c108aa990dc53eb7c510a9e2ff7c4259da47815831635a56b44e013e0b86"
+    },
+    {
+      "file": "evidence/vm/stage7-start-20261006-065935.json",
+      "bytes": 3336,
+      "sha256": "7f817724c9a4a6dc33864bdd821138d06fb844fa3388fc6128825979e0a4f3ee"
+    },
+    {
+      "file": "evidence/vm/start-20261006-065935.json",
+      "bytes": 1369,
+      "sha256": "e293c6367388e8f25084f939698be3493c1a9530f05b1c70d3f0a1eacb83ca65"
+    }
+  ]
+}

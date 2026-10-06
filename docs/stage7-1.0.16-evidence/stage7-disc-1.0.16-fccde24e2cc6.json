@@ -1,0 +1,39 @@
+{
+    "schema":  "jarvis-stage7-disc-v2",
+    "utc":  "2026-10-06T06:55:40.6335511Z",
+    "performed_by":  "THEGRIZZLYBEAR\\jonny",
+    "release_id":  "1.0.16-fccde24e2cc6",
+    "label":  "1.0.16-fccde24e2cc6",
+    "target":  {
+                   "schema":  "jarvis-stage7-target-v1",
+                   "release_id":  "1.0.16-fccde24e2cc6",
+                   "label":  "1.0.16-fccde24e2cc6",
+                   "egress_folder":  "stage7-1.0.16-fccde24e2cc6"
+               },
+    "commit":  "fccde24e2cc6bf087b43b0245ba283c8d7951c35",
+    "zip":  "JARVIS-1.0.16-fccde24e2cc6.zip",
+    "zip_bytes":  525906502,
+    "zip_sha256":  "58bba7423cf0668ff7684e9370865b9951e473eb1e0818c9437bf4287032d23a",
+    "guest_files":  [
+                        {
+                            "name":  "Invoke-Stage7.ps1",
+                            "sha256":  "18fdc2380f6d37f033d106c6ff6d574ff377d5a2385be1ac8358d528119dd832"
+                        },
+                        {
+                            "name":  "Invoke-Stage7Pass.ps1",
+                            "sha256":  "a9dce034e045712967073a4c891e153a4dc056ee60f3b1524fc36c504f2f0ff7"
+                        },
+                        {
+                            "name":  "stage7.cmd",
+                            "sha256":  "7b992f854b9c35fd501880baf8cb6fb6a67ae0ba092639585c23cac7d290fd5a"
+                        }
+                    ],
+    "iso":  "D:\\JARVIS-release-work\\stage7-media\\JARVIS-STAGE7-1.0.16-fccde24e2cc6.iso",
+    "iso_sha256":  "dd3a1abedc602a5e767951a5350c3ef4c7425238520d3b1e99d0b86e159fab75",
+    "iso_bytes":  527171584,
+    "payload_files":  7,
+    "payload_manifest_sha256":  "b8ab534d1a8a5b9b6384c22bf28bd0d789dff4f1bcac457e3a6b5073ac606454",
+    "readback":  "every payload file read back from the mounted ISO with its recorded SHA-256",
+    "copy":  "D:\\JARVIS-S6-FRESHVM\\media\\JARVIS-STAGE7-1.0.16-fccde24e2cc6.iso",
+    "copy_sha256":  "dd3a1abedc602a5e767951a5350c3ef4c7425238520d3b1e99d0b86e159fab75"
+}
