@@ -42,9 +42,10 @@ class EvidenceTests(unittest.TestCase):
     def test_preview_is_not_completed(self):
         event={'event':'tool.completed','data':{'name':'preview_action','result':{'status':'awaiting approval'},'checked_at':1}}
         reply=ae.action_guard("I've saved your note.",[event])
+        self.assertTrue(reply.startswith("I've saved your note.\n\nAction evidence"))  # 1.0.17: the reply stays, the truth under it
         self.assertIn('awaiting approval',reply)
-        self.assertNotIn("I've saved",reply)
-        self.assertIn('not confirmed',ae.action_guard('I created the file.',[]))
+        self.assertIn('does not mean completed',reply)
+        self.assertEqual(ae.action_guard('I created the file.',[]),'I created the file.\n\n'+ae.NO_ACTION_NOTE)
         self.assertEqual(ae.action_guard('Here is a design suggestion.',[]),'Here is a design suggestion.')
 
     def test_requested_and_failed_receipts(self):
@@ -81,7 +82,8 @@ class WorkEvidenceTests(unittest.TestCase):
         responses=[{'role':'assistant','content':'Saved!','tool_calls':[{'id':'c1','type':'function','function':{'name':'preview_action','arguments':json.dumps({'action':'save_item','arguments_json':json.dumps({'kind':'note','body':'Draft note'})})}}]}, {'role':'assistant','content':"I've saved your note."}]
         with patch.dict(os.environ,{'OPENAI_API_KEY':'test'}),patch('providers.chat',side_effect=responses):self.app.work(run,'Prepare a note for review',None)
         reply=next(e['data']['text'] for e in run.events if e['event']=='assistant.completed')
-        self.assertIn('awaiting approval',reply);self.assertNotIn("I've saved",reply)
+        self.assertIn('awaiting approval',reply);self.assertIn('does not mean completed',reply)  # 1.0.17: the claim stays, the truth under it
+        self.assertTrue(reply.startswith("I've saved your note.\n\nAction evidence"))
         self.assertEqual(self.app.store.items('note'),[])
         self.assertNotIn('Saved!',str(run.events))
 
@@ -91,7 +93,7 @@ class WorkEvidenceTests(unittest.TestCase):
         with patch.dict(os.environ,{'OPENAI_API_KEY':'test'}),patch('providers.chat',side_effect=responses),patch('actions.create_document',side_effect=ValueError('unavailable')):
             self.app.work(run,'Make a document about testing',None)
         reply=next(e['data']['text'] for e in run.events if e['event']=='assistant.completed')
-        self.assertIn('failed',reply);self.assertNotIn('I created',reply)
+        self.assertIn('create file: failed',reply);self.assertTrue(reply.startswith('I created the file.\n\nAction evidence'))  # 1.0.17
         evidence=next(e['data'] for e in run.events if e['event']=='answer.evidence')
         self.assertEqual(evidence['tools'][0]['status'],'failed')
 

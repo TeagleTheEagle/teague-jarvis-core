@@ -21,7 +21,8 @@ With the box ticked and Qwen as the chosen provider, the Core asks for the answe
 3. While the checks leave the text exactly as it is, it is shown as a **draft** (at most five times a second).
 4. From the moment the checks would change anything, nothing more of that answer is shown early.
 5. The finished answer goes through the checks as it always did, and what they return replaces the draft on screen.
-   Only that finished, checked answer is saved in the conversation, spoken, and given to other devices.
+   Only that finished, checked answer is saved in the conversation and spoken. (Since 1.0.17 another device's
+   question gets the same drafts through its events route, in fewer steps; before, it got the finished reply only.)
 
 So a draft is always the beginning of an answer, made of complete sentences, that the checks accepted as it stood.
 A sentence such as "I have saved the note" with no receipt behind it is never on screen, not even for a moment: the
@@ -48,7 +49,10 @@ timer is set": only with the receipt), and the removal of the lines only the Cor
   window says "Stopped." as before.
 - **Speech starts when the answer is complete**, as before. Speaking a draft would mean speaking words the finished
   answer may replace.
-- **Other devices get the finished reply only.** A question from a paired device is asked in one piece.
+- **Other devices, since 1.0.17, get the drafts too** (`assistant.draft` in their `events`, at most every half
+  second, `App.DEVICE_DRAFT_SECONDS`); until 1.0.16 a question from a paired device was asked in one piece.
+  The device's client decides what to show: the PC window shows it; the phone ignores the event until its events
+  loop handles `assistant.draft` (a change for the Mac session, docs/PHONE-CORE-FIXES-20261007.md section 1).
 - **OpenAI is unchanged** (one piece). The setting says "(Qwen)" for that reason.
 
 ## 3. When the pieces do not arrive properly
@@ -97,7 +101,7 @@ even the beginning of a "who answered" line is shown; words with a tool request 
 turned-down request asked again in one piece, a wrong key and an unpaid bill not; time that is up not followed by a
 second attempt; a tool runs once when the stream breaks after it; a broken stream, then no connection, then the
 backup provider; Stop clears the draft and keeps nothing; off by default with the old request; another device's
-question in one piece.
+question in one piece (changed in 1.0.17: it appears as it is written too, test_reply_stream.py).
 
 **Over a real connection on this PC** (a small server on 127.0.0.1 inside the test program, no encryption): a
 complete answer; Stop pressed while the provider was silent returned after 0.5 seconds; with the total time set to
@@ -116,6 +120,8 @@ PC refused):
   complete answer after about 4.3 seconds (the same answer in one piece: nothing for about 3 seconds, then all of it).
 - An answer containing "I have saved the note for you": the two sentences before it appeared, the claim never did,
   and the reply ended as "No matching action result was recorded for this request. Completion is not confirmed."
+  (Since 1.0.17 the finished reply keeps its words and carries the note "No action was carried out for this
+  request ..." under them, docs/PHONE-CORE-FIXES-20261007.md; the draft still stops before the claim.)
 - Words followed by a tool request: "Let me look at the clock first." appeared, was taken away when the tool ran,
   and the real answer then appeared sentence by sentence.
 - A stream that broke halfway: the first sentence appeared, was taken away, the window said "Waiting for AI

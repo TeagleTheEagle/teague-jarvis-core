@@ -341,6 +341,7 @@ class App:
         return offline_answers.OFFLINE_NOTE.sub('', providers.BACKUP_NOTE.sub('', safe))
 
     DRAFT_SECONDS = 0.2  # a reply shown while it is written is refreshed at most this often
+    DEVICE_DRAFT_SECONDS = 0.5  # a phone reads each draft as one whole event over its link: fewer, larger steps
 
     def drafts_for(self, run):
         """Replies that appear while they are written (reply_drafts.py): for one attempt at an answer, shows as a
@@ -351,7 +352,8 @@ class App:
             if providers.BACKUP_OPENING.search(text) or offline_answers.OFFLINE_OPENING.search(text):
                 return None  # the beginning of a line only the Core may write (who answered): nothing more is shown early
             return self.claim_checks(run, text)
-        return reply_drafts.Drafts(check, lambda text: run.emit('assistant.draft', {'text': text}), every=self.DRAFT_SECONDS)
+        every = self.DEVICE_DRAFT_SECONDS if getattr(run, 'wearable', False) else self.DRAFT_SECONDS
+        return reply_drafts.Drafts(check, lambda text: run.emit('assistant.draft', {'text': text}), every=every)
 
     def offline_answer(self, run, text, settings, error, usable):
         """When no AI provider can be reached: one answer from the small local model on this PC, if the owner has
@@ -609,12 +611,14 @@ class App:
             self.approvals = {k:v for k,v in self.approvals.items() if v['expires'] > time.time()}
             self.approvals[approval['id']] = approval
 
-    def ask_first(self, name, args, run, memory_command=None):
+    def ask_first(self, name, args, run, memory_command=None, memory_line=None):
         """The owner set this tool to "ask first": keep the exact call for the owner's approval on screen."""
         approval = {'id': uuid.uuid4().hex, 'tool': name, 'args': args, 'generic': True, 'label': permissions.TABLE[name].label,
                     'expires': time.time()+300, 'run_id': run.id if run else None, 'device': getattr(run, 'device', 'pc')}
         if memory_command:
             approval['memory_command'] = memory_command
+        if memory_line:
+            approval['memory_line'] = list(memory_line)   # "remember that": the line resolved now, saved on approval
         self.keep_approval(approval)
         # One sentence for both readers: the AI model (as the tool's result) and the owner (as the reply to a command).
         return {'approval': approval, 'status': 'awaiting approval', 'summary': 'Waiting for approval on screen: ' + approval['label'] + '. Nothing has happened yet.'}
@@ -624,6 +628,13 @@ class App:
         answered without a tool call. So the same table is asked here: the owner's switch for the tool that
         covers the command, and an activity row for what was changed."""
         governing = memory.governed_by(text)
+        line = None
+        if governing and memory.is_pointer(text):
+            # "Remember that.": the line before it is found now, while the conversation stands as the owner left
+            # it, and carried with an approval (by approval time the last line would be the waiting answer).
+            line = memory.previous_line(self.store, run.conversation if run else None, text)
+            if line is None:
+                return memory.NOTHING_BEFORE   # nothing to save and nothing to ask about
         if governing:
             verdict, why = permissions.decide(governing, None, stopped=self.stopped is not None, mode=self.tool_mode(governing))
             row = 'memory command: ' + permissions.TABLE[governing].label
@@ -631,12 +642,19 @@ class App:
                 self.audit(row, 'refused', run)
                 raise ValueError(why)
             if verdict == 'ask':
-                waiting = self.ask_first(governing, {'command': text}, run, memory_command=text)
+                args = {'command': text, **({'line': line[1]} if line else {})}   # the owner sees what would be saved
+                waiting = self.ask_first(governing, args, run, memory_command=text, memory_line=line)
                 run.emit('tool.completed', {'name': governing, 'result': waiting, 'checked_at': time.time()})
                 self.audit(row, 'awaiting approval', run)
                 return waiting['summary']
         before = self.store.items('memory') if governing else None
-        answer = memory.command(self.store, text)
+        try:
+            answer = memory.command(self.store, text, run.conversation if run else None, line)
+        except ValueError as exc:
+            # The store refused the fact (a credential in the line): said as the answer, with its activity row.
+            if governing:
+                self.audit(row, 'refused', run)
+            return str(exc)
         if governing and answer is not None:
             # "completed" only when a saved fact really changed (a command that matched nothing changes nothing).
             self.audit(row, 'completed' if self.store.items('memory') != before else 'nothing changed', run)
@@ -961,7 +979,7 @@ class App:
             if verdict == 'refuse':
                 raise ValueError(why)
             before = self.store.items('memory')
-            answer = memory.command(self.store, item['memory_command'])
+            answer = memory.command(self.store, item['memory_command'], None, item.get('memory_line'))
             self.audit('memory command: ' + permissions.TABLE[item['tool']].label, 'approved on screen' if self.store.items('memory') != before else 'approved on screen; nothing changed', run, device)
             if run and answer:
                 self.store.message(run.conversation, 'assistant', 'Approved on screen. ' + answer)
@@ -1047,9 +1065,10 @@ class App:
                 # every model request of this run. Empty when nothing differs from the default.
                 depth = {} if self.stage4 else providers.chat_options(settings.get('answer_mode'), text)
                 # Settings > AI > "Show replies while they are written": with Qwen the answer is asked for in pieces
-                # and shown as it grows, as far as the claim checks have passed it. Not for another device's
-                # question (its client waits for the finished reply) and not in the Stage 4 harness.
-                streaming = bool(settings.get('reply_stream')) and not self.stage4 and not getattr(run, 'wearable', False) and providers.provider() == 'qwen'
+                # and shown as it grows, as far as the claim checks have passed it. Since 1.0.17 also for another
+                # device's question: the phone reads the same assistant.draft events through its events route, in
+                # fewer steps (DEVICE_DRAFT_SECONDS; docs/PHONE-CORE-FIXES-20261007.md). Not in the Stage 4 harness.
+                streaming = bool(settings.get('reply_stream')) and not self.stage4 and providers.provider() == 'qwen'
                 if streaming:
                     depth = {**depth, 'stream': True}
                 drafts = None
@@ -1158,7 +1177,7 @@ class App:
                             snapshot=next(e['data']['result'] for e in reversed(run.events) if e['event']=='tool.completed' and e['data']['name']=='daily_briefing')
                             safe_text=answer_evidence.describe_briefing(snapshot)
                             if any(e['event'] in ('tool.completed','tool.failed') and e['data']['name'] in answer_evidence.ACTION_TOOLS for e in run.events):
-                                safe_text+='\n'+answer_evidence.action_guard('I completed the requested actions.',run.events)
+                                safe_text+='\n'+answer_evidence.receipts(run.events)
                             safe_text = offline_answers.OFFLINE_NOTE.sub('', providers.BACKUP_NOTE.sub('', safe_text))  # only the Core may say who answered
                         else:safe_text=self.claim_checks(run, response.get('content') or '')
                         answer += safe_text

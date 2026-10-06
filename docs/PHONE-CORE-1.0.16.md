@@ -134,7 +134,10 @@ Pair through the door with the code; keep `credential` in the Keychain; `hello` 
 speakers); `start` then `events {run_id, after}` in a loop until `done`; `speech {text}` for the reply's sound;
 `transcribe {data}` for hold-to-speak (16 kHz mono PCM, base64, at most 30 s); `conversations` and `history` for
 the Chats screen; `metrics` and `overview` for Status (the link time is the phone's own round trip of `status`);
-`stop` for STOP. Protocol field: 2.
+`stop` for STOP. Protocol field: 2. Since 1.0.17 the events of a device's question also carry `assistant.draft`
+(the whole reply so far, as far as the claim checks have passed it, at most every half second) when the PC's
+"Show replies while they are written" setting is on; the finished reply still comes as `assistant.delta` and
+`assistant.completed`, and a draft is never a claim the checks would change (docs/PHONE-CORE-FIXES-20261007.md).
 
 ## 7. Checked
 

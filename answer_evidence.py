@@ -86,16 +86,24 @@ def receipt(name,result):
 
 
 ACTION_TOOLS=permissions.ACTION_TOOLS  # which tools' results count as receipts: one table, permissions.py
+NO_ACTION_NOTE='No action was carried out for this request: nothing was saved, created, scheduled or changed. Completion is not confirmed.'
+
+
+def receipts(events):
+    """The receipts of this turn's action tools as one block, or '' when none ran."""
+    rows=[e for e in events if e['event'] in ('tool.completed','tool.failed') and e['data']['name'] in ACTION_TOOLS]
+    if not rows:return ''
+    return 'Action evidence for this request:\n'+'\n'.join(e['data']['name'].replace('_',' ')+': '+('failed' if e['event']=='tool.failed' else receipt(e['data']['name'],e['data']['result']))+'. Checked at '+stamp(e['data'].get('checked_at',time.time()))+'.' for e in rows)+'\nRequested or awaiting approval does not mean completed. These receipts cover only the listed actions.'
 
 
 def action_guard(text,events):
     # Deliberately bounded: this catches common completion wording, not every
-    # possible unsupported claim. All matching replies use actual receipts.
+    # possible unsupported claim. Since 1.0.17 the reply is kept and the truth is put under it (the receipts of
+    # this turn's actions, or the note that none ran): a replaced reply hid whole answers that merely
+    # mentioned something "has been updated" (docs/PHONE-CORE-FIXES-20261007.md).
     claim=re.search(r"\b(?:i(?:'ve| have)?|we(?:'ve| have)?)\s+(?:successfully\s+)?(?:saved|created|scheduled|cancelled|canceled|deleted|updated|applied|opened|launched|completed)\b|\b(?:timer|reminder|note|file|change|update|inspection)\b[^.!?\n]{0,50}\b(?:has been|was|is)\s+(?:successfully\s+)?(?:saved|created|scheduled|cancelled|canceled|deleted|updated|applied|completed)\b",text,re.I)
     if not claim:return text
-    rows=[e for e in events if e['event'] in ('tool.completed','tool.failed') and e['data']['name'] in ACTION_TOOLS]
-    if not rows:return 'No matching action result was recorded for this request. Completion is not confirmed.'
-    return 'Action evidence for this request:\n'+'\n'.join(e['data']['name'].replace('_',' ')+': '+('failed' if e['event']=='tool.failed' else receipt(e['data']['name'],e['data']['result']))+'. Checked at '+stamp(e['data'].get('checked_at',time.time()))+'.' for e in rows)+'\nRequested or awaiting approval does not mean completed. These receipts cover only the listed actions.'
+    return text.rstrip()+'\n\n'+(receipts(events) or NO_ACTION_NOTE)
 
 
 def evidence(events):

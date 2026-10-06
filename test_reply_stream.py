@@ -13,6 +13,7 @@ import unittest
 import urllib.error
 from unittest.mock import patch
 
+import answer_evidence
 import providers
 from server import App, Run
 
@@ -226,6 +227,7 @@ class CoreTests(unittest.TestCase):
         self.app = App(folder.name)
         self.app.store.save_settings({'reply_stream': True})
         self.app.DRAFT_SECONDS = 0  # every complete sentence is shown, whatever the clock says
+        self.app.DEVICE_DRAFT_SECONDS = 0
 
     def ask(self, text, *answers, wearable=False, env=QWEN):
         self.provider = Provider(*answers)
@@ -256,8 +258,8 @@ class CoreTests(unittest.TestCase):
         _, events = self.ask('Please write that down somewhere.', written(claimed))
         self.assertEqual([d['text'] for d in self.of(events, 'assistant.draft')], ['Certainly, sir.'])
         final = self.of(events, 'assistant.completed')[0]['text']
-        self.assertEqual(final, 'No matching action result was recorded for this request. Completion is not confirmed.')
-        self.assertNotIn('saved the note', json.dumps(events))
+        self.assertEqual(final, claimed + '\n\n' + answer_evidence.NO_ACTION_NOTE)   # 1.0.17: the reply stays, the note under it
+        self.assertNotIn('saved the note', json.dumps(self.of(events, 'assistant.draft')))   # never shown early
 
     def test_every_draft_is_a_beginning_of_the_answer_that_the_checks_leave_unchanged(self):
         """The promise itself, on answers made to break it, at several piece sizes: whatever is shown early is
@@ -395,10 +397,12 @@ class CoreTests(unittest.TestCase):
         self.assertIs(self.provider.requests[0]['stream'], False)
         self.assertEqual(self.of(events, 'assistant.completed')[0]['text'], ANSWER)
 
-    def test_another_devices_question_is_answered_in_one_piece(self):
-        _, events = self.ask('What is a transistor?', whole(ANSWER), wearable=True)
-        self.assertEqual(self.of(events, 'assistant.draft'), [])
-        self.assertIs(self.provider.requests[0]['stream'], False)
+    def test_another_devices_question_appears_as_it_is_written_too(self):
+        """1.0.17: a phone reads the same assistant.draft events through its events route."""
+        _, events = self.ask('What is a transistor?', written(ANSWER), wearable=True)
+        self.assertEqual([d['text'] for d in self.of(events, 'assistant.draft')], ['A transistor is a semiconductor switch.', 'A transistor is a semiconductor switch. It amplifies or switches signals.'])
+        self.assertIs(self.provider.requests[0]['stream'], True)
+        self.assertEqual(self.of(events, 'assistant.completed')[0]['text'], ANSWER)
 
 
 if __name__ == '__main__':

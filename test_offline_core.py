@@ -10,6 +10,7 @@ import unittest
 import urllib.request
 from unittest.mock import patch
 
+import answer_evidence
 import offline_answers
 import providers
 from ollama_provider import OllamaError
@@ -174,12 +175,12 @@ class ReviewTests(OfflineCase):
         claim = 'I have saved the note and the timer has been scheduled for 6 am.'
         _, events = self.ask('Tell me.', [{'choices': [{'finish_reason': 'stop', 'message': {'content': claim}}]}])
         checked = events['assistant.completed']['text']                  # what the checks make of it from a provider
-        self.assertNotIn('saved the note', checked)
+        self.assertEqual(checked, claim + '\n\n' + answer_evidence.NO_ACTION_NOTE)   # 1.0.17: the claim stays, the note under it
         Local.chat = {'done': True, 'message': {'content': claim}}
         _, events = self.ask('Tell me again.', [unreachable(), unreachable()])
         reply = events['assistant.completed']['text']
-        self.assertTrue(reply.startswith(checked + '\n\n' + NOTE), reply)  # the same words, then the closing line
-        self.assertNotIn('saved the note', reply)
+        self.assertTrue(reply.startswith(checked + '\n\n' + NOTE), reply)  # the same words (claim and note), then the closing line
+        self.assertIn(answer_evidence.NO_ACTION_NOTE, reply)
         Local.chat = {'done': True, 'message': {'content': 'All systems are online and the tests passed successfully.'}}
         _, events = self.ask('And the tests?', [unreachable(), unreachable()])
         self.assertNotIn('tests passed successfully', events['assistant.completed']['text'])

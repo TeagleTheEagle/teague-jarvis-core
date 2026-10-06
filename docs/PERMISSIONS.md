@@ -52,7 +52,7 @@ Every tool call passes `App.tool`: the AI model's, a typed or spoken command's, 
    a restored JSON backup.
 4. A refusal writes an activity row `refused`.
 
-The owner's exact memory commands (`memory.py`: "remember that I prefer ...", "my name is ...", "forget memory: ...")
+The owner's exact memory commands (`memory.py`: "remember that I prefer ...", "my name is ...", "forget memory: ...", and since 1.0.17 the bare "remember that", which saves the line before it)
 are answered without a tool call. `App.memory_command` asks the same table first (the switch of `save_item` or
 `manage_saved_memory`), so Off refuses them, Ask first makes them wait, and each one now writes an activity row.
 

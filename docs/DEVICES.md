@@ -74,7 +74,7 @@ desktop app's token, and a device's key opens none of the owner's routes. Decide
 |---|---|---|
 | `hello`, `status` | | who it is, what is allowed, whether JARVIS is stopped; `hello` may re-declare capabilities |
 | `start` | camera allowed, if a picture is sent | a question. It may call only the tools marked for other devices in `permissions.py` (reads); memory commands and every changing tool stay on the PC |
-| `events`, `cancel` | | only for its own questions. Its conversations are its own too: each starts with the device's id, and no device can write into or continue another's |
+| `events`, `cancel` | | only for its own questions. Its conversations are its own too: each starts with the device's id, and no device can write into or continue another's. Since 1.0.17 `events` also carries `assistant.draft` while the reply is written, when the PC's streaming setting is on |
 | `transcribe` | microphone allowed | local speech recognition |
 | `speech` | speakers allowed | speaks a text the device sends (up to 12,000 characters) with the voice JARVIS uses; meant for the reply |
 | `stop` | | the emergency stop (docs/PERMISSIONS.md). Any paired device may stop; **none can resume**. A stop is handled before anything else about the request, also as the stop words in a question: it is not turned away because a picture came with it, a capability is not allowed, or the database is busy. (1.0.16: a stop with a valid key is never turned away by the per-caller lockout either; only a wrong key is counted) |

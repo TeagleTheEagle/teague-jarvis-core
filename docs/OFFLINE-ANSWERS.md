@@ -59,8 +59,8 @@ mistakes a large model does not. It is a fallback for when nothing else answers,
   answer, seen with the same model), and as a second defence only what follows the last `</think>` counts as the
   answer; an answer cut short before that point counts as no answer.
 - **The local model's words meet the same checks as a provider's** (`App.claim_checks`): "I have saved the note"
-  without a receipt becomes "No matching action result was recorded…", "the tests passed" needs the result on
-  record. A small model that cannot do anything must not be the one that gets to claim it did.
+  without a receipt gets the note that no action was carried out under it (since 1.0.17; before, the reply was
+  replaced by that note), "the tests passed" needs the result on record. A small model that cannot do anything must not be the one that gets to claim it did.
 - **Stop ends a local answer at once** (its connection is closed, so the model stops working on it), and a question
   that was stopped while the provider was still being tried asks nobody.
 - Whatever goes wrong on the offline path itself, the provider's own error stands as it was (activity row "offline
