@@ -1,0 +1,26 @@
+{
+    "status":  "PASS",
+    "uninstall":  "uninstalled",
+    "install":  "installed",
+    "release":  "1.0.15-63362929d7ad",
+    "installer_seconds":  {
+                              "verify_package":  15.114,
+                              "copy":  8.738,
+                              "verify_copy":  7.586,
+                              "switch":  0.68
+                          },
+    "output":  null,
+    "running":  {
+                    "core_ready":  true,
+                    "seconds_to_ready":  16.5,
+                    "installed_release":  "1.0.15-63362929d7ad",
+                    "identity_matches":  true,
+                    "gate17_memory":  true,
+                    "gate19_memory":  true,
+                    "processes":  8,
+                    "processes_from_other_releases":  [
+
+                                                      ]
+                },
+    "new_release_present":  false
+}

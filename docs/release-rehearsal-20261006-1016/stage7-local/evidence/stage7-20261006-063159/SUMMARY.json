@@ -1,0 +1,46 @@
+{
+    "schema":  "jarvis-stage7-run-v1",
+    "overall":  "PASS",
+    "phase":  "Update",
+    "home":  "D:\\JARVIS-release-work\\stage7-local-1.0.16\\home",
+    "package":  "D:\\JARVIS-release-work\\pkg-1.0.16",
+    "started_utc":  "2026-10-06T06:31:59.3582702Z",
+    "finished_utc":  "2026-10-06T06:39:45.6181731Z",
+    "steps":  [
+                  {
+                      "step":  "E0-not-elevated",
+                      "status":  "PASS",
+                      "at":  "2026-10-06T06:31:59.4818004Z"
+                  },
+                  {
+                      "step":  "G1-packages",
+                      "status":  "PASS",
+                      "at":  "2026-10-06T06:32:02.4554539Z"
+                  },
+                  {
+                      "step":  "G2-extract-previous",
+                      "status":  "PASS",
+                      "at":  "2026-10-06T06:34:17.3638460Z"
+                  },
+                  {
+                      "step":  "G3-previous-installed",
+                      "status":  "PASS",
+                      "at":  "2026-10-06T06:35:39.3058343Z"
+                  },
+                  {
+                      "step":  "G4-update",
+                      "status":  "PASS",
+                      "at":  "2026-10-06T06:38:21.7240393Z"
+                  },
+                  {
+                      "step":  "G5-rollback",
+                      "status":  "PASS",
+                      "at":  "2026-10-06T06:38:47.0603516Z"
+                  },
+                  {
+                      "step":  "G6-update-again",
+                      "status":  "PASS",
+                      "at":  "2026-10-06T06:39:45.6181731Z"
+                  }
+              ]
+}

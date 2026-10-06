@@ -1,0 +1,8 @@
+zip install rehearsal starts 17:21:45
+0 zip hash                     {"matches_record": true, "bytes": 525906502}
+1 extract (Expand-Archive)     {"ok": true, "package_files": ["install.cmd", "installer.py", "release"]}
+2 install.cmd                  {"exit_code": 0, "result": "installed", "release": "1.0.16-fccde24e2cc6", "seconds": 70}
+3 launch                       {"processes": 8, "core_answers": true}
+4 verify after use             {"result": "verified", "release": "1.0.16-fccde24e2cc6"}
+5 uninstall                    {"result": "uninstalled", "files_removed": 10675, "kept": ["data", "config", "profile"], "jarvis_processes": 0, "leftover_program_files": 0}
+exit=0 at 17:26:01
