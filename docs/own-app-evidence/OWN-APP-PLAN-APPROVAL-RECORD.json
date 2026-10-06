@@ -1,0 +1,38 @@
+{
+  "schema": "jarvis-owner-decision-record-v1",
+  "subject": "Owner approval of the own-app plan (docs/OWN-APP-PLAN.md): release 1.0.17, JARVIS as his own app",
+  "issued_utc": "2026-10-06T08:23:24Z",
+  "issued_utc_basis": "first clock reading by Claude in the turn that received the first message (2026-10-06 19:23 local); the second message arrived in the same turn before this record was written",
+  "recorded_utc": "2026-10-06T08:24:51Z",
+  "owner_messages": [
+    {
+      "text": "I approve the own app plan can we make the app icon this image as well as the app icon for the ios app",
+      "attachment": "a 1254 x 1254 PNG, the Teague Industries badge (chrome T, TEAGUE INDUSTRIES, IDEAS | TECHNOLOGY | REALITY, on a dark rounded square with a blue frame); sha256 2e64494c3040a51f4ebe98900edfd040b0f36093ceb23496e7b3a362fc070097, 1,275,201 bytes; kept byte for byte at repo static/assets/branding/teague/teague-industries-badge.png",
+      "taken_as": "approval of the plan in substance (the words differ from the plan's approval wording by the hyphen in 'own-app'; reported to the owner, who then typed the exact wording below) and a change to decision D5: the icon of the Windows program and of the iPhone app is this image, not one made from the JARVIS mark"
+    },
+    {
+      "text": "I approve the own-app plan",
+      "taken_as": "the plan's exact approval wording (section 9). Decisions D1 to D4 and D6 as recommended: D1 Inno Setup, installed once by the owner on the build PC; D2 an entry in Settings > Apps > Installed apps with Uninstall that keeps the data; D3 the Setup.exe unsigned, signing later when the file goes online; D4 no faster sign-in start in this release; D6 JARVIS.ps1 dropped. D5 as the owner changed it in the first message."
+    }
+  ],
+  "approved_plan": {
+    "path": "C:\\Users\\jonny\\JARVIS-claude-workspace\\repo\\docs\\OWN-APP-PLAN.md",
+    "sha256": "7f2803a61a4b63cc585719a5073fee8c76a415c2ccbe6991e28d87a12d752b9a",
+    "repo_commit": "487485a",
+    "note": "the hash is of the plan as committed in 487485a; a later commit adds the approval and the D5 change to the plan's status line and its icon paragraph and changes nothing else in it"
+  },
+  "icon_files_made_on_approval": {
+    "made_by": "Pillow 12.3.0 in the repo's .venv, from the owner's image, on 2026-10-06 after the approval",
+    "static/assets/branding/teague/teague-industries-badge.png": "the owner's image unchanged, sha256 2e64494c3040a51f4ebe98900edfd040b0f36093ceb23496e7b3a362fc070097",
+    "desktop/jarvis.ico": "256 and 128 px the whole badge; 64, 48, 32, 24 and 16 px the chrome T centred on the badge's dark ground (the lettering is unreadable at those sizes); sha256 1c78eef2b442c40f744d67ddcf973f047712ae323578e8d1234a121d2927e636",
+    "desktop/tray.png": "32 px, the chrome T on the dark ground; sha256 e9192d2077f7017770a0a8ea10241a35c9f2ac58be2c34e98e10ef011106d1c9",
+    "phone/ios/AppIcon-1024.png": "1024 x 1024, RGB without alpha, the whole badge; sha256 bc6d268741f6b9bbfc303d9b2fb03efa58cfd845f341e24a6991f85daed3d82a; a copy for the Mac at D:\\JARVIS-release-work\\phone\\JARVIS-AppIcon-1024.png"
+  },
+  "effect": {
+    "authorized": "after 1.0.16 is the everyday JARVIS and the phone is paired (plan section 6, step 1), Claude builds release 1.0.17 in the repo as the plan's sections 3 and 6 describe (JARVIS.exe stamped with the icon, name, company and version; the resources\\app bootstrap; the desktop app deriving its folders from its own path and redirecting a stale start through current.json; shortcuts straight at JARVIS.exe, rewritten also on rollback; JARVIS-Setup.exe built with Inno Setup around the unchanged installer.py engine, per user, with a silent switch, a sandbox-home parameter and the Installed-apps entry; version 4 Stage 7 scripts as copies; tests; one independent reviewer per item; release notes; the release checks on this PC; the Stage 7 check plan for the owner's approval), all under the standing authority of CLAUDE.md; the icon files above are placed in the repo now. The desktop tray image desktop/tray.png, missing from the repo until now, is part of this placement",
+    "not_authorized": "installing Inno Setup (the owner's act, system-wide); the Stage 7 check of 1.0.17 and the update of the everyday JARVIS (each needs its own approval); a code-signing certificate or any signing; any push, upload or sync; registry writes on this PC outside a sandbox test that cleans up after itself; touching %LOCALAPPDATA%\\JARVIS; anything else in the OWNER-ONLY list of CLAUDE.md",
+    "stop_rules": "a failed check stops; a UAC prompt is a STOP; a contradiction between records is reported, not resolved by choice"
+  },
+  "next": "the owner: steps 4 to 7 of the 1.0.16 VM check, then the everyday update, Tailscale and the pairing; the AppIcon dragged into the Xcode project on the Mac; Inno Setup installed on this PC when convenient. Claude: the evaluation of the 1.0.16 check, the everyday-update plan; then release 1.0.17 as above",
+  "recorded_by": "Claude Code (Claude Fable 5.1). This record documents the owner's act; it grants no authority of its own."
+}

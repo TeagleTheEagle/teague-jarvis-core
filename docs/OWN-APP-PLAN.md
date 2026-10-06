@@ -1,8 +1,14 @@
 # JARVIS as his own app: release 1.0.17 (proposal for your approval)
 
-Status: **PROPOSED 2026-10-06 (Claude Code), written on your "write the own-app plan". Nothing of it is built.**
-Approval wording in section 9. It comes after 1.0.16 is your everyday JARVIS and the phone is paired (the approved
-`docs/PHONE-PLAN.md` steps 4 to 8); it does not touch 1.0.16.
+Status: **APPROVED BY THE OWNER 2026-10-06** ("I approve the own app plan can we make the app icon this image as well
+as the app icon for the ios app", then the exact wording "I approve the own-app plan"; first clock reading
+2026-10-06T08:23:24Z; record `../governance/OWN-APP-PLAN-APPROVAL-RECORD.json`, repo copy `docs/own-app-evidence/`).
+Decisions D1 Inno Setup (installed by the owner), D2 yes, D3 later, D4 no, D6 dropped, as recommended; **D5 changed by
+the owner: the icon is the Teague Industries badge the owner supplied** (`static/assets/branding/teague/
+teague-industries-badge.png`, sha256 2e64494c…), from which `desktop/jarvis.ico`, `desktop/tray.png` and
+`phone/ios/AppIcon-1024.png` were made the same day (section 3.1). Nothing else of it is built: the building starts
+after 1.0.16 is the everyday JARVIS and the phone is paired (the approved `docs/PHONE-PLAN.md` steps 4 to 8); it does
+not touch 1.0.16. Written on the owner's "write the own-app plan".
 
 What you said: "when can we make jarvis been his own app, launched by himself not electron" and "so how can we make
 jarvis his own app". The `docs/CAPABILITY-PLAN.md` section 5 proposal of `JARVIS-Setup.exe` ("a download app not a
@@ -49,9 +55,12 @@ Beside it, `release\electron\resources\app\` holds a four-line bootstrap (`packa
 the desktop app from `release\app\desktop\`. Electron starts that bootstrap whenever `JARVIS.exe` is started with no
 arguments, so a double-click on `JARVIS.exe` opens JARVIS, never Electron's welcome window.
 
-The icon: `desktop/jarvis.ico` (16 to 256 px) made from the mark `static/assets/branding/teague/jarvis-mark.svg` by a
-small build script, plus a real `desktop/tray.png`; both checked into the repo. If you have an icon file you prefer,
-it replaces them (decision D5).
+The icon (decision D5, decided by the owner on approval): the Teague Industries badge the owner supplied, kept byte for
+byte at `static/assets/branding/teague/teague-industries-badge.png`. Made from it on 2026-10-06 with Pillow and
+checked into the repo: `desktop/jarvis.ico` (256 and 128 px the whole badge; 64, 48, 32, 24 and 16 px the chrome T
+centred on the badge's dark ground, because the lettering cannot be read at those sizes), `desktop/tray.png` (32 px,
+the chrome T) and `phone/ios/AppIcon-1024.png` (the whole badge, 1024 px, no transparency, for Xcode's Assets >
+AppIcon). The owner may swap any of them for other renderings of the same badge.
 
 ### 3.2 The app knows where it lives
 
@@ -138,7 +147,7 @@ not in this release). The interrupted-update safety is unchanged and checked aga
 | D2 | An entry in Settings > Apps > Installed apps with Uninstall (data kept) | yes |
 | D3 | Signing the Setup.exe now (certificate in your name, yearly cost) or later | later, when the file goes online |
 | D4 | A faster start at sign-in (logon task; a system change) in this release | no, a separate decision |
-| D5 | The icon: made from the JARVIS mark, or an icon file from you | from the mark; send a file if you have one |
+| D5 | The icon: made from the JARVIS mark, or an icon file from you | **decided: the Teague Industries badge the owner supplied** |
 | D6 | `JARVIS.ps1` dropped (one way to start him) | dropped |
 
 Names shown by Windows: product "JARVIS", company "Teague Industries", version 1.0.17. Say if you want other words.
