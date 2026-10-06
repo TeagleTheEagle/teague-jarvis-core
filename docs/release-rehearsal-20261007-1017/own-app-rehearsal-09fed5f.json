@@ -1,0 +1,73 @@
+[
+    {
+        "step":  "1 install",
+        "status":  "installed",
+        "release":  "1.0.17-09fed5f54c31",
+        "launcher_script_written":  false,
+        "seconds":  {
+                        "verify_package":  8.078,
+                        "copy":  7.984,
+                        "verify_copy":  8.487,
+                        "switch":  0.196
+                    }
+    },
+    {
+        "step":  "2 program",
+        "exists":  true,
+        "product":  "JARVIS",
+        "company":  "Teague Industries",
+        "description":  "JARVIS",
+        "file_version":  "1.0.17.0",
+        "product_version":  "1.0.17.0",
+        "original":  "JARVIS.exe",
+        "electron_exe_absent":  true,
+        "bootstrap":  true
+    },
+    {
+        "step":  "3 launch",
+        "core_ready":  true,
+        "seconds_to_core":  30.9,
+        "process_names":  [
+                              "JARVIS.exe",
+                              "python.exe"
+                          ],
+        "jarvis_exe_processes":  7,
+        "window_title":  "JARVIS companion",
+        "data_in_sandbox":  true,
+        "profile_in_sandbox":  true,
+        "real_home_untouched_by_this":  true
+    },
+    {
+        "step":  "3b shutdown",
+        "left_after_request":  0,
+        "forced":  0
+    },
+    {
+        "step":  "4 stale start",
+        "core_ready":  true,
+        "seconds_to_core":  22.4,
+        "running_from":  [
+                             "D:\\JARVIS-release-work\\own-app-rehearsal\\home\\releases\\1.0.17-09fed5f54c31-copy\\electron\\JARVIS.exe"
+                         ],
+        "from_current_copy":  1,
+        "from_old":  0,
+        "handed_over":  true
+    },
+    {
+        "step":  "4b shutdown",
+        "left_after_request":  0,
+        "forced":  0
+    },
+    {
+        "step":  "5 uninstall",
+        "status":  "uninstalled",
+        "removed":  21418,
+        "kept":  [
+                     "data",
+                     "config",
+                     "profile"
+                 ],
+        "processes":  0,
+        "releases_left":  false
+    }
+]

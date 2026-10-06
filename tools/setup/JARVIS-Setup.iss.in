@@ -1,0 +1,181 @@
+; JARVIS-Setup (docs/OWN-APP-PLAN.md 3.4). This is the template; tools/setup/build_setup.py fills the @NAME@ fields and
+; writes JARVIS-Setup-<release id>.iss beside the package, which Inno Setup 6 compiles. Do not edit a generated copy.
+;
+; What the Setup does: unpacks the package (release\, installer.py) into %LOCALAPPDATA%\JARVIS-package, per user and
+; without administrator rights, then runs the package's own installer.py, which installs or updates JARVIS exactly as
+; the Stage 7 check has proven (the previous release kept as the rollback copy; data, keys and preferences untouched),
+; and registers "JARVIS" in Settings > Apps > Installed apps. Uninstall there runs the package's installer with
+; `uninstall` (program removed, data kept) and then removes the package folder.
+; Switches: /VERYSILENT /SUPPRESSMSGBOXES /NORESTART (silent); /HOME=<folder> (a sandbox install home, as installer.py
+; --home); /DIR=<folder> (a sandbox package folder, Inno's own switch); /NOSHORTCUTS (rehearsals on the build PC);
+; /LOG=<file>. The installer's JSON answer is kept in {app}\setup-result.json; the uninstall's in
+; <package folder>-uninstall-result.json beside the folder (the folder itself is removed by the uninstall).
+
+#define MyAppId "{{DC2C8033-1BBF-5E1C-99A0-BE0E70DC9937}"
+
+[Setup]
+AppId={#MyAppId}
+AppName=JARVIS
+AppVersion=@VERSION@
+AppVerName=JARVIS @VERSION@
+AppPublisher=Teague Industries
+AppComments=JARVIS release @RELEASE_ID@
+DefaultDirName={localappdata}\JARVIS-package
+UsePreviousAppDir=no
+DisableDirPage=yes
+DisableProgramGroupPage=yes
+DisableReadyPage=no
+PrivilegesRequired=lowest
+OutputDir=@OUTPUT_DIR@
+OutputBaseFilename=@OUTPUT_NAME@
+SetupIconFile=@ICON@
+UninstallDisplayName=JARVIS
+UninstallDisplayIcon={code:JarvisProgram}
+Compression=lzma2/normal
+SolidCompression=yes
+LZMAUseSeparateProcess=yes
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
+WizardStyle=modern
+ShowLanguageDialog=no
+CloseApplications=no
+RestartApplications=no
+SetupLogging=yes
+MinVersion=10.0
+VersionInfoVersion=@VERSION_QUAD@
+VersionInfoCompany=Teague Industries
+VersionInfoDescription=JARVIS Setup
+VersionInfoProductName=JARVIS
+VersionInfoProductVersion=@VERSION_QUAD@
+
+[Languages]
+Name: "english"; MessagesFile: "compiler:Default.isl"
+
+[Messages]
+WelcomeLabel2=This will install JARVIS @VERSION@ on this PC, for your user account only (no administrator rights).%n%nIf JARVIS is already installed it is updated: the previous release is kept as a rollback copy, and your data, keys and preferences are untouched.
+FinishedLabelNoIcons=JARVIS @VERSION@ is installed.
+FinishedLabel=JARVIS @VERSION@ is installed.
+
+; A newer Setup over an older package: the old release files go first, so the package holds exactly this release
+; (the installer verifies the package file by file and refuses anything extra).
+[InstallDelete]
+Type: filesandordirs; Name: "{app}\release"
+Type: files; Name: "{app}\installer.py"
+Type: files; Name: "{app}\install.cmd"
+Type: files; Name: "{app}\setup-result.json"
+Type: files; Name: "{app}\uninstall-result.json"
+
+[Files]
+Source: "@PACKAGE@\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
+
+; What the Setup itself wrote beside the package goes with it; the uninstall's own answer is kept beside the folder
+; (<package folder>-uninstall-result.json), where the Stage 7 check reads it.
+[UninstallDelete]
+Type: files; Name: "{app}\setup-result.json"
+Type: files; Name: "{app}\setup-home.txt"
+Type: files; Name: "{app}\setup-noshortcuts.txt"
+Type: dirifempty; Name: "{app}"
+
+[Run]
+Filename: "{code:JarvisProgram}"; WorkingDir: "{code:JarvisProgramFolder}"; Description: "Start JARVIS"; Flags: postinstall nowait skipifsilent; Check: InstallSucceeded
+
+[Code]
+var
+  Installed: Boolean;
+
+function HomeOverride(): String;
+begin
+  Result := Trim(ExpandConstant('{param:HOME|}'));
+end;
+
+function JarvisHome(): String;
+begin
+  Result := HomeOverride();
+  if Result = '' then Result := ExpandConstant('{localappdata}\JARVIS');
+end;
+
+function JarvisProgramFolder(Param: String): String;
+begin
+  Result := JarvisHome() + '\releases\@RELEASE_ID@\electron';
+end;
+
+function JarvisProgram(Param: String): String;
+begin
+  Result := JarvisProgramFolder('') + '\JARVIS.exe';
+end;
+
+function InstallSucceeded(): Boolean;
+begin
+  Result := Installed;
+end;
+
+function HomeArgument(const Home: String): String;
+begin
+  if Home <> '' then Result := ' --home "' + Home + '"' else Result := '';
+end;
+
+{ /NOSHORTCUTS: rehearsals on the build PC never touch its real Desktop and Startup folders (remembered for the uninstall). }
+function NoShortcutsArgument(): String;
+begin
+  if (ExpandConstant('{param:NOSHORTCUTS|}') <> '') or FileExists(ExpandConstant('{app}\setup-noshortcuts.txt')) then Result := ' --no-shortcuts' else Result := '';
+end;
+
+{ The package's installer, with the package's own Python; its JSON answer goes to a file beside the package. }
+function RunInstaller(const Action, Home, ResultFile: String; var Code: Integer): Boolean;
+var
+  Command: String;
+begin
+  Command := '/c ""' + ExpandConstant('{app}\release\python\python.exe') + '" "' + ExpandConstant('{app}\installer.py') + '" '
+             + Action + HomeArgument(Home) + NoShortcutsArgument() + ' > "' + ResultFile + '" 2>&1"';
+  Log('JARVIS installer: cmd ' + Command);
+  Result := Exec(ExpandConstant('{cmd}'), Command, ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, Code);
+  if not Result then Code := -1;
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  Code: Integer;
+  Note: String;
+begin
+  if CurStep = ssPostInstall then
+  begin
+    { The install home is remembered for the uninstall (a sandbox home never touches the real JARVIS). }
+    SaveStringToFile(ExpandConstant('{app}\setup-home.txt'), HomeOverride(), False);
+    if ExpandConstant('{param:NOSHORTCUTS|}') <> '' then SaveStringToFile(ExpandConstant('{app}\setup-noshortcuts.txt'), '1', False);
+    RunInstaller('install --package "' + ExpandConstant('{app}') + '"', HomeOverride(), ExpandConstant('{app}\setup-result.json'), Code);
+    Installed := Code = 0;
+    if not Installed then
+    begin
+      Note := 'JARVIS could not be installed (the installer answered ' + IntToStr(Code) + '). Nothing in JARVIS was changed.'
+              + #13#10 + 'Details: ' + ExpandConstant('{app}\setup-result.json')
+              + #13#10 + 'Quit JARVIS completely (its icon near the clock) and run this Setup again.';
+      Log(Note);
+      if not WizardSilent() then MsgBox(Note, mbError, MB_OK);
+    end;
+  end;
+end;
+
+{ Uninstall: first JARVIS itself through the package's installer (program removed, data kept); only when that
+  succeeded does Setup remove the package folder and the Installed-apps entry. A refusal (JARVIS still running)
+  keeps everything so the uninstall can be run again. }
+function InitializeUninstall(): Boolean;
+var
+  Code: Integer;
+  Saved: AnsiString;
+  Home, Note: String;
+begin
+  Result := True;
+  if not FileExists(ExpandConstant('{app}\installer.py')) then exit;
+  Home := '';
+  if LoadStringFromFile(ExpandConstant('{app}\setup-home.txt'), Saved) then Home := Trim(String(Saved));
+  RunInstaller('uninstall', Home, ExpandConstant('{app}') + '-uninstall-result.json', Code);
+  if Code <> 0 then
+  begin
+    Note := 'JARVIS could not be removed (the installer answered ' + IntToStr(Code) + '). JARVIS is still installed.'
+            + #13#10 + 'Details: ' + ExpandConstant('{app}') + '-uninstall-result.json'
+            + #13#10 + 'Quit JARVIS completely (its icon near the clock) and run the uninstall again.';
+    Log(Note);
+    if not UninstallSilent() then MsgBox(Note, mbError, MB_OK);
+    Result := False;
+  end;
+end;

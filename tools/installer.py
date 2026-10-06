@@ -235,10 +235,14 @@ def program_file(home, release_id):
 
 
 def ensure_launcher(home, release_id):
-    """JARVIS.ps1 is written only for a release that has no JARVIS.exe (decision D6: one way to start him). An
-    existing copy is left alone: a later rollback to such a release needs it, and it harms nothing."""
-    if not program_file(home, release_id):
-        atomic_write(Path(home) / 'JARVIS.ps1', LAUNCHER)
+    """JARVIS.ps1 is written only for a release that has no JARVIS.exe, and removed when the current release has
+    one (decision D6: one way to start him; its text would start an electron.exe that 1.0.17 does not ship). A
+    rollback to an older release writes it again."""
+    launcher = Path(home) / 'JARVIS.ps1'
+    if program_file(home, release_id):
+        launcher.unlink(missing_ok=True)
+    else:
+        atomic_write(launcher, LAUNCHER)
 
 
 def shortcut_script(home, release_id):

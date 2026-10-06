@@ -38,7 +38,7 @@ APP = {'app/server.py': b'# server', 'app/personality.txt': b'Default personalit
        'electron/electron.exe': b'MZ', 'models/wake-models/hey.onnx': b'model'}
 # A release of 1.0.17 or later: its own program file, no electron.exe (docs/OWN-APP-PLAN.md 3.1).
 APP_EXE = {**{k: v for k, v in APP.items() if k != 'electron/electron.exe'}, 'electron/JARVIS.exe': b'MZ-JARVIS',
-           'electron/resources/app/main.cjs': b'// bootstrap'}
+           'electron/resources/app/main.cjs': b'// bootstrap', 'electron/resources/app/package.json': b'{"main": "main.cjs"}'}
 
 
 class InstallerTests(unittest.TestCase):
@@ -56,6 +56,9 @@ class InstallerTests(unittest.TestCase):
         guard = patch.object(installer, 'write_shortcuts', side_effect=lambda home, release_id: self.shortcut_writes.append((str(home), release_id)))
         guard.start()
         self.addCleanup(guard.stop)
+        removal = patch.object(installer, 'remove_shortcuts', side_effect=lambda name=installer.SHORTCUT: self.shortcut_writes.append(('remove', name)))
+        removal.start()
+        self.addCleanup(removal.stop)
 
     def install(self, package, **kw):
         return installer.install(package, self.home, shortcuts=False, stop=self.stop, **kw)
@@ -535,12 +538,11 @@ class OwnAppTests(unittest.TestCase):
         self.assertIn('powershell.exe', self.scripts[0])
         self.assertIn('JARVIS.ps1', self.scripts[0])
 
-    def test_an_update_to_the_own_program_leaves_the_old_launcher_file_alone_and_a_rollback_uses_it_again(self):
+    def test_an_update_to_the_own_program_removes_the_old_launcher_file_and_a_rollback_writes_it_again(self):
         installer.install(self.old, self.home, shortcuts=True, stop=self.stop)
         installer.install(self.new, self.home, shortcuts=True, stop=self.stop)
-        self.assertTrue((self.home / 'JARVIS.ps1').exists())           # harmless; a rollback needs it
+        self.assertFalse((self.home / 'JARVIS.ps1').exists())          # decision D6: its text would start an electron.exe 1.0.17 has not
         self.assertIn('JARVIS.exe', self.scripts[-1])
-        (self.home / 'JARVIS.ps1').unlink()                              # even when it is gone, a rollback restores it
         result = installer.rollback(self.home, stop=self.stop)
         self.assertEqual(result['release'], '1.0.16-abc')
         self.assertIn('shortcuts', result['seconds'])

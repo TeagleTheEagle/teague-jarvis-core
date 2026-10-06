@@ -1,0 +1,29 @@
+{
+  "setup": "JARVIS-Setup-1.0.17-09fed5f54c31.exe",
+  "setup_sha256": "b790b9562b02271b734fdd8f20fa845dc48944f07caba7833cb2f24977bb2c13",
+  "setup_bytes": 404912417,
+  "release_id": "1.0.17-09fed5f54c31",
+  "version": "1.0.17",
+  "commit": "09fed5f54c31e9629924add42379a2c5250dfefb",
+  "package": "D:\\JARVIS-release-work\\own-app-rehearsal\\JARVIS-1.0.17-09fed5f54c31",
+  "package_zip": null,
+  "package_zip_sha256": null,
+  "manifest_sha256": "f8734532689d4eea31bcc24c71b2efbfcce076c825811aacd92c13a5a5ff0031",
+  "script": "JARVIS-Setup-1.0.17-09fed5f54c31.iss",
+  "script_sha256": "e8022bdeb6c7bc2c435cc98923bd582ced4e2498ebb5d509171935ad3635ccb9",
+  "template_sha256": "cecd6673bcbb4068a2a873e1f8b8e203b3a7d0dec4af4caadedba8cb7c4513fc",
+  "iscc": "C:\\Users\\jonny\\AppData\\Local\\Programs\\Inno Setup 6\\ISCC.exe",
+  "iscc_sha256": "0a8757031b33777e4c9cbffee40f11a5062b36d25cbe144c1db73b6102b80ad7",
+  "seconds": 118.9,
+  "built_at": 1791297358.4025426,
+  "signed": false,
+  "switches": [
+    "/VERYSILENT",
+    "/SUPPRESSMSGBOXES",
+    "/NORESTART",
+    "/HOME=<sandbox home>",
+    "/DIR=<sandbox package folder>",
+    "/NOSHORTCUTS",
+    "/LOG=<file>"
+  ]
+}

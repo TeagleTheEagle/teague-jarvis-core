@@ -77,6 +77,10 @@ def main(argv=None):
     added = overlay_tests(commit, app)
     (app / 'tools').mkdir(exist_ok=True)  # test_installer.py tests the installer shipped with the release
     shutil.copyfile(package / 'installer.py', app / 'tools' / 'installer.py')
+    # test_own_app.py tests the build's helpers; the build script never ships, so it comes from the release's commit
+    # like the tests themselves (1.0.17).
+    (app / 'tools' / 'build_release.py').write_bytes(subprocess.run(['git', 'show', f'{commit}:tools/build_release.py'], cwd=REPO, check=True,
+                                                                   capture_output=True).stdout)
     # Two Python tests evaluate JavaScript with `node`: give them the release's own Electron as node.
     shim = work / 'node-shim'
     shutil.copytree(copy / 'electron', shim)

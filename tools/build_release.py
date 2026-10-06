@@ -44,8 +44,10 @@ PYTHON_EMBED = {
 ELECTRON = {'version': '44.2.0', 'sha256': '07b043bf9b0a0ac14a82fac0b612b7b7ed13cde727d706d74e41a45278ab51f1'}
 # The program file (docs/OWN-APP-PLAN.md 3.1): Electron's binary renamed and stamped with the icon, the name and
 # the version by rcedit, the Electron team's tool, from the npm package rcedit 5.0.2 installed project-locally
-# (pnpm, desktop/package.json). The registry marks that package as no longer supported; the binary it carries
-# is pinned here by hash and the build refuses any other.
+# (pnpm, desktop/package.json; published by the Electron team's GitHub Actions with an npm provenance attestation,
+# bundling rcedit 2.0.0). The registry marks that package as no longer supported and its repository was archived
+# in April 2026; the binary it carries is pinned here by hash and the build refuses any other. A later release
+# may keep the binary in build/cache with a pinned URL and hash instead, as the Python embeddable is kept.
 RCEDIT = {'package': 'rcedit', 'version': '5.0.2', 'exe': 'bin/rcedit-x64.exe',
           'sha256': '3e7801db1a5edbec91b49a24a094aad776cb4515488ea5a4ca2289c400eade2a'}
 PROGRAM = {'file': 'JARVIS.exe', 'product': 'JARVIS', 'description': 'JARVIS', 'company': 'Teague Industries',
@@ -112,11 +114,12 @@ def stamp_program(exe, version, icon, rcedit):
     """The icon, the name, the company and the version, stamped into the renamed Electron binary."""
     quad = version_quad(version)
     strings = {'ProductName': PROGRAM['product'], 'FileDescription': PROGRAM['description'], 'CompanyName': PROGRAM['company'],
-               'InternalName': PROGRAM['product'], 'OriginalFilename': PROGRAM['file'], 'LegalCopyright': PROGRAM['company']}
+               'InternalName': PROGRAM['product'], 'OriginalFilename': PROGRAM['file'], 'LegalCopyright': 'Copyright ' + PROGRAM['company']}
     command = [str(rcedit), str(exe), '--set-icon', str(icon), '--set-file-version', quad, '--set-product-version', quad]
     for name, value in strings.items():
         command += ['--set-version-string', name, value]
-    subprocess.run(command, check=True, capture_output=True)
+    done = subprocess.run(command, capture_output=True)
+    require(done.returncode == 0, 'rcedit failed: ' + (done.stderr or done.stdout).decode(errors='replace').strip())
 
 
 def write_bootstrap(electron_dir, version):

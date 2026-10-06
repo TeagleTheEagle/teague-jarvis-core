@@ -13,8 +13,16 @@ const installPaths=require('./install-paths.cjs');
 // (docs/OWN-APP-PLAN.md 3.2). In development (the repo) nothing here applies.
 const layout=installPaths.installLayout(process.execPath);
 const stale=layout&&installPaths.staleStart(layout);
-if(stale){installPaths.redirect(stale,installPaths.appArguments(process.argv));app.exit(0);return;}
-if(layout){installPaths.applyLayout(layout);app.setPath('userData',layout.profile);}
+if(stale){
+ if(stale.program||stale.launcher)installPaths.redirect(stale,installPaths.appArguments(process.argv));
+ else dialog.showErrorBox('JARVIS','This program file belongs to an earlier JARVIS release ('+layout.releaseId+'). The installed one is '+stale.current+', and it could not be started from here. Start JARVIS from its Desktop shortcut.');
+ app.exit(0);return;
+}
+if(layout){
+ installPaths.applyLayout(layout);
+ require('node:fs').mkdirSync(layout.profile,{recursive:true});   // setPath throws for a folder that is not there
+ app.setPath('userData',layout.profile);app.setPath('sessionData',layout.profile);   // what --user-data-dir covered: the profile, caches included
+}
 let updates;
 let companionWanted=false;
 let unwatchCore,win,tray,backend,quitting=false,origin='',capture,companion,lastCompanionState,resumeMicOnShow=false,liveGrantUntil=0;

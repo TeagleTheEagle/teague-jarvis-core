@@ -12,7 +12,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / 'tools'))
-import build_release  # noqa: E402
+try:
+    import build_release  # noqa: E402
+except ModuleNotFoundError:   # a copy without the development tools (the release regression adds the script; anything else skips)
+    raise unittest.SkipTest('tools/build_release.py is not beside these tests') from None
 
 RCEDIT = ROOT / 'desktop' / 'node_modules' / build_release.RCEDIT['package'] / build_release.RCEDIT['exe']
 
