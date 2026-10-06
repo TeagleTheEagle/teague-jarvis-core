@@ -1,0 +1,36 @@
+{
+    "schema":  "jarvis-everyday-update-v1",
+    "utc":  "2026-10-06T02:11:48.4584703Z",
+    "installer":  {
+                      "status":  "installed",
+                      "release":  "1.0.15-63362929d7ad",
+                      "previous":  "1.0.14-e03872680e1d",
+                      "home":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS",
+                      "seconds":  {
+                                      "verify_package":  8.458,
+                                      "copy":  28.931,
+                                      "verify_copy":  8.907,
+                                      "stop":  0.627,
+                                      "switch":  0.005
+                                  }
+                  },
+    "wall_seconds":  47.1,
+    "verify":  "verified",
+    "current":  {
+                    "release":  "1.0.15-63362929d7ad",
+                    "previous":  "1.0.14-e03872680e1d",
+                    "switched_at":  1791252700.7806828
+                },
+    "database_sha256_before":  "cffac2db1634c684b54de916a8461ddef1f37244ac194bc31d58ec68ea853781",
+    "database_sha256_after":  "cffac2db1634c684b54de916a8461ddef1f37244ac194bc31d58ec68ea853781",
+    "database_unchanged":  true,
+    "shortcuts_before":  {
+                             "desktop":  true,
+                             "startup":  true
+                         },
+    "shortcuts_after":  {
+                            "desktop":  true,
+                            "startup":  true
+                        },
+    "jarvis_started":  false
+}
