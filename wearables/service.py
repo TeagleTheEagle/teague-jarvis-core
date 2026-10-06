@@ -13,6 +13,8 @@ import threading
 import time
 import uuid
 
+import calendar_feed
+import mail
 import permissions
 import providers
 from devices import DeviceError
@@ -201,7 +203,12 @@ class Service:
             projects=[{'id':p['id'],'name':p['name'],'open_tasks':len([l for l in p['links'] if l['kind']=='task' and l['ref'] in open_ids])} for p in workspaces.listing(store)]
             now=time.time()
             reminders=[{'title':r['title'],'due':r['due'],'fired':bool(r['fired'])} for r in store.reminders() if r['due']<=now+86400]
+            # 1.0.17 item G (docs/MAC-REQUESTS-20261007.md): the next day's events and the unread count, read in the background
+            # (server.Fresh) so this answer never waits on a feed or a mail server; null until read, null when not connected.
+            day=self.app.calendar_day.get() if calendar_feed.configured() else None
+            calendar=None if day is None else [{'title':r['title'],'start':r['start_ts'],'end':r['end_ts'],'all_day':r['all_day'],'location':r.get('location')} for r in day[:20]]
             return {'tasks_open':len(open_tasks),'projects':projects[:20],'reminders':reminders[:20],'conversations':len(store.conversations_for(self.prefix,1000)),
+                    'calendar_connected':calendar_feed.configured(),'calendar':calendar,'mail_unread':self.app.mail_unread.get() if mail.configured() else None,
                     'scope':'Open tasks, projects and the reminders due within 24 hours, from the PC; the conversations are this device\'s own.'}
         if op in ('approvals','approve','reject'):
             # 1.0.17 (docs/PHONE-ACCESS-1.0.17.md): what waits for the owner, and the owner's answer from the pocket.

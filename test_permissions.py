@@ -41,10 +41,11 @@ class TableTests(unittest.TestCase):
     def test_the_lists_other_modules_used_to_keep_are_unchanged(self):
         # Until 1.0.15 these four lists were written out in server.py, answer_evidence.py, store.py and actions.py.
         self.assertEqual(permissions.WEARABLE_TOOLS, {'device_registry', 'time_now', 'list_items', 'conversation_search',
-            'conversation_read', 'project_catalog', 'project_read', 'web_search', 'news_search'})
+            'conversation_read', 'project_catalog', 'project_read', 'web_search', 'news_search',
+            'mail_search', 'mail_read', 'calendar_events'})  # 1.0.17 item G: the mail and calendar reads
         self.assertEqual(permissions.ACTION_TOOLS, {'save_item', 'set_timer', 'manage_timer', 'manage_saved_memory', 'preview_action',
             'development_edit', 'development_propose', 'development_rollback', 'assistant_control', 'navigate_panel',
-            'inspect_interface', 'create_file', 'project_save_document', 'project_link_chat', 'open_app', 'spotify', 'play_music'})
+            'inspect_interface', 'create_file', 'project_save_document', 'project_link_chat', 'open_app', 'spotify', 'play_music', 'mail_send'})
         self.assertEqual(permissions.EVIDENCE_TOOLS, {'calculate', 'create_file', 'save_item', 'set_timer', 'suit_diagram',
             'project_link_chat', 'project_save_document'})
         self.assertEqual(permissions.PREVIEW_TOOLS, ('save_item', 'set_timer', 'create_file'))
@@ -64,7 +65,7 @@ class TableTests(unittest.TestCase):
                 if rule.effect == permissions.READS:
                     self.assertEqual((rule.asks, rule.read_actions), (permissions.NEVER, ()))
         # JARVIS changing itself always asks, and so does a draft.
-        for name in ('development_propose', 'development_edit', 'development_rollback', 'preview_action'):
+        for name in ('development_propose', 'development_edit', 'development_rollback', 'preview_action', 'mail_send'):
             self.assertEqual(permissions.TABLE[name].asks, permissions.ALWAYS)
 
     def test_some_actions_of_a_changing_tool_only_read(self):

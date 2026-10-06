@@ -90,14 +90,15 @@ record in `docs/`, committed by file list. Device routes are defined here and ha
   block. One nudge per collision, never repeated, none in quiet hours. On the PC: a notice and a spoken line when
   "proactive" is on. On the phone: `status.notices` counts and a `notices` op lists them (the Mac shows them).
 
-**G. Google: Gmail and Calendar** (items 3 and 4, after the owner's steps in section 3)
-- `google_connect.py`: the owner's one-time sign-in from Settings > Connectors (Google's OAuth 2.0 with a loopback
-  address on this PC, the same shape as the Spotify sign-in; the refresh token kept in the config folder beside the
-  device secret, out of backups and git, never read by Claude). Disconnect from the same page.
-- Tools: `mail_search` (recent, unread, by words; read one message), `mail_send` (a change; Ask first by default
-  for the AI, so a draft is shown before anything leaves), `calendar_events` (today, the next days), `calendar_add`
-  (a change, Ask first by default). The daily briefing gets a real calendar section. The phone's `overview` gets
-  the next 24 hours of events for its Upcoming panel.
+**G. Google: Gmail and Calendar** (items 3 and 4, after the owner's steps in section 3). **Built 2026-10-07, changed
+from the first design:** no Google sign-in screen (a personal account's OAuth app stays in testing status and its
+sign-in expires every seven days); instead an app password for Gmail over IMAP and SMTP, and the calendar's secret
+iCal address, both lines in the key file (`docs/GOOGLE-STEPS.md`; record `docs/PHONE-ACCESS-1.0.17.md` section 4).
+- `mail.py` and `calendar_feed.py`; Settings > Connections > Connectors with a TEST for each.
+- Tools: `mail_search` and `mail_read` (reads), `mail_send` (a change that always asks first: the draft waits for
+  the owner's approval on the PC or on a device that may approve), `calendar_events` (a read). The daily briefing
+  gets a real calendar section. The phone's `overview` gets the next 24 hours of events and the unread count.
+  Adding a calendar event is not built: it needs the sign-in screen (the owner's separate decision, "calendar add").
 - Plainly: anything JARVIS reads from mail or the calendar goes to the AI provider (Qwen on Alibaba) with the
   question, as every question does.
 
@@ -125,8 +126,8 @@ release work one to two. About five to seven long sessions before the VM check.
 |---|---|
 | Today | On the PC, JARVIS window: Settings > Devices > the phone's row > tick "May save memories and tasks" (item 1). After 1.0.17 is installed, the two new ticks on the same row. |
 | Today, if wanted | Settings > Spotify > sign in (the sign-in lasts until JARVIS restarts; a lasting sign-in is a later item). |
-| Before item G is usable | A Google Cloud project with the Gmail API and the Google Calendar API enabled, an OAuth consent screen with the owner's own Google account as a test user, and an OAuth client of the "Desktop app" type. Its client id and client secret go into the key file as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` (Claude never sees them). The exact clicks are written when item G is built. Then Settings > Connectors > Sign in to Google, once. |
-| Before item I is usable | Google's Device Access programme: the one-time US$5 registration, a Device Access project linked to the same OAuth client, and the Nest devices' home shared with it; the project id goes into the key file as `GOOGLE_DEVICE_ACCESS_PROJECT`. Also: which Nest camera model. |
+| Before item G is usable | `docs/GOOGLE-STEPS.md`: an app password for Gmail (2-Step Verification on, then myaccount.google.com/apppasswords) and the calendar's secret address in iCal format, as three lines in the key file (`GMAIL_ADDRESS`, `GMAIL_APP_PASSWORD`, `GOOGLE_CALENDAR_ICS`; Claude never sees them); start JARVIS again; Settings > Connections > TEST. No Google Cloud project, nothing that expires. |
+| Before item I is usable | Google's Device Access programme: the one-time US$5 registration, a Google Cloud project with an OAuth client (the Nest API has no app-password path, so this one does need the sign-in screen, re-done every seven days while the app is in testing status), and the Nest devices' home shared with it; the project id goes into the key file as `GOOGLE_DEVICE_ACCESS_PROJECT`. Also: which Nest camera model. |
 | No hurry | Run `tools/host/Test-QwenVoice.ps1` (jonny account) and send the photo; when it says SPEAKS, Settings > Voice > VOICE PREVIEW > Qwen (the cloned voice; fixed in 1.0.16). |
 | When the release is ready | "I approve the Stage 7 check of 1.0.17", then "I approve the update of my everyday JARVIS to 1.0.17" (each after its plan). |
 

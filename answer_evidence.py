@@ -25,6 +25,8 @@ def briefing(readers):
     for name,read in readers.items():
         try:
             raw=read()
+            notes=[]
+            if name=='calendar' and isinstance(raw,tuple):raw,notes=raw   # calendar_feed.upcoming: (rows, notes); a note means the feed is not fresh
             rows=raw['results'] if name=='news' else raw
             if not isinstance(rows,list) or any(not isinstance(r,dict) for r in rows):
                 raise ValueError('Invalid source response')
@@ -38,10 +40,11 @@ def briefing(readers):
                 if retrieved_at is None:section['status']='unverified'
                 elif raw.get('cached') or checked-retrieved_at>300 or retrieved_at>checked+60:section['status']='stale'
                 section['items']=[{**r,'publication_status':publication_status(r.get('published'),checked)} for r in section['items']]
+            if notes:section.update(status='stale',notes=list(notes))
             sections[name]=section
         except Exception as exc:
             sections[name]={'status':'failed','checked_at':time.time(),'items':[],'error_code':type(exc).__name__}
-    sections['calendar']={'status':'unavailable','items':[],'scope':'No calendar integration is connected to this briefing.'}
+    sections.setdefault('calendar',{'status':'unavailable','items':[],'scope':'No calendar is connected to this briefing (docs/GOOGLE-STEPS.md).'})  # 1.0.17 item G: a connected calendar is a reader like the others
     return {'status':'partial' if any(s['status'] in ('failed','unverified','stale') for s in sections.values()) else 'checked',
             'sections':sections,'generated_at':time.time(),
             'scope':'Saved outstanding tasks, saved reminders and project registry; not a complete calendar. News is feed metadata, not independently verified reporting.'}
@@ -71,6 +74,7 @@ def briefing_details(result):
             title=str(row.get('title') or row.get('name') or row.get('body') or 'Untitled')
             if name=='news':lines.append('• '+title+' — '+str(row.get('source') or 'publisher unknown')+'; '+str(row.get('published') or 'date unknown')+' ('+row['publication_status']+'). '+str(row.get('url','')))
             elif name=='reminders':lines.append('• '+title+' — '+('already due' if row.get('due',0)<=s['checked_at'] else 'due '+stamp(row['due']))+'.')
+            elif name=='calendar':lines.append('• '+title+' — '+('all day '+str(row.get('start',''))[:10] if row.get('all_day') else str(row.get('start') or ''))+(', '+str(row['location']) if row.get('location') else '')+'.')
             else:lines.append('• '+title)
         if s.get('limited'):lines.append(f"Showing {len(s['items'])} of {s['total']} records.")
     return '\n'.join(lines)
@@ -101,7 +105,7 @@ def action_guard(text,events):
     # possible unsupported claim. Since 1.0.17 the reply is kept and the truth is put under it (the receipts of
     # this turn's actions, or the note that none ran): a replaced reply hid whole answers that merely
     # mentioned something "has been updated" (docs/PHONE-CORE-FIXES-20261007.md).
-    claim=re.search(r"\b(?:i(?:'ve| have)?|we(?:'ve| have)?)\s+(?:successfully\s+)?(?:saved|created|scheduled|cancelled|canceled|deleted|updated|applied|opened|launched|completed)\b|\b(?:timer|reminder|note|file|change|update|inspection)\b[^.!?\n]{0,50}\b(?:has been|was|is)\s+(?:successfully\s+)?(?:saved|created|scheduled|cancelled|canceled|deleted|updated|applied|completed)\b",text,re.I)
+    claim=re.search(r"\b(?:i(?:'ve| have)?|we(?:'ve| have)?)\s+(?:successfully\s+)?(?:saved|created|scheduled|cancelled|canceled|deleted|updated|applied|opened|launched|completed|sent|emailed|mailed)\b|\b(?:timer|reminder|note|file|change|update|inspection|mail|email|message)\b[^.!?\n]{0,50}\b(?:has been|was|is)\s+(?:successfully\s+)?(?:saved|created|scheduled|cancelled|canceled|deleted|updated|applied|completed|sent|emailed|mailed)\b",text,re.I)
     if not claim:return text
     return text.rstrip()+'\n\n'+(receipts(events) or NO_ACTION_NOTE)
 
@@ -142,6 +146,21 @@ def describe_briefing(result):
             if source and title.endswith(' - '+source):title=title[:-len(' - '+source)]
             prefix='An older headline: ' if row.get('publication_status')=='older than 48 hours' else ''
             parts.append(prefix+(source+' reports: ' if source else '')+title+'.')
-    parts.append("I can't check your calendar yet. Sources and check times are in the details on screen.")
+    calendar=sections.get('calendar',{})
+    if calendar.get('status')=='unavailable':parts.append("I can't check your calendar yet.")
+    elif calendar.get('status')=='failed':parts.append("I couldn't read your calendar just now.")
+    elif calendar.get('status')=='checked_empty':parts.append('Nothing is in your calendar for the next day.')
+    else:
+        if calendar.get('status')=='stale':parts.append("I couldn't confirm that the calendar is up to date.")
+        rows=calendar.get('items',[])[:3]
+        said=[]
+        for row in rows:
+            title=str(row.get('title') or 'Untitled')
+            start=str(row.get('start') or '')
+            said.append(title+(' all day' if row.get('all_day') else (' at '+start[11:16] if len(start)>=16 else '')))
+        parts.append('In your calendar for the next day: '+'; '.join(said)+'.')
+        remaining=calendar.get('total',len(rows))-len(rows)
+        if remaining>0:parts.append(f'There are {remaining} more events in the details.')
+    parts.append('Sources and check times are in the details on screen.')
     # Stored titles can themselves contain pasted links; never read raw URLs aloud.
     return re.sub(r'https?://\S+','', ' '.join(parts))

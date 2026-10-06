@@ -187,3 +187,104 @@ question, and asking the owner without one).
 10. Low: test gaps. Added: the minimal position, directions from "here" through a device's question, the tool
     evidence in the "kept nowhere" check, the non-capture upload, the malformed id, the PC question's own control, the
     late answer, the refused controls.
+
+## 4. Item G: Gmail and Google Calendar (2026-10-07)
+
+**How, and why not a Google sign-in screen.** A personal Google account's OAuth app stays in "testing" status
+(publishing a Gmail app needs Google's review), and a testing app's sign-in expires after seven days. So JARVIS
+reads mail the way a mail program does, over IMAP and SMTP with an **app password** (sixteen letters Google makes
+for one program; it needs 2-Step Verification), and reads the calendar from the calendar's **secret iCal address**:
+no Cloud project, no consent screen, nothing that expires. Both are lines in the owner's key file (`GMAIL_ADDRESS`,
+`GMAIL_APP_PASSWORD`, `GOOGLE_CALENDAR_ICS`; several calendars separated by commas), read at JARVIS's start; the
+owner's steps are `docs/GOOGLE-STEPS.md`. Adding a calendar event would need the sign-in screen: not built ("calendar
+add" is the owner's separate decision).
+
+**`mail.py`.** `Mailbox` opens one IMAP session on the inbox read-only, every fetch a PEEK (nothing is marked read),
+`search(query, unread, days, limit)` with Gmail's own search words (`X-GM-RAW`, quoted; plain characters only),
+headers only, newest first, at most 25; `read(id)` one mail in full (the plain part, else the HTML part without
+its tags, cut at 6,000 characters; attachment names; a note that the text is data, not instructions); `send(to,
+subject, body)` one plain-text mail from the owner's address over SMTP, after `check_send` (one to ten plain
+addresses, a subject of 1 to 200 characters, a body up to 12,000, the tool-argument cap); `test_connection` signs in once and counts the
+unread. The two refusals are said plainly and never with the password or the server's text: "Gmail refused the app
+password..." and "Gmail could not be reached...".
+
+**`calendar_feed.py`.** The feed is fetched at most every ten minutes (5 MB cap, 25 s), kept as the last reading
+when a fetch fails (said in a note), parsed from iCalendar text (folded lines, escaped text, dates, UTC times,
+times in a named zone) and expanded for a window of days: DAILY, WEEKLY with BYDAY, MONTHLY by day-of-month or one
+BYDAY such as 2TU, YEARLY, with INTERVAL, COUNT and UNTIL; EXDATEs left out; an overridden instance (RECURRENCE-ID)
+replaces its original; cancelled events left out. Zones: zoneinfo when the time zone database is there (this PC's
+Python has none; the release pins its packages by hash, so the database was not added), else the feed's own
+VTIMEZONE rules (Google writes a yearly BYMONTH/BYDAY rule for each change, as Sydney's are), else the PC's local
+zone with a note. `upcoming(days)` gives rows with local ISO times and epoch seconds.
+
+**In the Core.** Four tools (50 now): `mail_search`, `mail_read` and `calendar_events` are reads marked for other
+devices (a phone may ask without the tools tick); `mail_send` is a change that always asks first (`asks=ALWAYS`):
+the tool checks the setup and the three fields, keeps an approval with exactly the draft (to, subject, body) and
+tells the model it is waiting; the owner's approval on the PC, or from a device that may approve, re-enters the tool
+with `approved=True` and sends; the receipt is "sent". The daily briefing has a real calendar section when the
+calendar is configured (the next day's events; `answer_evidence.briefing` takes a `calendar` reader; the spoken
+form says "In your calendar for the next day: ..."; without one it still says "I can't check your calendar yet").
+The device `overview` carries `calendar_connected`, `calendar` (the next 24 hours, up to 20, epoch seconds, as the
+Mac form says) and `mail_unread`, read in the background by `server.Fresh` (the calendar every ten minutes, the
+unread count every five) so the phone's reading never waits on a feed or a mail server; null until read, null when
+not configured. `/api/state.capabilities` carries `mail_connected` and `calendar_connected` (flags only); Settings
+> Connections has a Connectors panel (`static/connectors.js`) with a TEST for each (`/api/connections/test`
+services `mail` and `calendar`: a sign-in and the unread count; the feeds fetched and the next seven days counted;
+never an address or a link); the Settings integration list has Gmail and Google Calendar rows. The shipped
+personality now says what mail and the calendar can do (its hash added to `runtime_paths.SHIPPED_PERSONALITIES`);
+the owner-run request templates (`tools/host/jarvis-request-*`) regenerated with the 50 tools.
+
+**Plainly, for the owner:** whatever JARVIS reads from mail or the calendar goes to the AI provider with the
+question, as every question does; JARVIS never marks mail read, deletes or moves anything, and sends only what was
+approved; revoking the app password or resetting the secret address stops it at once.
+
+Checked: `test_mail.py` (7: not configured; search and read peeking only with the password in no answer; HTML-only
+mail and attachments; the refused password said without it; unreachable; send's checks and one plain mail; the
+connection test), `test_calendar_feed.py` (4: the week ahead with recurrence, zones, exceptions and overrides; the
+zone rules in October and June; fetch's cache, refusals and stale fallback; the rows for the phone and the briefing),
+`test_connectors.py` (4: search and read through a question; a mail that waits and is sent by the approval, a bad
+address, not set up; the calendar in a question and the briefing both ways; the overview fields, the flags, the
+TEST routes and a mail approved from the phone, reads without the tools tick), `test_connectors_view.cjs`; the
+permission pins, the briefing, the phone and the inspection suites unchanged in meaning.
+
+### Independent review of item G (one reviewer, 2026-10-07): no build-breaking finding; 1 high, 6 medium, 16 low, all applied
+
+1. High: the owner's steps named the key file as `config.env`; the Core reads `config\.env` (the file that holds the
+   AI keys). Fixed in `docs/GOOGLE-STEPS.md`, with the development copy's `.env` beside `server.py` named too.
+2. Medium: the claim guard had no word for a mail: "I've sent the email" would have passed. Fixed: `sent`, `emailed`,
+   `mailed`, `mail`, `email`, `message` in `answer_evidence.action_guard`; a test.
+3. Medium: the background reads ran while the emergency stop held and wrote no activity row. Fixed: `Fresh` takes
+   `allowed` (no refresh while stopped) and `note` (a row "mail unread count (background): failed"); tests.
+4. Medium: a daily series older than about 5.5 years disappeared (the walk was bounded from its first day). Fixed:
+   the first step near the window is computed for DAILY and WEEKLY, COUNT still counted from the start; a test.
+5. Medium: a reminder (VALARM) inside an event gave the event the reminder's title. Fixed: the VALARM lines are
+   skipped; a test.
+6. Medium: one read pulled a whole mail (an attachment of any size) and an unknown charset ended the question.
+   Fixed: the first 2 MB only, said so when cut; charsets decoded with a fallback; any decoding failure one fixed
+   sentence; tests.
+7. Medium: a refused recipient was reported as "could not be reached". Fixed: "Gmail refused the recipient
+   address; check it and try again." and "Gmail refused the mail."; a test.
+8. Low: the mail body cap (20,000) was above the tool-argument cap (12,000). Fixed: 12,000 in both.
+9. Low: "Jack <jack@example.com>" was refused as an address. Fixed: addresses parsed with `email.utils.getaddresses`.
+10. Low: non-plain characters in the search words were dropped silently. Fixed: said in the result.
+11. Low: headers had no length cap. Fixed: 300 characters.
+12. Low: 30 s per socket operation could hold a question beyond its budget. Fixed: 12 s.
+13. Low: DURATION without DTEND gave a zero-length event. Fixed: parsed.
+14. Low: WKST was ignored for two-weekly rules spanning Sunday. Fixed; a test.
+15. Low: one unreadable event or one refused feed failed everything. Fixed: skipped and said in a note; a quoted
+    zone name with a colon is read; tests.
+16. Low: BYMONTHDAY=-1 gave nothing. Fixed; a test.
+17. Low: a feed served from the cache after a failed fetch made a plain "checked" briefing section. Fixed: the
+    section is "stale" with the notes, the briefing "partial", the spoken form says so; a test.
+18. Low: "read only when you ask" was no longer true once the phone's Overview is shown. Fixed in the panel and the
+    owner's steps.
+19. Low: the connection test returned the address, unused. Dropped.
+20. Low: the model's copy of the waiting result carried the draft twice. Fixed: once, in the approval.
+21. Low: a docstring named the dashboard. Fixed.
+22. Low: wording in the owner's steps (a sentence the code never says; the card's name; Gmail's own Sent copy). Fixed.
+23. Low: test gaps. Added: an unknown charset, a missing id, the search words' quoting and a dropped character, an
+    empty result, no SINCE for day 0, the limit clamp, encoded and long headers, a refused recipient, a name with an
+    address, the body cap; an old daily series and COUNT, WKST with INTERVAL, the last day of the month, UNTIL as a
+    date, a VALARM, a DURATION, an odd zone name, a broken event, one failing feed of two; a failing background read
+    and none while stopped, the owner's own button, a denied mail, the tools tick taken back, a failing and a stale
+    calendar in the briefing, the guard on a "sent" claim.

@@ -8,14 +8,14 @@ import providers
 import maps
 
 
-SERVICES = ('chat', 'full', 'voice', 'search', 'maps')
+SERVICES = ('chat', 'full', 'voice', 'search', 'maps', 'mail', 'calendar')
 
 
 def check(service, mode=None, full=None):
     """mode is the saved answer mode (Settings > Answer speed), so the chat check asks the model that answers.
     full, for the 'full' check: a function returning (messages, tools) exactly as a real question sends them."""
     if service not in SERVICES:
-        raise ValueError('Choose chat, full, voice, search or maps.')
+        raise ValueError('Choose chat, full, voice, search, maps, mail or calendar.')
     start = time.perf_counter()
     result = {'service': service, 'checked_at': time.time()}
     try:
@@ -53,6 +53,20 @@ def check(service, mode=None, full=None):
             if not data.get('web', {}).get('results'):
                 raise ValueError('Search completed but returned no results.')
             detail = 'Brave returned a live result for a public test query.'
+        elif service == 'mail':
+            # 1.0.17 item G: one sign-in and the unread count; the address, the password and the mails stay out of the answer.
+            import mail
+            if not mail.configured():
+                return {**result, 'status': 'not_configured', 'detail': 'Put GMAIL_ADDRESS and GMAIL_APP_PASSWORD in the key file (docs/GOOGLE-STEPS.md) and start JARVIS again.', 'latency_ms': 0}
+            found = mail.test_connection()
+            detail = f"Gmail signed in with the app password: {found['unread']} unread in the inbox. Nothing was read or changed."
+        elif service == 'calendar':
+            import calendar_feed
+            if not calendar_feed.configured():
+                return {**result, 'status': 'not_configured', 'detail': 'Put GOOGLE_CALENDAR_ICS in the key file (docs/GOOGLE-STEPS.md) and start JARVIS again.', 'latency_ms': 0}
+            found = calendar_feed.test_connection()
+            detail = (f"{found['calendars']} calendar{'s' if found['calendars'] != 1 else ''} fetched: {found['events_next_7_days']} events in the next seven days."
+                      + (' ' + '; '.join(found['notes']).capitalize() + '.' if found['notes'] else ''))
         else:
             maps.directions('Sydney Opera House, NSW', 'Sydney Airport, NSW')
             detail = 'Google Routes returned a public test journey with traffic. Test map display and location permission in the Maps section.'
