@@ -44,3 +44,5 @@ node_modules/
 __pycache__/
 .cache/
 caches/
+# The owner's music files of a development copy (music.py): never part of the program.
+/music/

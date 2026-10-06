@@ -53,6 +53,7 @@ def app_fixture():
     app.attachments = {}
     app.devices = Mock()
     app.timings = []
+    app.music = None  # no music desk here (1.0.16): the Core's music commands are tested in test_music.py
     app.store = Mock()
     app.store.tool_modes.return_value = {}  # the owner changed no tool switch
     return ns, app

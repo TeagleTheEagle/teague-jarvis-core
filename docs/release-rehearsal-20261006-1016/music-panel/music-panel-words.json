@@ -1,0 +1,12 @@
+{
+  "folder": "D:\\JARVIS-release-work\\dashboard-preview\\config\\music",
+  "files_note": "1 music file. A song without a nickname can still be played by its file name.",
+  "now_before": "Nothing is playing.",
+  "save_bar_hidden": true,
+  "row_file": "Shoot to Thrill (tone stand-in)",
+  "now_playing": "Playing: Shoot to Thrill (tone stand-in) (workshop warrior) 0:00 / 0:02",
+  "volume_text": "Volume 20%",
+  "now_paused": "Paused: Shoot to Thrill (tone stand-in) (workshop warrior) 0:01 / 0:02",
+  "now_after_stop": "Nothing is playing.",
+  "rows_after": 0
+}

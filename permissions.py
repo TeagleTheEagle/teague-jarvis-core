@@ -92,6 +92,9 @@ TABLE = {
     'youtube': _rule('Find and load a YouTube video', CHANGES, ONLINE, 'Yes: load another video or close the panel.'),
     'spotify': _rule('Control Spotify', CHANGES, ONLINE, 'Yes: say the opposite command.', receipt=True,
         read_actions=('status',)),
+    'play_music': _rule('Play music from your files', CHANGES, PC, 'Yes: say "stop the music".', receipt=True,
+        read_actions=('status', 'list'),
+        note='Your own music files in the music folder (Settings > Music), played on this PC\'s speakers; the Core answers "play <nickname>" itself.'),
     # ---- this PC ----
     'computer_system_info': _rule('Read this PC\'s hardware and Windows details', reach=PC),
     'computer_files': _rule('List JARVIS\'s own source files'),

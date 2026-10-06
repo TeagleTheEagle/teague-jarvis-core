@@ -78,6 +78,7 @@ TOOLS = [
     schema('open_app', 'Launch an allowlisted Windows application (Calculator, Notepad or Paint).', {'app': {'type': 'string', 'enum': ['calculator', 'notepad', 'paint']}}, ['app']),
     schema('youtube', 'Find a YouTube video, or load a supplied video URL. Query search needs a YouTube API key.', {'query': STR}, ['query']),
     schema('spotify', 'Control a connected Spotify account. Only when the user asks for Spotify music playback.', {'action': {'type': 'string', 'enum': ['play', 'pause', 'next', 'previous', 'volume', 'status']}, 'query': STR, 'volume': {'type': 'integer', 'minimum': 0, 'maximum': 100}}, ['action']),
+    schema('play_music', 'Play one of the owner\'s own music files on this PC by its nickname or file name (query), or pause, resume, stop, set the volume (0-100), say what is playing (status), or list the songs (list). Only the owner\'s own files on this PC; not Spotify or YouTube.', {'action': {'type': 'string', 'enum': ['play', 'pause', 'resume', 'stop', 'volume', 'status', 'list']}, 'query': STR, 'volume': {'type': 'integer', 'minimum': 0, 'maximum': 100}}, ['action']),
 ]
 
 def suit_diagram(request, view):

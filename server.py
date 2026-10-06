@@ -47,6 +47,7 @@ import development
 import permissions
 import device_gateway
 import remote_devices
+import music
 from devices import DeviceBook, KINDS as DEVICE_KINDS
 import assistant_capabilities as companion_tools
 import update_history
@@ -124,6 +125,15 @@ class App:
         # The private-network door for paired devices (remote_devices.py, 1.0.16): a switch in Settings > Devices,
         # off by default. Opened in main() from the owner's saved choice; an App made by a test opens nothing by itself.
         self.remote_devices = None if self.stage4 else remote_devices.RemoteDevices(self, load=self.store.remote_devices_state, save=self.store.set_remote_devices_state)
+        # Music by nickname from the owner's own files (music.py, 1.0.16 item 5). The folder is in the config folder of an
+        # installation (kept across updates, not backed up); beside the data of an isolated instance.
+        if self.stage4:
+            self.music = None
+        else:
+            music_home = runtime_paths.config_dir_for(ROOT) if self.store.root == runtime_paths.data_dir().resolve() else self.store.root
+            self.music = music.Desk(self.store, music_home / 'music', remember_volume=lambda volume: self.store.save_settings({'music_volume': volume}))
+            self.music.player.volume = self.store.settings().get('music_volume', music.DEFAULT_VOLUME)
+            self.music.player.blocked = lambda: self.stopped is not None  # no song starts in the moment a stop arrives
         self.session = secrets.token_urlsafe(32)
         workspaces.setup(self.store)
         self.runs = {}
@@ -413,6 +423,11 @@ class App:
             inspection_jobs.cancel_all()
         except Exception:
             pass  # the stop itself must never fail on a side job
+        try:
+            if self.music is not None:
+                self.music.player.stop()  # the music stops with everything else; RESUME does not restart it
+        except Exception:
+            pass
         if not already:
             try:
                 self.audit('emergency stop', 'stopped' + (f'; {dropped} waiting approval(s) dropped' if dropped else ''), device=device)
@@ -520,6 +535,54 @@ class App:
         if not isinstance(body, dict) or set(body) - {'enabled', 'port'} or 'enabled' not in body:
             raise ValueError('Supply on or off, and the port.')
         return self.remote_devices.configure(body['enabled'], body.get('port'))
+
+    def music_command(self, text, run=None):
+        """The Core's own music commands (music.py): "play <song>", "stop the music", "pause", "resume", "volume up",
+        "what is playing". A "play" is music only when a song of that name exists in the owner's list or folder;
+        otherwise the words go to the AI as an ordinary question. Never for another device (the PC's speakers)."""
+        if getattr(self, 'music', None) is None or (run is not None and getattr(run, 'wearable', False)):
+            return None
+        parsed = music.command(text, open=self.music.player.now is not None)  # bare "pause", "continue", "louder" only while a song is open
+        if not parsed:
+            return None
+        action, argument = parsed
+        if action == 'play':
+            return ('play_music', {'action': 'play', 'query': argument}) if self.music.library.resolve(argument) else None
+        if action == 'volume':
+            step = music.VOLUME_STEP if argument == 'up' else -music.VOLUME_STEP if argument == 'down' else None
+            value = max(0, min(100, self.music.player.volume + step)) if step is not None else argument
+            return 'play_music', {'action': 'volume', 'volume': value}
+        return 'play_music', {'action': action}
+
+    def music_listing(self):
+        if self.music is None:
+            raise ValueError('Music is not available here.')
+        self.music.player.volume = self.store.settings().get('music_volume', self.music.player.volume)  # Settings is the truth
+        return {**self.music.act({'action': 'list'}), 'volume': self.music.player.volume}
+
+    def music_action(self, body):
+        """The owner's clicks in Settings > Music (the signed-in interface on the PC). A click is its own approval, as
+        every button in the interface: the owner's switch for the tool binds JARVIS's own calls, not the owner's."""
+        if self.music is None:
+            raise ValueError('Music is not available here.')
+        action = body.get('action')
+        if action == 'add':
+            if set(body) != {'action', 'nickname', 'file'}:
+                raise ValueError('Supply a nickname and a file.')
+            self.music.library.add(body['nickname'], body['file'])
+            self.audit('music nickname added: ' + str(body['nickname']).strip()[:50], str(body['file'])[:70])
+            return {**self.music_listing(), 'message': 'Nickname saved.'}
+        if action == 'remove':
+            if set(body) != {'action', 'nickname'}:
+                raise ValueError('Supply the nickname.')
+            self.music.library.remove(body['nickname'])
+            self.audit('music nickname removed: ' + str(body['nickname'])[:50], 'completed')
+            return {**self.music_listing(), 'message': 'Nickname removed.'}
+        if action in ('play', 'pause', 'resume', 'stop', 'volume', 'status'):
+            args = {'action': action, **({'query': body['query']} if 'query' in body else {}), **({'volume': body['volume']} if 'volume' in body else {})}
+            result = self.tool('play_music', args)
+            return {**self.music_listing(), 'message': result['message']}
+        raise ValueError('Unknown music action.')
 
     def permissions_listing(self):
         return {'tools': permissions.listing(self.store.tool_modes()), 'control': self.control(),
@@ -838,6 +901,11 @@ class App:
                 result = actions.create_document(self.store.root, **args)
             elif name == 'youtube':
                 result = actions.youtube(args['query'])
+            elif name == 'play_music':
+                if self.music is None:
+                    raise ValueError('Music is not available here.')
+                self.music.player.volume = self.store.settings().get('music_volume', self.music.player.volume)  # also when saved through /api/settings
+                result = self.music.act(args)
             elif name == 'spotify':
                 result = self.spotify.control(**args)
             elif name == 'open_app':
@@ -918,7 +986,7 @@ class App:
             self.wait_for_backup(run)
             self.store.message(run.conversation, 'user', text)
             memory_answer = self.memory_command(run, text) if not attachment and (not getattr(run,'wearable',False) or getattr(run,'writes',False)) else None
-            command = actions.local_command(text) if not attachment and memory_answer is None else None
+            command = (actions.local_command(text) or self.music_command(text, run)) if not attachment and memory_answer is None else None
             if not attachment and memory_answer is None and not command:
                 command = answer_evidence.command(text)
             if not attachment and memory_answer is None and not command and verified_status.status_question(text):
@@ -1183,6 +1251,8 @@ class App:
         if name != 'preview_action' and isinstance(result, dict) and result.get('status') == 'awaiting approval':
             return str(result.get('summary') or 'Waiting for approval on screen. Nothing has happened yet.')
         if name == 'daily_briefing':return answer_evidence.describe_briefing(result)
+        if name == 'play_music':
+            return str(result.get('message') or 'Done.')  # the spoken reply: "Playing Shoot to Thrill."
         if name == 'project_catalog':
             return 'Saved project registry checked at '+answer_evidence.stamp(time.time())+'.\n'+('\n'.join('• '+p['name'] for p in result['projects']) or 'No saved projects found.')+'\nProject progress was not independently tested.'
         if name == 'service_status':
@@ -1342,6 +1412,8 @@ class Handler(BaseHTTPRequestHandler):
                 if self.app.remote_devices is None:
                     return self.send(404, {'error': 'Unknown endpoint.'})
                 return self.send(200, self.app.remote_devices.status())
+            if path == '/api/music':
+                return self.send(200, self.app.music_listing())
             if path == '/api/offline-answers':
                 return self.send(200, {**offline_answers.status(), 'enabled': bool(self.app.store.settings().get('offline_answers', True))})
             if path == '/api/auto-backup':
@@ -1390,7 +1462,7 @@ class Handler(BaseHTTPRequestHandler):
                 # a style change has been approved; the program's own style files are never changed.
                 file = runtime_paths.config_dir_for(ROOT) / 'owner-style.css'
                 return self.send(200, file.read_bytes() if file.is_file() else b'', 'text/css; charset=utf-8')
-            mapping = {'/permissions.js':'permissions.js','/permissions.css':'permissions.css','/devices.js':'devices.js','/devices.css':'devices.css','/latency.js':'latency.js','/voice-core.js':'voice-core.js','/teague.js':'teague.js','/teague.css':'teague.css','/command-dashboard.js':'command-dashboard.js','/command-dashboard.css':'command-dashboard.css','/horizon.js':'horizon.js','/horizon.css':'horizon.css','/world-map.js':'world-map.js','/dashboard-model.js':'dashboard-model.js','/markdown-view.js':'markdown-view.js','/assets/branding/teague/jarvis-mark.svg':'assets/branding/teague/jarvis-mark.svg','/recovery.js':'recovery.js', '/assistant-controls.js':'assistant-controls.js', '/desktop-updates.js':'desktop-updates.js', '/inspection-client.js':'inspection-client.js', '/voice-lab.html': 'voice-lab.html', '/voice-lab.js': 'voice-lab.js', '/voice-lab.css': 'voice-lab.css', '/': 'index.html', '/app.js': 'app.js', '/diagrams.js': 'diagrams.js', '/workspaces.js': 'workspaces.js', '/voice-preview.js': 'voice-preview.js', '/maps.js': 'maps.js', '/reliability.js': 'reliability.js', '/reliability.css': 'reliability.css', '/maps.css': 'maps.css', '/map-canvas.html': 'map-canvas.html', '/map-canvas.js': 'map-canvas.js', '/map-canvas.css': 'map-canvas.css', '/style.css': 'style.css', '/gallery.css': 'gallery.css', '/pro.css': 'pro.css', '/voice.js': 'voice.js', '/mic-worklet.js': 'mic-worklet.js', '/assets/branding/teague/teague-mark.svg': 'assets/branding/teague/teague-mark.svg', '/assets/branding/teague/command-background.png': 'assets/branding/teague/command-background.png'}
+            mapping = {'/permissions.js':'permissions.js','/permissions.css':'permissions.css','/devices.js':'devices.js','/devices.css':'devices.css','/music.js':'music.js','/music.css':'music.css','/latency.js':'latency.js','/voice-core.js':'voice-core.js','/teague.js':'teague.js','/teague.css':'teague.css','/command-dashboard.js':'command-dashboard.js','/command-dashboard.css':'command-dashboard.css','/horizon.js':'horizon.js','/horizon.css':'horizon.css','/world-map.js':'world-map.js','/dashboard-model.js':'dashboard-model.js','/markdown-view.js':'markdown-view.js','/assets/branding/teague/jarvis-mark.svg':'assets/branding/teague/jarvis-mark.svg','/recovery.js':'recovery.js', '/assistant-controls.js':'assistant-controls.js', '/desktop-updates.js':'desktop-updates.js', '/inspection-client.js':'inspection-client.js', '/voice-lab.html': 'voice-lab.html', '/voice-lab.js': 'voice-lab.js', '/voice-lab.css': 'voice-lab.css', '/': 'index.html', '/app.js': 'app.js', '/diagrams.js': 'diagrams.js', '/workspaces.js': 'workspaces.js', '/voice-preview.js': 'voice-preview.js', '/maps.js': 'maps.js', '/reliability.js': 'reliability.js', '/reliability.css': 'reliability.css', '/maps.css': 'maps.css', '/map-canvas.html': 'map-canvas.html', '/map-canvas.js': 'map-canvas.js', '/map-canvas.css': 'map-canvas.css', '/style.css': 'style.css', '/gallery.css': 'gallery.css', '/pro.css': 'pro.css', '/voice.js': 'voice.js', '/mic-worklet.js': 'mic-worklet.js', '/assets/branding/teague/teague-mark.svg': 'assets/branding/teague/teague-mark.svg', '/assets/branding/teague/command-background.png': 'assets/branding/teague/command-background.png'}
             if path not in mapping:
                 return self.send(404, {'error': 'Not found.'})
             file = ROOT / 'static' / mapping[path]
@@ -1520,6 +1592,8 @@ class Handler(BaseHTTPRequestHandler):
                 result = self.app.devices_action(body)
             elif path == '/api/remote-devices':
                 result = self.app.remote_devices_action(body)
+            elif path == '/api/music':
+                result = self.app.music_action(body)
             elif path == '/api/auto-backup':
                 result = self.app.auto_backup_action(body)
             elif path == '/api/settings':

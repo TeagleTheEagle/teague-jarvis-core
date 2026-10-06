@@ -15,7 +15,7 @@ wrote into the folder the program runs from, which in the installed JARVIS is th
 
 ## 1. The table: `permissions.py`
 
-One row for each of the 45 tools (`permissions.TABLE`). `test_permissions.py` holds the table equal to
+One row for each of the 46 tools since 1.0.16 (`permissions.TABLE`). `test_permissions.py` holds the table equal to
 `actions.TOOLS`; a tool without a row is refused.
 
 | Column | Meaning |

@@ -44,7 +44,7 @@ class TableTests(unittest.TestCase):
             'conversation_read', 'project_catalog', 'project_read', 'web_search', 'news_search'})
         self.assertEqual(permissions.ACTION_TOOLS, {'save_item', 'set_timer', 'manage_timer', 'manage_saved_memory', 'preview_action',
             'development_edit', 'development_propose', 'development_rollback', 'assistant_control', 'navigate_panel',
-            'inspect_interface', 'create_file', 'project_save_document', 'project_link_chat', 'open_app', 'spotify'})
+            'inspect_interface', 'create_file', 'project_save_document', 'project_link_chat', 'open_app', 'spotify', 'play_music'})
         self.assertEqual(permissions.EVIDENCE_TOOLS, {'calculate', 'create_file', 'save_item', 'set_timer', 'suit_diagram',
             'project_link_chat', 'project_save_document'})
         self.assertEqual(permissions.PREVIEW_TOOLS, ('save_item', 'set_timer', 'create_file'))
