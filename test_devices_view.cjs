@@ -59,4 +59,10 @@ assert.equal(d.accessText({tools:true,approve:true,revoked:1}),'Revoked: nothing
 assert.equal(d.TOOLS_LABEL,"May use this PC's tools");
 assert.equal(d.APPROVE_LABEL,'May approve for JARVIS');
 assert.deepEqual(d.FLAGS,['writes','tools','approve']);
+// Item H: the "On this network" words. The Core's list is passive and the words say what each part is.
+assert.equal(d.networkTitle({count:2}),'On this network (2 seen)');
+assert.equal(d.networkTitle(null),'On this network (0 seen)');
+assert.deepEqual(d.networkRow({address:'192.168.1.1',hardware:'AA-BB-CC-00-11-22',name:'router.home',state:'Reachable',interface:'Wi-Fi',this_pc:false}),{title:'router.home',kind:'AA-BB-CC-00-11-22',state:'192.168.1.1 \u00b7 Reachable'});
+assert.deepEqual(d.networkRow({address:'192.168.1.42',hardware:'AA-BB-CC-DD-EE-FF',name:null,state:'Stale',interface:'Wi-Fi',this_pc:false}),{title:'192.168.1.42',kind:'AA-BB-CC-DD-EE-FF',state:'192.168.1.42 \u00b7 Stale'},'no name: the address stands in');
+assert.deepEqual(d.networkRow({address:'192.168.1.20',hardware:null,name:'THEGRIZZLYBEAR',state:'This PC',interface:'Wi-Fi',this_pc:true}),{title:'THEGRIZZLYBEAR',kind:'This PC',state:'192.168.1.20 \u00b7 Wi-Fi'});
 console.log('devices view (1.0.17): ok');

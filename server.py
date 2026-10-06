@@ -71,6 +71,7 @@ import mail
 import calendar_feed
 import nudges
 import speaker
+import network_devices
 import providers
 import system_metrics
 from ollama_shadow import ShadowObserver, observe as observe_shadow
@@ -1071,6 +1072,11 @@ class App:
                     self.keep_approval(approval)
                     result = {'approval': approval, 'status': 'awaiting approval',
                               'summary': 'Waiting for your approval before the mail leaves: to ' + ', '.join(recipients) + ', subject "' + subject + '". Nothing has been sent.'}
+            elif name == 'network_devices':
+                listing = network_devices.listing()  # 1.0.17 item H: passive, cached a minute
+                # The model (and so its provider) gets names, addresses and states; the hardware addresses stay on this PC's
+                # Devices page.
+                result = {'status': 'completed', **listing, 'devices': [{k: v for k, v in r.items() if k != 'hardware'} for r in listing['devices']]}
             elif name == 'calendar_events':
                 rows, notes = calendar_feed.upcoming(args['days'])
                 result = {'status': 'completed', 'days': args['days'], 'count': len(rows), 'events': rows[:60], 'notes': notes,
@@ -1783,6 +1789,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, self.app.permissions_listing())
             if path == '/api/devices':
                 return self.send(200, self.app.devices_listing())
+            if path == '/api/network-devices':
+                try:
+                    return self.send(200, network_devices.listing())  # 1.0.17 item H
+                except ValueError as why:
+                    return self.send(400, {'error': str(why)})
             if path == '/api/routine':
                 if self.app.routine is None:
                     return self.send(404, {'error': 'Unknown endpoint.'})

@@ -49,6 +49,13 @@ const JarvisDevices = {
     if (d.approve) parts.push('may approve for JARVIS');
     return parts.join('; ');
   },
+  // "On this network" (1.0.17 item H, network_devices.py): the heading with the Core's count, and a row's three
+  // parts: the name or the address; the hardware address (this PC: the words); the address with its state or adapter.
+  networkTitle(data) { return 'On this network (' + ((data && data.count) || 0) + ' seen)'; },
+  networkRow(r) {
+    if (r.this_pc) return {title: r.name || r.address, kind: 'This PC', state: r.address + (r.interface ? ' \u00b7 ' + r.interface : '')};
+    return {title: r.name || r.address, kind: r.hardware || '', state: r.address + (r.state ? ' \u00b7 ' + r.state : '')};
+  },
 };
 if (typeof module !== 'undefined') module.exports = JarvisDevices;
 
@@ -70,9 +77,9 @@ if (typeof document !== 'undefined') (() => {
     '"' + JarvisDevices.APPROVE_LABEL + '" lets it answer what waits for your approval.');
   const reach = el('p', 'devices-note', 'JARVIS listens on this PC. Programs on this PC can pair now; your phone and other devices can pair over your ' +
     'private network once the door below is on.');
-  const pairBox = el('div', 'devices-pair'), doorBox = el('div', 'devices-door'), list = el('div', 'devices-list');
+  const pairBox = el('div', 'devices-pair'), doorBox = el('div', 'devices-door'), list = el('div', 'devices-list'), network = el('div', 'devices-network');
   list.setAttribute('aria-live', 'polite');
-  panel.append(intro, reach, pairBox, doorBox, list);
+  panel.append(intro, reach, pairBox, doorBox, list, network);
   const category = q('.ti-settings-group[data-setting="Devices"]'), settingsView = q('#settingsView');
   if (category) category.append(panel); else if (settingsView) { panel.prepend(el('h2', '', 'Devices')); settingsView.prepend(panel); }
 
@@ -202,6 +209,27 @@ if (typeof document !== 'undefined') (() => {
     node.append(caps, actions);
     return node;
   }
+  // ---- on this network (1.0.17 item H): passive, this PC's own neighbour table; read when the owner asks ----
+  const networkNote = 'What this PC has seen on its networks, read from Windows when you ask. Passive: nothing is probed or ' +
+    'contacted; a name comes from this PC\'s DNS server only. Seeing a device never means touching it.';
+  const readButton = () => button('READ THE NETWORK LIST', 'outline', loadNetwork);
+  // The heading with the Core's count, the Core's own words, the button, then the rows.
+  function renderNetwork(data) {
+    network.replaceChildren(el('h3', '', JarvisDevices.networkTitle(data)), el('p', 'devices-note', (data && data.scope) || networkNote), readButton());
+    for (const r of (data && data.devices) || []) {
+      const words = JarvisDevices.networkRow(r), row = el('div', 'device-row off');
+      row.append(el('b', '', words.title), el('span', 'device-kind', words.kind), el('span', 'device-state', words.state));
+      network.append(row);
+    }
+  }
+  async function loadNetwork() {
+    const current = network.querySelector('button');
+    if (current) current.disabled = true;
+    try { renderNetwork(await api('/api/network-devices')); }
+    catch (e) { network.replaceChildren(el('h3', '', 'On this network'), el('p', 'devices-note', e.message), readButton()); }
+  }
+  if (inspecting()) network.append(el('h3', '', 'On this network'), el('p', 'devices-note', 'Not shown during an inspection.'));
+  else network.append(el('h3', '', 'On this network'), el('p', 'devices-note', networkNote), readButton());
   let renaming = () => !!list.querySelector('input:not([type=checkbox])');
   function render(data) {
     renderDoor(data && data.remote);

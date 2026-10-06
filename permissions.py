@@ -98,6 +98,9 @@ TABLE = {
         note='Always asks first: you see to whom, the subject and the text before anything leaves (on the PC, or on a device that may approve).'),
     'calendar_events': _rule('Read your calendar', reach=ONLINE, wearable=True,
         note='From the calendar\'s secret address (Settings > Connections); reading only.'),
+    # ---- the home network (item H): passive, this PC's own neighbour table ----
+    'network_devices': _rule('List the devices seen on the home network', reach=PC, wearable=True,
+        note='Passive: what this PC has already seen; nothing is probed or contacted (names from this PC\'s DNS server only), nothing is paired by it.'),
     'youtube': _rule('Find and load a YouTube video', CHANGES, ONLINE, 'Yes: load another video or close the panel.'),
     'spotify': _rule('Control Spotify', CHANGES, ONLINE, 'Yes: say the opposite command.', receipt=True,
         read_actions=('status',)),

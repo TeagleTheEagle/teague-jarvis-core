@@ -102,7 +102,7 @@ iCal address, both lines in the key file (`docs/GOOGLE-STEPS.md`; record `docs/P
 - Plainly: anything JARVIS reads from mail or the calendar goes to the AI provider (Qwen on Alibaba) with the
   question, as every question does.
 
-**H. The Wi-Fi device list** (owner's wishlist; "no tool for the Wi-Fi part")
+**H. The Wi-Fi device list** (owner's wishlist; "no tool for the Wi-Fi part"). **Built 2026-10-07** (`docs/PHONE-ACCESS-1.0.17.md` section 7).
 - Read-only: what the PC's own neighbour table and adapters know (addresses, names where the network resolves them,
   the Core's own machine), as a tool `network_devices` (a read, usable by devices) and a section "On this network" in
   Settings > Devices. No probing, no sending to the devices found, nothing paired by it: seeing a device never means

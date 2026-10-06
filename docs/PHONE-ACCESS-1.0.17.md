@@ -417,3 +417,64 @@ the full Python suite.
 - **Noted, not a finding:** every paired device sees every device's announcements; said in the form.
 - **Not applied:** `before` paging for notices older than the newest 50 (the reviewer offered it or the lifted cap;
   the cap covers the unread, and older items are on the PC).
+
+## 7. Item H: the devices seen on the home network (2026-10-07)
+
+The owner's wishlist ("no tool for the Wi-Fi part"), inside JARVIS's own boundary: seeing a device never means
+touching it.
+
+- `network_devices.py`: reads what Windows already knows, in one PowerShell call (no profile, no window, UTF-8
+  output, 25 s): the PC's own neighbour table (`Get-NetNeighbor`, IPv4: what this PC has seen) and the PC's own
+  addresses (`Get-NetIPAddress`). Kept: entries with a real hardware address in a state Windows lists as seen
+  (Reachable, Stale, Delay, Probe, Permanent). Dropped: multicast, broadcast, link-local and loopback addresses,
+  entries without a hardware address, the never-answered (Incomplete, Unreachable). This PC's own addresses appear
+  as "This PC" with the computer's name. At most 200 rows, in numeric order of address.
+- Names come from this PC's DNS server only, in a second PowerShell call for the first 40 rows together
+  (`Resolve-DnsName -Type PTR -DnsOnly -QuickTimeout`, 12 s for all of them). `-DnsOnly` means no LLMNR, no mDNS
+  and no NetBIOS, so nothing is multicast on the network and nothing is sent to a device found (Windows' own
+  resolver, `gethostbyaddr`, would do both when DNS has no answer). A name is text set by that device: printable
+  characters only, one space between words, at most 120, and the schema and the `scope` tell the model it is not
+  instructions. When DNS does not answer in time the list shows addresses. The list is kept a minute
+  (`CACHE_SECONDS`, a monotonic clock), so a repeated question does not read Windows again; `read_at` is the time
+  of that read. Nothing is probed, pinged, scanned or contacted (the test pins both scripts: no `Test-Connection`,
+  `Test-NetConnection`, `ping`, `Invoke-`, `Send-`, no neighbour written); no vendor lookup (that would send a
+  hardware address out of the PC). Windows not answering is one sentence: "The network list could not be read on
+  this PC."
+- The tool `network_devices` (`actions.py`; `permissions.py` row "List the devices seen on the home network": a read
+  on the PC, usable by a phone or wearable with no tick). The Core answers `{status, devices, count, read_at, scope}`
+  without the hardware addresses (a tool result goes to the model, and so to its provider; the hardware addresses
+  stay on this PC's Devices page); `scope` carries the boundary in words for the model to repeat. Inside a question
+  the failure is the tool's own sentence for the model and a code for a device. `test_permissions.py` pins the read.
+- The owner's route `GET /api/network-devices` (the signed-in interface only; `API.md`) and Settings > Devices >
+  "On this network" (`static/devices.js`): read when the owner presses READ THE NETWORK LIST, never on its own; the
+  heading, the Core's own words, the button, then the rows, each with the name or the address, the hardware
+  address, the address and the state (`JarvisDevices.networkRow`, `test_devices_view.cjs`); "Not shown during an
+  inspection."
+- The owner-run request templates (`tools/host/jarvis-request-*`) regenerated with the 51 tools; `docs/PERMISSIONS.md`
+  counts them.
+
+Checked: `test_network_devices.py` (6: the table read passively, filtered, named and cached with the read's own time,
+and a single neighbour as Windows writes it; names from DNS only, with a DNS timeout, a non-JSON answer, the address
+itself, control marks and an unasked address never holding or shaping the list, and nothing asked for an unusable
+address; 260 neighbours in numeric order, capped at 200, names asked for the first 40; Windows not answering as one
+plain sentence and an empty table as an empty list; both scripts pinned to the boundary; the owner's route, the tool
+from a paired device without a tick and from the PC's own question, the hardware addresses kept from the model, the
+activity row, the failure inside a question as a code), `test_permissions.py`, `test_devices_view.cjs`, the device
+and permission suites, the full Python suite.
+
+### Independent review of item H (one reviewer, 2026-10-07): 1 high, 2 medium, 5 low, all applied
+
+- **High.** The names were asked through Windows' resolver (`gethostbyaddr`), which, when DNS has no answer,
+  multicasts LLMNR and mDNS queries and sends a NetBIOS query to the device itself: the boundary "nothing is sent to
+  a device" was crossed by the naming step, and every claim of it was untrue as written. Applied: names from this
+  PC's DNS server only (`Resolve-DnsName -DnsOnly`, one bounded call, no threads), the scripts pinned by the test,
+  the claims reworded to what the code does.
+- **Medium.** A device's name is text chosen by whoever controls the device and went to the model unmarked.
+  Applied: printable characters only, and the schema and `scope` say it is not instructions. `read_at` was the time
+  of the call, not of the read the cached rows came from. Applied.
+- **Low (5).** The cache ran on the wall clock (a monotonic clock now); PowerShell's output was decoded with the
+  ANSI code page (UTF-8 now, undecodable bytes replaced); the page put the button above the heading after a read,
+  the heading had no style, and a click during an inspection did nothing silently (ordered, styled, said); test
+  gaps (the single-object shape, the cap and the order, the failure inside a question, the scripts pinned); wording
+  ("has seen" instead of "exchanged packets with", since a Stale entry needs no exchange; Windows PowerShell 5.1
+  always writes the state's number).

@@ -42,7 +42,7 @@ class TableTests(unittest.TestCase):
         # Until 1.0.15 these four lists were written out in server.py, answer_evidence.py, store.py and actions.py.
         self.assertEqual(permissions.WEARABLE_TOOLS, {'device_registry', 'time_now', 'list_items', 'conversation_search',
             'conversation_read', 'project_catalog', 'project_read', 'web_search', 'news_search',
-            'mail_search', 'mail_read', 'calendar_events'})  # 1.0.17 item G: the mail and calendar reads
+            'mail_search', 'mail_read', 'calendar_events', 'network_devices'})  # 1.0.17 items G and H: the mail, calendar and network reads
         self.assertEqual(permissions.ACTION_TOOLS, {'save_item', 'set_timer', 'manage_timer', 'manage_saved_memory', 'preview_action',
             'development_edit', 'development_propose', 'development_rollback', 'assistant_control', 'navigate_panel',
             'inspect_interface', 'create_file', 'project_save_document', 'project_link_chat', 'open_app', 'spotify', 'play_music', 'mail_send'})
