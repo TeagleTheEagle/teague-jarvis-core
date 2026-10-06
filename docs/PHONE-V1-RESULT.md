@@ -55,6 +55,14 @@ next round are in section 2 (items 4, 5, 7, 9 and 10); version 2 is listed in se
     lines. Fix: at launch, when a conversation id was restored, load its history from the Core (the same route Chats
     uses for CONTINUE) and show the last lines on Ask. The re-pair-after-revoke case (a new device id, the old
     conversations not listed) is by design of the Core's device book; said plainly here.
+11. **A Core reply replaced by "No matching action result was recorded for this request. Completion is not
+    confirmed."** (22:36, the owner's typed question "list improvements/additions needed in the next build for the
+    app"). Core-side, the same on the PC: `answer_evidence.action_guard` replaces a whole reply whose wording claims a
+    finished action ("has been updated", "I've completed", and the like) when no action tool ran in that turn. A list
+    of suggestions that mentions updates or completed work trips it, and the owner gets the guard's sentence instead
+    of the answer. Not an app matter. For a Core release: narrow the guard to claims about this turn's own actions
+    (only when a tool was attempted, or first-person claims only) and append the caveat under the reply instead of
+    replacing it. Meanwhile asking the question again usually gives an answer whose wording does not trip it.
 
 ## 3. The plan's section 10 checks
 
@@ -81,7 +89,14 @@ run again and this record closed.
 **Version 2** (plan section 11, each on the owner's word): camera and photos ("look at this"), the PC's chats on the
 phone, replies appearing while written, a Siri shortcut, notifications, the Dynamic Island, pairing by QR code, HTTPS
 through Tailscale, the Halo glasses with the phone as their bridge, a faster start of JARVIS at sign-in, the always-on
-mini PC question. The owner's wish list of 2026-10-06 (texts, calls, contacts, Gmail, calendar, maps) is its own plan:
+mini PC question. App-only candidates offered to the owner on 2026-10-06 for the next round: replies appearing as they
+are written (the Core already streams the pieces), Bluetooth headsets and audio interruptions, the screen awake while
+listening or speaking, Face ID on open, the speak-replies button on the Ask screen with a vibration on the reply, the
+Siri shortcut, text size following the phone's setting.
+
+**Core-side findings from the phone checks, for a Core release on the owner's word:** "remember that" resolving to the
+line before it (item 9); the action guard's false positive (item 11); the camera route for "look at this"; pairing by
+QR code; the PC's chats on the phone (a privacy decision). The owner's wish list of 2026-10-06 (texts, calls, contacts, Gmail, calendar, maps) is its own plan:
 contacts, Gmail and calendar are possible with permission; texts and calls only through Windows Phone Link on the PC.
 
 **TestFlight** (plan step 9) is still open: today the app runs from Xcode's own install, which lasts a year with the
