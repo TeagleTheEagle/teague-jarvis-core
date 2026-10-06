@@ -1,0 +1,58 @@
+{
+    "schema":  "jarvis-stage7-vm-start-v2",
+    "utc":  "2026-10-05T23:52:04.9972810Z",
+    "account":  "jarvis-s6-val",
+    "label":  "1.0.15-63362929d7ad",
+    "final":  "1.0.15-63362929d7ad",
+    "previous":  "1.0.14-e03872680e1d",
+    "vm_name":  "JARVIS-S6-FRESH",
+    "vm_uuid":  "4ef16bdd-2a1b-46af-83db-ee69c2f868bb",
+    "snapshot_before":  "STAGE7-PASS-1.0.14-e03872680e1d",
+    "allowed_current":  [
+                            "STAGE7-PASS-1.0.14-e03872680e1d"
+                        ],
+    "current_state_modified_before":  "false",
+    "restored_snapshot":  "FRESH-PREREQ",
+    "snapshots_kept":  [
+                           "FRESH-CLEAN-BASELINE",
+                           "FRESH-PREREQ",
+                           "GATE17-19-PASS",
+                           "GATE18-PASS",
+                           "STAGE7-PASS",
+                           "STAGE7-PASS-1.0.14-e03872680e1d"
+                       ],
+    "discs":  {
+                  "previous":  {
+                                   "iso":  "D:\\JARVIS-S6-FRESHVM\\media\\JARVIS-STAGE7-1.0.14-e03872680e1d.iso",
+                                   "sha256":  "92b58b9a704856bb07302729a74bd903e4a1b54a17d47b9f55ce44a35752f6d7",
+                                   "sata_port":  1
+                               },
+                  "stage7":  {
+                                 "iso":  "D:\\JARVIS-S6-FRESHVM\\media\\JARVIS-STAGE7-1.0.15-63362929d7ad.iso",
+                                 "sha256":  "7ec1976380739a24f828794efbdd7c200a32e2fcb7360e71581461883ef846fb",
+                                 "sata_port":  2
+                             }
+              },
+    "storage_lines":  [
+                          "\"SATA-0-0\"=\"D:\\\\JARVIS-S6-FRESHVM\\\\machines\\\\JARVIS-S6-FRESH\\\\Snapshots\\\\{4618f991-598e-4cb4-8d71-f0c13356350b}.vdi\"",
+                          "\"SATA-ImageUUID-0-0\"=\"4618f991-598e-4cb4-8d71-f0c13356350b\"",
+                          "\"SATA-hot-pluggable-0-0\"=\"off\"",
+                          "\"SATA-nonrotational-0-0\"=\"off\"",
+                          "\"SATA-discard-0-0\"=\"off\"",
+                          "\"SATA-1-0\"=\"D:\\\\JARVIS-S6-FRESHVM\\\\media\\\\JARVIS-STAGE7-1.0.14-e03872680e1d.iso\"",
+                          "\"SATA-ImageUUID-1-0\"=\"98c8dedd-8638-4114-9d14-0b8ae23af3a5\"",
+                          "\"SATA-tempeject-1-0\"=\"off\"",
+                          "\"SATA-IsEjected-1-0\"=\"off\"",
+                          "\"SATA-hot-pluggable-1-0\"=\"off\"",
+                          "\"SATA-nonrotational-1-0\"=\"off\"",
+                          "\"SATA-discard-1-0\"=\"off\"",
+                          "\"SATA-2-0\"=\"D:\\\\JARVIS-S6-FRESHVM\\\\media\\\\JARVIS-STAGE7-1.0.15-63362929d7ad.iso\"",
+                          "\"SATA-ImageUUID-2-0\"=\"bc4d8f04-4c51-4b7f-a8b8-8133382a3761\"",
+                          "\"SATA-tempeject-2-0\"=\"off\"",
+                          "\"SATA-IsEjected-2-0\"=\"off\"",
+                          "\"SATA-hot-pluggable-2-0\"=\"off\"",
+                          "\"SATA-nonrotational-2-0\"=\"off\"",
+                          "\"SATA-discard-2-0\"=\"off\"",
+                          "\"SATA-3-0\"=\"none\""
+                      ]
+}

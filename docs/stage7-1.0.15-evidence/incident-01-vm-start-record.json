@@ -1,0 +1,28 @@
+{
+  "schema": "jarvis-stage7-incident-note-v1",
+  "label": "1.0.15-63362929d7ad",
+  "step": "2 (jarvis-s6-val: restore the clean snapshot, attach the two discs, start the VM)",
+  "recorded_utc": "2026-10-05T23:57:56Z",
+  "recorded_by": "Claude Code (Claude Fable 5.1), from the records on D: and the VM's own log; no VirtualBox command was run by Claude",
+  "summary": "The VM start of step 2 completed (snapshot restored, discs attached, VM running with LocalhostReachable = 0), but the start script's own record (vm\\start-<utc>.json) was never written, and a second run of the launcher during the slow start printed STOPPED without doing anything. No step was repeated; nothing ran inside the VM.",
+  "timeline_utc": [
+    { "time": "2026-10-05T23:52:05Z", "what": "first launcher run (jarvis-s6-val): Start-Stage7Vm.ps1 wrote vm\\stage7-start-20261005-235205.json (snapshot before STAGE7-PASS-1.0.14-e03872680e1d, currentStateModified false, restored FRESH-PREREQ, six snapshots kept, discs 1.0.14 on port 1 and 1.0.15 on port 2 with the recorded hashes) and called Start-FreshVm.ps1, which ran VBoxManage startvm ('Waiting for VM \"JARVIS-S6-FRESH\" to power on...' in the owner's photo)" },
+    { "time": "2026-10-05T23:53:25Z to 23:53:42Z", "what": "Claude's reading: VBoxManage.exe (the startvm) and three VirtualBoxVM.exe processes present; VBoxHardening.log being written (program-file verification, the normal harmless lines only); no new VBox.log yet" },
+    { "time": "2026-10-05T23:54:07Z", "what": "second launcher run (a cmd.exe created at 10:54:07 local in the other session): VBoxManage reported the VM still 'poweroff' while a stage7-start record existed, so Invoke-Stage7Step.ps1 halted with 'the VM was already started for this check and is now off, but the pass inside it did not finish' (owner's photo). The halt happens before any action; the launcher ran nothing and wrote nothing." },
+    { "time": "2026-10-05T23:54:36Z", "what": "VBox.log opened by the VM process (the old log rotated to VBox.log.1)" },
+    { "time": "2026-10-05T23:54:38Z", "what": "VBox.log: 'Changing the VM state from CREATING to CREATED', 'CREATED to POWERING_ON', 'POWERING_ON to RUNNING'; the owner's second photo shows the VM window 'JARVIS-S6-FRESH (FRESH-PREREQ) [Running]' at the VirtualBox boot screen" },
+    { "time": "2026-10-05T23:55:11Z", "what": "VBox.log: guest log opened (Windows in the VM starting)" },
+    { "time": "2026-10-05T23:55:32Z to 23:56:20Z", "what": "Claude's reading: VBoxManage.exe gone (startvm returned); no cmd.exe or powershell.exe from the first launcher run left; vm folder holds only stage7-start-20261005-235205.json; the guest folder stage7-1.0.15-63362929d7ad is empty" }
+  ],
+  "vbox_log_evidence": {
+    "file": "D:\\JARVIS-S6-FRESHVM\\machines\\JARVIS-S6-FRESH\\Logs\\VBox.log",
+    "line_2": "Log opened 2026-10-05T23:54:36.638611200Z",
+    "line_290": "00:02:13.893086   LocalhostReachable <integer> = 0x0000000000000000 (0)",
+    "lines_1441_1454": "Changing the VM state from 'CREATING' to 'CREATED' / 'CREATED' to 'POWERING_ON' / 'POWERING_ON' to 'RUNNING'",
+    "meaning": "the running VM received NAT localhost-reachable = off, the same proof Start-FreshVm.ps1 looks for (its record would have quoted this line)"
+  },
+  "what_is_missing": "vm\\start-20261005-235205.json from Start-FreshVm.ps1 (schema stage6-fresh-vm-start-v1: settings at start, VBoxManage startvm outcome, the VBox.log line, the state after). Most likely cause: the first launcher window was closed by the owner while VBoxManage was still waiting for the slow power-on (the owner reported 'the vm isn't opened yet' at about 23:53Z and ran the launcher again at 23:54:07Z); closing the window ends the script before it writes. The settings at start are known from stage7-start-20261005-235205.json (hash-checked discs, snapshot) and from the VBox.log (LocalhostReachable = 0). To be confirmed by the owner: whether the first window was closed, and what it showed last.",
+  "cause_of_the_false_stop": "Invoke-Stage7Step.ps1 (version 3, as version 2 and 1) reads VBoxManage's VMState; during VirtualBox's start-up checks (here about 2.5 minutes, 83 seconds for the 1.0.14 check) the state still reads 'poweroff' although startvm is in progress, so a second run in that window is told the VM 'was already started ... and is now off'. A launcher defect in wording only (nothing is run); a later launcher version could say 'a start may still be in progress: wait for the VM window' when VBoxManage.exe is running.",
+  "effect_on_the_check": "none on what is tested: the VM is on FRESH-PREREQ with both discs attached and isolated as required, and the pass inside it has not started. The missing start record is replaced by this note and the VBox.log excerpt; the evaluation will cite both.",
+  "decision": "no step failed and nothing is repeated: the next step is step 3 inside the VM (sign in, open JARVIS_S7, double-click stage7). The owner was told this and asked to confirm what happened to the first window; the owner's answer is recorded in owner-note-01 when given."
+}
