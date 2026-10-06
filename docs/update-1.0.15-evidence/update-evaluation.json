@@ -1,0 +1,27 @@
+{
+  "schema": "jarvis-everyday-update-evaluation-v1",
+  "verdict": "EVERYDAY_UPDATE_COMPLETE",
+  "evaluated_utc": "2026-10-06T02:34:30Z",
+  "from": "1.0.14-e03872680e1d",
+  "to": "1.0.15-63362929d7ad",
+  "to_zip_sha256": "1019dce00702da4e15dac5ea8203a1a1034311fbbe30b352097517b16deec027",
+  "install_home": "%LOCALAPPDATA%\\JARVIS (the owner's everyday JARVIS)",
+  "approval": { "owner_text": "I approve the update of my everyday JARVIS to 1.0.15", "issued_utc": "2026-10-06T02:05:09Z", "record": "C:\\Users\\jonny\\JARVIS-claude-workspace\\governance\\UPDATE-1.0.15-APPROVAL-RECORD.json", "plan": "docs/UPDATE-EVERYDAY-1.0.15.md", "plan_sha256": "5d7580113cc3c62000a46835eadc4e2cd5cf1bb9c06ed9f6bad549367bf55fd5", "repo_commit": "8cf2187" },
+  "preconditions": { "stage7": "STAGE_7_COMPLETE for 1.0.15 (27 of 27; the first install's 675 s against the Gate 20 bound is an open owner question)", "sandbox_rehearsal": "13 of 13 PASS (docs/release-rehearsal-20261006-1015/update-rehearsal/)" },
+  "launcher": { "path": "D:\\JARVIS-update-1.0.15\\tools\\Invoke-EverydayUpdate.ps1", "sha256": "1c555b022337865c1734b7e9908c5baf66eb96bc33b74d29d97e6e8c0ea952d2", "equal_to_approval": true, "note": "the 1.0.14 launcher copied unchanged except its default folder and the plan it names" },
+  "steps": [
+    { "step": 1, "record": "check.json", "utc": "2026-10-06T02:09:08Z", "result": "PASS", "notes": "owner account THEGRIZZLYBEAR\\jonny, not elevated, launcher hash equal to the approval; package hash equal; 1.0.14 current (1.0.11 kept beside it) and verified; 0 JARVIS processes; 10.3 GB free on C:; both shortcuts present; package unpacked in 16.3 s" },
+    { "step": 2, "record": "backup.json", "utc": "2026-10-06T02:10:07Z", "result": "PASS", "notes": "backup 9c9131dcb5ed41388b37ed01dce06523 with 1.0.14's own backup code: 332 files, 2,999,409 bytes, verified; test restore passed with all 18 table counts equal (1,220 messages); copy on D: hash-equal (24774c8e…); program still verified" },
+    { "step": 3, "record": "update.json", "utc": "2026-10-06T02:11:48Z", "result": "PASS", "notes": "installed 1.0.15 in 47.1 s (verify package 8.5 s, copy 28.9 s, verify copy 8.9 s, stop 0.6 s, switch 0.005 s), verified; current 1.0.15, previous 1.0.14 kept; database file byte-for-byte unchanged (cffac2db…); shortcuts kept; JARVIS not started" },
+    { "step": 4, "record": "owner-check.json", "utc": "2026-10-06T02:21:39Z", "result": "PASS (owner-reported)", "notes": "the owner's screenshot at 13:15 local showed v1.0.15, the new look, 6 of 6 systems, 95 conversations and 3 memories, Qwen configured; the owner reported 'step 4 done' after the list (question answered, Settings pages, quiet quit); the activity log said no microphone was found: the PC's microphone, not the update" },
+    { "step": 5, "record": "restart-check.json", "utc": "2026-10-06T02:33Z", "result": "PASS", "notes": "after a PC restart (boot 13:25:30 local, sign-in 13:26:21) JARVIS 1.0.15 started by itself from the Startup shortcut at 13:31:46 (--login-launch), 5.4 minutes after sign-in; all 8 processes from the 1.0.15 release" }
+  ],
+  "rollback": "not used; 1.0.14 stays installed beside 1.0.15 (releases folder), 1.0.11 stays too; the launcher's rollback runs only with rollback-approved.json on the owner's word",
+  "open_items": [
+    "the owner's answer on the Gate 20 timing bound for Stage 7 checks (the VM's first install took 675 s)",
+    "removing the 1.0.11 release folder later (about 1.2 GB) on the owner's word",
+    "the microphone: 'No microphone was found' in the activity log at the first start of 1.0.15; to be checked by the owner with the microphone connected"
+  ],
+  "claude_actions_on_the_live_installation": "none: every step was run by the owner; Claude read records, process lists, file times and the Startup folder only, never config\\.env or the backup's contents",
+  "evaluated_by": "Claude Code (Claude Fable 5.1)"
+}
