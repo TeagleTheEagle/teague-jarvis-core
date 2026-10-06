@@ -80,7 +80,7 @@ def main(argv=None):
     # Two Python tests evaluate JavaScript with `node`: give them the release's own Electron as node.
     shim = work / 'node-shim'
     shutil.copytree(copy / 'electron', shim)
-    shutil.copyfile(shim / 'electron.exe', shim / 'node.exe')
+    shutil.copyfile(shim / 'JARVIS.exe', shim / 'node.exe')   # the release's Electron is JARVIS.exe (1.0.17)
 
     # A brand-new Windows account, laid out as Windows lays it out (one shared folder for
     # profile, AppData and Temp is not realistic and makes browsers refuse to start).
@@ -88,7 +88,7 @@ def main(argv=None):
     local, roaming, temp = home / 'AppData' / 'Local', home / 'AppData' / 'Roaming', home / 'AppData' / 'Local' / 'Temp'
     for folder in (work / 'data', work / 'config', roaming, temp):
         folder.mkdir(parents=True, exist_ok=True)
-    python, electron = copy / 'python' / 'python.exe', copy / 'electron' / 'electron.exe'
+    python, electron = copy / 'python' / 'python.exe', copy / 'electron' / 'JARVIS.exe'
     keep = ('SYSTEMROOT', 'SYSTEMDRIVE', 'WINDIR', 'COMSPEC', 'PATHEXT', 'NUMBER_OF_PROCESSORS', 'PROCESSOR_ARCHITECTURE',
             'PROGRAMFILES', 'PROGRAMFILES(X86)', 'PROGRAMW6432', 'PROGRAMDATA', 'ALLUSERSPROFILE',
             'COMMONPROGRAMFILES', 'COMMONPROGRAMFILES(X86)', 'COMMONPROGRAMW6432')  # Windows itself (Edge lives here)

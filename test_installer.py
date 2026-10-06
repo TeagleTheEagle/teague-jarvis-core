@@ -7,6 +7,7 @@ import json
 import os
 import shutil
 import socket
+import subprocess
 import sys
 import tempfile
 import threading
@@ -35,6 +36,9 @@ def make_package(base, version, files):
 
 APP = {'app/server.py': b'# server', 'app/personality.txt': b'Default personality.', 'python/python.exe': b'MZ',
        'electron/electron.exe': b'MZ', 'models/wake-models/hey.onnx': b'model'}
+# A release of 1.0.17 or later: its own program file, no electron.exe (docs/OWN-APP-PLAN.md 3.1).
+APP_EXE = {**{k: v for k, v in APP.items() if k != 'electron/electron.exe'}, 'electron/JARVIS.exe': b'MZ-JARVIS',
+           'electron/resources/app/main.cjs': b'// bootstrap'}
 
 
 class InstallerTests(unittest.TestCase):
@@ -47,6 +51,11 @@ class InstallerTests(unittest.TestCase):
         self.v2 = make_package(self.base, '1.1.0', {**APP, 'app/server.py': b'# server v2'})
         self.stops = []
         self.stop = lambda home: self.stops.append(home)
+        # Never the real Desktop and Startup folders of this PC: every shortcut write is recorded instead.
+        self.shortcut_writes = []
+        guard = patch.object(installer, 'write_shortcuts', side_effect=lambda home, release_id: self.shortcut_writes.append((str(home), release_id)))
+        guard.start()
+        self.addCleanup(guard.stop)
 
     def install(self, package, **kw):
         return installer.install(package, self.home, shortcuts=False, stop=self.stop, **kw)
@@ -123,7 +132,7 @@ class InstallerTests(unittest.TestCase):
             'while stopping the running JARVIS': lambda: patch.object(self, 'stop', side_effect=lambda h: crash()),
             'while writing the launcher': lambda: replace_fails_for('JARVIS.ps1.pending'),
             'while switching current.json': lambda: replace_fails_for('current.json.pending'),
-            'while writing shortcuts': lambda: patch.object(installer, 'write_shortcuts', side_effect=lambda h: crash()),
+            'while writing shortcuts': lambda: patch.object(installer, 'write_shortcuts', side_effect=lambda h, r: crash()),
         }
         for step, fault in faults.items():
             with self.subTest(step=step):
@@ -251,7 +260,8 @@ class InstallerTests(unittest.TestCase):
     def test_rollback_and_uninstall_report_phase_seconds(self):
         self.install(self.v1)
         self.install(self.v2)
-        self.assertEqual(set(installer.rollback(self.home, stop=self.stop)['seconds']), {'verify_target', 'stop', 'switch'})
+        self.assertEqual(set(installer.rollback(self.home, stop=self.stop, shortcuts=False)['seconds']), {'verify_target', 'stop', 'switch'})
+        self.assertEqual(set(installer.rollback(self.home, stop=self.stop)['seconds']), {'verify_target', 'stop', 'switch', 'shortcuts'})  # 1.0.17: the shortcuts follow the program
         self.assertEqual(set(installer.uninstall(self.home, shortcuts=False, stop=self.stop)['seconds']), {'stop', 'remove_program'})
 
     def test_install_rollback_uninstall_refuse_with_the_installed_python(self):
@@ -481,3 +491,85 @@ class InstallerTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class OwnAppTests(unittest.TestCase):
+    """Release 1.0.17 (docs/OWN-APP-PLAN.md 3.2 and 3.3): shortcuts straight at JARVIS.exe, also on rollback;
+    JARVIS.ps1 only for a release that has no program file of its own."""
+
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.base = Path(temp.name)
+        self.home = self.base / 'home'
+        self.old = make_package(self.base, '1.0.16', APP)
+        self.new = make_package(self.base, '1.0.17', APP_EXE)
+        self.scripts = []
+        def fake_run(command, **kw):
+            # Records every PowerShell script instead of running it; answers the process check with nothing running.
+            self.scripts.append(command[-1])
+            return subprocess.CompletedProcess(command, 0, 'remaining=0\n', '')
+        patcher = patch.object(installer.subprocess, 'run', side_effect=fake_run)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.stop = lambda home: None
+
+    def test_a_release_with_its_own_program_gets_no_launcher_script_and_shortcuts_at_the_program(self):
+        result = installer.install(self.new, self.home, shortcuts=True, stop=self.stop)
+        self.assertEqual(result['release'], '1.0.17-abc')
+        self.assertFalse((self.home / 'JARVIS.ps1').exists())
+        program = self.home / 'releases' / '1.0.17-abc' / 'electron' / 'JARVIS.exe'
+        self.assertEqual(installer.program_file(self.home, '1.0.17-abc'), program)
+        self.assertEqual(len(self.scripts), 1)
+        script = self.scripts[0]
+        self.assertIn(installer.ps_quote(program), script)
+        self.assertIn("'--login-launch'", script)
+        self.assertIn(installer.ps_quote(str(program) + ',0'), script)   # the shortcut carries the program's icon
+        self.assertNotIn('powershell.exe', script)
+        self.assertNotIn('JARVIS.ps1', script)
+
+    def test_an_older_release_keeps_the_launcher_script_and_powershell_shortcuts(self):
+        installer.install(self.old, self.home, shortcuts=True, stop=self.stop)
+        self.assertEqual((self.home / 'JARVIS.ps1').read_text(encoding='utf-8'), installer.LAUNCHER)
+        self.assertIsNone(installer.program_file(self.home, '1.0.16-abc'))
+        self.assertIn('powershell.exe', self.scripts[0])
+        self.assertIn('JARVIS.ps1', self.scripts[0])
+
+    def test_an_update_to_the_own_program_leaves_the_old_launcher_file_alone_and_a_rollback_uses_it_again(self):
+        installer.install(self.old, self.home, shortcuts=True, stop=self.stop)
+        installer.install(self.new, self.home, shortcuts=True, stop=self.stop)
+        self.assertTrue((self.home / 'JARVIS.ps1').exists())           # harmless; a rollback needs it
+        self.assertIn('JARVIS.exe', self.scripts[-1])
+        (self.home / 'JARVIS.ps1').unlink()                              # even when it is gone, a rollback restores it
+        result = installer.rollback(self.home, stop=self.stop)
+        self.assertEqual(result['release'], '1.0.16-abc')
+        self.assertIn('shortcuts', result['seconds'])
+        self.assertEqual((self.home / 'JARVIS.ps1').read_text(encoding='utf-8'), installer.LAUNCHER)
+        self.assertIn('JARVIS.ps1', self.scripts[-1])                    # the shortcuts followed the program
+        self.assertNotIn('JARVIS.exe', self.scripts[-1])
+        installer.install(self.new, self.home, shortcuts=True, stop=self.stop)   # update again: back at the program
+        self.assertIn('JARVIS.exe', self.scripts[-1])
+
+    def test_a_rollback_without_shortcuts_writes_none(self):
+        installer.install(self.old, self.home, shortcuts=False, stop=self.stop)
+        installer.install(self.new, self.home, shortcuts=False, stop=self.stop)
+        self.assertEqual(self.scripts, [])
+        result = installer.rollback(self.home, stop=self.stop, shortcuts=False)
+        self.assertEqual(result['release'], '1.0.16-abc')
+        self.assertEqual(self.scripts, [])
+        self.assertNotIn('shortcuts', result['seconds'])
+
+    def test_the_command_line_passes_no_shortcuts_to_rollback(self):
+        installer.install(self.old, self.home, shortcuts=False, stop=self.stop)
+        installer.install(self.new, self.home, shortcuts=False, stop=self.stop)
+        with patch.object(installer, 'stop_running_jarvis', self.stop), patch('sys.stdout', new=io.StringIO()) as out:
+            self.assertEqual(installer.main(['rollback', '--home', str(self.home), '--no-shortcuts']), 0)
+        self.assertEqual(json.loads(out.getvalue())['release'], '1.0.16-abc')
+        self.assertEqual([s for s in self.scripts if 'CreateShortcut' in s], [])   # the stop check ran; no shortcut script
+
+    def test_uninstall_removes_the_launcher_script_whichever_release_was_current(self):
+        installer.install(self.new, self.home, shortcuts=False, stop=self.stop)
+        (self.home / 'JARVIS.ps1').write_text('left over', encoding='utf-8')
+        installer.uninstall(self.home, shortcuts=False, stop=self.stop)
+        self.assertFalse((self.home / 'JARVIS.ps1').exists())
+        self.assertFalse((self.home / 'current.json').exists())

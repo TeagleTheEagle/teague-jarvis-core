@@ -1,0 +1,72 @@
+"""Release 1.0.17, JARVIS as his own app (docs/OWN-APP-PLAN.md): the build's stamping and bootstrap helpers. The
+stamping is proved on a small copy of rcedit's own program (never on the 170 MB Electron binary) with the pinned
+rcedit from desktop/node_modules; skipped when that package is not installed."""
+import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT / 'tools'))
+import build_release  # noqa: E402
+
+RCEDIT = ROOT / 'desktop' / 'node_modules' / build_release.RCEDIT['package'] / build_release.RCEDIT['exe']
+
+
+class VersionAndBootstrapTests(unittest.TestCase):
+    def test_the_windows_version_has_four_numbers(self):
+        self.assertEqual(build_release.version_quad('1.0.17'), '1.0.17.0')
+        self.assertEqual(build_release.version_quad('2.1'), '2.1.0.0')
+        self.assertEqual(build_release.version_quad('1.0.17.3'), '1.0.17.3')
+        for bad in ('1.0.17-rc1', '1.0.17.0.0', 'latest', ''):
+            with self.assertRaises(SystemExit, msg=bad):
+                build_release.version_quad(bad)
+
+    def test_the_bootstrap_loads_this_releases_desktop_app(self):
+        with tempfile.TemporaryDirectory() as folder:
+            release = Path(folder) / 'release'
+            (release / 'app' / 'desktop').mkdir(parents=True)
+            (release / 'app' / 'desktop' / 'main.cjs').write_text('// the app', encoding='utf-8')
+            build_release.write_bootstrap(release / 'electron', '1.0.17')
+            app = release / 'electron' / 'resources' / 'app'
+            package = json.loads((app / 'package.json').read_text(encoding='utf-8'))
+            self.assertEqual((package['name'], package['productName'], package['version'], package['main']), ('JARVIS', 'JARVIS', '1.0.17', 'main.cjs'))
+            main = (app / 'main.cjs').read_text(encoding='utf-8')
+            self.assertIn("require(path.join(__dirname, '..', '..', '..', 'app', 'desktop', 'main.cjs'))", main)
+            # The relative path from resources\app really lands on this release's desktop app.
+            self.assertEqual((app / '..' / '..' / '..' / 'app' / 'desktop' / 'main.cjs').resolve(), release / 'app' / 'desktop' / 'main.cjs')
+
+    def test_what_ships(self):
+        self.assertTrue(build_release.shipped('desktop/install-paths.cjs'))
+        self.assertTrue(build_release.shipped('desktop/jarvis.ico'))
+        self.assertFalse(build_release.shipped('desktop/test/install-paths.test.cjs'))
+        self.assertFalse(build_release.shipped('tools/setup/build_setup.py'))
+
+
+@unittest.skipUnless(RCEDIT.is_file(), 'rcedit not installed in desktop/node_modules')
+class StampingTests(unittest.TestCase):
+    def test_the_pinned_rcedit_is_the_one_in_node_modules(self):
+        self.assertEqual(build_release.file_sha256(RCEDIT), build_release.RCEDIT['sha256'])
+
+    def test_icon_name_company_and_version_are_stamped(self):
+        with tempfile.TemporaryDirectory() as folder:
+            victim = Path(folder) / 'JARVIS.exe'
+            shutil.copyfile(RCEDIT.parent / 'rcedit.exe', victim)   # a small program with a resource table, as Electron's has
+            build_release.stamp_program(victim, '1.0.17', ROOT / 'desktop' / 'jarvis.ico', RCEDIT)
+            def read(name):
+                return subprocess.run([str(RCEDIT), str(victim), '--get-version-string', name], check=True, capture_output=True, text=True).stdout.strip()
+            self.assertEqual(read('ProductName'), 'JARVIS')
+            self.assertEqual(read('CompanyName'), 'Teague Industries')
+            self.assertEqual(read('FileDescription'), 'JARVIS')
+            self.assertEqual(read('OriginalFilename'), 'JARVIS.exe')
+            self.assertEqual(read('ProductVersion'), '1.0.17.0')
+            self.assertEqual(read('FileVersion'), '1.0.17.0')
+            self.assertGreater(victim.stat().st_size, (RCEDIT.parent / 'rcedit.exe').stat().st_size)   # the icon went in
+
+
+if __name__ == '__main__':
+    unittest.main()

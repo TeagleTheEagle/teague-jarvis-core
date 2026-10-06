@@ -18,12 +18,16 @@ reinstall, failure paths, release regression, release manifest).
 ```
 %LOCALAPPDATA%\JARVIS\
   current.json                 {"release": "<id>", "previous": "<id>|null"}  (atomic replace)
-  JARVIS.ps1                   launcher: reads current.json, starts that release's desktop app
+  JARVIS.ps1                   launcher of releases before 1.0.17, written only while one is current;
+                               1.0.17 and later: the shortcuts point straight at releases\<id>\electron\JARVIS.exe,
+                               which works out these folders itself (docs/OWN-APP-PLAN.md 3.2)
   releases\<version>-<build>\  read-only after install
     manifest.json              every file: path, sha256, bytes; versions; build identity
     app\                       JARVIS source (server, desktop, intelligence, static, ...)
     python\                    official CPython 3.12.10 embeddable (x64) + locked site-packages
-    electron\                  Electron 44.2.0 (sha256 07b043bf…, the verified binary)
+    electron\                  Electron 44.2.0 (sha256 07b043bf…, the verified binary), shipped as JARVIS.exe since
+                               1.0.17 (renamed and stamped with the icon, name and version; resources\app holds the
+                               bootstrap that opens JARVIS on a double-click)
     models\                    Whisper base.en + openWakeWord models (bundled, hash-pinned)
   data\                        canonical data: jarvis.sqlite3, generated files, core.lock,
                                core-connection.json, logs\  — never touched by update/uninstall

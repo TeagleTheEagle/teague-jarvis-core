@@ -7,6 +7,14 @@ const {trusted,external,desktopHeaders}=require('./policy.cjs');
 const {connectCore,coreEnded}=require('./backend.cjs');
 const {ScreenCapture}=require('./capture.cjs');
 const {watchUpdates}=require('./local-updates.cjs');
+const installPaths=require('./install-paths.cjs');
+// From an installed release (<home>\releases\<id>\electron\JARVIS.exe) the app works out its own folders, as
+// JARVIS.ps1 did until 1.0.16, and a stale start (an old pin after an update) is handed to the current release
+// (docs/OWN-APP-PLAN.md 3.2). In development (the repo) nothing here applies.
+const layout=installPaths.installLayout(process.execPath);
+const stale=layout&&installPaths.staleStart(layout);
+if(stale){installPaths.redirect(stale,installPaths.appArguments(process.argv));app.exit(0);return;}
+if(layout){installPaths.applyLayout(layout);app.setPath('userData',layout.profile);}
 let updates;
 let companionWanted=false;
 let unwatchCore,win,tray,backend,quitting=false,origin='',capture,companion,lastCompanionState,resumeMicOnShow=false,liveGrantUntil=0;
@@ -59,7 +67,7 @@ async function start(){
   const result=await dialog.showMessageBox(win,{type:'question',buttons:['Keep microphone off','Enable microphone'],defaultId:0,cancelId:0,message:'Enable JARVIS microphone?',detail:'Microphone audio uses the existing local voice pipeline. Closing to tray stops activity. You can mute it in JARVIS.'});micApproved=result.response===1;if(micApproved){preferences.microphoneAllowed=true;require('node:fs').writeFileSync(preferencesFile,JSON.stringify(preferences,null,2));}callback(micApproved);
  });
  ses.setDisplayMediaRequestHandler((_request,callback)=>callback({}));
- win=new BrowserWindow({width:1280,height:900,minWidth:720,minHeight:540,show:false,...(process.platform==='win32'?{titleBarStyle:'hidden',titleBarOverlay:{color:'#03111b',symbolColor:'#bcefff',height:36}}:{}),backgroundColor:'#101820',title:'Teague Industries Command Center · JARVIS',webPreferences:{preload:path.join(__dirname,'preload.cjs'),session:ses,nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true,backgroundThrottling:false}});
+ win=new BrowserWindow({width:1280,height:900,minWidth:720,minHeight:540,show:false,...(process.platform==='win32'?{titleBarStyle:'hidden',titleBarOverlay:{color:'#03111b',symbolColor:'#bcefff',height:36}}:{}),backgroundColor:'#101820',title:'Teague Industries Command Center · JARVIS',icon:path.join(__dirname,'jarvis.ico'),webPreferences:{preload:path.join(__dirname,'preload.cjs'),session:ses,nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true,backgroundThrottling:false}});
  win.removeMenu();
  updates=watchUpdates(path.resolve(__dirname,'..'),update=>{if(!win.isDestroyed())win.webContents.send('jarvis:update-available',update);});
  function updateSender(event){if(event.sender!==win.webContents||event.senderFrame!==win.webContents.mainFrame||!trusted(event.senderFrame.url,origin))throw new Error('Untrusted update request.');}

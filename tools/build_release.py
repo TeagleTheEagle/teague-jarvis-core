@@ -7,7 +7,9 @@ Requires a clean, committed working tree: application files come from the HEAD c
 Every other input is checked against a pinned SHA-256 before use:
   - CPython 3.12.10 embeddable (python.org; MD5 matches the published value)
   - Python packages from requirements-lock.txt (pip --require-hashes, no index)
-  - Electron 44.2.0 (the binary used by the twelve-fix Electron verification)
+  - Electron 44.2.0 (the binary used by the twelve-fix Electron verification), shipped as JARVIS.exe:
+    the verified binary renamed and stamped with the JARVIS icon, name, company and version by rcedit
+    (pinned by hash), with a bootstrap in resources\app so a double-click opens JARVIS (1.0.17)
   - Whisper base.en and openWakeWord models
 Microsoft C++ runtime DLLs are deployed app-locally (versions recorded) so a clean PC
 needs no administrator-installed prerequisite. Nothing is executed from the inputs.
@@ -21,6 +23,7 @@ import argparse
 import hashlib
 import io
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -39,6 +42,18 @@ PYTHON_EMBED = {
     'md5_published_by_python_org': 'fe8ef205f2e9c3ba44d0cf9954e1abd3',
 }
 ELECTRON = {'version': '44.2.0', 'sha256': '07b043bf9b0a0ac14a82fac0b612b7b7ed13cde727d706d74e41a45278ab51f1'}
+# The program file (docs/OWN-APP-PLAN.md 3.1): Electron's binary renamed and stamped with the icon, the name and
+# the version by rcedit, the Electron team's tool, from the npm package rcedit 5.0.2 installed project-locally
+# (pnpm, desktop/package.json). The registry marks that package as no longer supported; the binary it carries
+# is pinned here by hash and the build refuses any other.
+RCEDIT = {'package': 'rcedit', 'version': '5.0.2', 'exe': 'bin/rcedit-x64.exe',
+          'sha256': '3e7801db1a5edbec91b49a24a094aad776cb4515488ea5a4ca2289c400eade2a'}
+PROGRAM = {'file': 'JARVIS.exe', 'product': 'JARVIS', 'description': 'JARVIS', 'company': 'Teague Industries',
+           'icon': 'desktop/jarvis.ico'}
+BOOTSTRAP_MAIN = ("// JARVIS bootstrap (written by tools/build_release.py, docs/OWN-APP-PLAN.md 3.1): JARVIS.exe started with no\n"
+                  "// arguments runs this, which loads this release's desktop app; never Electron's welcome window.\n"
+                  "const path = require('node:path');\n"
+                  "require(path.join(__dirname, '..', '..', '..', 'app', 'desktop', 'main.cjs'));\n")
 MODELS = {
     'speech-models/base.en/config.json': 'f3bc3821e9fc76a27bae538e11ae5b677dcdd352b4600429ce7951d398569aeb',
     'speech-models/base.en/model.bin': '2a166925539a16005f14ff328359f9b9adb9dc4fb631bb3b227526862e93e2ef',
@@ -84,6 +99,33 @@ def shipped(path):
 def require(condition, message):
     if not condition:
         raise SystemExit('BUILD REFUSED: ' + message)
+
+
+def version_quad(version):
+    """'1.0.17' -> '1.0.17.0', the four-number form Windows shows for a program; anything else refuses the build."""
+    parts = version.split('.')
+    require(1 <= len(parts) <= 4 and all(p.isdigit() for p in parts), f'version {version!r} must be one to four numbers separated by dots.')
+    return '.'.join(parts + ['0'] * (4 - len(parts)))
+
+
+def stamp_program(exe, version, icon, rcedit):
+    """The icon, the name, the company and the version, stamped into the renamed Electron binary."""
+    quad = version_quad(version)
+    strings = {'ProductName': PROGRAM['product'], 'FileDescription': PROGRAM['description'], 'CompanyName': PROGRAM['company'],
+               'InternalName': PROGRAM['product'], 'OriginalFilename': PROGRAM['file'], 'LegalCopyright': PROGRAM['company']}
+    command = [str(rcedit), str(exe), '--set-icon', str(icon), '--set-file-version', quad, '--set-product-version', quad]
+    for name, value in strings.items():
+        command += ['--set-version-string', name, value]
+    subprocess.run(command, check=True, capture_output=True)
+
+
+def write_bootstrap(electron_dir, version):
+    """resources\\app beside JARVIS.exe: what Electron runs when the program is started with no arguments."""
+    app = Path(electron_dir) / 'resources' / 'app'
+    app.mkdir(parents=True, exist_ok=True)
+    (app / 'package.json').write_text(json.dumps({'name': 'JARVIS', 'productName': 'JARVIS', 'version': version,
+                                                   'private': True, 'main': 'main.cjs'}, indent=1) + '\n', encoding='utf-8')
+    (app / 'main.cjs').write_text(BOOTSTRAP_MAIN, encoding='utf-8')
 
 
 def build(version, make_zip=True, out_root=None):
@@ -135,10 +177,20 @@ def build(version, make_zip=True, out_root=None):
         compileall.compile_dir(str(folder), quiet=2, workers=0,
                                invalidation_mode=py_compile.PycInvalidationMode.UNCHECKED_HASH)
 
-    # 3. Electron, verified.
+    # 3. Electron, verified, shipped as JARVIS.exe (docs/OWN-APP-PLAN.md 3.1): the verified binary renamed and
+    #    stamped with the icon, the name and the version, plus the bootstrap that opens JARVIS on a double-click.
     electron = ROOT / 'desktop' / 'node_modules' / 'electron' / 'dist'
     require(file_sha256(electron / 'electron.exe') == ELECTRON['sha256'], 'Electron identity mismatch.')
+    rcedit = ROOT / 'desktop' / 'node_modules' / RCEDIT['package'] / RCEDIT['exe']
+    require(rcedit.is_file() and file_sha256(rcedit) == RCEDIT['sha256'],
+            f'rcedit {RCEDIT["version"]} missing or changed in desktop/node_modules (run pnpm install in desktop).')
+    icon = ROOT / PROGRAM['icon']
+    require(icon.is_file(), f'{PROGRAM["icon"]} missing.')
     shutil.copytree(electron, release / 'electron')
+    program = release / 'electron' / PROGRAM['file']
+    os.replace(release / 'electron' / 'electron.exe', program)
+    stamp_program(program, version, icon, rcedit)
+    write_bootstrap(release / 'electron', version)
 
     # 4. Models, verified.
     for relative, digest in MODELS.items():
@@ -157,6 +209,8 @@ def build(version, make_zip=True, out_root=None):
         'python': {'version': '3.12.10', 'embeddable_sha256': PYTHON_EMBED['sha256'],
                    'packages_lock_sha256': file_sha256(ROOT / 'requirements-lock.txt')},
         'electron': ELECTRON, 'models': MODELS,
+        'program': {'file': 'electron/' + PROGRAM['file'], 'sha256': file_sha256(program), 'version': version_quad(version),
+                    'stamped_with': RCEDIT, 'icon_sha256': file_sha256(icon)},
         'crt': {dll: file_sha256(release / 'python' / dll) for dll in CRT},
         'application_files': len(members), 'files': files,
     }

@@ -87,7 +87,8 @@ build\release\JARVIS-<version>-<commit>\install.cmd                 # per user, 
 Inputs are pinned (Python embeddable, requirements-lock.txt, Electron, models); the build
 refuses anything that does not match. Rehearse in a sandbox before a real install:
 `release\python\python.exe installer.py install --package . --home %TEMP%\jarvis-sandbox-home --no-shortcuts`,
-then `JARVIS.ps1` in that home. Rollback / uninstall / verify / status: `installer.py <action> --home <home>`.
+then `releases\<id>\electron\JARVIS.exe` in that home (1.0.17 and later; `JARVIS.ps1` for older releases).
+Rollback / uninstall / verify / status: `installer.py <action> --home <home>` (`--no-shortcuts` applies to rollback too).
 
 C: is nearly full on this PC, so local builds and rehearsals use D: (`--out` picks the
 output folder, `--no-zip` skips the distributable zip for rehearsal builds):

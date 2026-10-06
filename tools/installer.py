@@ -10,7 +10,9 @@ the installed releases, so install, rollback and uninstall refuse to run from th
     python installer.py verify | status
 
 Layout under --home (default %LOCALAPPDATA%\\JARVIS):
-    current.json  JARVIS.ps1  releases\\<id>\\  data\\  config\\  profile\\
+    current.json  releases\\<id>\\  data\\  config\\  profile\\  (JARVIS.ps1 only while a release before 1.0.17 is current)
+The Desktop and Startup shortcuts point straight at the current release's electron\\JARVIS.exe (1.0.17 and later;
+docs/OWN-APP-PLAN.md 3.3), rewritten on install, update and rollback; an older release is started through JARVIS.ps1.
 Program files are verified file-by-file against the release manifest before use, staged
 beside the live release and switched in one atomic step, so an interrupted install or
 update leaves the previous release current. Data, config and profile folders are never
@@ -30,6 +32,7 @@ from pathlib import Path
 
 CONFIRM_DATA_REMOVAL = 'CONFIRM-DELETE-MY-JARVIS-DATA'
 SHORTCUT = 'JARVIS.lnk'
+PROGRAM = Path('electron') / 'JARVIS.exe'   # the release's own program file (1.0.17 and later)
 LEGACY_SHORTCUT = 'JARVIS Desktop.lnk'  # created by the pre-release Install-JARVIS-Shortcuts.ps1
 
 LAUNCHER = r'''param([switch]$LoginLaunch)
@@ -225,14 +228,39 @@ def stop_running_jarvis(home, timeout=30):
                 'Quit JARVIS completely (its icon near the clock), then run this again.')
 
 
-def write_shortcuts(home):
-    script = ("$s=New-Object -ComObject WScript.Shell;"
-              "foreach($pair in @(@([Environment]::GetFolderPath('Desktop'),''),@([Environment]::GetFolderPath('Startup'),' -LoginLaunch'))){"
-              "$l=$s.CreateShortcut((Join-Path $pair[0] '" + SHORTCUT + "'));"
-              "$l.TargetPath=(Get-Command powershell.exe).Source;"
-              "$l.Arguments='-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File \"'+" + ps_quote(Path(home) / 'JARVIS.ps1') + "+'\"'+$pair[1];"
-              "$l.WindowStyle=7;$l.WorkingDirectory=" + ps_quote(home) + ";$l.Description='JARVIS';$l.Save()}")
-    subprocess.run(['powershell', '-NoProfile', '-Command', script], check=True, capture_output=True, timeout=60)
+def program_file(home, release_id):
+    """The release's own program file, or None for a release before 1.0.17 (started through JARVIS.ps1)."""
+    program = Path(home) / 'releases' / release_id / PROGRAM
+    return program if program.is_file() else None
+
+
+def ensure_launcher(home, release_id):
+    """JARVIS.ps1 is written only for a release that has no JARVIS.exe (decision D6: one way to start him). An
+    existing copy is left alone: a later rollback to such a release needs it, and it harms nothing."""
+    if not program_file(home, release_id):
+        atomic_write(Path(home) / 'JARVIS.ps1', LAUNCHER)
+
+
+def shortcut_script(home, release_id):
+    """PowerShell that writes the Desktop and Startup shortcuts: straight at the release's JARVIS.exe with its icon
+    (the Startup one with --login-launch), or at the PowerShell launcher for an older release."""
+    program = program_file(home, release_id)
+    if program:
+        return ("$s=New-Object -ComObject WScript.Shell;"
+                "foreach($pair in @(@([Environment]::GetFolderPath('Desktop'),''),@([Environment]::GetFolderPath('Startup'),'--login-launch'))){"
+                "$l=$s.CreateShortcut((Join-Path $pair[0] '" + SHORTCUT + "'));"
+                "$l.TargetPath=" + ps_quote(program) + ";$l.Arguments=$pair[1];$l.IconLocation=" + ps_quote(str(program) + ',0') + ";"
+                "$l.WindowStyle=1;$l.WorkingDirectory=" + ps_quote(program.parent.parent / 'app' / 'desktop') + ";$l.Description='JARVIS';$l.Save()}")
+    return ("$s=New-Object -ComObject WScript.Shell;"
+            "foreach($pair in @(@([Environment]::GetFolderPath('Desktop'),''),@([Environment]::GetFolderPath('Startup'),' -LoginLaunch'))){"
+            "$l=$s.CreateShortcut((Join-Path $pair[0] '" + SHORTCUT + "'));"
+            "$l.TargetPath=(Get-Command powershell.exe).Source;"
+            "$l.Arguments='-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File \"'+" + ps_quote(Path(home) / 'JARVIS.ps1') + "+'\"'+$pair[1];"
+            "$l.WindowStyle=7;$l.WorkingDirectory=" + ps_quote(home) + ";$l.Description='JARVIS';$l.Save()}")
+
+
+def write_shortcuts(home, release_id):
+    subprocess.run(['powershell', '-NoProfile', '-Command', shortcut_script(home, release_id)], check=True, capture_output=True, timeout=60)
 
 
 def remove_shortcuts(name=SHORTCUT):
@@ -286,17 +314,17 @@ def install(package, home, shortcuts=True, stop=stop_running_jarvis, replace_leg
     if current and current['release'] != release_id:
         stop(home)
         lap('stop')
-    atomic_write(home / 'JARVIS.ps1', LAUNCHER)
+    ensure_launcher(home, release_id)
     write_current(home, release_id, previous)
     lap('switch')
     if shortcuts:
-        write_shortcuts(home)
+        write_shortcuts(home, release_id)
         if replace_legacy_shortcuts:  # owner switch-over: the old JARVIS no longer starts at login
             remove_shortcuts(LEGACY_SHORTCUT)
     return {'status': 'installed', 'release': release_id, 'previous': previous, 'home': str(home), 'seconds': lap.seconds}
 
 
-def rollback(home, stop=stop_running_jarvis):
+def rollback(home, stop=stop_running_jarvis, shortcuts=True):
     home = Path(home)
     refuse_if_run_from_installation(home, 'rollback')
     lap = Laps()
@@ -307,8 +335,12 @@ def rollback(home, stop=stop_running_jarvis):
     lap('verify_target')
     stop(home)
     lap('stop')
+    ensure_launcher(home, current['previous'])
     write_current(home, current['previous'], current['release'])
     lap('switch')
+    if shortcuts:  # the shortcuts follow the program (1.0.17): the previous release's JARVIS.exe, or JARVIS.ps1
+        write_shortcuts(home, current['previous'])
+        lap('shortcuts')
     return {'status': 'rolled_back', 'release': current['previous'], 'previous': current['release'], 'seconds': lap.seconds}
 
 
@@ -401,7 +433,7 @@ def main(argv=None):
             result = install(args.package or Path(__file__).resolve().parent, home, shortcuts=not args.no_shortcuts,
                              replace_legacy_shortcuts=args.replace_legacy_shortcuts)
         elif args.action == 'rollback':
-            result = rollback(home)
+            result = rollback(home, shortcuts=not args.no_shortcuts)
         elif args.action == 'uninstall':
             result = uninstall(home, args.remove_data, shortcuts=not args.no_shortcuts)
         elif args.action == 'verify':
