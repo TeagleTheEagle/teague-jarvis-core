@@ -297,3 +297,58 @@ PERMISSIONS.md, the master architecture, the three phone READMEs); the Core's de
 copies equal the record. The state handed over: round 2 compiled on the Mac (compile-only build) on 2026-10-07, the
 project settings corrected there (App Icon = AppIcon in both configurations; the Face ID Info key), not yet run on the
 phone; the eight checks of README-round2 and plan check 3 are the Mac session's first open item.
+
+## 10. Milestone copies received from the Mac
+
+The rule (section 9 and `phone/ios/mac/CLAUDE.md`): at each milestone the Mac session zips its sources, the asset
+catalog, its status and its records as `JARVIS-ios-mac-<stamp>.zip` and prints the sha256; the owner carries the
+zip here; this session checks the hash, keeps the copy unedited under `phone/ios/mac/<stamp>/` and the zip under
+`D:/JARVIS-release-work/phone/`, records what it holds here, and does not build it (no Swift compiler on the PC).
+
+### 10.1 `JARVIS-ios-mac-20261007-0135.zip` (received 2026-10-07, about 01:45 local)
+
+- 3,294,916 bytes; sha256 `d9b342bb2d9fd7508dcd2a5b71664b29326d99f330beb322fdcfd978bb47f0ee`, equal to the hash in
+  the Mac session's handoff (it supersedes a 01:18 zip never carried here). Copy: `phone/ios/mac/20261007-0135/`,
+  44 files: 15 Swift sources in `JARVIS/`, the asset catalog (`AppIcon`, `AccentColor`, `TeagueBadge`,
+  `JARVISBackground`), `JARVISUITests/PhoneChecksUITests.swift`, `JARVIS.xcodeproj` with the `JARVIS-PhoneChecks`
+  scheme, the Mac's `CLAUDE.md`, `STATUS.md`, `RESULTS.md`, `ROUND3-COMMAND-LOOK.md`, `PC-REQUESTS-20261007.md`,
+  and 13 phone screenshots under `records/round2-20261007/` and `records/round3-20261007/`.
+- Against the round-2 record in `phone/ios/JARVIS/` (the thirteen files this session handed over, section 7):
+  new `CoreOrb.swift`, `Hud.swift`, `OverviewView.swift`; changed `AskView.swift`, `AudioRecorder.swift`,
+  `CoreClient.swift`, `JARVISApp.swift`, `Models.swift`, `PairingView.swift`, `SessionModel.swift`; unchanged
+  `AudioPlayer.swift`, `ChatsView.swift`, `Keychain.swift`, `SiriIntents.swift`, `Theme.swift`; `StatusView.swift`
+  removed (the Overview replaces it). App version 1.2 in the Mac's `project.pbxproj`. The project settings the Mac
+  changed (App Icon = `AppIcon` in both configurations, the Face ID Info key) are in that file.
+- What the Mac records as done there (its `STATUS.md` and `RESULTS.md`, nothing seen from this PC): round 2
+  installed on the phone from the Mac on 2026-10-07 00:14 (plan check 3 PASSES: the conversation's lines are back
+  after a true close and reopen; the header PASSES on Ask; the badge icon shows); a UI test target that drives the
+  app on the phone from the Mac with screenshots; round 3 "the command look" (owner: "build the command look"): the
+  third tab is Overview (`OverviewView.swift`), the glowing `CoreOrb` on Ask and Overview, `Hud.swift` as the panel
+  kit, health samples and the microphone level kept by the session, the header word "Offline" instead of "Not
+  reached", reviewed there (2 high, 3 medium, 12 low, all applied) and seen on the phone with the Core online;
+  this session's 1.0.17 request handled in the app: `assistant.draft` shown as a dashed "Writing..." bubble,
+  replaced not appended, cleared on completion, failure, cancel or interruption, never spoken; hold-and-send (a
+  question made while the Core cannot be reached waits on the phone and goes at the next reading within 15 minutes,
+  one at most, the Core's conversation read first so a request that got through is not sent twice; DROP on Ask),
+  reviewed there and checked by the owner ("it worked"). Open on the Mac: six owner checks from round 2 (the stop
+  note after RESUME, a headset, the screen awake, the vibration, Face ID, Siri) and two from round 3 (the hold on the
+  Overview, the amber orb while thinking); next app-only rounds offered there (a lock-screen and Control Center
+  button; Dynamic Type), not chosen.
+- Carried here for the Core: `PC-REQUESTS-20261007.md`, the Mac session's item-by-item reading of the owner's words
+  to it at 01:15 local, "give him full access to everything he's saying he's not able to do", after JARVIS listed on
+  the phone what it cannot do. Where each item is decided: (1) writes from the phone: the owner's tick "may save
+  memories and tasks" on the phone's row in Settings > Devices, on the PC today, nothing to build; (2) approving or
+  rejecting JARVIS's waiting changes from the phone: a Core change (device ops for the waiting list with description
+  and diff, approve and reject by id, an event or flag when something waits, a per-device "may approve" tick off by
+  default, expiry; the Mac then builds an Approvals panel behind Face ID); (3) Gmail and (4) Calendar: Core
+  connectors with the owner's consent, or for the calendar a device route the phone feeds from its own calendars;
+  (5) Spotify: the owner's sign-in on the PC, plus the tool marked usable by other devices if the phone should ask
+  for music; (6) commands and a shell from the phone: a change to the device marks in `permissions.py`, tool by
+  tool; the Mac recommends no shell from the phone and named tools behind Ask first, answered on the phone through
+  item 2; (7) Mark I: hardware, when it exists; (8) screen analysis from the phone: the existing tool marked usable
+  by other devices; (9) location with a question: a Core field on `start` or a `location` op, stored only on the
+  owner's word, and a switch in the app off by default. Also asked: a `devices` read for the Overview, an `announce`
+  op for texts from a Shortcuts automation, a Phone Link reader for calls, time-aware nudges, a memory version
+  stamp. The owner decided in this session, at about 01:50 local, with five screenshots of JARVIS's list: "give jarvis all
+  these permissions and make everything he said he didn't have make him have it"; the build order is
+  `docs/PHONE-ACCESS-PLAN.md`. Anything the Core reads goes to its AI provider (Qwen on Alibaba).
