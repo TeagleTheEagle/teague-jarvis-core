@@ -847,8 +847,11 @@ async function captureDesktopScreen(analyse,question){
  }catch(e){if(epoch===screenEpoch)document.getElementById('screenStatus').textContent='Screenshot failed: '+e.message;}
  finally{screenCaptureBusy=false;}
 }
+// The start-up song (Settings > Music): asked of the Core once the sign-in greeting has been spoken; the Core plays it
+// through the same call as the PLAY button, or says why not (no song set or quiet hours: silence; file gone or stopped: a toast).
+async function startupSong(){try{const answer=await api('/api/music',{action:'startup'});if(answer&&answer.message)toast(answer.message,!answer.played);}catch(e){toast('Start-up song: '+e.message,true);}}
 if(window.jarvisDesktop){
- window.jarvisDesktop.onLoginGreeting(text=>{if(text&&!state.busy)void speak(text);});
+ window.jarvisDesktop.onLoginGreeting(async text=>{for(let i=0;i<40&&!state.data;i++)await new Promise(r=>setTimeout(r,250));if(text&&!state.busy){try{await speak(text);}catch(e){}}await startupSong();});
  window.jarvisDesktop.onStop(()=>{stopScreenVision();void stop();});
  window.jarvisDesktop.onScreenRevoked(stopScreenVision);
  window.jarvisDesktop.onCompanionAction(action=>{if(action==='live')void startDesktopLive();if(action==='stop-screen')stopScreenVision();if(action==='capture')void captureSharedScreen(true);if(action==='mic')void toggleMic();});

@@ -4,8 +4,9 @@
 .music-panel>p{color:#b4c5cf;line-height:1.6;font-size:14px}
 .music-note{color:#8aa6c0;font-size:12.5px;line-height:1.5;flex:1 0 100%;margin:0}
 .music-folder code{font:12.5px var(--mono,ui-monospace,monospace);color:#e6f1fa;background:#0a1f3566;padding:2px 6px;border-radius:5px;margin-right:10px;word-break:break-all}
-.music-now,.music-add{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:16px;margin:16px 0 22px;border:1px solid #2f8fdc55;border-radius:10px;background:#0a1f3566}
-.music-now h3,.music-add h3,.music-list h3{flex:1 0 100%;margin:0;font:700 11px/1.3 var(--sans,system-ui);letter-spacing:.18em;color:#7fd4ff;text-transform:uppercase}
+.music-now,.music-add,.music-startup{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:16px;margin:16px 0 22px;border:1px solid #2f8fdc55;border-radius:10px;background:#0a1f3566}
+.music-now h3,.music-add h3,.music-startup h3,.music-list h3{flex:1 0 100%;margin:0;font:700 11px/1.3 var(--sans,system-ui);letter-spacing:.18em;color:#7fd4ff;text-transform:uppercase}
+.music-startup select{flex:0 1 320px;min-width:0}
 .music-now-line{flex:1 0 100%;margin:0;font-size:14px;color:#8aa6c0}
 .music-now-line.ok{color:#4de3c1}
 .music-now-line.warn{color:#f0b866}

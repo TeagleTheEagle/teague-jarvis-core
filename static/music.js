@@ -17,6 +17,11 @@ const JarvisMusic = {
   volumeText(volume) { return 'Volume ' + volume + '%'; },
   // A nickname row: the file it points at, or that the file is gone.
   rowText(row) { return row.present ? row.title : row.file + ' (file not in the folder)'; },
+  // The start-up song line: what plays after JARVIS's greeting at a sign-in start (the setting music_startup).
+  startupText(startup, present) {
+    if (!startup) return 'No start-up song: after his greeting at sign-in, JARVIS stays quiet.';
+    return 'After his greeting at sign-in, JARVIS plays: ' + startup + (present ? '' : ' (not in the folder, so nothing plays)') + '. Not in quiet hours, and not while the emergency stop holds.';
+  },
 };
 if (typeof module !== 'undefined') module.exports = JarvisMusic;
 
@@ -32,9 +37,9 @@ if (typeof document !== 'undefined') (() => {
   const panel = el('section', 'music-panel');
   const intro = el('p', '', 'Your own music, played by JARVIS on this PC\'s speakers. Copy MP3 files (WAV works too) into the folder below, ' +
     'give a song a nickname, and say "Jarvis, play <nickname>". "Stop the music", "pause", "resume", "volume up" and "volume down" work the same way.');
-  const folderLine = el('p', 'music-folder'), nowBox = el('div', 'music-now'), addBox = el('div', 'music-add'), list = el('div', 'music-list');
+  const folderLine = el('p', 'music-folder'), nowBox = el('div', 'music-now'), startupBox = el('div', 'music-startup'), addBox = el('div', 'music-add'), list = el('div', 'music-list');
   list.setAttribute('aria-live', 'polite');
-  panel.append(intro, folderLine, nowBox, addBox, list);
+  panel.append(intro, folderLine, nowBox, startupBox, addBox, list);
   const category = q('.ti-settings-group[data-setting="Music"]'), settingsView = q('#settingsView');
   if (category) category.append(panel); else if (settingsView) { panel.prepend(el('h2', '', 'Music')); settingsView.prepend(panel); }
 
@@ -93,10 +98,36 @@ if (typeof document !== 'undefined') (() => {
     }));
   }
 
+  // The start-up song: the song JARVIS plays once his greeting at a sign-in start has been spoken (setting
+  // music_startup, a nickname or a file name; nothing = quiet). Saved the moment it is chosen.
+  function renderStartup(data) {
+    if (startupBox.contains(document.activeElement)) return;
+    const current = data.startup || '';
+    const note = el('p', 'music-note', JarvisMusic.startupText(current, !!data.startup_present));
+    const choice = el('select'); choice.setAttribute('aria-label', 'Song played after the greeting at sign-in');
+    choice.add(new Option('Nothing', ''));
+    const named = new Set();
+    for (const row of data.nicknames || []) if (row.present) { named.add(row.file); choice.add(new Option(row.nickname + ' (' + row.title + ')', row.nickname)); }
+    for (const f of data.files || []) if (!named.has(f)) choice.add(new Option(f, f));   // a file with a nickname is listed once, by its nickname
+    if (current && ![...choice.options].some(o => o.value === current)) choice.add(new Option(current + ' (not in the folder)', current));
+    choice.value = current;
+    choice.onchange = async () => {
+      const wanted = choice.value;
+      try {
+        await api('/api/settings', {music_startup: wanted});
+        toast(wanted ? 'Start-up song saved.' : 'No start-up song.');
+        note.textContent = JarvisMusic.startupText(wanted, true);   // said at once, even while the select keeps the focus
+      } catch (e) { toast(e.message, true); choice.value = current; }
+      await load();
+    };
+    startupBox.replaceChildren(el('h3', '', 'When JARVIS starts'), note, choice);
+  }
+
   function render(data) {
     folderLine.replaceChildren(el('span', '', 'Folder: '), el('code', '', data.folder || ''), button('REFRESH', 'text-button', load));
     if (!addBox.contains(document.activeElement)) renderAdd(data);  // a nickname being typed or a file being chosen stays
     renderNow(data);
+    renderStartup(data);
     renderList(data);
   }
   async function load() {

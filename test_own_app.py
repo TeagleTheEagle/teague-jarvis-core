@@ -71,5 +71,42 @@ class StampingTests(unittest.TestCase):
             self.assertGreater(victim.stat().st_size, (RCEDIT.parent / 'rcedit.exe').stat().st_size)   # the icon went in
 
 
+class SetupScriptTests(unittest.TestCase):
+    """tools/setup/build_setup.py without Inno Setup: the template's placeholders, its two application ids and the
+    four-number version it stamps (review of 2026-10-07, findings L4 and L6)."""
+
+    def setUp(self):
+        sys.path.insert(0, str(ROOT / 'tools' / 'setup'))
+        import build_setup
+        self.build_setup = build_setup
+        self.template = build_setup.TEMPLATE.read_text(encoding='utf-8')
+
+    def test_every_placeholder_is_filled_and_a_missing_one_is_refused(self):
+        values = {'VERSION': '1.0.17', 'RELEASE_ID': '1.0.17-0123456789ab', 'PACKAGE': r'D:\pkg', 'ICON': r'D:\i.ico',
+                  'OUTPUT_DIR': r'D:\out', 'OUTPUT_NAME': 'JARVIS-Setup-1.0.17-0123456789ab', 'VERSION_QUAD': build_release.version_quad('1.0.17')}
+        text = self.build_setup.render(self.template, values)
+        self.assertNotIn('@VERSION@', text)
+        self.assertIn('AppVersion=1.0.17', text)
+        self.assertIn('VersionInfoVersion=1.0.17.0', text)
+        self.assertIn(r"'\releases\1.0.17-0123456789ab\electron'", text)
+        with self.assertRaises(SystemExit) as refused:
+            self.build_setup.render(self.template, {k: v for k, v in values.items() if k != 'RELEASE_ID'})
+        self.assertIn('@RELEASE_ID@', str(refused.exception))
+
+    def test_the_two_application_ids_come_from_the_template(self):
+        real, sandbox = self.build_setup.app_ids(self.template)
+        self.assertEqual(real, '{DC2C8033-1BBF-5E1C-99A0-BE0E70DC9937}')
+        self.assertRegex(sandbox, r'^\{[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}\}$')
+        self.assertNotEqual(real, sandbox)
+        self.assertIn('AppId={code:AppIdForThisRun}', self.template)   # the id is chosen at run time: a sandbox run never touches the real entry
+        self.assertIn("Result := 'JARVIS (sandbox)'", self.template)
+        with self.assertRaises(SystemExit):
+            self.build_setup.app_ids(self.template.replace('#define SandboxAppGuid', '#define Other'))
+
+    def test_a_version_that_is_not_numbers_is_refused_before_inno_setup(self):
+        with self.assertRaises(SystemExit):
+            build_release.version_quad('1.0.17-rc1')
+
+
 if __name__ == '__main__':
     unittest.main()

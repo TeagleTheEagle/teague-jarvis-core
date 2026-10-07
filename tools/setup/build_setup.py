@@ -15,10 +15,15 @@ Output, beside the package:
   JARVIS-Setup-<id>.setup.json   the record: hash and size of the Setup, the package's hashes, the Inno version
 
 Switches of the built Setup: /VERYSILENT /SUPPRESSMSGBOXES /NORESTART (silent, for the Stage 7 check and rehearsals),
-/HOME=<folder> (a sandbox install home instead of %LOCALAPPDATA%\\JARVIS, as installer.py --home), /DIR=<folder> (a
-sandbox package folder), /NOSHORTCUTS (rehearsals on the build PC: its real Desktop and Startup are never touched),
-/LOG=<file>. The installer's own JSON answer is written to <package folder>\\setup-result.json; the uninstall's to
-<package folder>-uninstall-result.json beside it.
+/HOME=<folder> (a sandbox install home instead of %LOCALAPPDATA%\\JARVIS, as installer.py --home; needs /DIR as well,
+and the run registers as "JARVIS (sandbox)" under its own application id, so a rehearsal on the build PC never touches
+the entry of the real JARVIS there), /DIR=<folder> (a sandbox package folder), /NOSHORTCUTS (rehearsals on the build
+PC: its real Desktop and Startup are never touched; the installer itself also withholds them from any home that is not
+the PC's own install home), /LOG=<file>. The installer's own JSON answer is written to <package folder>\\setup-result.json;
+the uninstall's to <package folder>-uninstall-result.json beside it. A silent Setup exits 0 even when the package's
+installer refused (Inno Setup has finished its own work by then): setup-result.json is the verdict; on a refusal the
+Setup removes the Installed-apps entry it wrote and its finished page says that nothing was installed. The two
+application ids are read from the template into the record (app_id, sandbox_app_id).
 """
 import argparse
 import hashlib
@@ -32,6 +37,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from installer import verify_release  # noqa: E402
+from build_release import version_quad  # noqa: E402  (the same four-number form, and the same refusal, as the build)
 
 ROOT = Path(__file__).resolve().parents[2]
 TEMPLATE = Path(__file__).resolve().parent / 'JARVIS-Setup.iss.in'
@@ -74,6 +80,15 @@ def render(template, values):
     return text
 
 
+def app_ids(template_text):
+    """The two application ids the template defines (the real JARVIS, and a sandbox run with /HOME), in the form
+    Windows records them (braces around the GUID): the Stage 7 check and the rehearsals read them from the record."""
+    found = dict(re.findall(r'^#define (MyAppGuid|SandboxAppGuid) "([0-9A-Fa-f-]{36})"', template_text, re.M))
+    if set(found) != {'MyAppGuid', 'SandboxAppGuid'}:
+        refuse('the template does not define MyAppGuid and SandboxAppGuid.')
+    return '{' + found['MyAppGuid'].upper() + '}', '{' + found['SandboxAppGuid'].upper() + '}'
+
+
 def build(package, iscc=None, out_dir=None):
     package = Path(package).resolve()
     if not (package / 'release').is_dir() or not (package / 'installer.py').is_file():
@@ -95,9 +110,11 @@ def build(package, iscc=None, out_dir=None):
     if setup.exists():
         refuse(f'{setup} already exists.')
     script = out_dir / (name + '.iss')
-    script.write_text(render(TEMPLATE.read_text(encoding='utf-8'), {
+    template_text = TEMPLATE.read_text(encoding='utf-8')
+    app_id, sandbox_app_id = app_ids(template_text)
+    script.write_text(render(template_text, {
         'VERSION': version, 'RELEASE_ID': release_id, 'PACKAGE': package, 'ICON': ICON,
-        'OUTPUT_DIR': out_dir, 'OUTPUT_NAME': name, 'VERSION_QUAD': '.'.join(version.split('.') + ['0'] * (4 - len(version.split('.')))),
+        'OUTPUT_DIR': out_dir, 'OUTPUT_NAME': name, 'VERSION_QUAD': version_quad(version),
     }), encoding='utf-8')
     started = time.time()
     done = subprocess.run([str(compiler), '/Qp', str(script)], capture_output=True, text=True, errors='replace')
@@ -110,7 +127,11 @@ def build(package, iscc=None, out_dir=None):
                'script': script.name, 'script_sha256': file_sha256(script), 'template_sha256': file_sha256(TEMPLATE),
                'iscc': str(compiler), 'iscc_sha256': file_sha256(compiler), 'seconds': round(time.time() - started, 1),
                'built_at': time.time(), 'signed': False,
-               'switches': ['/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/HOME=<sandbox home>', '/DIR=<sandbox package folder>', '/NOSHORTCUTS', '/LOG=<file>']}
+               'app_id': app_id, 'sandbox_app_id': sandbox_app_id, 'sandbox_display_name': 'JARVIS (sandbox)',
+               'switches': ['/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART',
+                            '/HOME=<sandbox home> together with /DIR=<sandbox package folder> (registers as "JARVIS (sandbox)" under sandbox_app_id)',
+                            '/NOSHORTCUTS', '/LOG=<file>'],
+               'silent_exit_code_note': 'a silent Setup exits 0 even when the package installer refused; setup-result.json is the verdict'}
     (out_dir / (name + '.setup.json')).write_text(json.dumps(summary, indent=2), encoding='utf-8')
     return summary
 

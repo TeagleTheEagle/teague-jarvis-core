@@ -79,8 +79,8 @@ answers them itself, so they start at once and work offline.
 
 Reading tags inside the files (the file name is the title); playlists and "next"; playing on the phone or any
 other device (version 2 of the phone, where the phone's own speakers would play); Spotify (what exists stays as
-it is); fading between songs; a start-up song (a separate decision, the file version is now possible on top of
-this).
+it is); fading between songs; a start-up song (a separate decision when this was written; built for 1.0.17 on the
+owner's word, see the last section).
 
 ## Checked
 
@@ -174,3 +174,77 @@ the music.
 **Not reached by the review:** the real media interface (the state right after play, `resume` on the mpegvideo
 device, a drive without short names, a path over 260 characters, a slow drive, MP3 files); the panel in a browser;
 the desktop app; the test VM; a spoken command through a microphone; the carrying out of an approved "play".
+
+## Defect found by the owner in 1.0.16 (2026-10-07), fixed for 1.0.17: the music could not be stopped
+
+**What the owner saw** (screenshots of the chat): "Play Wake Up Warrior." answered "Playing Daddy's Home." (the only
+file in the folder, chosen by the model); "stop music." answered "Nothing was playing." while the song played on to
+its end; later "stop Wake Up Warrior." got "the player reports nothing was actually running".
+
+**Cause, reproduced on this PC** (a tone and a copy of the owner's MP3 at 5 percent volume; the copy deleted
+afterwards): Windows ties a device opened through its media interface (`mciSendString`) to the thread that opened
+it. The Core answers each request on its own thread, so the "play" request opened the song on a thread that ended
+with the answer, and every command from a later thread (`status`, `stop`, `close`) was refused with "The specified
+device is not open or is not recognized by MCI". `Player.mode()` takes a refused status as "the song ran out" and
+closes its bookkeeping (`now = None`) while the close itself is refused too, so the sound plays on with no way to
+reach it; the next "stop" then finds nothing open and says "Nothing was playing." The 1.0.16 panel check did not
+show it because a browser keeps one connection for the panel's requests and the Core serves one connection on one
+thread. The earlier record's "the `mpegvideo` device plays both" stands; the thread rule was unknown.
+
+**Fix (`music.Mci`):** every media command is sent from one long-lived daemon thread of the player's own
+(`jarvis-music-mci`, started at the first command, restarted if ever gone); callers hand the command over and wait
+for the answer (30 s at most; errors come back as before). `Player`, the routes, the tool and the commands are
+unchanged. Tests (`test_music.OneThreadForTheMediaInterfaceTests`): commands from three threads and the main thread
+all run on that one thread and answer in order; an error on the worker reaches the caller and the worker lives on;
+off Windows the plain refusal; and, against the real media interface, a one-second silent tone opened on a thread
+that then ends is still seen as playing and is stopped from another thread (the owner's case; skipped where no
+media device answers).
+
+## The start-up song (1.0.17; owner, 2026-10-07: "when jarvis boots he says his morning hello message then the mp3 plays")
+
+**What you get.** In Settings > Music, "When JARVIS starts": choose the song (a nickname, or a file by name;
+"Nothing" by default). When JARVIS starts by himself at your sign-in (the Startup shortcut), the window speaks his
+greeting as before ("Good morning, Mr. Teague. JARVIS is online and ready for your day, sir."), and when the greeting
+has been said the song plays on this PC's speakers at the music volume. Not in quiet hours (then no greeting is
+spoken and no song is played), and not while the emergency stop holds (the window shows the stopped sentence). When
+the greeting is skipped (voice off, or the window already busy), the song still plays. A file that is gone is said
+on screen and nothing plays. "Stop the music" works as for any song.
+
+**How it is built.** The setting `music_startup` (`store.py`: a nickname or a file name, no path separators, no
+leading dot, up to 255 characters; empty = none). `App.music_listing` reports `startup` and `startup_present`
+(`App.music_startup_known`: the exact nickname or file name the panel offers, whatever the case; not the spoken word
+match). `App.music_action` action `startup` answers `{played, message}`: `''` when nothing is set or in quiet hours;
+"The start-up song ... is not in the music folder." (and an activity row) when the file is gone; the stopped sentence
+while the stop holds; otherwise the same tool call as the PLAY button, so the receipt is "Playing <title>." The
+window (`static/app.js`, the desktop's login greeting hook) waits for its first state, speaks the greeting, then asks
+the Core for the song and shows the Core's words as a toast. The panel (`static/music.js`, `renderStartup`) saves the
+choice at once through `/api/settings`; a song with a nickname is listed once, by its nickname. `Library.resolve`
+now also takes the exact file name, whatever its case (so the setting and "play <file name>" work by file name).
+
+**The switch.** The song is the owner's own standing setting, like a click on PLAY: the switch for the tool "Play
+music from your files" in Settings > Permissions binds JARVIS's own calls, not the owner's, so it does not stop the
+start-up song (recorded here and in the test; `docs/PERMISSIONS.md` says the same of the owner's buttons). The
+emergency stop and quiet hours do.
+
+**Checked.** `test_music.StartupSongTests` (5): silence when nothing is set; the setting's rules (separators, a
+leading dot, padding, a number, the 255-character limit) and `startup_present` by nickname and by file name whatever
+its case; the song played on request and a vanished file said; nothing while the emergency stop holds; quiet hours
+silent and the Off switch not binding. `test_music_view.cjs`: the panel's three sentences. The whole Python suite
+and the interface scripts pass. Not checked: a real sign-in with the greeting spoken by a provider and the song after
+it (the first real one is the owner's; the window's hook is read-only reviewed), and the panel in a browser.
+
+**Independent review of both music items (one reviewer, 2026-10-07): no high finding; 3 medium and 12 low.** Applied:
+M1 (the comments promised the switch binds the start-up song; decided and recorded: it does not, with a test); M2
+(quiet hours honoured); M3 (a stalled media interface: the wait is 10 s, a command that did not come back marks the
+interface stuck so later commands are refused at once until it answers, `Player.stop` takes a lock timeout and the
+emergency stop and the Core's exit use it, so neither waits on a stall); L1 (an open that timed out may leave the
+alias open: the next play closes it first); L2 (`_close` always clears the bookkeeping); L3 (the exact file name
+matches whatever its case); L5 (the setting may be 255 characters); L6 and L7 (the panel's note is redrawn at once
+after a save, the select goes back on a refused save, a song with a nickname is listed once); L8
+(`startup_present` by exact name); L9 (the greeting waits for the window's first state, so on a slow sign-in the
+song no longer plays before the greeting could be spoken); L10 (the song stops when JARVIS quits); L11 and L12
+(these records, the API rows for `/api/music`, the tests above and a stalled-interface test; the real-interface
+test now fails rather than skips on a refused open unless no device answers). Recorded, not changed: L4 (a nickname
+that is itself another file's name now plays that file; the only spoken phrase whose meaning changed since 1.0.16).
+Verified by the reviewer: the thread model (no deadlock, bounded waits, the daemon thread at exit), path safety (the
+setting never becomes a path), the answer shapes and the window's toasts, the routes being the owner's only.

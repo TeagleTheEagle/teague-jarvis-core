@@ -373,5 +373,198 @@ class CoreTests(DeviceCase):
         self.assertEqual(permissions.effect('play_music', {'action': 'play'}), permissions.CHANGES)
 
 
+class StartupSongTests(DeviceCase):
+    """The start-up song (owner, 2026-10-07: "when jarvis boots he says his morning hello message then the mp3
+    plays"): a setting, shown in the listing, played on the window's request once the sign-in greeting is spoken."""
+
+    def setUp(self):
+        super().setUp()
+        self.mci = FakeMci()
+        self.app.music.player.mci = self.mci
+        fill(self.app.music.library.folder)
+
+    def test_no_song_set_means_silence(self):
+        status, answer = self.owner('/api/music', {'action': 'startup'})
+        self.assertEqual((status, answer), (200, {'played': False, 'message': ''}))
+        self.assertIsNone(self.mci.mode)
+        self.assertEqual((self.owner('/api/music')[1]['startup'], self.owner('/api/music')[1]['startup_present']), ('', False))
+
+    def test_the_setting_is_a_nickname_or_a_file_name(self):
+        self.assertEqual(self.owner('/api/settings', {'music_startup': '..\\secrets.mp3'})[0], 400)
+        self.assertEqual(self.owner('/api/settings', {'music_startup': 'a/b.mp3'})[0], 400)
+        self.assertEqual(self.owner('/api/settings', {'music_startup': ' padded '})[0], 400)
+        self.assertEqual(self.owner('/api/settings', {'music_startup': 7})[0], 400)
+        self.assertEqual(self.owner('/api/settings', {'music_startup': 'Shoot to Thrill.mp3'})[0], 200)
+        listing = self.owner('/api/music')[1]
+        self.assertEqual((listing['startup'], listing['startup_present']), ('Shoot to Thrill.mp3', True))
+        self.assertEqual(self.owner('/api/settings', {'music_startup': 'gone song'})[0], 200)
+        self.assertEqual(self.owner('/api/music')[1]['startup_present'], False)
+
+    def test_the_song_plays_on_request_after_the_greeting(self):
+        self.owner('/api/music', {'action': 'add', 'nickname': 'workshop warrior', 'file': 'Shoot to Thrill.mp3'})
+        self.owner('/api/settings', {'music_startup': 'workshop warrior'})
+        status, answer = self.owner('/api/music', {'action': 'startup'})
+        self.assertEqual((status, answer), (200, {'played': True, 'message': 'Playing Shoot to Thrill.'}))
+        self.assertEqual(self.mci.mode, 'playing')
+        self.owner('/api/music', {'action': 'stop'})
+        # The setting may name the file itself (as the panel's list does): the exact file name resolves.
+        self.assertEqual(self.app.music.library.resolve('Shoot to Thrill.mp3')[1:], ('Shoot to Thrill.mp3', 'workshop warrior'))
+        self.assertIsNone(self.app.music.library.resolve('Shoot to Thrill.mp3 '[:-1] + 'x'))
+        self.owner('/api/settings', {'music_startup': 'Back in Black.mp3'})
+        status, answer = self.owner('/api/music', {'action': 'startup'})
+        self.assertEqual((status, answer), (200, {'played': True, 'message': 'Playing Back in Black.'}))
+        self.owner('/api/music', {'action': 'stop'})
+        # A file that is gone: said, nothing played.
+        self.owner('/api/settings', {'music_startup': 'vanished.mp3'})
+        status, answer = self.owner('/api/music', {'action': 'startup'})
+        self.assertEqual((status, answer['played'], answer['message']), (200, False, 'The start-up song vanished.mp3 is not in the music folder.'))
+        self.assertIsNone(self.mci.mode)
+
+    def test_nothing_starts_while_the_emergency_stop_holds(self):
+        self.owner('/api/settings', {'music_startup': 'Shoot to Thrill.mp3'})
+        self.assertEqual(self.owner('/api/emergency-stop', {})[0], 200)
+        status, answer = self.owner('/api/music', {'action': 'startup'})
+        self.assertEqual((status, answer['played']), (200, False))
+        self.assertTrue(answer['message'])
+        self.assertIsNone(self.mci.mode)
+        self.owner('/api/resume', {})
+
+    def test_quiet_hours_keep_it_silent_and_the_tool_switch_does_not_bind_the_owners_own_setting(self):
+        self.owner('/api/settings', {'music_startup': 'shoot to thrill.MP3', 'quiet_hours': True})   # the file name, whatever its case
+        self.assertEqual(self.owner('/api/music')[1]['startup_present'], True)
+        self.assertEqual(self.owner('/api/music', {'action': 'startup'})[1], {'played': False, 'message': ''})
+        self.assertIsNone(self.mci.mode)
+        self.owner('/api/settings', {'quiet_hours': False})
+        # The start-up song is the owner's own standing setting, like a click on PLAY: the switch for JARVIS's own
+        # calls ("Play music from your files", Off here) does not bind it; the emergency stop and quiet hours do.
+        self.app.set_permission('play_music', permissions.OFF)
+        self.assertEqual(self.owner('/api/music', {'action': 'startup'})[1], {'played': True, 'message': 'Playing Shoot to Thrill.'})
+        self.assertEqual(self.mci.mode, 'playing')
+        self.owner('/api/music', {'action': 'stop'})
+        self.app.set_permission('play_music', permissions.DEFAULT)
+        # A file name longer than 100 characters is a file name still.
+        self.assertEqual(self.owner('/api/settings', {'music_startup': 'x' * 200 + '.mp3'})[0], 200)
+        self.assertEqual(self.owner('/api/settings', {'music_startup': 'x' * 300 + '.mp3'})[0], 400)
+
+
+class OneThreadForTheMediaInterfaceTests(unittest.TestCase):
+    """2026-10-07: Windows ties a song opened through its media interface to the thread that opened it; the Core
+    answers each request on its own thread, so 1.0.16 could not stop a song from the request after the one that
+    started it ("Playing Daddy's Home." then "Nothing was playing." while the song played on). Every command now goes
+    through one long-lived thread of the player's own."""
+
+    def test_every_command_runs_on_the_same_long_lived_thread(self):
+        import threading
+        mci = music.Mci()
+        mci.winmm = object()   # not used: the command itself is replaced below
+        seen = []
+        mci._send_here = lambda command: (seen.append((command, threading.current_thread().name)), 'ok')[1]
+        results = []
+        workers = [threading.Thread(target=lambda n=n: results.append(mci.send(f'command {n}'))) for n in range(3)]
+        for w in workers:
+            w.start()
+        for w in workers:
+            w.join()
+        results.append(mci.send('command main'))
+        self.assertEqual(results, ['ok'] * 4)
+        self.assertEqual(sorted(c for c, _ in seen), ['command 0', 'command 1', 'command 2', 'command main'])
+        self.assertEqual({name for _, name in seen}, {music.Mci.THREAD})
+        self.assertTrue(mci.thread.is_alive() and mci.thread.daemon)
+
+    def test_an_error_on_the_worker_reaches_the_caller_and_the_worker_lives_on(self):
+        mci = music.Mci()
+        mci.winmm = object()
+        def send_here(command):
+            if command == 'bad':
+                raise MusicError('The specified device is not open or is not recognized by MCI.')
+            return 'fine'
+        mci._send_here = send_here
+        with self.assertRaises(MusicError):
+            mci.send('bad')
+        self.assertEqual(mci.send('good'), 'fine')
+
+    def test_off_windows_the_answer_is_plain(self):
+        mci = music.Mci()
+        mci.winmm = None
+        with self.assertRaises(MusicError):
+            mci.send('status x mode')
+
+    def test_a_stalled_interface_is_refused_at_once_until_it_answers_and_the_emergency_stop_never_waits_on_it(self):
+        import threading, time
+        mci = music.Mci()
+        mci.winmm = object()
+        mci.WAIT = 0.2
+        release = threading.Event()
+        def send_here(command):
+            if command.startswith('open'):
+                release.wait(5)   # the stalled command
+            return 'ok'
+        mci._send_here = send_here
+        player = Player(mci)
+        with self.assertRaises(music.MediaTimeout):   # the open does not come back in time
+            player.play(Path('C:/music/song.mp3'))
+        self.assertIsNone(player.now)
+        self.assertTrue(player.stale_alias and mci.stuck)
+        with self.assertRaises(music.MediaTimeout):   # refused at once, not after another wait
+            mci.send('status jarvismusic mode')
+        started = time.monotonic()
+        self.assertIsNone(player.stop(lock_timeout=0.5))   # nothing on the books, nothing sent, no waiting
+        self.assertLess(time.monotonic() - started, 0.3)
+        release.set()
+        for _ in range(50):   # the late answer frees the interface
+            if not mci.stuck:
+                break
+            time.sleep(0.02)
+        self.assertEqual(mci.send('status jarvismusic mode'), 'ok')
+        # The next play closes the alias the late open may have left behind, before it opens.
+        seen = []
+        mci._send_here = lambda command: (seen.append(command), 'ok')[1]
+        player.play(Path('C:/music/song.mp3'))
+        self.assertEqual(seen[0], f'close {music.ALIAS}')
+        self.assertTrue(seen[1].startswith('open '))
+        self.assertFalse(player.stale_alias)
+        # A caller holding the player's lock while the interface stalls: the emergency stop's bounded stop gives up in time.
+        mci._send_here = lambda command: (release.clear(), release.wait(5), 'ok')[2]
+        holder = threading.Thread(target=lambda: player.mode())
+        holder.start(); time.sleep(0.05)
+        started = time.monotonic()
+        self.assertIsNone(player.stop(lock_timeout=0.2))
+        self.assertLess(time.monotonic() - started, 1.0)
+        release.set(); holder.join(5)
+
+    @unittest.skipUnless(os.name == 'nt', 'Windows media interface')
+    def test_a_song_opened_on_a_thread_that_ended_can_still_be_seen_and_stopped(self):
+        """The owner's case against the real media interface: a one-second silent tone (volume 0)."""
+        import math, struct, threading, wave
+        with tempfile.TemporaryDirectory() as folder:
+            tone = Path(folder) / 'tone.wav'
+            with wave.open(str(tone), 'wb') as w:
+                w.setnchannels(1); w.setsampwidth(2); w.setframerate(8000)
+                w.writeframes(b''.join(struct.pack('<h', int(2000 * math.sin(2 * math.pi * 440 * i / 8000))) for i in range(8000)))
+            player = Player(music.Mci())
+            player.volume = 0
+            outcome = {}
+            def opener():
+                try:
+                    player.play(tone)
+                    outcome['mode'] = player.mode()
+                except MusicError as exc:
+                    outcome['error'] = str(exc)
+            t = threading.Thread(target=opener); t.start(); t.join()
+            try:
+                if 'error' in outcome:
+                    if 'device' in outcome['error'].lower() or 'driver' in outcome['error'].lower():
+                        self.skipTest('no media device on this machine: ' + outcome['error'])
+                    self.fail('the real media interface refused the open: ' + outcome['error'])
+                self.assertEqual(outcome['mode'], 'playing')
+                self.assertEqual(player.mode(), 'playing')   # from this thread, after the opening thread ended
+                self.assertEqual(player.status()['title'], 'tone')
+                stopped = player.stop()
+                self.assertEqual(stopped['title'], 'tone')
+                self.assertEqual(player.mode(), 'nothing')
+            finally:
+                player.stop()
+
+
 if __name__ == '__main__':
     unittest.main()

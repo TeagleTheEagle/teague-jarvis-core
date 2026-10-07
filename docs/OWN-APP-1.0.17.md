@@ -5,10 +5,12 @@ Owner: "start 1.0.17" (2026-10-07, about 00:45 local). The plan is approved (`do
 is still open. The three Core items of the phone checks (`docs/PHONE-CORE-FIXES-20261007.md`) ride in this release.
 
 Status: **items 3.1 to 3.3 built, tested, rehearsed in a sandbox and independently reviewed, findings applied
-(section 2); item 3.4 (JARVIS-Setup.exe) built with Inno Setup 6.7.3 and rehearsed in a sandbox, not yet reviewed
-(section 3); version 4 Stage 7 scripts not started (section 4; the version 3 files were read and the changes
-designed, see the handover). Nothing built here reaches the everyday JARVIS until the
-release's Stage 7 check and update, on the owner's approvals.**
+(section 2); item 3.4 (JARVIS-Setup.exe) built with Inno Setup 6.7.3, rehearsed in a sandbox (section 3; that
+rehearsal superseded, section 6) and independently reviewed together with the version 4 Stage 7 scripts on
+2026-10-07, findings applied (section 7); the version 4 scripts written, their decision tests passing
+(`docs/STAGE7-DRIVER-V4.md`); the Setup rehearsal that watches the real shortcut folders and the version 4 sandbox
+Stage 7 harness written (section 7). Next: the real build of 1.0.17 and its checks (section 4). Nothing built here
+reaches the everyday JARVIS until the release's Stage 7 check and update, on the owner's approvals.**
 
 ## 1. Items 3.1 to 3.3 (commit 09fed5f)
 
@@ -123,10 +125,12 @@ Not yet independently reviewed (the next session, with the version 4 scripts).
 
 ## 4. Still to do in this release
 
-Version 4 Stage 7 scripts (copies of version 3; the Install phase from the Setup silently, the Installed-apps entry
-checked, the uninstall through it, one update through the Setup); the release-notes entry; the build of 1.0.17 proper
-from a clean tree; the comparison with 1.0.16; the release regression; the zip and Setup rehearsals; the sandbox
-Stage 7; then `docs/STAGE7-CHECK-1.0.17.md` for the owner's approval, the VM check and the everyday update.
+The build of 1.0.17 proper from a clean tree (`tools/build_release.py`, then `tools/setup/build_setup.py` for its
+Setup); the comparison with 1.0.16; the release regression; the zip rehearsal and the Setup rehearsal that watches
+the real shortcut folders (`docs/release-rehearsal-20261007-1017/rehearse-setup-v2.ps1`); the sandbox Stage 7 pass
+with the version 4 scripts (`rehearse-stage7-release-v4.ps1`); then `docs/STAGE7-CHECK-1.0.17.md` for the owner's
+approval, the VM check and the everyday update. Done since the first draft of this section: the version 4 Stage 7
+scripts, the release-notes entry, the review of section 7.
 
 ## 5. Disclosure: the owner's shortcuts, 2026-10-07 01:10 local
 
@@ -185,3 +189,70 @@ must not be run again on this PC; the real build of 1.0.17 gets the fixed script
 (a new copy of `rehearse-setup.ps1`) records the real Desktop and Startup folders before and after each step
 (hash or absence) and fails on any change, which this one did not. The owner's Desktop shortcut's
 icon is PowerShell's, as 1.0.16 had it.
+
+## 7. Version 4 Stage 7 scripts, the two rehearsal scripts, and the independent review of item 3.4 with them (2026-10-07)
+
+**Written (the version 3 files untouched):** `tools/guest/stage7-v4/` and `tools/host/stage7-v4/`, recorded in
+`docs/STAGE7-DRIVER-V4.md` (install from the Setup, the Installed-apps entry, uninstall through it, reinstall from the
+Setup, one update through the Setup as step G7, the DVD-sized disc with the Setup beside the zip; 29 checks per
+pass); their decision tests, 19 launcher cases and 21 driver cases, pass. `docs/release-rehearsal-20261007-1017/
+rehearse-setup-v2.ps1`: the Setup rehearsal with the owner's real Desktop and Startup `JARVIS.lnk` recorded (hash or
+ABSENT) before, after every step and at the end, stopping at once on any change; it also requires the installer's own
+word "withheld" and `--no-shortcuts` in the Setup's logged command, the entry "JARVIS (sandbox)" with the version,
+exit code 0 of the Setup and the uninstaller, and the live JARVIS's process count unchanged.
+`rehearse-stage7-release-v4.ps1`: the version 3 harness with the version 4 driver, the same watch after every start
+of the driver, the entry required absent before, and a cleanup through the sandbox's own uninstaller at the end that
+fails the run if the sandbox's entry or package folder survives.
+
+**Independent review (one reviewer, 2026-10-07) of item 3.4 (`tools/setup/`), the version 4 scripts and the two
+rehearsal scripts: no high finding; 8 medium and 9 low.** Applied:
+
+- M1: the disc builder's version 4 copy of `New-PackageIso.ps1` lives beside `New-Stage7Disc.ps1` in the launcher
+  folder; when a launcher folder was placed without it, the repo copy is used; the check plan lists it as a seventh
+  tool with its hash.
+- M2: a Setup or uninstaller run inside the VM could be silent for a quarter of an hour (the unpack of 1.2 GB plus
+  the installer's work) against the owner's 15-minute rule: the guest driver now says every half minute that the
+  Setup is still running and how many files the package folder holds.
+- M3: the checks did not assert the installer's own word on the real shortcuts (the one line that proves the
+  2026-10-07 incident cannot recur): I2, U1, U2 and G7 now require "written"/"removed" on the VM and "withheld" in a
+  sandbox, and on the VM that the Setup got no folder or shortcut switch at all.
+- M4: a refused install (JARVIS running) left the Installed-apps entry saying "JARVIS 1.0.17" and a finished page
+  saying "installed"; the silent Setup exits 0 either way. The Setup now removes the entry it wrote when the installer
+  refuses, the finished page says that nothing was installed, and the records say that `setup-result.json` is the
+  verdict, not the exit code.
+- M5: the uninstall removed the program before Windows' own "are you sure" question: the Setup now asks first,
+  with the data-kept wording, and a "No" does nothing at all.
+- M6: a sandbox run shared the real JARVIS's application id, so once the real 1.0.17 is installed no sandbox
+  rehearsal could run on this PC, and a run with `/HOME` would have rewritten the real entry: a run with `/HOME`
+  now registers as "JARVIS (sandbox)" under a second application id, `/HOME` without `/DIR` is refused before
+  anything is done, the two ids are read from the template into the Setup's record (`app_id`, `sandbox_app_id`), and
+  the guest driver and both rehearsals read the sandbox id from that record.
+- M7: the no-shortcuts marker file survived a later install into the same package folder: it is removed with the
+  old package files, so each install decides from its own command line.
+- M8: the harness's cleanup was only recorded: it now fails the run (exit 2, state STOPPED) when the sandbox's
+  entry or package folder survives or the installer did not withhold the real shortcuts.
+- L1, L2: the Setup rehearsal's `home_file` is a plain string (the version 1 record carried a 2 MB provider graph
+  in that field), a stale answer file is deleted before each run, and exit codes and the live process count are
+  asserted. L4: the Setup's four-number version comes from `build_release.version_quad` (the same refusal as the
+  build); `test_own_app.SetupScriptTests` (3) covers the placeholders, the two ids and the refusal. L5: a dead
+  `[InstallDelete]` entry removed, `createallsubdirs` added, the home path saved as UTF-8 and read back as such, a
+  trailing backslash stripped from `/HOME`. L6: the application ids in one place (the template) and in the record.
+  L7: a missing Setup or uninstaller fails the step with a record instead of ending the phase; I4 requires that no
+  `JARVIS.ps1` was written for a release with its own program (decision D6); G7 checks the shortcut targets after
+  the update through the Setup; the Setup is hashed once. L8: `test_installer.py`'s runner block moved to the end
+  (it sat before `OwnAppTests`, so `python test_installer.py` ran half the module; the suite runner was unaffected).
+  L9: the records corrected (this file, the disc record's schema `jarvis-stage7-disc-v4`, the switches text).
+- Not applied, recorded: L3 (a finer watch of the real shortcut folders between the driver's twenty installer
+  calls would need a background thread; the installer's own-home rule is the primary defence and the end state is
+  compared). The reviewer also found the compile check of 06:32 was of the template as it then stood; the rewritten
+  template was compiled again today against a dummy package (`UsePreviousLanguage=no` was needed once `AppId` uses
+  a code constant, found by that compile) and compiles.
+
+**Verified by the reviewer (not re-checked here):** `HasSwitch` and the switch forwarding to the uninstaller's second
+phase; `{param:HOME|}` with the quoted form; the cmd quoting of the installer command; `own_home`, `shortcuts_for`,
+the `None` defaults and the guarded shortcut writes in every installer test; the order of `[InstallDelete]`, `[Files]`,
+`ssPostInstall` and `[UninstallDelete]`; the registry key and its values against the I3/G7 comparisons; the switch
+rule of `RunSetup`; the launch fallback; G7's flow; the DVD setting; the decision tests. **Not verified by anyone
+yet:** the real 1.0.17 build and Setup (next), the durations in the VM, Inno's exact behaviour after a refused
+installer run (the exit code and the finished page, now handled either way), and the I4 shortcut-target comparison on
+the VM.

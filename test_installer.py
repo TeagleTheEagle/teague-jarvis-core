@@ -524,10 +524,6 @@ class InstallerTests(unittest.TestCase):
             self.assertFalse(installer.own_home(self.home))  # no %LOCALAPPDATA%: never "own", never a traceback
 
 
-if __name__ == '__main__':
-    unittest.main()
-
-
 class OwnAppTests(unittest.TestCase):
     """Release 1.0.17 (docs/OWN-APP-PLAN.md 3.2 and 3.3): shortcuts straight at JARVIS.exe, also on rollback;
     JARVIS.ps1 only for a release that has no program file of its own."""
@@ -607,3 +603,7 @@ class OwnAppTests(unittest.TestCase):
         installer.uninstall(self.home, shortcuts=False, stop=self.stop)
         self.assertFalse((self.home / 'JARVIS.ps1').exists())
         self.assertFalse((self.home / 'current.json').exists())
+
+
+if __name__ == '__main__':
+    unittest.main()

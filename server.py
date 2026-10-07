@@ -498,7 +498,7 @@ class App:
             pass  # the stop itself must never fail on a side job
         try:
             if self.music is not None:
-                self.music.player.stop()  # the music stops with everything else; RESUME does not restart it
+                self.music.player.stop(lock_timeout=2)  # the music stops with everything else; RESUME does not restart it; never waits on a stalled media interface
         except Exception:
             pass
         if not already:
@@ -634,8 +634,20 @@ class App:
     def music_listing(self):
         if self.music is None:
             raise ValueError('Music is not available here.')
-        self.music.player.volume = self.store.settings().get('music_volume', self.music.player.volume)  # Settings is the truth
-        return {**self.music.act({'action': 'list'}), 'volume': self.music.player.volume}
+        settings = self.store.settings()
+        self.music.player.volume = settings.get('music_volume', self.music.player.volume)  # Settings is the truth
+        startup = settings.get('music_startup', '')
+        return {**self.music.act({'action': 'list'}), 'volume': self.music.player.volume,
+                'startup': startup, 'startup_present': self.music_startup_known(startup)}
+
+    def music_startup_known(self, song):
+        """Whether the start-up setting names a nickname whose file is present, or a file in the folder (whatever its
+        case): the exact names the panel offers, not the spoken word match."""
+        if not isinstance(song, str) or not song.strip():
+            return False
+        names = {row['nickname'].casefold() for row in self.music.library.nicknames() if row['present']}
+        names |= {f.casefold() for f in self.music.library.files()}
+        return song.strip().casefold() in names
 
     def music_action(self, body):
         """The owner's clicks in Settings > Music (the signed-in interface on the PC). A click is its own approval, as
@@ -659,6 +671,25 @@ class App:
             args = {'action': action, **({'query': body['query']} if 'query' in body else {}), **({'volume': body['volume']} if 'volume' in body else {})}
             result = self.tool('play_music', args)
             return {**self.music_listing(), 'message': result['message']}
+        if action == 'startup':
+            # The window asks for the start-up song once JARVIS's greeting at a sign-in start has been spoken (owner,
+            # 2026-10-07: "when jarvis boots he says his morning hello message then the mp3 plays"). The song is the
+            # owner's setting music_startup (a nickname or a file name; empty = none), played through the same call
+            # as the PLAY button: the owner's own standing setting, so the switch in Settings > Permissions does not
+            # bind it (as it does not bind the owner's clicks); the emergency stop and quiet hours do.
+            settings = self.store.settings()
+            song = str(settings.get('music_startup', '') or '').strip()
+            if not song:
+                return {'played': False, 'message': ''}
+            if settings.get('quiet_hours'):   # quiet hours: no greeting is spoken, no song is played
+                return {'played': False, 'message': ''}
+            if not self.music_startup_known(song):
+                self.audit('start-up song not found: ' + song[:50], 'refused')
+                return {'played': False, 'message': 'The start-up song ' + song[:60] + ' is not in the music folder.'}
+            if self.stopped is not None:   # the emergency stop holds: nothing starts, said plainly rather than as an error
+                return {'played': False, 'message': permissions.STOPPED_MESSAGE}
+            result = self.tool('play_music', {'action': 'play', 'query': song})
+            return {'played': result.get('status') == 'completed', 'message': result.get('message', '')}
         raise ValueError('Unknown music action.')
 
     def permissions_listing(self):
@@ -2241,6 +2272,11 @@ def main():
         for run in server.app.runs.values():
             run.cancel.set()
         server.app.remote_devices.shutdown()
+        try:
+            if server.app.music is not None:
+                server.app.music.player.stop(lock_timeout=2)   # the song ends with JARVIS, not with the process
+        except Exception:
+            pass
         server.server_close()
         ownership.release()
 

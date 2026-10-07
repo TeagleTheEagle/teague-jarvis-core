@@ -13,6 +13,7 @@ and the AI model may call it for phrasings the Core did not recognise.
 import ctypes
 import re
 import sys
+import queue
 import threading
 import time
 from pathlib import Path
@@ -43,25 +44,68 @@ def title_of(file):
     return Path(file).stem
 
 
+class MediaTimeout(MusicError):
+    """The media interface did not answer in time (a stalled driver or drive): the one error after which the player
+    cannot know whether a device is open."""
+
+
 # ---- Windows' media interface ----
 class Mci:
-    """winmm.dll's mciSendString, one command at a time. Not available off Windows."""
+    """winmm.dll's mciSendString, every command sent from one long-lived thread of its own. Windows ties a device
+    opened through the media interface to the thread that opened it: once that thread has ended, every other thread
+    is told "The specified device is not open or is not recognized by MCI" while the sound plays on. The Core answers
+    each request on its own thread, so in 1.0.16 a song opened by the "play" request could not be stopped, paused or
+    even seen by the next request (seen by the owner on 2026-10-07: "Playing Daddy's Home." then "Nothing was
+    playing."). Here one daemon thread owns every device for the life of the process. Not available off Windows."""
+
+    THREAD = 'jarvis-music-mci'
+    WAIT = 10   # seconds for one command; the media interface answers at once in practice (review of 2026-10-07, M3)
 
     def __init__(self):
         self.lock = threading.Lock()
         self.winmm = ctypes.windll.winmm if sys.platform == 'win32' else None
+        self.queue = queue.Queue()
+        self.thread = None
+        self.stuck = False   # a command did not come back in time: later commands are refused at once until it does
 
-    def send(self, command):
-        if self.winmm is None:
-            raise MusicError('Music plays on Windows only.')
+    def _send_here(self, command):
+        """One command on the calling thread (the worker's)."""
         answer = ctypes.create_unicode_buffer(512)
-        with self.lock:
-            code = self.winmm.mciSendStringW(command, answer, 511, None)
+        code = self.winmm.mciSendStringW(command, answer, 511, None)
         if code:
             text = ctypes.create_unicode_buffer(512)
             self.winmm.mciGetErrorStringW(code, text, 511)
             raise MusicError((text.value or f'Windows media error {code}').rstrip('.') + '.')
         return answer.value
+
+    def _work(self):
+        while True:
+            command, done = self.queue.get()
+            try:
+                done['result'] = self._send_here(command)
+            except BaseException as exc:  # handed back to the caller; the worker lives on
+                done['error'] = exc
+            finally:
+                self.stuck = False   # the interface answered, late or not: commands flow again
+                done['event'].set()
+
+    def send(self, command):
+        if self.winmm is None:
+            raise MusicError('Music plays on Windows only.')
+        if self.stuck:
+            raise MediaTimeout('Windows is not answering music commands; the music waits until it does.')
+        with self.lock:
+            if self.thread is None or not self.thread.is_alive():
+                self.thread = threading.Thread(target=self._work, name=self.THREAD, daemon=True)
+                self.thread.start()
+        done = {'event': threading.Event()}
+        self.queue.put((command, done))
+        if not done['event'].wait(self.WAIT):
+            self.stuck = True
+            raise MediaTimeout('Windows did not answer the music command in time.')
+        if 'error' in done:
+            raise done['error']
+        return done['result']
 
 
 def short_path(path):
@@ -85,21 +129,34 @@ class Player:
         self.lock = threading.RLock()
         self.now = None   # {'file', 'title', 'nickname', 'started'} while a song is open
         self.volume = DEFAULT_VOLUME
+        self.stale_alias = False   # an open that timed out may have finished later and left the alias open (review L1)
 
     def _close(self):
-        if self.now is not None:
-            try:
-                self.mci.send(f'close {ALIAS}')
-            except MusicError:
-                pass
-        self.now = None
+        try:
+            if self.now is not None:
+                try:
+                    self.mci.send(f'close {ALIAS}')
+                except MusicError:
+                    pass
+        finally:
+            self.now = None   # whatever happened, nothing is on the books (review L2)
 
     def play(self, path, nickname=None):
         with self.lock:
             self._close()
+            if self.stale_alias:
+                try:
+                    self.mci.send(f'close {ALIAS}')
+                except MusicError:
+                    pass
+                self.stale_alias = False
             if self.blocked and self.blocked():
                 raise MusicError(permissions.STOPPED_MESSAGE)
-            self.mci.send(f'open "{short_path(path)}" type mpegvideo alias {ALIAS}')
+            try:
+                self.mci.send(f'open "{short_path(path)}" type mpegvideo alias {ALIAS}')
+            except MediaTimeout:
+                self.stale_alias = True
+                raise
             self.now = {'file': Path(path).name, 'title': title_of(path), 'nickname': nickname, 'started': time.time()}
             try:
                 self.mci.send(f'set {ALIAS} time format milliseconds')
@@ -144,8 +201,13 @@ class Player:
                 self.mci.send(f'play {ALIAS}')
             return dict(self.now)
 
-    def stop(self):
-        with self.lock:
+    def stop(self, lock_timeout=None):
+        """Stops and closes the song; returns what was open, or None. `lock_timeout`: the emergency stop must never
+        wait on a stalled media interface (review M3): when the player's lock cannot be had in that time, nothing is
+        sent (the stop still holds, and no song can start while it does) and None is returned."""
+        if not self.lock.acquire(timeout=-1 if lock_timeout is None else lock_timeout):
+            return None
+        try:
             was = self.now
             if was is not None:
                 try:
@@ -154,6 +216,8 @@ class Player:
                     pass
             self._close()
             return was
+        finally:
+            self.lock.release()
 
     def set_volume(self, percent):
         if type(percent) is not int or not 0 <= percent <= 100:
@@ -234,6 +298,10 @@ class Library:
         all said, for a nickname of two words or more; or the words said all in the nickname, for four letters or
         more), then a file whose name holds every word said. Filler words alone ("it", "the", "a") name nothing.
         (path, file name, nickname or None), or None when nothing matches."""
+        if isinstance(spoken, str):   # the exact file name, whatever its case (the panel's lists, the start-up setting)
+            file = next((f for f in self.files() if f.casefold() == spoken.strip().casefold()), None)
+            if file:
+                return self.folder / file, file, next((row['nickname'] for row in self.nicknames() if row['file'] == file), None)
         wanted = normalise(spoken)
         wanted = re.sub(r'^(?:the|a|an|my|some) ', '', wanted)  # "the workshop warrior" is the workshop warrior
         words = wanted.split()

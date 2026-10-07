@@ -9,7 +9,9 @@ Base: `http://127.0.0.1:8765`. Load `/` first for a random process-scoped HttpOn
 | POST | `/api/chat` | `{text, conversation, attachment?: uploadId}` returns `{run_id}` |
 | GET | `/api/runs/ID/events?after=-1` | `{events, done}`, waits up to 10 seconds for new events |
 | POST | `/api/cancel` | `{run_id}` |
-| POST | `/api/settings` | Subset of `{name, voice, continuous, response_length, answer_mode, provider_backup, speech_recognition, offline_answers, reply_stream, tone, humor, speech_rate, wake_sensitivity, quiet_hours, briefing_time, proactive, voice_profile}` |
+| POST | `/api/settings` | Subset of `{name, voice, continuous, response_length, answer_mode, provider_backup, speech_recognition, offline_answers, reply_stream, tone, humor, speech_rate, wake_sensitivity, quiet_hours, briefing_time, proactive, voice_profile, music_volume, music_startup}` (music_startup: the nickname or file name of the song played after the greeting at a sign-in start, empty for none) |
+| GET | `/api/music` | The music folder, its files, the nicknames, what is playing, the volume, and the start-up song (`startup`, `startup_present`) |
+| POST | `/api/music` | `{action}` with `add {nickname, file}`, `remove {nickname}`, `play {query}`, `pause`, `resume`, `stop`, `volume {volume}`, `status`, or `startup` (the window's request after the sign-in greeting; answers `{played, message}`: silent when no song is set or in quiet hours, a message when the file is gone or the emergency stop holds) |
 | POST | `/api/item` | `{kind: memory|note|task, body, id?: existingId}` |
 | POST | `/api/item/delete` | `{kind, id}` |
 | POST | `/api/reminder` | `{title, seconds}` |
