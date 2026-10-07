@@ -5,7 +5,14 @@ Status: **APPROVED BY THE OWNER** ("I approve the update of my everyday JARVIS t
 `f74fff6f…` as committed in 08cbb7b; repo copy `docs/update-1.0.17-evidence/`). The launcher is placed in
 `D:\JARVIS-update-1.0.17\tools\` with `update-authorized.json`; the owner's steps follow. (Before the approval: READY FOR
 THE OWNER'S APPROVAL, 2026-10-07 19:00 local, the launcher's review findings applied and the reviewed launcher passed
-its sandbox rehearsal 26 of 26, run 3 below.) Updating the everyday JARVIS is your decision
+its sandbox rehearsal 26 of 26, run 3 below.) **Step 1 PASSED (2026-10-07T08:02:19Z) with one deviation, incident 01:
+the "leftover" `%LOCALAPPDATA%\JARVIS-package` folder of item 3 below does not exist on your Windows.** It exists only
+for Claude's processes: the Claude desktop app is a packaged (MSIX) application and Windows redirects AppData writes
+from it and its child processes into the app's private store (`AppData\Local\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Local`),
+where a rehearsal of 2026-10-02 unpacked that folder; the owner's probe (`D:\JARVIS-update-1.0.17\probe\probe.cmd`)
+proved the real `AppData\Local` holds `JARVIS` only. Nothing is renamed, nothing deleted, the launcher's record is
+right for the real disk, and the Setup creates the real package folder fresh at step 3. Record
+`D:\JARVIS-update-1.0.17\evidence\incident-01-leftover-folder.json` with the probe's output. Updating the everyday JARVIS is your decision
 (`CLAUDE.md`). 1.0.17 build 2 (`1.0.17-0d38218c4e1d`) passed its Stage 7 check in the test VM today
 (`STAGE_7_COMPLETE`, 29 of 29 checks, `docs/stage7-1.0.17-evidence/`), the first check made with the Setup. The
 launcher for this update is a **new version** (the update is made by the Setup, as the approved own-app plan says);

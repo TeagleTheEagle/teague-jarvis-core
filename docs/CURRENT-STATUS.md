@@ -249,6 +249,21 @@ only records where the work stands. Historical handover context: `docs/PROJECT-C
   `docs/update-1.0.17-evidence/`. Nothing of the installed JARVIS was read or touched. **Next: the owner's step 1**
   (JARVIS quit first; `update-step.cmd`), Claude checks `check.json`, then steps 2, 3, 4 (the owner's check list in the
   plan) and 5 (the PC restart); then `update-evaluation.json`, the manifest, the repo copy, `EVERYDAY_UPDATE_COMPLETE`.
+  **Step 1 PASSED (08:02:19Z; `check.json`: hashes equal, 1.0.16 verified, 0 processes, 11.9 GB free, no entry, 10,768
+  package files unpacked) with incident 01:** the launcher found no `%LOCALAPPDATA%\JARVIS-package` to rename, while
+  every Claude session had seen one. **Cause found and proven with an owner-run probe: the Claude desktop app is a
+  packaged (MSIX) app, and Windows redirects AppData and HKCU writes from Claude's processes (sandbox on or off) into
+  `C:\Users\jonny\AppData\Local\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Local` (and the package's registry hive),
+  with reads showing the merged view.** The "leftover" 1.2 GB folder is `LocalCache\Local\JARVIS-package`, unpacked by
+  a zip install rehearsal's `install.cmd` on 2026-10-02 from a Claude session; the owner's Windows never had it; the
+  real `AppData\Local` holds `JARVIS` only; no `LocalCache\Local\JARVIS` exists, so nothing has shadowed the installed
+  JARVIS; Desktop, Startup and D: are not virtualized. Consequences: nothing to rename (the plan's item 3 is moot, said
+  in the plan); every earlier mention of that leftover on the owner's C: (the 1.0.15 and 1.0.16 plans, the cleanup
+  list) described the phantom; the sandbox rehearsals' "JARVIS (sandbox)" entries were only ever in the package hive;
+  any AppData or HKCU fact only Claude has read is unverified for the owner's side (memory note). Records
+  `D:\JARVIS-update-1.0.17\evidence\incident-01-leftover-folder.json`, `probe-owner-window.txt`, the probe in
+  `D:\JARVIS-update-1.0.17\probe\`. Cleanup candidate on the owner's word, later: the 1.2 GB phantom under LocalCache.
+  **Next: the owner's step 2.**
 - **The everyday JARVIS (1.0.16) is still not running** (0 processes at 18:41 and through the rehearsals; 0 since
   14:50). The owner has not said why. Nothing this session ran touches it; the question goes to the owner before
   anything starts it.
