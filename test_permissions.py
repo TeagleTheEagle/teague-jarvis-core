@@ -45,7 +45,8 @@ class TableTests(unittest.TestCase):
             'mail_search', 'mail_read', 'calendar_events', 'network_devices'})  # 1.0.17 items G and H: the mail, calendar and network reads
         self.assertEqual(permissions.ACTION_TOOLS, {'save_item', 'set_timer', 'manage_timer', 'manage_saved_memory', 'preview_action',
             'development_edit', 'development_propose', 'development_rollback', 'assistant_control', 'navigate_panel',
-            'inspect_interface', 'create_file', 'project_save_document', 'project_link_chat', 'open_app', 'spotify', 'play_music', 'mail_send'})
+            'inspect_interface', 'create_file', 'project_save_document', 'project_link_chat', 'open_app', 'spotify', 'play_music', 'mail_send',
+            'workshop_files', 'workshop_run', 'workshop_mission'})  # the Workshop (docs/WORKSHOP.md): its changes are receipts too
         self.assertEqual(permissions.EVIDENCE_TOOLS, {'calculate', 'create_file', 'save_item', 'set_timer', 'suit_diagram',
             'project_link_chat', 'project_save_document'})
         self.assertEqual(permissions.PREVIEW_TOOLS, ('save_item', 'set_timer', 'create_file'))

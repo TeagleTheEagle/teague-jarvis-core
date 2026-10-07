@@ -48,6 +48,7 @@ import permissions
 import device_gateway
 import remote_devices
 import music
+import workshop
 from devices import DeviceBook, FLAGS as DEVICE_FLAGS, KINDS as DEVICE_KINDS
 import assistant_capabilities as companion_tools
 import update_history
@@ -174,6 +175,19 @@ class App:
             self.music = music.Desk(self.store, music_home / 'music', remember_volume=lambda volume: self.store.save_settings({'music_volume': volume}))
             self.music.player.volume = self.store.settings().get('music_volume', music.DEFAULT_VOLUME)
             self.music.player.blocked = lambda: self.stopped is not None  # no song starts in the moment a stop arrives
+        # The Workshop (workshop.py, docs/WORKSHOP.md): JARVIS's own folder beside the data and config of an installation
+        # (kept across updates, outside the backups: it may hold a Python environment); beside the data of an isolated
+        # instance. A mission runs on its own thread; every tool call of one passes App.tool like any other.
+        if self.stage4:
+            self.workshop = None
+        else:
+            workshop_home = ((runtime_paths.install_home() or ROOT) / 'workshop') if self.store.root == runtime_paths.data_dir().resolve() else self.store.root / 'workshop'
+            # JARVIS's own folders: no command may name them and no owner setting may add them (docs/WORKSHOP.md).
+            protected = [runtime_paths.config_dir(), runtime_paths.data_dir(), ROOT, runtime_paths.install_home(), self.store.root]
+            self.workshop = workshop.Desk(self.store, workshop_home, settings=self.store.settings, protected=protected)
+            self.workshop.connect(ask_model=self.mission_model, call_tool=self.tool, instructions=self.instructions, make_run=Run,
+                                  notify=self.mission_notice, audit=self.audit, offered=self.offered_tools, ready=self.mission_blocked,
+                                  forget=self.forget_run_approvals)
         self.session = secrets.token_urlsafe(32)
         workspaces.setup(self.store)
         self.runs = {}
@@ -501,6 +515,11 @@ class App:
                 self.music.player.stop(lock_timeout=2)  # the music stops with everything else; RESUME does not restart it; never waits on a stalled media interface
         except Exception:
             pass
+        try:
+            if getattr(self, 'workshop', None) is not None:
+                self.workshop.stop_all('emergency stop')  # the mission and its running command end with everything else; RESUME does not restart them
+        except Exception:
+            pass
         if not already:
             try:
                 self.audit('emergency stop', 'stopped' + (f'; {dropped} waiting approval(s) dropped' if dropped else ''), device=device)
@@ -612,6 +631,56 @@ class App:
         if not isinstance(body, dict) or set(body) - {'enabled', 'port'} or 'enabled' not in body:
             raise ValueError('Supply on or off, and the port.')
         return self.remote_devices.configure(body['enabled'], body.get('port'))
+
+    # ---- the Workshop (workshop.py, docs/WORKSHOP.md) ----
+    def mission_model(self, messages, tools, cancel, text):
+        """One model request of a mission: the chosen provider, the owner's answer speed for these words, no streaming."""
+        depth = providers.chat_options(self.store.settings().get('answer_mode'), text)
+        return providers.chat(messages, tools, lambda *_: None, cancel, False, max_tokens=workshop.MISSION_MAX_TOKENS, **depth)
+
+    def mission_blocked(self):
+        """Why a mission cannot start now (the stop, no provider, no key), or None."""
+        if self.stopped is not None:
+            return permissions.STOPPED_MESSAGE
+        if providers.provider() not in providers.AI_PROVIDERS:
+            return str(providers.unsupported_error())
+        if not (os.getenv('OPENAI_API_KEY') or os.getenv('DASHSCOPE_API_KEY')):
+            return 'A mission needs an AI provider key (Settings > AI).'
+        return None
+
+    def forget_run_approvals(self, run_id):
+        """The approvals one run raised and their notices go (a mission that ended: its Run is not in self.runs, so the
+        cancelled-run rule of approval_items never meets them)."""
+        with self.lock:
+            gone = [k for k, v in self.approvals.items() if v.get('run_id') == run_id]
+            for k in gone:
+                self.approvals.pop(k, None)
+        self.forget_approval_notices(gone)
+        return len(gone)
+
+    def mission_notice(self, text):
+        """The end of a mission, said on the PC and on the devices like a nudge (1.0.17 item F)."""
+        if self.notices:
+            self.notices.add('announce', text)
+
+    def workshop_listing(self):
+        if self.workshop is None:
+            raise ValueError('The workshop is not available here.')
+        return self.workshop.listing()
+
+    def workshop_action(self, body):
+        """The owner's own clicks in Settings > Workshop: start or stop a mission, delete a lesson."""
+        if self.workshop is None:
+            raise ValueError('The workshop is not available here.')
+        action = body.get('action')
+        if action == 'start':
+            self.require_running()
+            return {**self.workshop.start_mission(body.get('goal', '')), 'message': 'Mission started.'}
+        if action == 'stop':
+            return {**self.workshop.stop_mission('Stopped by the owner in Settings > Workshop.'), 'message': 'Stopping the mission.'}
+        if action == 'delete_lesson':
+            return {**self.workshop.lessons.delete(body.get('id')), 'message': 'Lesson deleted.'}
+        raise ValueError('Unknown workshop action.')
 
     def music_command(self, text, run=None):
         """The Core's own music commands (music.py): "play <song>", "stop the music", "pause", "resume", "volume up",
@@ -1071,6 +1140,10 @@ class App:
                 result = actions.create_document(self.store.root, **args)
             elif name == 'youtube':
                 result = actions.youtube(args['query'])
+            elif name in workshop.TOOLS:
+                if self.workshop is None:
+                    raise ValueError('The workshop is not available here.')
+                result = self.workshop.act(name, args, run)
             elif name == 'play_music':
                 if self.music is None:
                     raise ValueError('Music is not available here.')
@@ -1423,6 +1496,13 @@ class App:
                     context['desktop_capabilities'] = {'screen_vision': 'Live local sharing on explicit start; AI receives changed frames periodically and notes are saved in Communications. Screenshot commands request one immediate frame. Commands: analyse my screen, take a screenshot Jarvis, start screen sharing, stop sharing.', 'companion': 'Floating hologram with analyse screen, microphone and stop controls. Command: show hologram.', 'limits': 'AI receives sampled images, not every video frame. No arbitrary mouse/keyboard control. Only claim to see supplied images. Screen observations are analysis-only; separate explicit user commands can use existing tools.'}
                 context['recent_research'] = self.store.recent_research(run.conversation)
                 context['recent_tool_evidence'] = self.store.recent_evidence(run.conversation)
+                if getattr(self, 'workshop', None) is not None:
+                    try:
+                        workshop_context = self.workshop.context(text)  # the lessons these words match; the latest mission (docs/WORKSHOP.md)
+                    except Exception:
+                        workshop_context = None  # a workshop record that cannot be read never costs the question
+                    if isinstance(workshop_context, dict) and workshop_context:
+                        context['workshop'] = workshop_context
                 if getattr(run, 'location', None):
                     # 1.0.17 item D: the device's position, for this answer only; the Core keeps it nowhere and never shows it in a reply unasked.
                     context['device_location'] = {**run.location, 'note': 'Reported by the device with this question; current, not stored, not tracked. Use it for directions, nearby places and local time. Name the place by its label or in words; never repeat the coordinates in a reply; never claim to track the owner.'}
@@ -1841,6 +1921,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, self.app.remote_devices.status())
             if path == '/api/music':
                 return self.send(200, self.app.music_listing())
+            if path == '/api/workshop':
+                return self.send(200, self.app.workshop_listing())
             if path == '/api/offline-answers':
                 return self.send(200, {**offline_answers.status(), 'enabled': bool(self.app.store.settings().get('offline_answers', True))})
             if path == '/api/auto-backup':
@@ -1889,7 +1971,7 @@ class Handler(BaseHTTPRequestHandler):
                 # a style change has been approved; the program's own style files are never changed.
                 file = runtime_paths.config_dir_for(ROOT) / 'owner-style.css'
                 return self.send(200, file.read_bytes() if file.is_file() else b'', 'text/css; charset=utf-8')
-            mapping = {'/permissions.js':'permissions.js','/permissions.css':'permissions.css','/devices.js':'devices.js','/devices.css':'devices.css','/music.js':'music.js','/music.css':'music.css','/connectors.js':'connectors.js','/connectors.css':'connectors.css','/routine.js':'routine.js','/routine.css':'routine.css','/latency.js':'latency.js','/voice-core.js':'voice-core.js','/teague.js':'teague.js','/teague.css':'teague.css','/command-dashboard.js':'command-dashboard.js','/command-dashboard.css':'command-dashboard.css','/horizon.js':'horizon.js','/horizon.css':'horizon.css','/world-map.js':'world-map.js','/dashboard-model.js':'dashboard-model.js','/markdown-view.js':'markdown-view.js','/assets/branding/teague/jarvis-mark.svg':'assets/branding/teague/jarvis-mark.svg','/recovery.js':'recovery.js', '/assistant-controls.js':'assistant-controls.js', '/desktop-updates.js':'desktop-updates.js', '/inspection-client.js':'inspection-client.js', '/voice-lab.html': 'voice-lab.html', '/voice-lab.js': 'voice-lab.js', '/voice-lab.css': 'voice-lab.css', '/': 'index.html', '/app.js': 'app.js', '/diagrams.js': 'diagrams.js', '/workspaces.js': 'workspaces.js', '/voice-preview.js': 'voice-preview.js', '/maps.js': 'maps.js', '/reliability.js': 'reliability.js', '/reliability.css': 'reliability.css', '/maps.css': 'maps.css', '/map-canvas.html': 'map-canvas.html', '/map-canvas.js': 'map-canvas.js', '/map-canvas.css': 'map-canvas.css', '/style.css': 'style.css', '/gallery.css': 'gallery.css', '/pro.css': 'pro.css', '/voice.js': 'voice.js', '/mic-worklet.js': 'mic-worklet.js', '/assets/branding/teague/teague-mark.svg': 'assets/branding/teague/teague-mark.svg', '/assets/branding/teague/command-background.png': 'assets/branding/teague/command-background.png'}
+            mapping = {'/permissions.js':'permissions.js','/permissions.css':'permissions.css','/devices.js':'devices.js','/devices.css':'devices.css','/music.js':'music.js','/music.css':'music.css','/workshop.js':'workshop.js','/workshop.css':'workshop.css','/connectors.js':'connectors.js','/connectors.css':'connectors.css','/routine.js':'routine.js','/routine.css':'routine.css','/latency.js':'latency.js','/voice-core.js':'voice-core.js','/teague.js':'teague.js','/teague.css':'teague.css','/command-dashboard.js':'command-dashboard.js','/command-dashboard.css':'command-dashboard.css','/horizon.js':'horizon.js','/horizon.css':'horizon.css','/world-map.js':'world-map.js','/dashboard-model.js':'dashboard-model.js','/markdown-view.js':'markdown-view.js','/assets/branding/teague/jarvis-mark.svg':'assets/branding/teague/jarvis-mark.svg','/recovery.js':'recovery.js', '/assistant-controls.js':'assistant-controls.js', '/desktop-updates.js':'desktop-updates.js', '/inspection-client.js':'inspection-client.js', '/voice-lab.html': 'voice-lab.html', '/voice-lab.js': 'voice-lab.js', '/voice-lab.css': 'voice-lab.css', '/': 'index.html', '/app.js': 'app.js', '/diagrams.js': 'diagrams.js', '/workspaces.js': 'workspaces.js', '/voice-preview.js': 'voice-preview.js', '/maps.js': 'maps.js', '/reliability.js': 'reliability.js', '/reliability.css': 'reliability.css', '/maps.css': 'maps.css', '/map-canvas.html': 'map-canvas.html', '/map-canvas.js': 'map-canvas.js', '/map-canvas.css': 'map-canvas.css', '/style.css': 'style.css', '/gallery.css': 'gallery.css', '/pro.css': 'pro.css', '/voice.js': 'voice.js', '/mic-worklet.js': 'mic-worklet.js', '/assets/branding/teague/teague-mark.svg': 'assets/branding/teague/teague-mark.svg', '/assets/branding/teague/command-background.png': 'assets/branding/teague/command-background.png'}
             if path not in mapping:
                 return self.send(404, {'error': 'Not found.'})
             file = ROOT / 'static' / mapping[path]
@@ -2034,6 +2116,8 @@ class Handler(BaseHTTPRequestHandler):
                 result = self.app.remote_devices_action(body)
             elif path == '/api/music':
                 result = self.app.music_action(body)
+            elif path == '/api/workshop':
+                result = self.app.workshop_action(body)
             elif path == '/api/auto-backup':
                 result = self.app.auto_backup_action(body)
             elif path == '/api/settings':
@@ -2160,6 +2244,8 @@ class Handler(BaseHTTPRequestHandler):
             elif path == '/api/shutdown':
                 for run in self.app.runs.values():
                     run.cancel.set()
+                if getattr(self.app, 'workshop', None) is not None:
+                    self.app.workshop.stop_all('JARVIS is shutting down')  # a mission's command line does not outlive the Core
                 result = {'status': 'shutting down'}
                 threading.Thread(target=self.server.shutdown, daemon=True).start()
             else:

@@ -1,0 +1,28 @@
+// What the Workshop panel says (static/workshop.js). The Core decides and does; these are only the words on screen.
+const assert=require('node:assert/strict');
+const w=require('./static/workshop.js');
+assert.equal(w.stateText('running'),'Running');
+assert.equal(w.stateText('finished'),'Done');
+assert.equal(w.stateText('failed'),'Not completed','a mission that did not reach its goal is never shown as done');
+assert.equal(w.stateText('stopped'),'Stopped');
+assert.equal(w.stateText('planning'),'Planning');
+assert.equal(w.missionLine({state:'running',goal:'List the largest files'}),'Running: List the largest files');
+assert.equal(w.minutesText(15),'A mission may run for up to 15 minutes and 60 tool calls; then it stops and reports.');
+assert.equal(w.minutesText(1),'A mission may run for up to 1 minute and 60 tool calls; then it stops and reports.');
+assert.equal(w.foldersText([]),'No other folder: JARVIS may use the workshop folder only.');
+assert.equal(w.foldersText(['D:\\Projects','C:\\scripts']),'JARVIS may also use: D:\\Projects; C:\\scripts');
+assert.equal(w.refusedText([]),'');
+assert.equal(w.refusedText(null),'');
+assert.equal(w.refusedText([{folder:'C:\\Users\\me\\AppData\\Local\\JARVIS',why:"JARVIS's own folder (C:\\Users\\me\\AppData\\Local\\JARVIS\\config) or inside it, or holding it"},{folder:'docs',why:'not a full path'}]),
+  "Not taken: C:\\Users\\me\\AppData\\Local\\JARVIS (JARVIS's own folder (C:\\Users\\me\\AppData\\Local\\JARVIS\\config) or inside it, or holding it); docs (not a full path).");
+const own={jarvis_python:{path:'x',version:'3.12.10'}};
+assert.equal(w.interpreterText({...own,workshop_env:{path:'v'}}),"JARVIS's own Python 3.12.10 runs scripts with the shipped packages (nothing can be installed into it); the workshop's own environment is ready, so \"pip install\" and \"python\" use it.");
+assert.equal(w.interpreterText({...own,workshop_env:null,pc_python:{path:'p',version:'3.13.1'}}),"JARVIS's own Python 3.12.10 runs scripts with the shipped packages (nothing can be installed into it); the PC's Python 3.13.1 can make the workshop's own environment when a package is needed.");
+assert.equal(w.interpreterText({...own,workshop_env:null,pc_python:null}),"JARVIS's own Python 3.12.10 runs scripts with the shipped packages (nothing can be installed into it); no other Python is installed on this PC, so no package can be installed (installing Python from python.org is your step).");
+assert.equal(w.interpreterText(null),'');
+assert.equal(w.lessonText({text:'pip needs the venv first',tags:'pip venv'}),'pip needs the venv first [pip venv]');
+assert.equal(w.lessonText({text:'plain',tags:''}),'plain');
+assert.equal(w.logLine({kind:'step',step:2,text:'script written'}).endsWith('step 2: script written'),true);
+assert.equal(w.logLine({kind:'tool',tool:'workshop_run',text:'python a.py -> exit 1 (failed, 0.3 s)'}),'workshop_run: python a.py -> exit 1 (failed, 0.3 s)');
+assert.equal(w.logLine({kind:'plan',text:'3 steps'}),'plan: 3 steps');
+console.log('workshop view: ok');

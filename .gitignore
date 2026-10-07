@@ -46,3 +46,5 @@ __pycache__/
 caches/
 # The owner's music files of a development copy (music.py): never part of the program.
 /music/
+# JARVIS's workshop of a development copy (workshop.py): his own files, environment and recycle folder, never the program.
+/workshop/

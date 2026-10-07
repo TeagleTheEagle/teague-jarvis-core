@@ -300,11 +300,12 @@ def backup_note(backup, error):
     return f'[{PROVIDER_NAMES[backup]} answered this question because {chosen} could not. {first_sentence(error)}]'
 
 
-def chat(messages, tools, emit, cancel, vision=False, mode=None, text='', use=None, stream=False):
+def chat(messages, tools, emit, cancel, vision=False, mode=None, text='', use=None, stream=False, max_tokens=None):
     """One model request. mode (Settings > Answer speed; None means the default) and text (the
     user's own words) only steer Qwen today: see qwen_plan(). use names the provider for this one
     request when it is not the chosen one (the backup, see backup_provider()). stream: ask for the
-    answer in pieces (Qwen only today; each piece is handed to emit as 'assistant.piece')."""
+    answer in pieces (Qwen only today; each piece is handed to emit as 'assistant.piece'). max_tokens: a larger
+    reply budget for the OpenAI chat path (a workshop mission writes whole files in one reply; docs/WORKSHOP.md)."""
     if cancel.is_set():
         return None
     chosen = use or provider()
@@ -351,7 +352,7 @@ def chat(messages, tools, emit, cancel, vision=False, mode=None, text='', use=No
         response={'role':'assistant','content':content or None,'_response_output':output}
         if calls: response['tool_calls']=calls
         return response
-    body = {'model': model, 'messages': messages, 'stream': False, 'max_completion_tokens': 1024}
+    body = {'model': model, 'messages': messages, 'stream': False, 'max_completion_tokens': int(max_tokens) if max_tokens else 1024}
     if any(m.get('role') == 'tool' and '"path": "' in str(m.get('content', '')) and ('static/pro.css' in str(m.get('content', '')) or 'personality.txt' in str(m.get('content', ''))) for m in messages):
         body['max_completion_tokens'] = 8192
 
