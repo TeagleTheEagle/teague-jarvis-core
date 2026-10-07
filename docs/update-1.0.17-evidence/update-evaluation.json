@@ -1,0 +1,42 @@
+{
+  "schema": "jarvis-everyday-update-evaluation-v1",
+  "utc": "2026-10-07T08:46:04Z",
+  "result": "EVERYDAY_UPDATE_COMPLETE",
+  "subject": "Update of the owner's everyday JARVIS (%LOCALAPPDATA%\\JARVIS) from 1.0.16-fccde24e2cc6 to 1.0.17-0d38218c4e1d, the first update made by the release's own Setup (JARVIS-Setup-1.0.17-0d38218c4e1d.exe), by the owner on the owner's approval",
+  "approval": {
+    "owner_text": "I approve the update of my everyday JARVIS to 1.0.17",
+    "issued_utc": "2026-10-07T07:58:40Z",
+    "record": "C:\\Users\\jonny\\JARVIS-claude-workspace\\governance\\UPDATE-1.0.17-APPROVAL-RECORD.json",
+    "plan": "docs/UPDATE-EVERYDAY-1.0.17.md, sha256 f74fff6f2adff377a19c5b9dbad19367905573002adb5618f58705f254b3e57f at commit 08cbb7b"
+  },
+  "preconditions": {
+    "stage7_check": "STAGE_7_COMPLETE for 1.0.17-0d38218c4e1d in the test VM, 29 of 29 checks (D:\\JARVIS-stage7\\1.0.17-0d38218c4e1d\\evidence\\stage7-evaluation.json)",
+    "sandbox_rehearsal": "26 of 26 PASS on this launcher (docs/release-rehearsal-20261007-1017/update-rehearsal-3/)",
+    "launcher": "tools/host/update-1.0.17/Invoke-EverydayUpdate.ps1 sha256 66c8cce6e4b16e302a0201aff690158d43684eba8315d1b2a6b7e542bd84365b, update-step.cmd 9c469bd44002e59066f5b8e7e2b077173826780840b37e7f4151e99be86d3388, placed in D:\\JARVIS-update-1.0.17\\tools (prep-tools-hashes.txt)"
+  },
+  "steps": {
+    "1_check": "PASS, check.json 2026-10-07T08:02:19Z: the zip (sha256 210b4623...) and the Setup (sha256 b7bb04d3...) equal their approved hashes and the Setup's record; the installed 1.0.16 verified with 1.0.11, 1.0.14 and 1.0.15 beside it; 0 JARVIS processes; 11.9 GB free on C:; no Settings > Apps entry; 10,768 package files unpacked to D:\\JARVIS-update-1.0.17\\package. Incident 01: no leftover %LOCALAPPDATA%\\JARVIS-package to rename (see incidents).",
+    "2_backup": "PASS, backup.json 08:13:38Z: backup d5499b695d1d4eb688b7f8e76f60e9a0 made with 1.0.16's own backup code, 356 files, 3,268,323 bytes, backup_verified; test restore restore_rehearsal_passed with all 22 table counts equal (1,667 messages, 1,151 audit rows, 14 items, 36 research rows among them); the copy in D:\\JARVIS-update-1.0.17\\backup hash-equal; the program still verified.",
+    "3_update": "PASS, update.json 08:17:34Z: the Setup run silently with the owner's defaults, exit 0, 187.1 s wall; the installer inside it answered installed (verify package 7.6 s, copy 68.1 s, verify copy 17.6 s, stop 0.7 s, switch 0.4 s; shortcuts written); 1.0.17 verified; current.json release 1.0.17-0d38218c4e1d, previous 1.0.16-fccde24e2cc6; Settings > Apps entry JARVIS 1.0.17, Teague Industries, uninstaller in %LOCALAPPDATA%\\JARVIS-package; the Desktop and Startup shortcuts changed from the PowerShell launcher to releases\\1.0.17-0d38218c4e1d\\electron\\JARVIS.exe; no JARVIS.ps1 left; the database file byte-for-byte unchanged (sha256 f1a8dddd... before and after); JARVIS not started; the Setup's log setup-update-20261007-081419.log (4.4 MB, kept on D: only, in the manifest).",
+    "4_owner_check": "PASS (owner-reported), owner-check.json 08:36:50Z: 'step 4 done' on the eight-point list; Claude saw 8 processes of 1.0.17 started through JARVIS.exe at 19:36 local.",
+    "5_restart": "PASS, restart-check.json: boot 19:38:59 local, sign-in 19:39:39, JARVIS 1.0.17 started by itself from the Startup shortcut (--login-launch) at 19:43:13, 3.6 minutes after sign-in, all 8 processes from 1.0.17."
+  },
+  "incidents": {
+    "01": "incident-01-leftover-folder.json: the plan expected a 1.2 GB leftover %LOCALAPPDATA%\\JARVIS-package folder to be renamed aside at step 1; the owner's Windows never had it. Cause proven with the owner-run probe (probe-owner-window.txt): the Claude desktop app is a packaged (MSIX) application, Windows redirects AppData and HKCU writes from Claude's processes into AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache, and a 2026-10-02 rehearsal unpacked the folder there. Nothing renamed, nothing deleted, no effect on the update; the plan's item 3 moot; every earlier mention of that leftover on the owner's C: corrected."
+  },
+  "timing": {
+    "setup_wall_seconds": 187.1,
+    "installer_seconds": { "verify_package": 7.591, "copy": 68.063, "verify_copy": 17.555, "stop": 0.675, "switch": 0.409 },
+    "note": "the installer's laps inside the Setup add up to 94.3 s, inside the 600 s Gate 20 bound; stop 0.7 s inside 120 s"
+  },
+  "state_after": {
+    "everyday_jarvis": "1.0.17-0d38218c4e1d at %LOCALAPPDATA%\\JARVIS, started by its own JARVIS.exe, listed in Settings > Apps, shortcuts at JARVIS.exe",
+    "rollback_copies": "1.0.16-fccde24e2cc6 (one rollback step, on the owner's word only), 1.0.15-63362929d7ad, 1.0.14-e03872680e1d, 1.0.11-60d406fb6398 still installed",
+    "setup_package_folder": "%LOCALAPPDATA%\\JARVIS-package (the Setup's own, with unins000.exe; Settings > Apps uninstalls from it)",
+    "free_space_c": "9.1 GB after step 3 (11.9 GB before)",
+    "backup": "d5499b695d1d4eb688b7f8e76f60e9a0 in %LOCALAPPDATA%\\JARVIS\\data-backups and D:\\JARVIS-update-1.0.17\\backup"
+  },
+  "not_done": "the rollback (not needed); Gmail, Calendar and the Workshop (not part of this check); the removal of the old releases and of the phantom folder under the Claude package's LocalCache (cleanup, on the owner's word)",
+  "records": "D:\\JARVIS-update-1.0.17\\evidence (MANIFEST.json); repo copy C:\\Users\\jonny\\JARVIS-claude-workspace\\repo\\docs\\update-1.0.17-evidence (without the Setup log)",
+  "recorded_by": "Claude Code (Claude Fable 5.1). Steps 1 to 3 and 5 are evidenced by the launcher's records and Claude's read-only reads; step 4 by the owner's own check."
+}

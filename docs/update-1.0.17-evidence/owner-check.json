@@ -1,0 +1,12 @@
+{
+  "schema": "jarvis-everyday-update-owner-check-v1",
+  "step": 4,
+  "utc": "2026-10-07T08:36:50Z",
+  "owner_message": "step 4 done",
+  "owner_message_utc_basis": "received by Claude on 2026-10-07 at about 19:36 local, after the owner was given the eight-point check list of docs/UPDATE-EVERYDAY-1.0.17.md (the badge icon and the JARVIS name in the window, taskbar and tray; About shows 1.0.17-0d38218c4e1d (installed); memories and conversations present; a question answered and voice working; music started and stopped on 'stop the music'; Settings > Apps lists JARVIS 1.0.17, Teague Industries; Settings > Devices with the two new ticks off, Settings > Routine and Settings > Connections open; a quiet quit)",
+  "result": "PASS (owner-reported)",
+  "photos_received": "none with this message; the owner reported the step done in words only",
+  "claude_read_only_look": "recorded in the same minute from this PC: the JARVIS processes under %LOCALAPPDATA%\\JARVIS\\releases, the installed release's current.json and its release folders (see claude_observation); config\\.env, the database and the backup contents were not read",
+  "claude_observation": "8 JARVIS processes, all from releases\\1.0.17-0d38218c4e1d (JARVIS.exe x 7, python.exe x 1, started 19:36:24 to 19:36:27 local): the owner started 1.0.17 through its own JARVIS.exe (the 8 processes of this PC, as for 1.0.16); current.json: release 1.0.17-0d38218c4e1d, previous 1.0.16-fccde24e2cc6, switched_at 1791361044 (step 3); release folders 1.0.11, 1.0.14, 1.0.15, 1.0.16, 1.0.17; no JARVIS.ps1 in the install folder (config, current.json, data, data-backups, profile, releases)",
+  "recorded_by": "Claude Code (Claude Fable 5.1). This record documents the owner's report; the owner's own check is the evidence for step 4."
+}

@@ -1,0 +1,63 @@
+{
+  "schema": "stage6-evidence-manifest-v1",
+  "generated_utc": "2026-10-07T08:46:05Z",
+  "root": "D:\\JARVIS-update-1.0.17",
+  "folders": [
+    "evidence"
+  ],
+  "not_listed": "this manifest itself; the sealed P0 folder is never read",
+  "files": 10,
+  "bytes": 4406317,
+  "entries": [
+    {
+      "file": "evidence/backup.json",
+      "bytes": 5340,
+      "sha256": "33ced15964090e621545cf170043c2907141b2e788ce668c449f11d1dc923065"
+    },
+    {
+      "file": "evidence/check.json",
+      "bytes": 1602,
+      "sha256": "ad757548466c78d8f0e1780ffe715f97ca47807e0f6717bf0af913dc1bd45546"
+    },
+    {
+      "file": "evidence/incident-01-leftover-folder.json",
+      "bytes": 3712,
+      "sha256": "5ec6bb1bc57e8a00e97d6065a44e9d144748cd7d0f0d22f60284dc06e4724ea1"
+    },
+    {
+      "file": "evidence/owner-check.json",
+      "bytes": 1789,
+      "sha256": "ad6c5784ac07455e706fa5af49fb62098f0ff84087b2c742b8eaf4bad26cca56"
+    },
+    {
+      "file": "evidence/prep-tools-hashes.txt",
+      "bytes": 979,
+      "sha256": "29503ca59d61254887b073d36088c1e20878fa71c8b87cfddf1fe0dbcfb4506b"
+    },
+    {
+      "file": "evidence/probe-owner-window.txt",
+      "bytes": 1145,
+      "sha256": "2f18f185dea045dd59bb5da2766657f658c13fb43e3b5e6214ceca927a58ebf4"
+    },
+    {
+      "file": "evidence/restart-check.json",
+      "bytes": 1405,
+      "sha256": "b9dff8d51346ed85df67591ee9204a54cb5bb233e7b01f95c83ea90d1ac2afd4"
+    },
+    {
+      "file": "evidence/setup-update-20261007-081419.log",
+      "bytes": 4381240,
+      "sha256": "2437658ca4b4f4f1f2be38f61e112c89ed986d5a00c8cec4c90f07e8c3ecadc4"
+    },
+    {
+      "file": "evidence/update-evaluation.json",
+      "bytes": 5683,
+      "sha256": "8842f95bff4716cced744d5391545cf511ec555c705c07400ebd5c8aa47152c2"
+    },
+    {
+      "file": "evidence/update.json",
+      "bytes": 3422,
+      "sha256": "90196038ed3ce14da21e900fa761de2d1e4904703ed3fb5b4bb461f75d6c711c"
+    }
+  ]
+}

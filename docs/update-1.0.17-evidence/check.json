@@ -1,0 +1,33 @@
+{
+    "schema":  "jarvis-everyday-update-check-v2",
+    "utc":  "2026-10-07T08:02:19.2579438Z",
+    "final":  "1.0.17-0d38218c4e1d",
+    "previous":  "1.0.16-fccde24e2cc6",
+    "zip":  "D:\\JARVIS-release-work\\pkg-1.0.17\\JARVIS-1.0.17-0d38218c4e1d.zip",
+    "zip_sha256":  "210b46235638e92bbef1634b853c53ae6838ed58e997543cab87ffa844bb01d9",
+    "setup":  "D:\\JARVIS-release-work\\pkg-1.0.17\\JARVIS-Setup-1.0.17-0d38218c4e1d.exe",
+    "setup_sha256":  "b7bb04d36180c99251e61a0458e77af5eb4a50aafea5812ff14525bdd63eeb7e",
+    "app_id":  "{DC2C8033-1BBF-5E1C-99A0-BE0E70DC9937}",
+    "sandbox":  false,
+    "package_unpacked_to":  "D:\\JARVIS-update-1.0.17\\package\\JARVIS-1.0.17-0d38218c4e1d",
+    "package_release":  "1.0.17-0d38218c4e1d",
+    "package_files":  10768,
+    "install_home":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS",
+    "current":  {
+                    "release":  "1.0.16-fccde24e2cc6",
+                    "previous":  "1.0.15-63362929d7ad",
+                    "switched_at":  1791278379.434263
+                },
+    "installed_verified":  "verified",
+    "free_bytes":  11872329728,
+    "jarvis_processes":  0,
+    "staging":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS-package",
+    "staging_moved_aside":  null,
+    "entry_before":  {
+                         "present":  false
+                     },
+    "shortcuts":  {
+                      "desktop":  "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+                      "startup":  "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+                  }
+}

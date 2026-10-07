@@ -1,0 +1,67 @@
+{
+    "schema":  "jarvis-everyday-update-v2",
+    "utc":  "2026-10-07T08:17:34.9291109Z",
+    "setup":  "D:\\JARVIS-release-work\\pkg-1.0.17\\JARVIS-Setup-1.0.17-0d38218c4e1d.exe",
+    "setup_exit":  0,
+    "setup_switches":  [
+                           "/VERYSILENT",
+                           "/SUPPRESSMSGBOXES",
+                           "/NORESTART",
+                           "/LOG=\"D:\\JARVIS-update-1.0.17\\evidence\\setup-update-20261007-081419.log\""
+                       ],
+    "setup_log":  "D:\\JARVIS-update-1.0.17\\evidence\\setup-update-20261007-081419.log",
+    "setup_wall_seconds":  187.1,
+    "installer":  {
+                      "status":  "installed",
+                      "release":  "1.0.17-0d38218c4e1d",
+                      "previous":  "1.0.16-fccde24e2cc6",
+                      "home":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS",
+                      "seconds":  {
+                                      "verify_package":  7.591,
+                                      "copy":  68.063,
+                                      "verify_copy":  17.555,
+                                      "stop":  0.675,
+                                      "switch":  0.409
+                                  },
+                      "shortcuts":  "written"
+                  },
+    "installer_seconds":  {
+                              "verify_package":  7.591,
+                              "copy":  68.063,
+                              "verify_copy":  17.555,
+                              "stop":  0.675,
+                              "switch":  0.409
+                          },
+    "verify":  "verified",
+    "current":  {
+                    "release":  "1.0.17-0d38218c4e1d",
+                    "previous":  "1.0.16-fccde24e2cc6",
+                    "switched_at":  1791361044.9781623
+                },
+    "entry_before":  {
+                         "present":  false
+                     },
+    "entry":  {
+                  "present":  true,
+                  "name":  "JARVIS",
+                  "version":  "1.0.17",
+                  "publisher":  "Teague Industries",
+                  "uninstall":  "\"C:\\Users\\jonny\\AppData\\Local\\JARVIS-package\\unins000.exe\"",
+                  "location":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS-package\\"
+              },
+    "database_sha256_before":  "f1a8dddd3a932a21a00b03f398819518f0bc7f8e52f307cd8f535b63ede6db5b",
+    "database_sha256_after":  "f1a8dddd3a932a21a00b03f398819518f0bc7f8e52f307cd8f535b63ede6db5b",
+    "database_unchanged":  true,
+    "free_bytes_before":  11865509888,
+    "shortcuts_before":  {
+                             "desktop":  "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+                             "startup":  "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+                         },
+    "shortcuts_after":  {
+                            "desktop":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS\\releases\\1.0.17-0d38218c4e1d\\electron\\JARVIS.exe",
+                            "startup":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS\\releases\\1.0.17-0d38218c4e1d\\electron\\JARVIS.exe"
+                        },
+    "program":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS\\releases\\1.0.17-0d38218c4e1d\\electron\\JARVIS.exe",
+    "launcher_script_left":  false,
+    "jarvis_started":  false
+}

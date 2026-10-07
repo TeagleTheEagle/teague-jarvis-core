@@ -1,6 +1,11 @@
 # Updating your everyday JARVIS to 1.0.17 (plan for your approval)
 
-Status: **APPROVED BY THE OWNER** ("I approve the update of my everyday JARVIS to 1.0.17", first clock reading
+Status: **DONE: `EVERYDAY_UPDATE_COMPLETE` (2026-10-07T08:46:04Z; `docs/update-1.0.17-evidence/update-evaluation.json`). The everyday JARVIS is
+1.0.17-0d38218c4e1d.** Steps 1 to 5 run by the owner 2026-10-07 19:01 to 19:43 local: check (incident 01 below), backup
+d5499b69… (356 files, test restore passed, 22 table counts equal), the Setup silently in 187 s (the installer inside it
+94 s; shortcuts at JARVIS.exe, the entry JARVIS 1.0.17, no JARVIS.ps1, the database unchanged), the owner's eight-point
+check, the PC restart with JARVIS.exe starting by itself 3.6 minutes after sign-in. 1.0.16, 1.0.15, 1.0.14 and 1.0.11
+stay installed as rollback copies. **APPROVED BY THE OWNER** ("I approve the update of my everyday JARVIS to 1.0.17", first clock reading
 2026-10-07T07:58:40Z, recorded 2026-10-07T08:00:21Z; record `../governance/UPDATE-1.0.17-APPROVAL-RECORD.json`, plan sha256
 `f74fff6f…` as committed in 08cbb7b; repo copy `docs/update-1.0.17-evidence/`). The launcher is placed in
 `D:\JARVIS-update-1.0.17\tools\` with `update-authorized.json`; the owner's steps follow. (Before the approval: READY FOR
