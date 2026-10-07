@@ -477,7 +477,14 @@ class CoreTests(DeviceCase):
         self.assertEqual(self.owner('/api/workshop', {'action': 'delete_lesson', 'id': 'nope'})[0], 400)
 
     def test_a_question_uses_the_tools_under_the_switches(self):
+        # Commands ship as "ask first" (docs/WORKSHOP.md): the first call waits; the owner sets Allowed and it runs.
+        shipped = next(r for r in self.owner('/api/permissions')[1]['tools'] if r['name'] == 'workshop_run')
+        self.assertEqual((shipped['mode'], shipped['shipped']), ('ask', 'ask'))
         with patch.dict(os.environ, WORK_ENV, clear=True), patch.object(providers, 'request', side_effect=lambda *a, **k: replies.pop(0)):
+            replies = [calls('workshop_run', command='echo first'), DONE]
+            events = self.ask('run echo first')
+            self.assertEqual(events['tool.completed']['result']['status'], 'awaiting approval')
+            self.assertEqual(self.owner('/api/permissions', {'tool': 'workshop_run', 'mode': 'default'})[0], 200)
             replies = [calls('workshop_files', action='write', path='note.txt', content='from a question'), calls('workshop_run', command='type note.txt'), DONE]
             events = self.ask('write note.txt and show it')
             self.assertEqual(events['assistant.completed']['text'], 'Done.')
@@ -500,6 +507,7 @@ class CoreTests(DeviceCase):
         self.assertIn('workshop_run', actions_seen)
 
     def test_a_mission_from_the_panel_through_the_real_model_path(self):
+        self.assertEqual(self.owner('/api/permissions', {'tool': 'workshop_run', 'mode': 'default'})[0], 200)  # unattended commands: the owner's switch
         with patch.dict(os.environ, WORK_ENV, clear=True), patch.object(providers, 'request', side_effect=lambda *a, **k: replies.pop(0)):
             replies = [plan_reply('Echo the words', 'Report'), calls('workshop_run', command='echo mission ok'),
                        calls('workshop_mission', action='finish', outcome='done', text='Echoed "mission ok" (exit code 0).')]
@@ -526,6 +534,7 @@ class CoreTests(DeviceCase):
         self.assertIn('provider key', answer['error'])
 
     def test_the_emergency_stop_ends_a_mission_and_its_command(self):
+        self.assertEqual(self.owner('/api/permissions', {'tool': 'workshop_run', 'mode': 'default'})[0], 200)  # unattended commands: the owner's switch
         gate = threading.Event()
 
         def slow_model(*a, **k):

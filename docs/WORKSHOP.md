@@ -58,9 +58,12 @@ stop ends a mission and its running command at once.
   can reach everything on this PC the owner's account can, and the internet (`pip` does). What the Workshop does
   about it: a command line that names JARVIS's own config, data or program folders, the install home, `config.env`
   or `.env` (after `%LOCALAPPDATA%`-style variables are expanded, with either slash, case ignored) is refused as data,
-  a net against the model's own mistakes, not a wall; the keys are out of the command's environment; and the owner
-  can set the tool to "ask first" in Settings > Permissions to see every command before it runs. The panel and the
-  permission row say the same.
+  a net against the model's own mistakes, not a wall; the keys are out of the command's environment; and **the tool
+  ships as "ask first"** (the owner's decision of 2026-10-07, "do both"): every command waits for the owner's
+  approval on the PC before it runs, until the owner sets the switch to Allowed in Settings > Permissions (which a
+  mission needs to run commands unattended). `permissions.Rule.shipped` holds that position; `permissions.effective`
+  gives every tool's position as it stands (the owner's saved choice, else the shipped one), and the Core reads its
+  switches through it. The panel, the permission row and the release note say the same.
 - **Interpreters** (`workshop_python`): `status` names JARVIS's own Python, the workshop's environment when it exists
   and the PC's Python if one is installed (`py -3`, `python`, `python3`, never JARVIS's own and never the workshop's
   environment; the Store alias that is not installed answers with an error and is skipped). `make_venv` creates
@@ -105,8 +108,9 @@ stop ends a mission and its running command at once.
   a second call of the same tool in that mission is answered "already waiting" without a new approval; the
   guidance tells the model to finish with outcome "failed" and say what waits. When the mission ends, the approvals
   it raised and their notices go with it (an approval given later would have run with no mission and no stop
-  behind it: review finding 6). Set the workshop tools to "allowed" for unattended work, or to "ask first" to see
-  every command before it runs; both are the owner's choice in Settings > Permissions.
+  behind it: review finding 6). Commands ship as "ask first", so a mission's first command waits and the mission
+  reports what waits; for unattended missions the owner sets "Run commands on this PC in the workshop" to Allowed
+  in Settings > Permissions. Both positions are the owner's choice.
 - `workshop_run` has no undo: a command that deletes or changes files inside the workshop is done when it is done
   (`workshop_files` keeps copies; a command does not). The folders the owner adds are open to commands too; JARVIS's
   own config, data and program folders, the install home and the folders holding them cannot be added (the panel

@@ -27,19 +27,25 @@ SELF = 'JARVIS itself'            # JARVIS's own personality, style and program 
 NEVER = 'no'
 WORDS = 'your own words'          # runs only when the owner's own words in the question ask for exactly this
 ALWAYS = 'always'                 # the owner approves on screen, seeing exactly what will happen, before it does
+# The owner's switch positions (Settings > Permissions); defined here because the table below names a shipped one.
+DEFAULT = 'default'               # allowed
+ASK = 'ask'                       # ask first
+OFF = 'off'
 
-Rule = namedtuple('Rule', 'label effect reach undo asks repeat_adds wearable evidence receipt preview read_actions note device_writes')
+Rule = namedtuple('Rule', 'label effect reach undo asks repeat_adds wearable evidence receipt preview read_actions note device_writes shipped')
 
 
 def _rule(label, effect=READS, reach=LOCAL, undo='', asks=NEVER, repeat_adds=False, wearable=False,
-          evidence=False, receipt=False, preview=False, read_actions=(), note='', device_writes=False):
+          evidence=False, receipt=False, preview=False, read_actions=(), note='', device_writes=False, shipped=None):
     # device_writes (1.0.16): a paired device the owner ticked "may save memories and tasks" may call it too
     # (docs/PHONE-CORE-1.0.16.md). Only the saving of memories, notes, tasks and timers is marked.
+    # shipped: the switch position a tool has until the owner moves it (DEFAULT for every tool but one: the
+    # workshop's commands ship as "ask first", the owner's decision of 2026-10-07, docs/WORKSHOP.md).
     if effect == READS:
         undo = undo or 'Nothing to undo.'
     elif not undo:
         raise ValueError('A tool that changes something must say whether it can be undone: ' + label)
-    return Rule(label, effect, reach, undo, asks, repeat_adds, wearable, evidence, receipt, preview, tuple(read_actions), note, device_writes)
+    return Rule(label, effect, reach, undo, asks, repeat_adds, wearable, evidence, receipt, preview, tuple(read_actions), note, device_writes, shipped or DEFAULT)
 
 
 TABLE = {
@@ -119,8 +125,8 @@ TABLE = {
         'Yes: a replaced or deleted file is kept in the workshop\'s recycle folder.', receipt=True, read_actions=('list', 'read'),
         note='Only inside the workshop folder and the folders you add in Settings > Workshop.'),
     'workshop_run': _rule('Run commands on this PC in the workshop', CHANGES, PC,
-        'No: what a command did is done; the files it changed inside the workshop are not kept automatically.', receipt=True,
-        note='One command line at a time, in a workshop folder, with a time limit; keys and passwords are kept out of its environment and its output. Set it to "ask first" to see every command before it runs.'),
+        'No: what a command did is done; the files it changed inside the workshop are not kept automatically.', receipt=True, shipped=ASK,
+        note='One command line at a time, started in a workshop folder, with a time limit; it can reach what your account can on this PC; keys and passwords are kept out of its environment and its output, and JARVIS\'s own folders and key file are refused by name. Ships as "ask first": you approve each command on the PC before it runs. Set it to "allowed" for a mission to run commands unattended.'),
     'workshop_python': _rule('Make the workshop\'s own Python environment', CHANGES, PC,
         'Yes: delete the .venv folder in the workshop.', read_actions=('status',),
         note='Packages go into this environment, never into JARVIS\'s own Python.'),
@@ -246,6 +252,13 @@ def offered(tool, mode):
     return {**tool, 'function': {**tool['function'], 'description': tool['function']['description'] + ASK_NOTE}}
 
 
+def effective(stored=None):
+    """Every tool's switch position as it stands: the owner's saved choice where there is one, else the position
+    the tool ships with (DEFAULT for all but the workshop's commands, which ship as "ask first")."""
+    stored = stored or {}
+    return {name: (stored[name] if stored.get(name) in modes_for(name) else rule.shipped) for name, rule in TABLE.items()}
+
+
 def changed(modes=None):
     """The owner's switches that differ from "Allowed", as the window needs them: the few commands it answers
     by itself (sections, the microphone, timers, inspections) obey the same switches as the Core."""
@@ -254,12 +267,14 @@ def changed(modes=None):
 
 
 def listing(modes=None):
-    """The table as the interface shows it, with the owner's switch for each tool."""
-    modes = modes or {}
+    """The table as the interface shows it, with the owner's switch for each tool (the shipped position where the
+    owner has not moved it)."""
+    modes = effective(modes)
     rows = []
     for name, rule in TABLE.items():
-        mode = modes.get(name) if modes.get(name) in modes_for(name) else DEFAULT
+        mode = modes[name]
         rows.append({'name': name, 'label': rule.label, 'effect': rule.effect, 'reach': rule.reach, 'undo': rule.undo,
                      'asks': rule.asks, 'repeat_adds': rule.repeat_adds, 'wearable': rule.wearable, 'note': rule.note,
-                     'reads_for': list(rule.read_actions), 'mode': mode, 'modes': list(modes_for(name)), 'device_writes': rule.device_writes})
+                     'reads_for': list(rule.read_actions), 'mode': mode, 'modes': list(modes_for(name)), 'device_writes': rule.device_writes,
+                     'shipped': rule.shipped})
     return rows

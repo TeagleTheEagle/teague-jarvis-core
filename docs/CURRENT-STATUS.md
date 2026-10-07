@@ -251,8 +251,10 @@ only records where the work stands. Historical handover context: `docs/PROJECT-C
   9 medium, 10 low, all applied (the record's last section). `test_workshop.py` 32 and `test_workshop_view.cjs` pass;
   the full Python suite (809 OK), the 27 interface scripts and the desktop suite (60; the first run had one Core
   start-up failure in `backend.test.cjs`, the rerun was clean, the cause not established) pass at the commit. Not built: a mission continuing
-  after an approval; missions on a schedule. **Open for the owner:** the shipped switch of "Run commands on this PC
-  in the workshop" is "allowed" (independence, as mandated); say "commands ask first" to ship it as "ask first".
+  after an approval; missions on a schedule. **Owner decision ("do both", 2026-10-07 about 16:00): commands ship as
+  "ask first"** (`permissions.Rule.shipped`, read through `permissions.effective`): every command waits for the
+  owner's approval on the PC until the owner sets the switch to Allowed in Settings > Permissions (which a mission
+  needs to run commands unattended).
 - Next: the owner's approval of the Stage 7 check of 1.0.17 (build 2), the VM check, the everyday update; then 1.0.18
   (the Workshop) through the same chain.
 

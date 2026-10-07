@@ -312,7 +312,7 @@ class App:
     def offered_tools(self):
         """The tools a question offers the AI model: none the owner switched off (Settings > Permissions), and
         one set to "ask first" says so, so the model says "waiting", not "done"."""
-        modes = {} if self.stage4 else self.store.tool_modes()
+        modes = {} if self.stage4 else permissions.effective(self.store.tool_modes())  # the shipped positions where the owner has not moved a switch
         return [permissions.offered(t, modes.get(t['function']['name'])) for t in actions.TOOLS
                 if modes.get(t['function']['name']) != permissions.OFF]
 
@@ -541,7 +541,7 @@ class App:
             raise ValueError(permissions.STOPPED_MESSAGE)
 
     def tool_mode(self, name):
-        return self.store.tool_modes().get(name, permissions.DEFAULT)
+        return permissions.effective(self.store.tool_modes()).get(name, permissions.DEFAULT)
 
     def device_name(self, device_id):
         """A paired device's name for the screen; None for this PC, an unknown id or no id."""

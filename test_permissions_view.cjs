@@ -30,6 +30,7 @@ assert.equal(p.modeText(read,'default'),'Allowed');
 // What a row says about asking: never "does not ask" for a tool that asks, and nothing at all for a read.
 assert.equal(p.asksText(change),'Does not ask first.');
 assert.equal(p.asksText({...change,mode:'ask'}),'Asks you on screen first (your switch).');
+assert.equal(p.asksText({...change,mode:'ask',shipped:'ask'}),'Asks you on screen first (as shipped; set it to Allowed for a mission to run commands unattended).','the workshop commands ship as ask first (docs/WORKSHOP.md)');
 assert.equal(p.asksText({...change,mode:'off'}),'Off: JARVIS cannot do this when answering.');
 assert.equal(p.asksText(self),'Always asks you on screen first.');
 assert.equal(p.asksText(words),'Only when your own words ask for exactly this.');

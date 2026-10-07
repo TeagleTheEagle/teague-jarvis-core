@@ -322,7 +322,9 @@ class Store:
         if tool not in permissions.TABLE or mode not in permissions.modes_for(tool):
             raise ValueError('That switch position is not available for this tool.')
         with self.connect() as db:
-            if mode == permissions.DEFAULT:
+            # No row means the position the tool ships with (permissions.Rule.shipped; "allowed" for all but the
+            # workshop's commands). A row is kept whenever the owner's choice differs from it, "default" included.
+            if mode == permissions.TABLE[tool].shipped:
                 db.execute('DELETE FROM tool_modes WHERE tool=?', (tool,))
             else:
                 db.execute('INSERT OR REPLACE INTO tool_modes VALUES (?,?,?)', (tool, mode, time.time()))

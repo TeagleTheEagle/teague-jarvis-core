@@ -80,7 +80,7 @@ if (typeof document !== 'undefined') (() => {
     const refused = JarvisWorkshop.refusedText(data.refused_folders);
     foldersBox.replaceChildren(el('h3', '', 'Other folders JARVIS may use'), note, ...(refused ? [el('p', 'workshop-note warn', refused)] : []), input,
       button('SAVE', 'outline', () => save({workshop_folders: input.value.trim()}, 'Folders saved.')),
-      el('p', 'workshop-note', 'A command JARVIS runs starts in a workshop folder and can reach what your account can on this PC; JARVIS\'s own config, data and program folders and its key file are refused by name. Set "Run commands on this PC in the workshop" to ask first in Settings > Permissions to see every command before it runs.'));
+      el('p', 'workshop-note', 'A command JARVIS runs starts in a workshop folder and can reach what your account can on this PC; JARVIS\'s own config, data and program folders and its key file are refused by name. Commands ship as "ask first": you approve each one on the PC before it runs. For a mission to run commands unattended, set "Run commands on this PC in the workshop" to Allowed in Settings > Permissions.'));
   }
 
   function renderMinutes(data) {

@@ -140,6 +140,12 @@ class TableTests(unittest.TestCase):
         self.assertEqual((rows['set_timer']['mode'], rows['set_timer']['asks'], rows['set_timer']['modes']), ('ask', permissions.NEVER, ['default', 'ask', 'off']))
         self.assertEqual(rows['web_search']['mode'], 'off')
         self.assertEqual((rows['time_now']['mode'], rows['time_now']['modes']), ('default', ['default', 'off']))  # "ask" is not a position for a read
+        # The workshop's commands ship as "ask first" (docs/WORKSHOP.md, the owner's decision of 2026-10-07): no saved
+        # row means "ask"; a saved "default" row means the owner set Allowed; every other tool ships as "default".
+        self.assertEqual((rows['workshop_run']['mode'], rows['workshop_run']['shipped'], rows['set_timer']['shipped']), ('ask', 'ask', 'default'))
+        self.assertEqual(permissions.effective({})['workshop_run'], 'ask')
+        self.assertEqual(permissions.effective({'workshop_run': 'default'})['workshop_run'], 'default')
+        self.assertEqual({n for n, r in permissions.TABLE.items() if r.shipped != permissions.DEFAULT}, {'workshop_run'})
         self.assertEqual(rows['development_edit']['asks'], permissions.ALWAYS)
         self.assertEqual(rows['manage_timer']['reads_for'], ['list'])
         json.dumps(list(rows.values()))

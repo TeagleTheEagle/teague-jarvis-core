@@ -19,7 +19,10 @@ One row for each of the 56 tools since the Workshop (51 in 1.0.17, 46 in 1.0.16)
 `actions.TOOLS`; a tool without a row is refused. The five Workshop rows (`workshop_files`, `workshop_run`, `workshop_python`,
 `workshop_lessons`, `workshop_mission`; `docs/WORKSHOP.md`) are changes on this PC with the recycle folder, the stop and the lesson
 list as their undo; `workshop_run` has no undo and says so. Each can be set to "ask first" or "off" like any other change; a mission's
-tool calls obey the same switches, and the emergency stop ends a mission and its running command.
+tool calls obey the same switches, and the emergency stop ends a mission and its running command. `workshop_run` is the one tool
+that **ships as "ask first"** (`Rule.shipped`; the owner's decision of 2026-10-07): `permissions.effective(stored)` gives every
+tool's position as it stands, the owner's saved choice or the shipped one, and `server.App.tool_mode`, `offered_tools` and the
+listing read through it; the owner sets it to Allowed for unattended missions.
 
 | Column | Meaning |
 |---|---|

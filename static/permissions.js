@@ -33,7 +33,7 @@ const JarvisPermissions = {
   asksText(row) {
     if (row.mode === 'off') return 'Off: JARVIS cannot do this when answering.';
     if (row.asks === 'always') return 'Always asks you on screen first.';
-    if (row.mode === 'ask') return 'Asks you on screen first (your switch).';
+    if (row.mode === 'ask') return row.shipped === 'ask' ? 'Asks you on screen first (as shipped; set it to Allowed for a mission to run commands unattended).' : 'Asks you on screen first (your switch).';
     if (row.asks === 'your own words') return 'Only when your own words ask for exactly this.';
     return row.effect === 'changes' ? 'Does not ask first.' : '';
   },
