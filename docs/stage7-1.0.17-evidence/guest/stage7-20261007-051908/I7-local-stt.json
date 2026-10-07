@@ -1,0 +1,6 @@
+{
+    "status":  "PASS",
+    "exit_code":  0,
+    "seconds":  23,
+    "output":  "{\u0027text\u0027: \u0027The meeting starts at 9 tomorrow morning.\u0027, \u0027latency_ms\u0027: 4157, \u0027model_load_ms\u0027: 1875, \u0027inference_ms\u0027: 2282, \u0027audio_seconds\u0027: 2.98, \u0027local\u0027: True}\n{\u0027text\u0027: \u0027The meeting starts at 9 tomorrow morning.\u0027, \u0027latency_ms\u0027: 1343, \u0027model_load_ms\u0027: 0, \u0027inference_ms\u0027: 1343, \u0027audio_seconds\u0027: 2.98, \u0027local\u0027: True}"
+}

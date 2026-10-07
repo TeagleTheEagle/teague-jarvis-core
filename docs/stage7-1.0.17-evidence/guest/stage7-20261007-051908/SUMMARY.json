@@ -1,0 +1,56 @@
+{
+    "schema":  "jarvis-stage7-run-v1",
+    "overall":  "PASS",
+    "phase":  "Install",
+    "home":  "C:\\Users\\jarvis-s6-guest\\AppData\\Local\\JARVIS",
+    "package":  "E:\\",
+    "started_utc":  "2026-10-07T05:19:08.2979385Z",
+    "finished_utc":  "2026-10-07T05:49:45.2364958Z",
+    "steps":  [
+                  {
+                      "step":  "E0-not-elevated",
+                      "status":  "PASS",
+                      "at":  "2026-10-07T05:19:15.2902618Z"
+                  },
+                  {
+                      "step":  "I1-package",
+                      "status":  "PASS",
+                      "at":  "2026-10-07T05:20:52.4264900Z"
+                  },
+                  {
+                      "step":  "I2-setup-install",
+                      "status":  "PASS",
+                      "at":  "2026-10-07T05:36:17.8896419Z"
+                  },
+                  {
+                      "step":  "I3-installed-apps",
+                      "status":  "PASS",
+                      "at":  "2026-10-07T05:36:17.9186993Z"
+                  },
+                  {
+                      "step":  "I4-verify",
+                      "status":  "PASS",
+                      "at":  "2026-10-07T05:41:27.3307714Z"
+                  },
+                  {
+                      "step":  "I5-launch",
+                      "status":  "PASS",
+                      "at":  "2026-10-07T05:43:26.6630246Z"
+                  },
+                  {
+                      "step":  "I6-duplicate-core",
+                      "status":  "PASS",
+                      "at":  "2026-10-07T05:43:41.9188509Z"
+                  },
+                  {
+                      "step":  "I7-local-stt",
+                      "status":  "PASS",
+                      "at":  "2026-10-07T05:44:02.7978997Z"
+                  },
+                  {
+                      "step":  "I8-restart",
+                      "status":  "PASS",
+                      "at":  "2026-10-07T05:49:45.2216364Z"
+                  }
+              ]
+}

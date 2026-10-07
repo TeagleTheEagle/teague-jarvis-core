@@ -261,10 +261,23 @@ only records where the work stands. Historical handover context: `docs/PROJECT-C
   in `D:\JARVIS-S6-FRESHVM\tools\stage7-1.0.17\` (seven files hash-equal to the approved table, plus
   `stage7-authorized.json`, schema v4, expected snapshot STAGE7-PASS-1.0.16-fccde24e2cc6); the record folders
   `D:\JARVIS-stage7\1.0.17-0d38218c4e1d\evidence` and `D:\JARVIS-S6-FRESHVM\evidence\guest-egress-01\stage7-1.0.17-0d38218c4e1d`
-  are created; the 1.0.16 disc read again equal to its record. **The owner's seven steps are next** (the plan's
-  table; step 1 the disc, about 940 MB, up to ten minutes; the window left open during the VM's power-on; drive E:
-  inside the VM). After "stage 7 done": the evaluation, manifests, the repo copy, then the everyday-update plan for
-  the owner's approval; then 1.0.18 (the Workshop) through the same chain.
+  are created; the 1.0.16 disc read again equal to its record. **THE VM CHECK OF 1.0.17 IS COMPLETE: `STAGE_7_COMPLETE`,
+  29 of 29 checks** (owner "stage 7 done" 2026-10-07 about 18:04 local; the seven steps 16:04 to 18:04: the disc
+  941,621,248 bytes sha256 `519c0257…` built and read back; the VM started from STAGE7-PASS-1.0.16 with FRESH-PREREQ
+  restored and LocalhostReachable = 0 proven; Install, AfterRestart, Uninstall, Update and Interrupt all PASS with the
+  version 4 driver: the Setup's silent install, the Installed-apps entry, the uninstall through it, the reinstall, the
+  update while running, the rollback, the update again, the update through the Setup (G7), the interrupted update;
+  snapshot STAGE7-PASS-1.0.17-0d38218c4e1d 26a2163a… taken 07:04:19Z after a clean shutdown, all eight earlier
+  snapshots kept). Evaluation `D:\JARVIS-stage7\1.0.17-0d38218c4e1d\evidence\stage7-evaluation.json` (07:07:09Z) with
+  the host and guest MANIFESTs; repo copy `docs/stage7-1.0.17-evidence/` (the guest copy without the Inno Setup logs
+  of 2 to 4.5 MB each, which stay on D: and are in the guest manifest). One deviation, dispositioned under the owner's
+  rule of 2026-10-06: the first install's laps inside the Setup add up to 601.5 s, 1.5 s over the 600 s bound (verify
+  copy 395.8 s in the VM against 7 to 18 s on this PC; every reinstall, update, rollback and stop far inside). Noted:
+  4 processes at the launches in the VM (8 on this PC); no check depends on it. **Next: the plan for updating the
+  everyday JARVIS to 1.0.17 through the Setup, `docs/UPDATE-EVERYDAY-1.0.17.md`, for the owner's approval**; then
+  1.0.18 (the Workshop) through the same chain. The owner also asked (18:00) for a survey of open-source GitHub
+  projects for five capabilities (task generalisation, multi-week autonomy, closed-loop self-modification, novel
+  knowledge creation, multi-instance cohesion): in progress as a research record, no code applied.
 
 ## Where we are
 
