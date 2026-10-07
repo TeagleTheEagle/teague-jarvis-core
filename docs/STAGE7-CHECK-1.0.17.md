@@ -43,7 +43,10 @@ Records: `docs/release-rehearsal-20261007-1017/README.md`.
 - Compared with 1.0.16: the same pinned parts (Python, its packages, the models, the Windows runtime files); of the
   shipped source 30 files changed, 86 added and 0 removed, exactly the work since 1.0.16; the only other difference
   is the planned program change: `JARVIS.exe` with its bootstrap is in, `electron.exe` is out.
-- Release regression with the release's own Python and Electron (`JARVIS.exe`): **(pending)**.
+- Release regression with the release's own Python and Electron (`JARVIS.exe`): build 1's did not pass (test
+  defects and timeouts under load, recorded); **build 2's (`1.0.17-0d38218c4e1d`, the same program) PASS on the idle
+  PC: 776 Python tests OK with 7 skipped by their own conditions, 60 desktop, 18 Intelligence, 26 interface scripts.**
+  (This draft still names build 1's ids elsewhere; it is rewritten for build 2 once build 2's remaining checks pass.)
 - Zip install in a sandbox: installed in 433 s (three other checks shared the disk), launched through `JARVIS.exe`
   (the Core up in 26 s, 8 processes), verified, then uninstalled: all 10,768 program files removed, data kept, nothing
   left running; the real shortcuts withheld, no launcher script.

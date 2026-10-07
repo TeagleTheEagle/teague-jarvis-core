@@ -149,5 +149,15 @@ the sandbox Stage 7 pass) is kept as evidence of the same program and is run aga
 - `JARVIS-1.0.17-0d38218c4e1d.compare-1.0.16.json`: against 1.0.16 exactly as build 1's comparison above (30 shipped
   source files changed, 86 added, 0 removed; the four planned program files; the pinned inputs identical).
 
-(The regression, the Setup, the zip and Setup rehearsals and the sandbox Stage 7 pass of build 2 follow below as
-each completes, run one after another on an otherwise idle PC.)
+## Release regression of build 2: PASS (`regression-1.0.17-0d38218c4e1d.output.txt`, `...desktop-log.txt`)
+
+With the release's own Python and `JARVIS.exe` (no development environment, no system Node), run alone on the PC,
+14:16-14:42 local: **776 Python tests OK (1,296 s; 7 skipped, by the conditions written in the tests: the three
+Setup-template tests and the `tell_jarvis` module, which need repo-only tools, the two rcedit stamping tests, which
+need `desktop/node_modules` that a release does not carry, and the 8.3 short-name installer test, as in every
+regression), 60 desktop (157 s), 18 Intelligence, 26 interface scripts; 109 test files overlaid from 0d38218; the
+release verified unchanged before and after.** The nine timeouts of build 1's run did not recur: they were the load,
+as the records said.
+
+(The Setup, the zip and Setup rehearsals, the refresh of `pkg-1.0.17` and the sandbox Stage 7 pass of build 2 follow
+below as each completes, one after another.)
