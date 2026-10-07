@@ -1,7 +1,11 @@
 # Updating your everyday JARVIS to 1.0.17 (plan for your approval)
 
-Status: **READY FOR THE OWNER'S APPROVAL (2026-10-07, 19:00 local, Claude Code): the launcher's review findings are
-applied and the reviewed launcher passed its sandbox rehearsal 26 of 26** (run 3, below). Updating the everyday JARVIS is your decision
+Status: **APPROVED BY THE OWNER** ("I approve the update of my everyday JARVIS to 1.0.17", first clock reading
+2026-10-07T07:58:40Z, recorded 2026-10-07T08:00:21Z; record `../governance/UPDATE-1.0.17-APPROVAL-RECORD.json`, plan sha256
+`f74fff6f…` as committed in 08cbb7b; repo copy `docs/update-1.0.17-evidence/`). The launcher is placed in
+`D:\JARVIS-update-1.0.17\tools\` with `update-authorized.json`; the owner's steps follow. (Before the approval: READY FOR
+THE OWNER'S APPROVAL, 2026-10-07 19:00 local, the launcher's review findings applied and the reviewed launcher passed
+its sandbox rehearsal 26 of 26, run 3 below.) Updating the everyday JARVIS is your decision
 (`CLAUDE.md`). 1.0.17 build 2 (`1.0.17-0d38218c4e1d`) passed its Stage 7 check in the test VM today
 (`STAGE_7_COMPLETE`, 29 of 29 checks, `docs/stage7-1.0.17-evidence/`), the first check made with the Setup. The
 launcher for this update is a **new version** (the update is made by the Setup, as the approved own-app plan says);
