@@ -277,7 +277,21 @@ only records where the work stands. Historical handover context: `docs/PROJECT-C
   everyday JARVIS to 1.0.17 through the Setup, `docs/UPDATE-EVERYDAY-1.0.17.md`, for the owner's approval**; then
   1.0.18 (the Workshop) through the same chain. The owner also asked (18:00) for a survey of open-source GitHub
   projects for five capabilities (task generalisation, multi-week autonomy, closed-loop self-modification, novel
-  knowledge creation, multi-instance cohesion): in progress as a research record, no code applied.
+  knowledge creation, multi-instance cohesion): written as `docs/CAPABILITY-SOURCES-20261007.md` (commit 8f3854c), a
+  record and six bounded proposals in a recommended order (skills, standing goals, sub-workers, self-improvement runs
+  on a copy behind the proposal door, discoveries with OpenEvolve, a local cloned voice with Chatterbox on this PC's
+  GTX 1660 Ti from the owner's 18.7 s clip), nothing applied; the owner says which first. **The everyday-update
+  plan `docs/UPDATE-EVERYDAY-1.0.17.md` is written but NOT YET READY:** the update launcher version 2
+  (`tools/host/update-1.0.17/Invoke-EverydayUpdate.ps1`: the update through the Setup, the leftover
+  `%LOCALAPPDATA%\JARVIS-package` renamed aside at step 1, the entry and shortcut-target checks, the database hash
+  asserted) passed its sandbox rehearsal 24 of 24 (`docs/release-rehearsal-20261007-1017/rehearse-everyday-update-1017.ps1`,
+  records in `update-rehearsal/`, launcher sha256 4f6d49e0… at that run), was then independently reviewed (1 high:
+  a rehearsal could reach the real folders through the defaults if called inconsistently; 3 medium; 8 low; all
+  applied, the plan's review section) and **must be rehearsed again on the changed launcher** (delete
+  `D:\JARVIS-release-work\update-rehearsal-1.0.17` first; the harness refuses an existing base; harness finding 12
+  still to add: assert the real entry absent before and after, uninstall the sandbox even when a shortcut change
+  throws). Then the plan's status line and the launcher hash go in, and it is offered for the owner's approval
+  ("I approve the update of my everyday JARVIS to 1.0.17"). Session ended on "handoff" at about 18:55 local.
 
 ## Where we are
 

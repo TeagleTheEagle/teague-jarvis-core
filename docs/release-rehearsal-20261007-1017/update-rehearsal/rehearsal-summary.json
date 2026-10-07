@@ -1,0 +1,139 @@
+{
+    "base":  "D:\\JARVIS-release-work\\update-rehearsal-1.0.17",
+    "launcher_sha256":  "4f6d49e03587c8bb67390f37d196bcfa6aa3438a21faad78aab6b82a826b57da",
+    "setup_sha256":  "b7bb04d36180c99251e61a0458e77af5eb4a50aafea5812ff14525bdd63eeb7e",
+    "checks":  [
+                   {
+                       "check":  "sandbox: 1.0.16 installed",
+                       "passed":  true,
+                       "detail":  "installed"
+                   },
+                   {
+                       "check":  "sandbox: 1.0.16 running on its data",
+                       "passed":  true,
+                       "detail":  "1.0.16-fccde24e2cc6"
+                   },
+                   {
+                       "check":  "refused without approval",
+                       "passed":  true,
+                       "detail":  "exit 2"
+                   },
+                   {
+                       "check":  "refused while JARVIS runs",
+                       "passed":  true,
+                       "detail":  "exit 2"
+                   },
+                   {
+                       "check":  "step 1 check",
+                       "passed":  true,
+                       "detail":  "exit 0"
+                   },
+                   {
+                       "check":  "step 1: stale staging folder moved aside, nothing deleted",
+                       "passed":  true,
+                       "detail":  "D:\\JARVIS-release-work\\update-rehearsal-1.0.17\\staging-before-1.0.17-0d38218c4e1d"
+                   },
+                   {
+                       "check":  "step 1: no entry before",
+                       "passed":  true,
+                       "detail":  "False"
+                   },
+                   {
+                       "check":  "step 2 backup",
+                       "passed":  true,
+                       "detail":  "exit 0"
+                   },
+                   {
+                       "check":  "step 3 update",
+                       "passed":  true,
+                       "detail":  "exit 0"
+                   },
+                   {
+                       "check":  "update: database unchanged",
+                       "passed":  true,
+                       "detail":  "d398ff658b6c5f5925adfb90a29f93905deed49afea4fef784fa01e6cd4c1b7d"
+                   },
+                   {
+                       "check":  "update: current is 1.0.17, previous 1.0.16",
+                       "passed":  true,
+                       "detail":  "1.0.17-0d38218c4e1d"
+                   },
+                   {
+                       "check":  "update: the installer inside the Setup withheld the shortcuts (sandbox)",
+                       "passed":  true,
+                       "detail":  "withheld (the home is not this PC\u0027s own install home)"
+                   },
+                   {
+                       "check":  "update: the entry JARVIS (sandbox) with the version",
+                       "passed":  true,
+                       "detail":  "JARVIS (sandbox) 1.0.17"
+                   },
+                   {
+                       "check":  "update: the real entry untouched",
+                       "passed":  true,
+                       "detail":  "False"
+                   },
+                   {
+                       "check":  "update: the Setup logged --no-shortcuts",
+                       "passed":  true,
+                       "detail":  "setup-update.log"
+                   },
+                   {
+                       "check":  "sandbox: 1.0.17 running on the same data through JARVIS.exe",
+                       "passed":  true,
+                       "detail":  "1.0.17-0d38218c4e1d"
+                   },
+                   {
+                       "check":  "sandbox: only JARVIS.exe and python.exe run",
+                       "passed":  true,
+                       "detail":  "JARVIS.exe,python.exe"
+                   },
+                   {
+                       "check":  "rerun changes nothing",
+                       "passed":  true,
+                       "detail":  "exit 0"
+                   },
+                   {
+                       "check":  "rollback to 1.0.16",
+                       "passed":  true,
+                       "detail":  "1.0.16-fccde24e2cc6"
+                   },
+                   {
+                       "check":  "rollback: the entry still says 1.0.17 (as the plan says)",
+                       "passed":  true,
+                       "detail":  "1.0.17"
+                   },
+                   {
+                       "check":  "sandbox: 1.0.16 running again on the same data",
+                       "passed":  true,
+                       "detail":  "1.0.16-fccde24e2cc6"
+                   },
+                   {
+                       "check":  "rerun after rollback changes nothing",
+                       "passed":  true,
+                       "detail":  "exit 0"
+                   },
+                   {
+                       "check":  "cleanup: the sandbox uninstalled through its own entry",
+                       "passed":  true,
+                       "detail":  "exit 0"
+                   },
+                   {
+                       "check":  "the owner real shortcuts unchanged throughout",
+                       "passed":  true,
+                       "detail":  "1829581c857b4d28940451d169d630973ad19b67b1e2b50d1c9f10a0ff74a296 0be9b25f28204e577003aaad675df2cb2afb6aaeacdc97d74947e7ecd2771387"
+                   }
+               ],
+    "failed":  0,
+    "real_shortcuts_before":  {
+                                  "desktop":  "1829581c857b4d28940451d169d630973ad19b67b1e2b50d1c9f10a0ff74a296",
+                                  "startup":  "0be9b25f28204e577003aaad675df2cb2afb6aaeacdc97d74947e7ecd2771387"
+                              },
+    "real_shortcuts_after":  {
+                                 "desktop":  "1829581c857b4d28940451d169d630973ad19b67b1e2b50d1c9f10a0ff74a296",
+                                 "startup":  "0be9b25f28204e577003aaad675df2cb2afb6aaeacdc97d74947e7ecd2771387"
+                             },
+    "live_processes_before":  0,
+    "live_processes_after":  0,
+    "sandbox_processes_after":  0
+}
