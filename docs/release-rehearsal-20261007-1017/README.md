@@ -138,6 +138,16 @@ builds shows below). The number stays 1.0.17, as for 1.0.16's two builds: the ap
 never left this PC's sandboxes. Every check of build 1 above (the comparison, the Setup rehearsal, the zip rehearsal,
 the sandbox Stage 7 pass) is kept as evidence of the same program and is run again on build 2.
 
-## Build 2 of 1.0.17
+## Build 2: `1.0.17-0d38218c4e1d` (commit 0d38218), the release under acceptance
 
-(Appended as each check completes.)
+- `build-1.0.17-build2.log.txt`, `JARVIS-1.0.17-0d38218c4e1d.release.json`: 10,768 files, 1,186,082,321 bytes; zip
+  `D:\JARVIS-release-work\release\JARVIS-1.0.17-0d38218c4e1d.zip`, 533,361,567 bytes, sha256
+  `210b46235638e92bbef1634b853c53ae6838ed58e997543cab87ffa844bb01d9`; built from the clean tree at 14:14-14:16 local.
+- `JARVIS-1.0.17-0d38218c4e1d.compare-build1.json`: against build 1, **0 source files changed, 0 added, 0 removed, the
+  pinned inputs identical**: the same program; the only differences are the 3,986 bytecode files and the 29 pip
+  launcher/RECORD files that record the build folder and time.
+- `JARVIS-1.0.17-0d38218c4e1d.compare-1.0.16.json`: against 1.0.16 exactly as build 1's comparison above (30 shipped
+  source files changed, 86 added, 0 removed; the four planned program files; the pinned inputs identical).
+
+(The regression, the Setup, the zip and Setup rehearsals and the sandbox Stage 7 pass of build 2 follow below as
+each completes, run one after another on an otherwise idle PC.)
