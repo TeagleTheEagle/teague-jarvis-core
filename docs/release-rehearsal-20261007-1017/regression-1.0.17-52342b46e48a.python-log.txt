@@ -1,0 +1,292 @@
+.....................................................................................................................................................................................................................................s...............................................................................F.........................................................................................EEEss.........................................................................EE----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 49617)
+Traceback (most recent call last):
+  File "D:\JARVIS-release-work\regression-1.0.17\release\app\device_gateway.py", line 295, in handle
+    return handler.send(200, gateway.pair(body, caller))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\JARVIS-release-work\regression-1.0.17\release\app\server.py", line 1741, in send
+    self.wfile.write(content)
+  File "socketserver.py", line 845, in write
+ConnectionAbortedError: [WinError 10053] An established connection was aborted by the software in your host machine
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "socketserver.py", line 697, in process_request_thread
+  File "socketserver.py", line 362, in finish_request
+  File "socketserver.py", line 766, in __init__
+  File "http\server.py", line 436, in handle
+  File "http\server.py", line 424, in handle_one_request
+  File "D:\JARVIS-release-work\regression-1.0.17\release\app\server.py", line 1916, in do_POST
+    return device_gateway.handle(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\JARVIS-release-work\regression-1.0.17\release\app\device_gateway.py", line 307, in handle
+    return handler.send(503, {'error': 'JARVIS service unavailable.'})
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\JARVIS-release-work\regression-1.0.17\release\app\server.py", line 1740, in send
+    self.end_headers()
+  File "http\server.py", line 538, in end_headers
+  File "http\server.py", line 542, in flush_headers
+  File "socketserver.py", line 845, in write
+ConnectionAbortedError: [WinError 10053] An established connection was aborted by the software in your host machine
+----------------------------------------
+.......FE.EE----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 61272)
+Traceback (most recent call last):
+  File "D:\JARVIS-release-work\regression-1.0.17\release\app\phone_bridge.py", line 165, in handle_request
+    return self.reply(200, self.server.bridge.create(token, json.loads(raw)))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\JARVIS-release-work\regression-1.0.17\release\app\phone_bridge.py", line 137, in reply
+    self.wfile.write(data)
+  File "socketserver.py", line 845, in write
+ConnectionAbortedError: [WinError 10053] An established connection was aborted by the software in your host machine
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "socketserver.py", line 697, in process_request_thread
+  File "socketserver.py", line 362, in finish_request
+  File "socketserver.py", line 766, in __init__
+  File "http\server.py", line 436, in handle
+  File "http\server.py", line 424, in handle_one_request
+  File "D:\JARVIS-release-work\regression-1.0.17\release\app\phone_bridge.py", line 174, in handle_request
+    return self.reply(503, {'error': 'Storage unavailable. Retry using the same request ID.'})
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\JARVIS-release-work\regression-1.0.17\release\app\phone_bridge.py", line 136, in reply
+    self.end_headers()
+  File "http\server.py", line 538, in end_headers
+  File "http\server.py", line 542, in flush_headers
+  File "socketserver.py", line 845, in write
+ConnectionAbortedError: [WinError 10053] An established connection was aborted by the software in your host machine
+----------------------------------------
+...............EE----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 61895)
+Traceback (most recent call last):
+  File "D:\JARVIS-release-work\regression-1.0.17\release\app\server.py", line 2167, in do_POST
+    self.send(200, result)
+  File "D:\JARVIS-release-work\regression-1.0.17\release\app\server.py", line 1741, in send
+    self.wfile.write(content)
+  File "socketserver.py", line 845, in write
+ConnectionAbortedError: [WinError 10053] An established connection was aborted by the software in your host machine
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "socketserver.py", line 697, in process_request_thread
+  File "socketserver.py", line 362, in finish_request
+  File "socketserver.py", line 766, in __init__
+  File "http\server.py", line 436, in handle
+  File "http\server.py", line 424, in handle_one_request
+  File "D:\JARVIS-release-work\regression-1.0.17\release\app\server.py", line 2178, in do_POST
+    self.send(500, {'error': 'Local operation failed. No success was assumed.'})
+  File "D:\JARVIS-release-work\regression-1.0.17\release\app\server.py", line 1740, in send
+    self.end_headers()
+  File "http\server.py", line 538, in end_headers
+  File "http\server.py", line 542, in flush_headers
+  File "socketserver.py", line 845, in write
+ConnectionAbortedError: [WinError 10053] An established connection was aborted by the software in your host machine
+----------------------------------------
+..............................................................................................................................................................................................................................E.................................................
+======================================================================
+ERROR: test_a_version_that_is_not_numbers_is_refused_before_inno_setup (test_own_app.SetupScriptTests.test_a_version_that_is_not_numbers_is_refused_before_inno_setup)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\JARVIS-release-work\regression-1.0.17\release\app\test_own_app.py", line 80, in setUp
+    import build_setup
+ModuleNotFoundError: No module named 'build_setup'
+
+======================================================================
+ERROR: test_every_placeholder_is_filled_and_a_missing_one_is_refused (test_own_app.SetupScriptTests.test_every_placeholder_is_filled_and_a_missing_one_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\JARVIS-release-work\regression-1.0.17\release\app\test_own_app.py", line 80, in setUp
+    import build_setup
+ModuleNotFoundError: No module named 'build_setup'
+
+======================================================================
+ERROR: test_the_two_application_ids_come_from_the_template (test_own_app.SetupScriptTests.test_the_two_application_ids_come_from_the_template)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\JARVIS-release-work\regression-1.0.17\release\app\test_own_app.py", line 80, in setUp
+    import build_setup
+ModuleNotFoundError: No module named 'build_setup'
+
+======================================================================
+ERROR: test_only_the_windows_own_fresh_capture_is_taken_and_a_bad_id_is_refused (test_phone_access.ReviewTests.test_only_the_windows_own_fresh_capture_is_taken_and_a_bad_id_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\JARVIS-release-work\regression-1.0.17\release\app\test_phone_access.py", line 509, in test_only_the_windows_own_fresh_capture_is_taken_and_a_bad_id_is_refused
+    paired = self.pair()
+             ^^^^^^^^^^^
+  File "D:\JARVIS-release-work\regression-1.0.17\release\app\test_device_gateway.py", line 68, in pair
+    status, paired = self.device('pair', {'code': started['code'], 'capabilities': list(capabilities)})
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\JARVIS-release-work\regression-1.0.17\release\app\test_device_gateway.py", line 63, in device
+    return self.send('/api/device/' + op, body or {}, {'X-Jarvis-Device': credential} if credential else {})
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\JARVIS-release-work\regression-1.0.17\release\app\test_device_gateway.py", line 54, in send
+    with urllib.request.urlopen(request, timeout=10) as response:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "urllib\request.py", line 215, in urlopen
+  File "urllib\request.py", line 515, in open
+  File "urllib\request.py", line 532, in _open
+  File "urllib\request.py", line 492, in _call_chain
+  File "urllib\request.py", line 1373, in http_open
+  File "urllib\request.py", line 1348, in do_open
+  File "http\client.py", line 1430, in getresponse
+  File "http\client.py", line 331, in begin
+  File "http\client.py", line 292, in _read_status
+  File "socket.py", line 720, in readinto
+TimeoutError: timed out
+
+======================================================================
+ERROR: test_only_the_windows_own_fresh_capture_is_taken_and_a_bad_id_is_refused (test_phone_access.ReviewTests.test_only_the_windows_own_fresh_capture_is_taken_and_a_bad_id_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "shutil.py", line 633, in _rmtree_unsafe
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'D:\\JARVIS-release-work\\regression-1.0.17\\home\\AppData\\Local\\Temp\\tmpk1e1kvn9\\jarvis.sqlite3'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "tempfile.py", line 954, in cleanup
+  File "tempfile.py", line 934, in _rmtree
+  File "shutil.py", line 781, in rmtree
+  File "shutil.py", line 635, in _rmtree_unsafe
+  File "tempfile.py", line 909, in onexc
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'D:\\JARVIS-release-work\\regression-1.0.17\\home\\AppData\\Local\\Temp\\tmpk1e1kvn9\\jarvis.sqlite3'
+
+======================================================================
+ERROR: test_without_the_tick_a_changing_tool_is_refused_and_with_it_the_pcs_switches_decide (test_phone_access.ToolsTests.test_without_the_tick_a_changing_tool_is_refused_and_with_it_the_pcs_switches_decide)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "shutil.py", line 633, in _rmtree_unsafe
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'D:\\JARVIS-release-work\\regression-1.0.17\\home\\AppData\\Local\\Temp\\tmp96ny3xzk\\jarvis.sqlite3'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "tempfile.py", line 954, in cleanup
+  File "tempfile.py", line 934, in _rmtree
+  File "shutil.py", line 781, in rmtree
+  File "shutil.py", line 635, in _rmtree_unsafe
+  File "tempfile.py", line 909, in onexc
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'D:\\JARVIS-release-work\\regression-1.0.17\\home\\AppData\\Local\\Temp\\tmp96ny3xzk\\jarvis.sqlite3'
+
+======================================================================
+ERROR: test_http_boundaries (test_phone_bridge.PhoneBridgeTests.test_http_boundaries)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\JARVIS-release-work\regression-1.0.17\release\app\test_phone_bridge.py", line 71, in test_http_boundaries
+    code,_=call(headers={**auth,'Content-Type':'application/json'},method='POST',body=json.dumps({'title':'HTTP test','request_id':'f'*16}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\JARVIS-release-work\regression-1.0.17\release\app\test_phone_bridge.py", line 59, in call
+    r=conn.getresponse()
+      ^^^^^^^^^^^^^^^^^^
+  File "http\client.py", line 1430, in getresponse
+  File "http\client.py", line 331, in begin
+  File "http\client.py", line 292, in _read_status
+  File "socket.py", line 720, in readinto
+TimeoutError: timed out
+
+======================================================================
+ERROR: test_http_boundaries (test_phone_bridge.PhoneBridgeTests.test_http_boundaries)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "shutil.py", line 633, in _rmtree_unsafe
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'D:\\JARVIS-release-work\\regression-1.0.17\\home\\AppData\\Local\\Temp\\tmpc9ieq4sl\\jarvis.sqlite3'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "tempfile.py", line 954, in cleanup
+  File "tempfile.py", line 934, in _rmtree
+  File "shutil.py", line 781, in rmtree
+  File "shutil.py", line 635, in _rmtree_unsafe
+  File "tempfile.py", line 909, in onexc
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'D:\\JARVIS-release-work\\regression-1.0.17\\home\\AppData\\Local\\Temp\\tmpc9ieq4sl\\jarvis.sqlite3'
+
+======================================================================
+ERROR: test_with_the_tick_a_tool_set_to_ask_first_asks_on_the_pc (test_phone_core.WritesTests.test_with_the_tick_a_tool_set_to_ask_first_asks_on_the_pc)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\JARVIS-release-work\regression-1.0.17\release\app\test_phone_core.py", line 128, in test_with_the_tick_a_tool_set_to_ask_first_asks_on_the_pc
+    paired = self.pair()
+             ^^^^^^^^^^^
+  File "D:\JARVIS-release-work\regression-1.0.17\release\app\test_device_gateway.py", line 66, in pair
+    status, started = self.owner('/api/devices', {'action': 'pair', 'name': name, 'kind': kind})
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\JARVIS-release-work\regression-1.0.17\release\app\test_device_gateway.py", line 60, in owner
+    return self.send(path, data, {'Cookie': 'jarvis_session=' + self.app.session} if signed_in else {})
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\JARVIS-release-work\regression-1.0.17\release\app\test_device_gateway.py", line 54, in send
+    with urllib.request.urlopen(request, timeout=10) as response:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "urllib\request.py", line 215, in urlopen
+  File "urllib\request.py", line 515, in open
+  File "urllib\request.py", line 532, in _open
+  File "urllib\request.py", line 492, in _call_chain
+  File "urllib\request.py", line 1373, in http_open
+  File "urllib\request.py", line 1348, in do_open
+  File "http\client.py", line 1430, in getresponse
+  File "http\client.py", line 331, in begin
+  File "http\client.py", line 292, in _read_status
+  File "socket.py", line 720, in readinto
+TimeoutError: timed out
+
+======================================================================
+ERROR: test_with_the_tick_a_tool_set_to_ask_first_asks_on_the_pc (test_phone_core.WritesTests.test_with_the_tick_a_tool_set_to_ask_first_asks_on_the_pc)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "shutil.py", line 633, in _rmtree_unsafe
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'D:\\JARVIS-release-work\\regression-1.0.17\\home\\AppData\\Local\\Temp\\tmpmc2vzt22\\jarvis.sqlite3'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "tempfile.py", line 954, in cleanup
+  File "tempfile.py", line 934, in _rmtree
+  File "shutil.py", line 781, in rmtree
+  File "shutil.py", line 635, in _rmtree_unsafe
+  File "tempfile.py", line 909, in onexc
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'D:\\JARVIS-release-work\\regression-1.0.17\\home\\AppData\\Local\\Temp\\tmpmc2vzt22\\jarvis.sqlite3'
+
+======================================================================
+ERROR: test_tell_jarvis (unittest.loader._FailedTest.test_tell_jarvis)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_tell_jarvis
+Traceback (most recent call last):
+  File "unittest\loader.py", line 396, in _find_test_path
+  File "unittest\loader.py", line 339, in _get_module_from_name
+  File "D:\JARVIS-release-work\regression-1.0.17\release\app\test_tell_jarvis.py", line 16, in <module>
+    import tell_jarvis  # noqa: E402
+    ^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'tell_jarvis'
+
+
+======================================================================
+FAIL: test_the_core_stamps_with_its_release_and_tells_the_model_the_rule (test_memory_stamp.StampTests.test_the_core_stamps_with_its_release_and_tells_the_model_the_rule)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\JARVIS-release-work\regression-1.0.17\release\app\test_memory_stamp.py", line 82, in test_the_core_stamps_with_its_release_and_tells_the_model_the_rule
+    self.assertTrue(any(f.startswith('I prefer short answers [saved under development') for f in context['saved_facts']))
+AssertionError: False is not true
+
+======================================================================
+FAIL: test_without_the_tick_a_changing_tool_is_refused_and_with_it_the_pcs_switches_decide (test_phone_access.ToolsTests.test_without_the_tick_a_changing_tool_is_refused_and_with_it_the_pcs_switches_decide)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\JARVIS-release-work\regression-1.0.17\release\app\test_phone_access.py", line 100, in test_without_the_tick_a_changing_tool_is_refused_and_with_it_the_pcs_switches_decide
+    events = self.ask(key, 'Write my plan down as a file', [calls('create_file', **NOTE), DONE])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\JARVIS-release-work\regression-1.0.17\release\app\test_phone_access.py", line 82, in ask
+    return self.finished(key, started['run_id'])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\JARVIS-release-work\regression-1.0.17\release\app\test_device_gateway.py", line 82, in finished
+    self.fail('The question did not finish.')
+AssertionError: The question did not finish.
+
+----------------------------------------------------------------------
+Ran 776 tests in 2969.009s
+
+FAILED (failures=2, errors=11, skipped=3)

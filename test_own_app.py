@@ -71,6 +71,7 @@ class StampingTests(unittest.TestCase):
             self.assertGreater(victim.stat().st_size, (RCEDIT.parent / 'rcedit.exe').stat().st_size)   # the icon went in
 
 
+@unittest.skipUnless((ROOT / 'tools' / 'setup' / 'build_setup.py').is_file(), 'tools/setup is not shipped in a release (the release regression)')
 class SetupScriptTests(unittest.TestCase):
     """tools/setup/build_setup.py without Inno Setup: the template's placeholders, its two application ids and the
     four-number version it stamps (review of 2026-10-07, findings L4 and L6)."""

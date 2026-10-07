@@ -13,7 +13,10 @@ from unittest.mock import patch
 from test_device_gateway import DeviceCase
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / 'tools' / 'host'))
-import tell_jarvis  # noqa: E402
+try:
+    import tell_jarvis  # noqa: E402
+except ImportError:  # tools/host is not shipped in a release: the release regression skips this module
+    raise unittest.SkipTest('tools/host/tell_jarvis.py is not shipped in a release')
 
 
 class TellJarvisTests(DeviceCase):

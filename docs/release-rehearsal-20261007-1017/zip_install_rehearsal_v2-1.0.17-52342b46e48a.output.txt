@@ -1,0 +1,7 @@
+0 zip hash                     {"matches_record": true, "bytes": 533364383}
+1 extract (Expand-Archive)     {"ok": true, "package_files": ["install.cmd", "installer.py", "release"]}
+2 install.cmd                  {"exit_code": 0, "result": "installed", "release": "1.0.17-52342b46e48a", "shortcuts": "withheld (the home is not this PC's own install home)", "launcher_script_written": false, "seconds": 433}
+3 launch (JARVIS.exe)          {"program": "releases\\1.0.17-52342b46e48a\\electron\\JARVIS.exe", "processes": {"count": 8, "names": ["JARVIS.exe", "python.exe"]}, "core_answers": true, "seconds": 26.4}
+4 verify after use             {"result": "verified", "release": "1.0.17-52342b46e48a"}
+5 uninstall                    {"result": "uninstalled", "files_removed": 10768, "kept": ["data", "config", "profile"], "shortcuts": "withheld (the home is not this PC's own install home)", "jarvis_processes": 0, "leftover_program_files": 0}
+exit=0

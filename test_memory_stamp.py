@@ -69,6 +69,7 @@ class StampTests(unittest.TestCase):
     def test_the_core_stamps_with_its_release_and_tells_the_model_the_rule(self):
         app = App(str(self.folder))
         self.assertTrue(app.store.release.startswith('development ') or app.store.release == runtime_paths.release_id())
+        stamp = app.store.release   # "development <revision>" in the repository; the release id in the release regression
         app.store.put('memory', 'I prefer short answers')
         app.store.release = '1.0.11-old'
         app.store.put('memory', 'JARVIS cannot read mail')
@@ -79,7 +80,7 @@ class StampTests(unittest.TestCase):
             app.work(run, 'Can you read my mail? Remember my preference.', None)
         context = json.loads(bodies[0]['messages'][1]['content'].split(': ', 1)[1])
         self.assertIn('JARVIS cannot read mail [saved under 1.0.11-old]', context['saved_facts'])
-        self.assertTrue(any(f.startswith('I prefer short answers [saved under development') for f in context['saved_facts']))
+        self.assertIn('I prefer short answers [saved under ' + stamp + ']', context['saved_facts'])
         self.assertEqual(context['saved_facts_note'], memory.STAMP_NOTE)
         self.assertIn('newer release is right', context['saved_facts_note'])
         # The Memory page gets the stamp with each row.

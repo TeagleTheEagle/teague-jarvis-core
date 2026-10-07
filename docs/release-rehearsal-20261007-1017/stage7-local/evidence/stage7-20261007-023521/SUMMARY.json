@@ -1,0 +1,56 @@
+{
+    "schema":  "jarvis-stage7-run-v1",
+    "overall":  "PASS",
+    "phase":  "Install",
+    "home":  "D:\\JARVIS-release-work\\stage7-local-1.0.17\\home",
+    "package":  "D:\\JARVIS-release-work\\pkg-1.0.17",
+    "started_utc":  "2026-10-07T02:35:21.1065192Z",
+    "finished_utc":  "2026-10-07T02:39:00.9085528Z",
+    "steps":  [
+                  {
+                      "step":  "E0-not-elevated",
+                      "status":  "PASS",
+                      "at":  "2026-10-07T02:35:21.2454625Z"
+                  },
+                  {
+                      "step":  "I1-package",
+                      "status":  "PASS",
+                      "at":  "2026-10-07T02:35:22.4434853Z"
+                  },
+                  {
+                      "step":  "I2-setup-install",
+                      "status":  "PASS",
+                      "at":  "2026-10-07T02:37:51.9288476Z"
+                  },
+                  {
+                      "step":  "I3-installed-apps",
+                      "status":  "PASS",
+                      "at":  "2026-10-07T02:37:51.9480449Z"
+                  },
+                  {
+                      "step":  "I4-verify",
+                      "status":  "PASS",
+                      "at":  "2026-10-07T02:38:01.1607326Z"
+                  },
+                  {
+                      "step":  "I5-launch",
+                      "status":  "PASS",
+                      "at":  "2026-10-07T02:38:25.1882309Z"
+                  },
+                  {
+                      "step":  "I6-duplicate-core",
+                      "status":  "PASS",
+                      "at":  "2026-10-07T02:38:37.4664111Z"
+                  },
+                  {
+                      "step":  "I7-local-stt",
+                      "status":  "PASS",
+                      "at":  "2026-10-07T02:38:42.8660154Z"
+                  },
+                  {
+                      "step":  "I8-restart",
+                      "status":  "PASS",
+                      "at":  "2026-10-07T02:39:00.9055537Z"
+                  }
+              ]
+}

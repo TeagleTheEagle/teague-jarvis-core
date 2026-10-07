@@ -1,0 +1,152 @@
+[
+    {
+        "step":  "0 before",
+        "at":  "2026-10-07T02:23:46.5919447Z",
+        "setup":  "D:\\JARVIS-release-work\\release\\JARVIS-Setup-1.0.17-52342b46e48a.exe",
+        "setup_bytes":  406915840,
+        "setup_sha256":  "0fd7220cde96508ca3ad5a86cf025a1e5c52c3d83b7f7a4d9a09847326aa16e1",
+        "entry_before":  {
+                             "present":  false
+                         },
+        "processes":  0,
+        "live_jarvis_processes":  8,
+        "real_shortcuts":  {
+                               "desktop":  "1829581c857b4d28940451d169d630973ad19b67b1e2b50d1c9f10a0ff74a296",
+                               "startup":  "0be9b25f28204e577003aaad675df2cb2afb6aaeacdc97d74947e7ecd2771387"
+                           }
+    },
+    {
+        "step":  "1 silent install",
+        "at":  "2026-10-07T02:31:44.0298469Z",
+        "setup_exit":  0,
+        "seconds":  477.3,
+        "installer_status":  "installed",
+        "release":  "1.0.17-52342b46e48a",
+        "previous":  null,
+        "installer_seconds":  {
+                                  "verify_package":  9.098,
+                                  "copy":  61.769,
+                                  "verify_copy":  282.544,
+                                  "switch":  1.613
+                              },
+        "installer_shortcuts":  "withheld (the home is not this PC\u0027s own install home)",
+        "installer_command":  "2026-10-07 13:25:45.921   JARVIS installer: cmd /c \"\"D:\\JARVIS-release-work\\setup-rehearsal-v2-1.0.17\\package\\release\\python\\python.exe\" \"D:\\JARVIS-release-work\\setup-rehearsal-v2-1.0.17\\package\\installer.py\" install --package \"D:\\JARVIS-release-work\\setup-rehearsal-v2-1.0.17\\package\" --home \"D:\\JARVIS-release-work\\setup-rehearsal-v2-1.0.17\\home\" --no-shortcuts \u003e \"D:\\JARVIS-release-work\\setup-rehearsal-v2-1.0.17\\package\\setup-result.json\" 2\u003e\u00261\"",
+        "no_shortcuts_passed":  true,
+        "home_file":  "D:\\JARVIS-release-work\\setup-rehearsal-v2-1.0.17\\home\r\n",
+        "noshortcuts_marker":  true,
+        "entry":  {
+                      "present":  true,
+                      "name":  "JARVIS (sandbox)",
+                      "version":  "1.0.17",
+                      "publisher":  "Teague Industries",
+                      "uninstall":  "\"D:\\JARVIS-release-work\\setup-rehearsal-v2-1.0.17\\package\\unins000.exe\"",
+                      "location":  "D:\\JARVIS-release-work\\setup-rehearsal-v2-1.0.17\\package\\"
+                  },
+        "real_shortcuts":  {
+                               "desktop":  "1829581c857b4d28940451d169d630973ad19b67b1e2b50d1c9f10a0ff74a296",
+                               "startup":  "0be9b25f28204e577003aaad675df2cb2afb6aaeacdc97d74947e7ecd2771387"
+                           }
+    },
+    {
+        "step":  "1b layout",
+        "at":  "2026-10-07T02:31:44.0526152Z",
+        "program":  true,
+        "package_release":  true,
+        "uninstaller":  true,
+        "launcher_script":  false
+    },
+    {
+        "step":  "2 launch",
+        "at":  "2026-10-07T02:32:16.8922764Z",
+        "core_ready":  true,
+        "seconds_to_core":  32.7,
+        "processes":  [
+                          "JARVIS.exe",
+                          "python.exe"
+                      ],
+        "real_shortcuts":  {
+                               "desktop":  "1829581c857b4d28940451d169d630973ad19b67b1e2b50d1c9f10a0ff74a296",
+                               "startup":  "0be9b25f28204e577003aaad675df2cb2afb6aaeacdc97d74947e7ecd2771387"
+                           }
+    },
+    {
+        "step":  "2b shutdown",
+        "at":  "2026-10-07T02:32:18.9478522Z",
+        "left_after_request":  0
+    },
+    {
+        "step":  "3 reinstall",
+        "at":  "2026-10-07T02:34:02.7426248Z",
+        "setup_exit":  0,
+        "seconds":  103.8,
+        "installer_status":  "installed",
+        "release":  "1.0.17-52342b46e48a",
+        "previous":  null,
+        "installer_seconds":  {
+                                  "verify_package":  9.055,
+                                  "verify_installed":  9.494,
+                                  "switch":  0.088
+                              },
+        "installer_shortcuts":  "withheld (the home is not this PC\u0027s own install home)",
+        "installer_command":  "2026-10-07 13:33:42.791   JARVIS installer: cmd /c \"\"D:\\JARVIS-release-work\\setup-rehearsal-v2-1.0.17\\package\\release\\python\\python.exe\" \"D:\\JARVIS-release-work\\setup-rehearsal-v2-1.0.17\\package\\installer.py\" install --package \"D:\\JARVIS-release-work\\setup-rehearsal-v2-1.0.17\\package\" --home \"D:\\JARVIS-release-work\\setup-rehearsal-v2-1.0.17\\home\" --no-shortcuts \u003e \"D:\\JARVIS-release-work\\setup-rehearsal-v2-1.0.17\\package\\setup-result.json\" 2\u003e\u00261\"",
+        "no_shortcuts_passed":  true,
+        "home_file":  "D:\\JARVIS-release-work\\setup-rehearsal-v2-1.0.17\\home\r\n",
+        "noshortcuts_marker":  true,
+        "entry":  {
+                      "present":  true,
+                      "name":  "JARVIS (sandbox)",
+                      "version":  "1.0.17",
+                      "publisher":  "Teague Industries",
+                      "uninstall":  "\"D:\\JARVIS-release-work\\setup-rehearsal-v2-1.0.17\\package\\unins000.exe\"",
+                      "location":  "D:\\JARVIS-release-work\\setup-rehearsal-v2-1.0.17\\package\\"
+                  },
+        "real_shortcuts":  {
+                               "desktop":  "1829581c857b4d28940451d169d630973ad19b67b1e2b50d1c9f10a0ff74a296",
+                               "startup":  "0be9b25f28204e577003aaad675df2cb2afb6aaeacdc97d74947e7ecd2771387"
+                           }
+    },
+    {
+        "step":  "4 uninstall",
+        "at":  "2026-10-07T02:34:15.2661554Z",
+        "uninstaller_exit":  0,
+        "seconds":  12.4,
+        "installer_status":  "uninstalled",
+        "removed":  10768,
+        "kept":  [
+                     "data",
+                     "config",
+                     "profile"
+                 ],
+        "installer_shortcuts":  "withheld (the home is not this PC\u0027s own install home)",
+        "installer_command":  "2026-10-07 13:34:03.501   JARVIS installer: cmd /c \"\"D:\\JARVIS-release-work\\setup-rehearsal-v2-1.0.17\\package\\release\\python\\python.exe\" \"D:\\JARVIS-release-work\\setup-rehearsal-v2-1.0.17\\package\\installer.py\" uninstall --home \"D:\\JARVIS-release-work\\setup-rehearsal-v2-1.0.17\\home\" --no-shortcuts \u003e \"D:\\JARVIS-release-work\\setup-rehearsal-v2-1.0.17\\package-uninstall-result.json\" 2\u003e\u00261\"",
+        "no_shortcuts_passed":  true,
+        "entry_after":  {
+                            "present":  false
+                        },
+        "package_folder_left":  false,
+        "program_left":  false,
+        "current_json_left":  false,
+        "data_kept":  true,
+        "config_kept":  true,
+        "processes":  0,
+        "real_shortcuts":  {
+                               "desktop":  "1829581c857b4d28940451d169d630973ad19b67b1e2b50d1c9f10a0ff74a296",
+                               "startup":  "0be9b25f28204e577003aaad675df2cb2afb6aaeacdc97d74947e7ecd2771387"
+                           }
+    },
+    {
+        "step":  "5 after",
+        "at":  "2026-10-07T02:34:15.4112473Z",
+        "real_shortcuts":  {
+                               "desktop":  "1829581c857b4d28940451d169d630973ad19b67b1e2b50d1c9f10a0ff74a296",
+                               "startup":  "0be9b25f28204e577003aaad675df2cb2afb6aaeacdc97d74947e7ecd2771387"
+                           },
+        "real_shortcuts_unchanged":  true,
+        "live_jarvis_processes_before":  8,
+        "live_jarvis_processes_after":  8,
+        "entry_after":  {
+                            "present":  false
+                        },
+        "result":  "PASS"
+    }
+]
