@@ -1,0 +1,14 @@
+{
+  "status": "uninstalled",
+  "program_files_removed": 21443,
+  "kept": [
+    "data",
+    "config",
+    "profile"
+  ],
+  "seconds": {
+    "stop": 0.65,
+    "remove_program": 8.933
+  },
+  "shortcuts": "withheld (the home is not this PC's own install home)"
+}

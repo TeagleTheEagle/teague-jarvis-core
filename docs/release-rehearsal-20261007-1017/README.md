@@ -159,5 +159,63 @@ regression), 60 desktop (157 s), 18 Intelligence, 26 interface scripts; 109 test
 release verified unchanged before and after.** The nine timeouts of build 1's run did not recur: they were the load,
 as the records said.
 
-(The Setup, the zip and Setup rehearsals, the refresh of `pkg-1.0.17` and the sandbox Stage 7 pass of build 2 follow
-below as each completes, one after another.)
+## The Setup of build 2 (`JARVIS-Setup-1.0.17-0d38218c4e1d.setup.json`)
+
+Built by `tools/setup/build_setup.py` with Inno Setup 6.7.3 from build 2's package, 14:43-14:46 local, in 142.0 s (nothing
+else running): `D:\JARVIS-release-work\release\JARVIS-Setup-1.0.17-0d38218c4e1d.exe`, 406,936,706 bytes, sha256
+`b7bb04d36180c99251e61a0458e77af5eb4a50aafea5812ff14525bdd63eeb7e`; the same reviewed template (sha256 `82c2d322…`),
+both application ids in the record.
+
+## Zip install of build 2: PASS (`zip_install_rehearsal_v2-1.0.17-0d38218c4e1d.output.txt`)
+
+14:46-14:50 local, nothing else running: the zip hash equals the record; Windows' extraction gives `install.cmd`,
+`installer.py`, `release`; `install.cmd --home <sandbox> --no-shortcuts` installed 1.0.17-0d38218c4e1d in 47 s (433 s for
+build 1 under three other checks) with the installer's word `withheld` and no launcher script; `JARVIS.exe` brought the
+Core up in 17.8 s (8 processes, `JARVIS.exe` and `python.exe` only); verified after use; the uninstall removed all
+10,768 program files, kept data, config and profile, 0 processes, 0 program files left, `withheld` again.
+
+## The Setup rehearsal, version 2, on build 2's Setup: PASS (`setup-rehearsal-v2-1.0.17-0d38218c4e1d.json`)
+
+`rehearse-setup-v2.ps1` 14:50-14:53 local, nothing else running: the owner's real Desktop and Startup `JARVIS.lnk` carry
+the same sha256 before, after every step and at the end (`1829581c…`, `0be9b25f…`); no Installed-apps entry existed
+before and none exists after. The silent install with `/DIR`, `/HOME` and `/NOSHORTCUTS` in 90.4 s (the installer inside:
+verify package 7.9 s, copy 10.6 s, verify copy 18.0 s, switch 0.1 s; `withheld`; `--no-shortcuts` in its logged command),
+the entry "JARVIS (sandbox)" 1.0.17, Teague Industries under the sandbox id with the sandbox uninstaller, no `JARVIS.ps1`;
+`JARVIS.exe` started (the Core up in 18.8 s) and shut down cleanly; the reinstall in 62.5 s (`withheld` again); the
+uninstall through the entry's own uninstaller in 10.4 s: 10,768 program files removed, data, config and profile kept,
+the entry and the package folder gone, 0 processes, `withheld` and `--no-shortcuts` again.
+
+**The owner's everyday JARVIS was not running during build 2's checks** (0 live processes recorded before and after the
+Setup rehearsal and the sandbox Stage 7 pass; it was running with 8 processes through build 1's checks up to 14:09).
+Nothing here addresses it: every rehearsal counts processes by their program folder and stops only its own sandbox's.
+Reported to the owner.
+
+## `pkg-1.0.17` refreshed (14:54)
+
+Build 1's four files removed from `D:\JARVIS-release-work\pkg-1.0.17`; build 2's zip (sha256 `210b4623…`), its record,
+its Setup (sha256 `b7bb04d3…`) and the Setup's record copied in, hashes read back equal to the records.
+
+## Stage 7 pass in a sandbox, 1.0.16 -> 1.0.17 build 2, version 4 scripts: ALL PASSED (`stage7-local-build2/`)
+
+The same harness and the same scripts as build 1's pass, on `pkg-1.0.17` (build 2) against `pkg-1.0.16`, base
+`D:\JARVIS-release-work\stage7-local-1.0.17-build2`, 14:54-15:08 local (15 min; nothing else running). **ALL STAGE 7
+STEPS PASSED**, every check PASS; the owner's real Desktop and Startup shortcuts carry the same hashes before, after
+every start of the driver and at the end; 0 live JARVIS processes before and after (see above); the sandbox's entry
+absent before and absent after the cleanup (its own uninstaller, 14.4 s, 21,443 program files of both releases removed,
+data kept). The records: `rehearsal-summary.json` (state `finished`, every step said its line), `rehearsal.output.txt`,
+`evidence/` (the five run folders with their check records; the Inno Setup logs of 2 to 4.5 MB each stay on D: only).
+
+| Start of the driver | Result and timings (the installer's own seconds inside the Setup) |
+|---|---|
+| 1: Install (14:54:10-14:56:27) | the zip and the Setup against their records; the Setup silently in 67.3 s wall (inside: verify package 7.2 s, copy 11.1 s, verify copy 7.1 s, switch 0.1 s; `withheld`); the entry "JARVIS (sandbox)" 1.0.17; the files verified, `JARVIS.exe` present, no `JARVIS.ps1`; launch through `JARVIS.exe` (8 processes), a memory saved, duplicate Core refused, local speech recognition 4 s, stop and start; the restart record written; the driver asked for the restart |
+| 2: on the same start of Windows | "Windows has not been restarted since the install step", as it must |
+| 3: with "one start later" (`-BootIdentityFile`) (14:56:28-15:08:12) | AfterRestart PASS (8 processes, both memories); Uninstall PASS through the entry's own uninstaller in 10 s (stop 1.7 s, remove 2.1 s; all program files removed, data kept, the entry and the package folder gone) and reinstall from the Setup in 71.3 s wall (verify package 8.5 s, copy 11.5 s, verify copy 11.2 s, switch 0.2 s); Update PASS: 1.0.16 extracted (110.3 s) and installed over the kept data (verify 7.6 s, copy 8.8 s, verify copy 7.2 s, switch 1.8 s), updated to 1.0.17 while running in 58.5 s wall (verify package 18.2 s, copy 13.0 s, verify copy 24.5 s, stop 2.1 s, switch 0.6 s; 8 processes, both memories), rollback to 1.0.16 in 10.8 s, update again in 33.1 s wall (verify 20.0 s, the present 1.0.17 verified 11.3 s, stop 1.3 s, switch 0.4 s), **G7 the update through the Setup** from 1.0.16 running in 69.2 s wall (verify package 10.6 s, verify installed 10.3 s, stop 1.8 s, switch 0.9 s; the entry present with the version); Interrupt PASS: 1.0.16 running (verify 18.4 s, copy 7.4 s, verify copy 8.2 s, switch 0.3 s), the installer killed mid-copy, 1.0.16 still current and running, the rerun in 30.7 s wall (verify 9.9 s, copy 9.1 s, verify copy 9.6 s, stop 1.6 s, switch 0.3 s), verified, both memories, stopped cleanly |
+| 4: nothing left to do | ALL STAGE 7 STEPS PASSED, no phase run |
+
+Every install, update and rollback is far inside the Gate 20 bound (600 s on the installer's own seconds; the longest
+lap here is verify copy 24.5 s) and every stop inside 120 s (the longest 2.1 s). E0 again records
+`administrators_group_member: unknown` from Git Bash's `whoami` (the artefact of this PC noted for build 1).
+
+**Build 2 has passed every check this PC can give it:** the comparison, the release regression, the Setup, the zip
+install, the Setup rehearsal and the sandbox Stage 7 pass. The check in the test VM (`docs/STAGE7-CHECK-1.0.17.md`,
+now written for build 2) waits for the owner's approval.

@@ -1,0 +1,23 @@
+{
+    "status":  "PASS",
+    "setup_exit":  0,
+    "seconds":  71.3,
+    "setup_log":  "setup-reinstall.log",
+    "reinstall":  "installed",
+    "release":  "1.0.17-0d38218c4e1d",
+    "installer_seconds":  {
+                              "verify_package":  8.521,
+                              "copy":  11.535,
+                              "verify_copy":  11.205,
+                              "switch":  0.179
+                          },
+    "output":  null,
+    "entry_present":  true,
+    "entry_name":  "JARVIS (sandbox)",
+    "entry_version":  "1.0.17",
+    "core_ready":  true,
+    "memory_restored":  true,
+    "verify":  "verified",
+    "shortcuts_word":  "withheld (the home is not this PC\u0027s own install home)",
+    "shortcuts_expected":  "withheld*"
+}

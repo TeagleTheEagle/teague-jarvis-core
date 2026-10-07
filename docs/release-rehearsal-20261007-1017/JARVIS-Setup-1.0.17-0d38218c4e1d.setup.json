@@ -1,0 +1,32 @@
+{
+  "setup": "JARVIS-Setup-1.0.17-0d38218c4e1d.exe",
+  "setup_sha256": "b7bb04d36180c99251e61a0458e77af5eb4a50aafea5812ff14525bdd63eeb7e",
+  "setup_bytes": 406936706,
+  "release_id": "1.0.17-0d38218c4e1d",
+  "version": "1.0.17",
+  "commit": "0d38218c4e1dff49caed553df74805dd014a0673",
+  "package": "D:\\JARVIS-release-work\\release\\JARVIS-1.0.17-0d38218c4e1d",
+  "package_zip": "JARVIS-1.0.17-0d38218c4e1d.zip",
+  "package_zip_sha256": "210b46235638e92bbef1634b853c53ae6838ed58e997543cab87ffa844bb01d9",
+  "manifest_sha256": "967ba0bcd64355330ac3097a5025a6872a46aca66b324ac31114933f04d6b9ea",
+  "script": "JARVIS-Setup-1.0.17-0d38218c4e1d.iss",
+  "script_sha256": "3c6943000fc725fc78bdb48cb8bd7f054c94316c7cccfe0f757f31f346e11ef0",
+  "template_sha256": "82c2d322d74c42e72a2f0a17d6e31e5e24476f54428f915158757ebcbda74546",
+  "iscc": "C:\\Users\\jonny\\AppData\\Local\\Programs\\Inno Setup 6\\ISCC.exe",
+  "iscc_sha256": "0a8757031b33777e4c9cbffee40f11a5062b36d25cbe144c1db73b6102b80ad7",
+  "seconds": 142.0,
+  "built_at": 1791344778.2883892,
+  "signed": false,
+  "app_id": "{DC2C8033-1BBF-5E1C-99A0-BE0E70DC9937}",
+  "sandbox_app_id": "{7A3F1C52-9E4B-4D16-8C0D-2B5E6F7A9D31}",
+  "sandbox_display_name": "JARVIS (sandbox)",
+  "switches": [
+    "/VERYSILENT",
+    "/SUPPRESSMSGBOXES",
+    "/NORESTART",
+    "/HOME=<sandbox home> together with /DIR=<sandbox package folder> (registers as \"JARVIS (sandbox)\" under sandbox_app_id)",
+    "/NOSHORTCUTS",
+    "/LOG=<file>"
+  ],
+  "silent_exit_code_note": "a silent Setup exits 0 even when the package installer refused; setup-result.json is the verdict"
+}

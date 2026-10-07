@@ -1,18 +1,20 @@
 # Stage 7 check of 1.0.17 (plan for your approval)
 
-Status: **DRAFT (2026-10-07, Claude Code): the checks on this PC are still running; this becomes "ready for your
-approval" when the sandbox Stage 7 pass and the release regression have passed and are recorded here.** Nothing has run
-in the VM. Approving it lets Claude place the tools and create this check's record folders; every VirtualBox step
+Status: **READY FOR YOUR APPROVAL (2026-10-07, 15:15 local, Claude Code): every check on this PC has passed for build 2
+and is recorded in `docs/release-rehearsal-20261007-1017/README.md`.** Build 1 (`1.0.17-52342b46e48a`) is superseded and
+was never offered: its release regression did not pass under the load of four checks at once (test defects and
+timeouts, no product defect), the test fixes were committed, and build 2 is the same program built from that commit
+(0 source files changed against build 1, the pinned inputs identical). Nothing has run in the VM. Approving it lets Claude place the tools and create this check's record folders; every VirtualBox step
 stays yours, as for 1.0.11, 1.0.14, 1.0.15 and 1.0.16.
 
 ## What it is
 
 The standard check every release passes before it reaches your everyday JARVIS (your Stage 7 decision of 2026-10-04),
-now for **1.0.17-52342b46e48a** ("JARVIS as his own app", the approved `docs/OWN-APP-PLAN.md`, with the access items of
+now for **1.0.17-0d38218c4e1d** (build 2) ("JARVIS as his own app", the approved `docs/OWN-APP-PLAN.md`, with the access items of
 `docs/PHONE-ACCESS-PLAN.md`, the three phone-check fixes, the music stop fix and the start-up song) against
 **1.0.16-fccde24e2cc6** (your everyday JARVIS). The same pass as the approved `docs/STAGE7-PLAN.md`, in the same VM,
 **with the version 4 scripts** (`docs/STAGE7-DRIVER-V4.md`), because this release installs differently: install from
-`JARVIS-Setup-1.0.17-52342b46e48a.exe` (the one file you will use from now on), first launch, the entry in Settings > Apps,
+`JARVIS-Setup-1.0.17-0d38218c4e1d.exe` (the one file you will use from now on), first launch, the entry in Settings > Apps,
 Windows restart with automatic start, uninstall through that entry, reinstall from the Setup, 1.0.16 installed and
 updated to 1.0.17 while running, rollback, update again, one update through the Setup, and an update killed mid-copy
 then run again, with test data kept throughout. Updating your everyday JARVIS afterwards is a separate decision of
@@ -20,11 +22,12 @@ yours.
 
 ## The build
 
-- **1.0.17-52342b46e48a** (commit 52342b4): zip `D:\JARVIS-release-work\release\JARVIS-1.0.17-52342b46e48a.zip`,
-  533,364,383 bytes, sha256 `115344e5d621c65ba6b9d0ad535a7318c9f8bd1b6f9f96d5f61bf3977f3fdd41`; its Setup
-  `D:\JARVIS-release-work\release\JARVIS-Setup-1.0.17-52342b46e48a.exe`, 406,915,840 bytes, sha256
-  `0fd7220cde96508ca3ad5a86cf025a1e5c52c3d83b7f7a4d9a09847326aa16e1` (record `JARVIS-Setup-1.0.17-52342b46e48a.setup.json`
-  beside it: built from this package's manifest; unsigned, decision D3).
+- **1.0.17-0d38218c4e1d** (commit 0d38218, build 2): zip `D:\JARVIS-release-work\release\JARVIS-1.0.17-0d38218c4e1d.zip`,
+  533,361,567 bytes, sha256 `210b46235638e92bbef1634b853c53ae6838ed58e997543cab87ffa844bb01d9`; its Setup
+  `D:\JARVIS-release-work\release\JARVIS-Setup-1.0.17-0d38218c4e1d.exe`, 406,936,706 bytes, sha256
+  `b7bb04d36180c99251e61a0458e77af5eb4a50aafea5812ff14525bdd63eeb7e` (record `JARVIS-Setup-1.0.17-0d38218c4e1d.setup.json`
+  beside it: built from this package's manifest; unsigned, decision D3). The same four files are in
+  `D:\JARVIS-release-work\pkg-1.0.17`, the folder the disc is built from (hashes read back equal).
 - What is new since 1.0.16: everything in `release-notes.json` for 1.0.17: JARVIS.exe with the Teague Industries badge
   and the Setup with the Installed-apps entry (`docs/OWN-APP-1.0.17.md`); replies streamed to the phone, "remember
   that", the action guard (`docs/PHONE-CORE-FIXES-20261007.md`); the access items A, C, D, G, E, F and H
@@ -42,30 +45,33 @@ Records: `docs/release-rehearsal-20261007-1017/README.md`.
 
 - Compared with 1.0.16: the same pinned parts (Python, its packages, the models, the Windows runtime files); of the
   shipped source 30 files changed, 86 added and 0 removed, exactly the work since 1.0.16; the only other difference
-  is the planned program change: `JARVIS.exe` with its bootstrap is in, `electron.exe` is out.
-- Release regression with the release's own Python and Electron (`JARVIS.exe`): build 1's did not pass (test
-  defects and timeouts under load, recorded); **build 2's (`1.0.17-0d38218c4e1d`, the same program) PASS on the idle
-  PC: 776 Python tests OK with 7 skipped by their own conditions, 60 desktop, 18 Intelligence, 26 interface scripts.**
-  (This draft still names build 1's ids elsewhere; it is rewritten for build 2 once build 2's remaining checks pass.)
-- Zip install in a sandbox: installed in 433 s (three other checks shared the disk), launched through `JARVIS.exe`
-  (the Core up in 26 s, 8 processes), verified, then uninstalled: all 10,768 program files removed, data kept, nothing
-  left running; the real shortcuts withheld, no launcher script.
-- The Setup rehearsed in a sandbox twice with the owner's real Desktop and Startup shortcuts recorded before and after
-  every step and required unchanged: on a rehearsal build of the same code (PASS, 13:11-13:15) and on this build's
-  own Setup (PASS, 13:25-13:35: silent install 477 s under two other checks, launch through `JARVIS.exe` in 33 s,
-  reinstall 104 s, the uninstall through the entry's own uninstaller 12 s with all 10,768 program files removed and the
-  data kept); the entry "JARVIS (sandbox)" under the sandbox id each time; the real shortcuts' hashes the same before
-  and after; the installer's word "withheld" at every step.
-- The whole Stage 7 pass 1.0.16 -> 1.0.17 in a sandbox with the version 4 scripts: **ALL STAGE 7 STEPS PASSED**
-  (2026-10-07, 13:35-14:09, 29 checks, under the regression's load): install from the Setup (144.5 s with the
-  unpack; the installer inside it 58 s), the sandbox entry, the files verified, no `JARVIS.ps1`, launch through
-  `JARVIS.exe` (the Core up in 19.8 s); the restart check asking for the restart when there was none and seeing one
-  when told of one; after-restart; uninstall through the entry's own uninstaller (12 s; all 10,768 program files
-  removed, the entry and the package folder gone, data kept) and reinstall from the Setup (154.8 s); update while
-  running (398.8 s wall under load; the Core ready 47.7 s after the switch), rollback to 1.0.16 (11.9 s), update
-  again (66.9 s), one update through the Setup (101.5 s wall); and the interrupted update (killed with 3,323 of
-  10,768 files copied; 1.0.16 untouched and running; the rerun 136.4 s). The owner's real shortcuts unchanged
-  throughout; the sandbox cleaned up through its own entry at the end.
+  is the planned program change: `JARVIS.exe` with its bootstrap is in, `electron.exe` is out. Compared with build 1:
+  the same program (0 source files changed, the pinned inputs identical; only the bytecode and pip record files that
+  carry the build folder and time differ).
+- Release regression with the release's own Python and Electron (`JARVIS.exe`), run alone on the PC: **PASS**
+  (776 Python tests OK with 7 skipped by their own conditions, 60 desktop, 18 Intelligence, 26 interface scripts;
+  14:16-14:42; the release verified unchanged before and after).
+- Zip install in a sandbox (nothing else running): installed in 47 s, launched through `JARVIS.exe` (the Core up in
+  17.8 s, 8 processes), verified, then uninstalled: all 10,768 program files removed, data kept, nothing left running;
+  the real shortcuts withheld, no launcher script.
+- The Setup rehearsed in a sandbox with the owner's real Desktop and Startup shortcuts recorded before and after every
+  step and required unchanged: on a rehearsal build of the same code (PASS, 13:11-13:15), on build 1's Setup (PASS,
+  13:25-13:35) and on this build's own Setup (PASS, 14:50-14:53: silent install 90.4 s with the installer inside it at
+  36 s, launch through `JARVIS.exe` in 18.8 s, reinstall 62.5 s, the uninstall through the entry's own uninstaller 10.4 s
+  with all 10,768 program files removed and the data kept); the entry "JARVIS (sandbox)" under the sandbox id each
+  time; the real shortcuts' hashes the same before and after; the installer's word "withheld" at every step.
+- The whole Stage 7 pass 1.0.16 -> 1.0.17 in a sandbox with the version 4 scripts, on build 2 with nothing else
+  running: **ALL STAGE 7 STEPS PASSED** (2026-10-07, 14:54-15:08, 29 checks; build 1 passed the same harness under
+  load, 13:35-14:09): install from the Setup (67.3 s wall; the installer inside it: verify package 7.2 s, copy 11.1 s,
+  verify copy 7.1 s, switch 0.1 s), the sandbox entry, the files verified, no `JARVIS.ps1`, launch through `JARVIS.exe`
+  (8 processes); the restart check asking for the restart when there was none and seeing one when told of one;
+  after-restart; uninstall through the entry's own uninstaller (10 s; all 10,768 program files removed, the entry and
+  the package folder gone, data kept) and reinstall from the Setup (71.3 s wall); update while running (58.5 s wall;
+  inside: verify package 18.2 s, copy 13.0 s, verify copy 24.5 s, stop 2.1 s, switch 0.6 s), rollback to 1.0.16
+  (10.8 s), update again (33.1 s wall), one update through the Setup (69.2 s wall; stop 1.8 s, switch 0.9 s); and the
+  interrupted update (the installer killed mid-copy; 1.0.16 untouched and running; the rerun 30.7 s wall). Every lap far
+  inside the Gate 20 bound. The owner's real shortcuts unchanged throughout; the sandbox cleaned up through its own
+  entry at the end. Records: `docs/release-rehearsal-20261007-1017/stage7-local-build2/`.
 - The version 4 tools' decision tests: the launcher 19 cases, the guest driver 21 cases, all pass; the tools were
   reviewed with item 3.4 (no high finding; 8 medium and 9 low applied, `docs/OWN-APP-1.0.17.md` section 7).
 
@@ -81,7 +87,7 @@ as they are), and one file inside the VM, `stage7` on this check's disc (drive E
 | 3 | inside the VM | sign in (`jarvis-s6-guest` / `fresh-vm-2026`), open **drive E:**, check that the files on it say **1.0.17**, double-click `stage7` | installs 1.0.17 from the Setup and tests it (about 30 minutes). **Note 2:** both discs are named `JARVIS_S7`: drive D: is the 1.0.16 disc, drive E: this check's. **Note 3:** while the Setup unpacks and installs, the window prints one line every half minute ("the Setup (install) still running: ... s, ... files in the package folder"); that is progress, not a hang. Wait for "The install step PASSED" |
 | 4 | inside the VM | quit JARVIS from its icon near the clock, **Start > Power > Restart**, sign in, wait a minute, open drive E: again, double-click `stage7` again | restart check; uninstall through Settings > Apps' own uninstaller and reinstall from the Setup; update, rollback, update again, one update through the Setup; the interrupted update (about 70 minutes; the Setup runs three more times, each with the half-minute lines). It does not matter how long after the restart you start it |
 | 5 | inside the VM | when it says ALL STAGE 7 STEPS PASSED: Start > Power > Shut down | |
-| 6 | PC, jarvis-s6-val | double-click `stage7-step` | takes the snapshot `STAGE7-PASS-1.0.17-52342b46e48a` |
+| 6 | PC, jarvis-s6-val | double-click `stage7-step` | takes the snapshot `STAGE7-PASS-1.0.17-0d38218c4e1d` |
 | 7 | this chat | say "stage 7 done" | Claude checks every record and gives the result |
 
 ## What is checked
@@ -122,10 +128,10 @@ timings.
    last state change 2026-10-06T08:59:37Z, no change recorded since that snapshot). The launcher restores FRESH-PREREQ
    only if the VM is on that snapshot (or already on FRESH-PREREQ) and VirtualBox records no change since; otherwise it
    stops and restores nothing. Every snapshot is kept (eight now).
-5. **Names:** the disc `JARVIS-STAGE7-1.0.17-52342b46e48a.iso` with `stage7-target.json`; the PC records
-   `D:\JARVIS-stage7\1.0.17-52342b46e48a\evidence`; the VM records
-   `D:\JARVIS-S6-FRESHVM\evidence\guest-egress-01\stage7-1.0.17-52342b46e48a`; the final snapshot
-   `STAGE7-PASS-1.0.17-52342b46e48a`; the launcher folder `D:\JARVIS-S6-FRESHVM\tools\stage7-1.0.17` with one file more
+5. **Names:** the disc `JARVIS-STAGE7-1.0.17-0d38218c4e1d.iso` with `stage7-target.json`; the PC records
+   `D:\JARVIS-stage7\1.0.17-0d38218c4e1d\evidence`; the VM records
+   `D:\JARVIS-S6-FRESHVM\evidence\guest-egress-01\stage7-1.0.17-0d38218c4e1d`; the final snapshot
+   `STAGE7-PASS-1.0.17-0d38218c4e1d`; the launcher folder `D:\JARVIS-S6-FRESHVM\tools\stage7-1.0.17` with one file more
    than before (the version 4 disc builder).
 6. **Timing bound:** as above, with the new sentence on the Setup's unpacking.
 7. **Expected sights:** the install step is longer and shows only the half-minute lines while the Setup runs; in the
@@ -155,12 +161,12 @@ VirtualBox only in jarvis-s6-val.
 1. Records it in `../governance/STAGE7-1.0.17-APPROVAL-RECORD.json` with this plan's hash and the tool hashes below.
 2. Creates `D:\JARVIS-S6-FRESHVM\tools\stage7-1.0.17\` with the five version 4 host files (the four launcher scripts and
    the disc builder), `Start-FreshVm.ps1`, `Take-FreshVmSnapshot.ps1` and `stage7-authorized.json` (schema
-   `jarvis-stage7-authorized-v4`; final 1.0.17-52342b46e48a, previous 1.0.16-fccde24e2cc6, label 1.0.17-52342b46e48a,
+   `jarvis-stage7-authorized-v4`; final 1.0.17-0d38218c4e1d, previous 1.0.16-fccde24e2cc6, label 1.0.17-0d38218c4e1d,
    expected current snapshot STAGE7-PASS-1.0.16-fccde24e2cc6), each copy hash-checked.
 3. Creates the two record folders named above (nothing else on D: changes).
 
-Tool hashes (sha256, read on 2026-10-07 at commit 52342b4; the version 4 files as reviewed and rehearsed; the two
-VM helpers unchanged since the 1.0.15 approval):
+Tool hashes (sha256, read on 2026-10-07 at commit 52342b4 and read again at 15:10 after build 2's pass, unchanged; the
+version 4 files as reviewed and rehearsed on both builds; the two VM helpers unchanged since the 1.0.15 approval):
 
 | File | sha256 |
 |---|---|
@@ -177,5 +183,5 @@ VM helpers unchanged since the 1.0.15 approval):
 
 ## Approval
 
-Not yet: this plan is a draft until the pending checks above are recorded. When it says "ready for your approval",
-reply in your own words that you approve this check, for example: "I approve the Stage 7 check of 1.0.17".
+Ready. Reply in your own words that you approve this check, for example: "I approve the Stage 7 check of 1.0.17".
+The approval names build 2, `1.0.17-0d38218c4e1d`; build 1 is superseded and no record of this check will name it.
