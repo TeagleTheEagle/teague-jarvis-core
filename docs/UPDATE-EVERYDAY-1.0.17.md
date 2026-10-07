@@ -1,8 +1,7 @@
 # Updating your everyday JARVIS to 1.0.17 (plan for your approval)
 
-Status: **NOT YET READY (2026-10-07, 18:55 local, Claude Code): the launcher's review findings are applied but the
-rehearsal must run again on the changed launcher before this plan is offered for approval** (the next session's first
-act; the earlier rehearsal of the pre-review launcher passed 24 of 24). Updating the everyday JARVIS is your decision
+Status: **READY FOR THE OWNER'S APPROVAL (2026-10-07, 19:00 local, Claude Code): the launcher's review findings are
+applied and the reviewed launcher passed its sandbox rehearsal 26 of 26** (run 3, below). Updating the everyday JARVIS is your decision
 (`CLAUDE.md`). 1.0.17 build 2 (`1.0.17-0d38218c4e1d`) passed its Stage 7 check in the test VM today
 (`STAGE_7_COMPLETE`, 29 of 29 checks, `docs/stage7-1.0.17-evidence/`), the first check made with the Setup. The
 launcher for this update is a **new version** (the update is made by the Setup, as the approved own-app plan says);
@@ -65,27 +64,33 @@ list (Settings > Devices > On this network), 51 tools each with its switch. Not 
   list, the streamed replies.
 - **The personality text** shipped with 1.0.17 is the same as 1.0.16's; nothing of yours is touched.
 - **This launcher, version 2, rehearsed** (`docs/release-rehearsal-20261007-1017/rehearse-everyday-update-1017.ps1`,
-  records in `update-rehearsal/`, 2026-10-07 18:22-18:30 local): 1.0.16 installed into a sandbox folder on D: and
+  records in `update-rehearsal-3/`, 2026-10-07 18:49-18:54 local, the third run, on the reviewed launcher): 1.0.16 installed into a sandbox folder on D: and
   started once; a stale package folder planted; refused without approval; refused while JARVIS was running; step 1
   PASS (both hashes equal, the Setup's record checked, no entry before, the stale folder renamed aside, the package
   unpacked, 1.0.16 verified); step 2 PASS (backup made with 1.0.16's own backup code, 178 files, test restore passed,
-  copy on D: hash-checked, program still verifies); step 3 PASS (the Setup silently in 78.7 s wall: the installer
-  inside it verify package 8.9 s, copy 18.7 s, verify copy 10.6 s, stop 0.9 s, switch 0.1 s; verified; the entry
+  copy on D: hash-checked, program still verifies); step 3 PASS (the Setup silently in 98.7 s wall: the installer
+  inside it verify package 12.7 s, copy 11.6 s, verify copy 27.6 s, stop 1.8 s, switch 0.1 s; verified; the entry
   "JARVIS (sandbox) 1.0.17, Teague Industries" with its uninstaller; no `JARVIS.ps1`; the database file byte-for-byte
   unchanged; JARVIS not started); 1.0.17 started on the same data through its own `JARVIS.exe` (only `JARVIS.exe`
   and `python.exe` running); a rerun changed nothing; rollback (only with its approval file) PASS, 1.0.16 verified
   and started again, the entry still saying 1.0.17 as this plan says; a rerun after the rollback changed nothing;
-  the sandbox uninstalled through its own entry at the end; **24 of 24 checks**. Your real Desktop and Startup
+  the sandbox uninstalled through its own entry at the end; **26 of 26 checks** (the real Settings > Apps entry
+  asserted absent at the start and at the end as well). Your real Desktop and Startup
   shortcuts carried the same hashes before, after every step and at the end; your real JARVIS was not running at
   the time (0 processes before and after) and was never addressed; the real Settings > Apps entry was never
-  created; no sandbox process was left.
+  created; no sandbox process was left. The earlier runs: run 1 (18:22-18:26, `update-rehearsal/`), 24 of 24 on the
+  launcher before its review; run 2 (18:44-18:48, `update-rehearsal-2/`), the first on the reviewed launcher: every
+  launcher step passed and the harness itself stopped on two defects of its own (it looked for the Setup's log under
+  its old name after review finding 9 gave the log a time stamp, and it read the sandbox Core's connection file in the
+  instant the Core removed it at shutdown); both fixed in the harness, nothing in the launcher, and run 3 is the record.
 - **Not rehearsable by me:** your real data (the sandbox database was new; the same backup code made and test-restored
   your real data at the 1.0.14, 1.0.15 and 1.0.16 updates, every count equal), your real install folder, your real
   shortcuts being rewritten (the sandbox Setup withholds them; the VM check wrote and checked them), and your real
   restart.
 - **The launcher** (`tools/host/update-1.0.17/`): the 1.0.16 launcher with step 3 changed to the Setup and the checks
   above, step 1 with the Setup's hash and the rename, and the rollback record noting the entry; independently
-  reviewed (section "Independent review" below); sha256 recorded in the approval record at approval
+  reviewed (section "Independent review" below) and rehearsed again after the review (run 3 above); sha256
+  `66c8cce6e4b16e302a0201aff690158d43684eba8315d1b2a6b7e542bd84365b`, recorded in the approval record at approval
   (`update-step.cmd` is identical to 1.0.14's, 1.0.15's and 1.0.16's). The Setup: `JARVIS-Setup-1.0.17-0d38218c4e1d.exe`,
   406,936,706 bytes, sha256 `b7bb04d36180c99251e61a0458e77af5eb4a50aafea5812ff14525bdd63eeb7e`; the zip sha256
   `210b46235638e92bbef1634b853c53ae6838ed58e997543cab87ffa844bb01d9` (both in `D:\JARVIS-release-work\pkg-1.0.17`).
@@ -140,7 +145,7 @@ timings, never your messages or keys. I never read your key file or the contents
 1.0.18 (the Workshop) through the same chain; then whichever of the six capability proposals you choose
 (`docs/CAPABILITY-SOURCES-20261007.md`); the C: cleanup on your word.
 
-## Independent review (one reviewer agent, 2026-10-07 18:30 to 18:45: 1 high, 3 medium, 8 low; all applied, re-rehearsal pending)
+## Independent review (one reviewer agent, 2026-10-07 18:30 to 18:45: 1 high, 3 medium, 8 low; all applied, rehearsed again 26 of 26)
 
 1. **High:** nothing tied `-InstallHome` and `-Staging` to the Setup's `/HOME` and `/DIR` switches, so a rehearsal
    called with inconsistent parameters could have reached the real installation through the defaults. Fixed: a
@@ -161,8 +166,8 @@ timings, never your messages or keys. I never read your key file or the contents
    package folder left by an earlier attempt of step 3 is told apart from a leftover. 9. The Setup's log carries a
    time stamp, never overwritten. 10. The PASSED line in a sandbox no longer claims the shortcuts; the final line
    after a rollback says the rollback stands and that the PowerShell shortcuts and launcher script came back. 11.
-   Free space is checked again at step 3. 12. (harness) noted for the re-rehearsal: assert the real entry absent
-   before and after; uninstall the sandbox even when a shortcut change throws.
+   Free space is checked again at step 3. 12. (harness) done before the re-rehearsal: the real entry asserted
+   absent at the start and at the end; the cleanup runs even when a step throws.
 
 ## Approval
 

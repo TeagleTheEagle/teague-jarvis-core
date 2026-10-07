@@ -1,0 +1,34 @@
+{
+    "schema":  "jarvis-everyday-update-rollback-v2",
+    "utc":  "2026-10-07T07:53:12.9827529Z",
+    "result":  {
+                   "status":  "rolled_back",
+                   "release":  "1.0.16-fccde24e2cc6",
+                   "previous":  "1.0.17-0d38218c4e1d",
+                   "seconds":  {
+                                   "verify_target":  7.63,
+                                   "stop":  0.681,
+                                   "switch":  0.132
+                               },
+                   "shortcuts":  "withheld (the home is not this PC\u0027s own install home)"
+               },
+    "verify":  "verified",
+    "current":  {
+                    "release":  "1.0.16-fccde24e2cc6",
+                    "previous":  "1.0.17-0d38218c4e1d",
+                    "switched_at":  1791359585.0608644
+                },
+    "shortcuts":  {
+                      "desktop":  "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+                      "startup":  "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+                  },
+    "launcher_script_present":  true,
+    "entry_still":  {
+                        "present":  true,
+                        "name":  "JARVIS (sandbox)",
+                        "version":  "1.0.17",
+                        "publisher":  "Teague Industries",
+                        "uninstall":  "\"D:\\JARVIS-release-work\\update-rehearsal-1.0.17-3\\staging\\unins000.exe\"",
+                        "location":  "D:\\JARVIS-release-work\\update-rehearsal-1.0.17-3\\staging\\"
+                    }
+}

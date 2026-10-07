@@ -6,7 +6,10 @@
 # the same data through its own JARVIS.exe, a rerun that changes nothing, rollback (only with its approval file), a
 # final rerun, and the sandbox uninstalled through its own entry. The owner's real Desktop and Startup shortcuts are
 # hashed before, after every step and at the end and must not change; the owner's installed JARVIS
-# (%LOCALAPPDATA%\JARVIS) is never addressed, and the number of its processes is recorded before and after.
+# (%LOCALAPPDATA%\JARVIS) is never addressed, and the number of its processes is recorded before and after. The owner's
+# real Installed-apps entry is asserted absent at the start and at the end, and the cleanup (the sandbox JARVIS ended,
+# the sandbox uninstalled through its own entry) runs whatever happened above, a thrown stop included (review finding
+# 12 of 2026-10-07).
 param(
     [string] $Base = 'D:\JARVIS-release-work\update-rehearsal-1.0.17',
     [string] $PreviousZip = 'D:\JARVIS-release-work\pkg-1.0.16\JARVIS-1.0.16-fccde24e2cc6.zip',
@@ -56,7 +59,13 @@ function Step([string] $title, [string] $authorizedFile) {
     [pscustomobject]@{ exit = $code; text = $out }
 }
 function Records { if (Test-Path -LiteralPath (Join-Path $root 'evidence')) { @(Get-ChildItem -LiteralPath (Join-Path $root 'evidence') -File | ForEach-Object { $_.Name } | Sort-Object) } else { @() } }
-function CoreLink { $f = Join-Path $sandboxHome 'data\core-connection.json'; if (Test-Path -LiteralPath $f) { Get-Content -LiteralPath $f -Raw | ConvertFrom-Json } else { $null } }
+$coreLinkFile = Join-Path $sandboxHome 'data\core-connection.json'
+function CoreLink {
+    # $null when the file is absent or cannot be read at this instant (the Core writes it at start and removes it at
+    # shutdown; a read in that moment is denied): the callers poll.
+    if (-not (Test-Path -LiteralPath $coreLinkFile)) { return $null }
+    try { Get-Content -LiteralPath $coreLinkFile -Raw -ErrorAction Stop | ConvertFrom-Json } catch { $null }
+}
 function StartSandbox {
     # 1.0.16 through its JARVIS.ps1; 1.0.17 through its own JARVIS.exe (the launcher script is gone once it is current).
     $script = Join-Path $sandboxHome 'JARVIS.ps1'
@@ -88,7 +97,7 @@ function StopSandbox {
             $s = Session $link
             Invoke-RestMethod -Method Post -Uri ($link.origin + '/api/shutdown') -Body '{}' -ContentType 'application/json' -Headers @{ 'X-Jarvis-Desktop' = $link.token } -WebSession $s -TimeoutSec 10 | Out-Null
         } catch {}
-        for ($i = 0; $i -lt 60 -and (CoreLink); $i++) { Start-Sleep -Milliseconds 500 }
+        for ($i = 0; $i -lt 60 -and (Test-Path -LiteralPath $coreLinkFile); $i++) { Start-Sleep -Milliseconds 500 }
     }
     for ($round = 0; $round -lt 5 -and (SandboxProcesses).Count; $round++) {
         SandboxProcesses | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
@@ -99,8 +108,14 @@ function StopSandbox {
 function Entry { if (Test-Path -LiteralPath $key) { $e = Get-ItemProperty -LiteralPath $key; [ordered]@{ present = $true; name = $e.DisplayName; version = $e.DisplayVersion } } else { @{ present = $false } } }
 
 $liveBefore = LiveCount
+$realEntryAtStart = Test-Path -LiteralPath $realKey
 Note "live JARVIS processes at the start: $liveBefore; real shortcuts: $($shortcutsBefore.desktop) $($shortcutsBefore.startup); real entry present: $(Test-Path -LiteralPath $realKey)"
+Check 'the real entry absent at the start' (-not (Test-Path -LiteralPath $realKey)) $realKey
 
+# Sections 1 to 5 run inside one try: a thrown stop (the real shortcuts changed, a sandbox JARVIS that never became
+# ready) is recorded as a failed check and the cleanup of section 6 still runs.
+$aborted = $null
+try {
 # 1. The everyday JARVIS of the sandbox: 1.0.16 installed with its own package installer, started once. A stale
 #    staging folder planted, as the switch-over left one on the owner's C:.
 Note '===== install 1.0.16 into the sandbox home'
@@ -145,7 +160,7 @@ Check 'update: the installer inside the Setup withheld the shortcuts (sandbox)' 
 $entry = Entry
 Check 'update: the entry JARVIS (sandbox) with the version' ($entry.present -and $entry.name -eq $setupRecord.sandbox_display_name -and $entry.version -eq $setupRecord.version) "$($entry.name) $($entry.version)"
 Check 'update: the real entry untouched' (-not (Test-Path -LiteralPath $realKey)) "$(Test-Path -LiteralPath $realKey)"
-Check 'update: the Setup logged --no-shortcuts' ((Test-Path -LiteralPath (Join-Path $root 'evidence\setup-update.log')) -and ((Get-Content -LiteralPath (Join-Path $root 'evidence\setup-update.log') -Raw) -like '*--no-shortcuts*')) 'setup-update.log'
+Check 'update: the Setup logged --no-shortcuts' ($null -ne $update -and $update.setup_log -and (Test-Path -LiteralPath $update.setup_log) -and ((Get-Content -LiteralPath $update.setup_log -Raw) -like '*--no-shortcuts*')) $(if ($null -ne $update -and $update.setup_log) { Split-Path -Leaf $update.setup_log } else { 'no setup_log in update.json' })
 
 # 4. 1.0.17 on the same data, through its own JARVIS.exe.
 $link = StartSandbox
@@ -170,8 +185,12 @@ Check 'sandbox: 1.0.16 running again on the same data' ($state.updates.installed
 StopSandbox
 $r = Step 'rerun after the rollback: nothing to do' $auth
 Check 'rerun after rollback changes nothing' ($r.exit -eq 0 -and $r.text -like '*complete and recorded*') "exit $($r.exit)"
+} catch { $aborted = $_.Exception.Message }
 
-# 6. Cleanup through the sandbox's own entry (both releases removed, data kept, the entry and the staging gone).
+# 6. Cleanup, whatever happened above: the sandbox JARVIS ended, then the sandbox uninstalled through its own entry
+#    (both releases removed, data kept, the entry and the staging gone).
+if ($aborted) { Note "STOPPED: $aborted"; Check 'the harness ran to the end' $false $aborted }
+try { StopSandbox } catch { Note "cleanup: $($_.Exception.Message)"; Check 'cleanup: the sandbox JARVIS ended' $false $_.Exception.Message }
 $uninstaller = Join-Path $staging 'unins000.exe'
 if (Test-Path -LiteralPath $uninstaller) {
     $u = Start-Process -FilePath $uninstaller -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART') -PassThru -Wait
@@ -180,17 +199,18 @@ if (Test-Path -LiteralPath $uninstaller) {
     while ((Get-Date) -lt $deadline -and ((Test-Path -LiteralPath $staging) -or (Test-Path -LiteralPath $key))) { Start-Sleep -Milliseconds 500 }
     Check 'cleanup: the sandbox uninstalled through its own entry' ($u.ExitCode -eq 0 -and -not (Test-Path -LiteralPath $key) -and -not (Test-Path -LiteralPath $staging) -and (Test-Path -LiteralPath (Join-Path $sandboxHome 'data\jarvis.sqlite3')) -and -not (Test-Path -LiteralPath (Join-Path $sandboxHome 'releases'))) "exit $($u.ExitCode)"
 } else {
-    # The Setup never ran (an earlier step stopped): no entry to clean up; the sandbox JARVIS is ended all the same.
+    # The Setup never ran (an earlier step stopped): no entry to clean up; the sandbox JARVIS was ended above.
     Check 'cleanup: the sandbox uninstalled through its own entry' $false 'no uninstaller: the update step never ran'
-    StopSandbox
 }
 Check 'the owner real shortcuts unchanged throughout' (ShortcutsUnchanged) "$((RealShortcuts).desktop) $((RealShortcuts).startup)"
+Check 'the real entry absent at the end' (-not (Test-Path -LiteralPath $realKey)) $realKey
 
 $liveAfter = LiveCount
 Note "live JARVIS processes at the end: $liveAfter (start: $liveBefore); sandbox processes at the end: $((SandboxProcesses).Count)"
 $failed = @($results | Where-Object { -not $_.passed }).Count
 $summary = [ordered]@{ base = $Base; launcher_sha256 = (Get-FileHash -LiteralPath $Launcher -Algorithm SHA256).Hash.ToLower(); setup_sha256 = $authorization.final_setup_sha256; checks = @($results); failed = $failed
-    real_shortcuts_before = $shortcutsBefore; real_shortcuts_after = (RealShortcuts); live_processes_before = $liveBefore; live_processes_after = $liveAfter; sandbox_processes_after = (SandboxProcesses).Count }
+    real_shortcuts_before = $shortcutsBefore; real_shortcuts_after = (RealShortcuts); live_processes_before = $liveBefore; live_processes_after = $liveAfter; sandbox_processes_after = (SandboxProcesses).Count
+    real_entry_present_at_start = $realEntryAtStart; real_entry_present_at_end = (Test-Path -LiteralPath $realKey); aborted = $aborted }
 [IO.File]::WriteAllText((Join-Path $Base 'rehearsal-summary.json'), (ConvertTo-Json -InputObject $summary -Depth 5), (New-Object Text.UTF8Encoding $false))
 Note ("{0} checks, {1} failed" -f $results.Count, $failed)
 exit $(if ($failed) { 1 } else { 0 })

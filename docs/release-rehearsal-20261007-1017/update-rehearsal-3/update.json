@@ -1,0 +1,70 @@
+{
+    "schema":  "jarvis-everyday-update-v2",
+    "utc":  "2026-10-07T07:52:38.3406159Z",
+    "setup":  "D:\\JARVIS-release-work\\pkg-1.0.17\\JARVIS-Setup-1.0.17-0d38218c4e1d.exe",
+    "setup_exit":  0,
+    "setup_switches":  [
+                           "/VERYSILENT",
+                           "/SUPPRESSMSGBOXES",
+                           "/NORESTART",
+                           "/LOG=\"D:\\JARVIS-release-work\\update-rehearsal-1.0.17-3\\update\\evidence\\setup-update-20261007-075051.log\"",
+                           "/DIR=D:\\JARVIS-release-work\\update-rehearsal-1.0.17-3\\staging",
+                           "/HOME=D:\\JARVIS-release-work\\update-rehearsal-1.0.17-3\\home",
+                           "/NOSHORTCUTS"
+                       ],
+    "setup_log":  "D:\\JARVIS-release-work\\update-rehearsal-1.0.17-3\\update\\evidence\\setup-update-20261007-075051.log",
+    "setup_wall_seconds":  98.7,
+    "installer":  {
+                      "status":  "installed",
+                      "release":  "1.0.17-0d38218c4e1d",
+                      "previous":  "1.0.16-fccde24e2cc6",
+                      "home":  "D:\\JARVIS-release-work\\update-rehearsal-1.0.17-3\\home",
+                      "seconds":  {
+                                      "verify_package":  12.68,
+                                      "copy":  11.626,
+                                      "verify_copy":  27.623,
+                                      "stop":  1.835,
+                                      "switch":  0.149
+                                  },
+                      "shortcuts":  "withheld (the home is not this PC\u0027s own install home)"
+                  },
+    "installer_seconds":  {
+                              "verify_package":  12.68,
+                              "copy":  11.626,
+                              "verify_copy":  27.623,
+                              "stop":  1.835,
+                              "switch":  0.149
+                          },
+    "verify":  "verified",
+    "current":  {
+                    "release":  "1.0.17-0d38218c4e1d",
+                    "previous":  "1.0.16-fccde24e2cc6",
+                    "switched_at":  1791359549.9273887
+                },
+    "entry_before":  {
+                         "present":  false
+                     },
+    "entry":  {
+                  "present":  true,
+                  "name":  "JARVIS (sandbox)",
+                  "version":  "1.0.17",
+                  "publisher":  "Teague Industries",
+                  "uninstall":  "\"D:\\JARVIS-release-work\\update-rehearsal-1.0.17-3\\staging\\unins000.exe\"",
+                  "location":  "D:\\JARVIS-release-work\\update-rehearsal-1.0.17-3\\staging\\"
+              },
+    "database_sha256_before":  "d398ff658b6c5f5925adfb90a29f93905deed49afea4fef784fa01e6cd4c1b7d",
+    "database_sha256_after":  "d398ff658b6c5f5925adfb90a29f93905deed49afea4fef784fa01e6cd4c1b7d",
+    "database_unchanged":  true,
+    "free_bytes_before":  1447306899456,
+    "shortcuts_before":  {
+                             "desktop":  "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+                             "startup":  "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+                         },
+    "shortcuts_after":  {
+                            "desktop":  "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+                            "startup":  "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+                        },
+    "program":  "D:\\JARVIS-release-work\\update-rehearsal-1.0.17-3\\home\\releases\\1.0.17-0d38218c4e1d\\electron\\JARVIS.exe",
+    "launcher_script_left":  false,
+    "jarvis_started":  false
+}

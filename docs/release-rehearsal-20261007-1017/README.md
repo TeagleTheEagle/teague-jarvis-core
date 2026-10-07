@@ -219,3 +219,26 @@ lap here is verify copy 24.5 s) and every stop inside 120 s (the longest 2.1 s).
 **Build 2 has passed every check this PC can give it:** the comparison, the release regression, the Setup, the zip
 install, the Setup rehearsal and the sandbox Stage 7 pass. The check in the test VM (`docs/STAGE7-CHECK-1.0.17.md`,
 now written for build 2) waits for the owner's approval.
+
+## The everyday-update launcher, version 2: sandbox rehearsals (`update-rehearsal/`, `update-rehearsal-2/`, `update-rehearsal-3/`)
+
+`rehearse-everyday-update-1017.ps1` rehearses `tools/host/update-1.0.17/Invoke-EverydayUpdate.ps1` (the update of the
+everyday JARVIS made by the release's own Setup; `docs/UPDATE-EVERYDAY-1.0.17.md`) in a sandbox on D:: 1.0.16 installed
+into a sandbox home and started once, a stale package folder planted, the refusals (no approval; JARVIS running), the
+three steps with the sandbox switches (`/DIR`, `/HOME`, `/NOSHORTCUTS`), 1.0.17 started through its own `JARVIS.exe`,
+the reruns, the rollback with its approval file, the cleanup through the sandbox's own entry; the owner's real
+Desktop and Startup shortcuts hashed before, after every step and at the end; the real Settings > Apps entry asserted
+absent at the start and the end; the live JARVIS counted by its program folder, never addressed. Three runs on
+2026-10-07, each in its own base folder on D: (all three kept; the Inno Setup logs stay there):
+
+| Run | Launcher | Result |
+|---|---|---|
+| 1, 18:22-18:26, `update-rehearsal/` (base `D:\JARVIS-release-work\update-rehearsal-1.0.17`) | before its review, sha256 `4f6d49e0…` | 24 of 24 |
+| 2, 18:44-18:48, `update-rehearsal-2/` (base `...-1.0.17-2`) | reviewed, sha256 `66c8cce6…` | every launcher step PASS (the Setup in 91.1 s wall); 22 checks, 2 failed, both the harness's own: it looked for `setup-update.log` after review finding 9 gave the log a time stamp, and it read the sandbox Core's connection file in the instant the Core removed it at shutdown ("access denied") and stopped; the cleanup still ran (finding 12), the sandbox uninstalled through its entry, the real shortcuts and the real entry untouched, 0 sandbox processes left |
+| 3, 18:49-18:54, `update-rehearsal-3/` (base `...-1.0.17-3`) | reviewed, sha256 `66c8cce6…`; the harness fixed | **26 of 26**: step 1 (hashes and the Setup's record, the stale folder renamed aside, 10,768 package files unpacked, 1.0.16 verified, no entry before); step 2 (backup 178 files with 1.0.16's own code, test restore passed, the copy hash-equal); step 3 (the Setup silently in 98.7 s wall; inside: verify package 12.7 s, copy 11.6 s, verify copy 27.6 s, stop 1.8 s, switch 0.1 s; `withheld`; the entry "JARVIS (sandbox)" 1.0.17; no `JARVIS.ps1`; the database byte-for-byte unchanged; not started); 1.0.17 up on the same data (`JARVIS.exe` and `python.exe` only); the reruns change nothing; the rollback to 1.0.16 verified and running again, the entry still 1.0.17; the cleanup; the real shortcuts hash-equal throughout; the real entry absent at the start and the end |
+
+The harness changes between the runs: the real entry asserted absent at the start and the end and the cleanup run
+whatever happened above, a thrown stop included (review finding 12); the Setup's log taken from `update.json`; a
+connection-file read that fails in the instant the Core writes or removes it is "not readable now", not a stop.
+Nothing in the launcher changed after its review (sha256 `66c8cce6…` at runs 2 and 3). The 0 live JARVIS processes
+at every run: the owner's everyday JARVIS was not running (see above, and the status).

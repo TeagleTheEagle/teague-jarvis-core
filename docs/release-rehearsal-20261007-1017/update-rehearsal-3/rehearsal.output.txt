@@ -1,0 +1,76 @@
+live JARVIS processes at the start: 0; real shortcuts: 1829581c857b4d28940451d169d630973ad19b67b1e2b50d1c9f10a0ff74a296 0be9b25f28204e577003aaad675df2cb2afb6aaeacdc97d74947e7ecd2771387; real entry present: False
+PASS  the real entry absent at the start  HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{DC2C8033-1BBF-5E1C-99A0-BE0E70DC9937}_is1
+===== install 1.0.16 into the sandbox home
+PASS  sandbox: 1.0.16 installed  installed
+PASS  sandbox: 1.0.16 running on its data  1.0.16-fccde24e2cc6
+===== no approval: refused  18:50:03
+STOPPED: this update has not been approved yet (no update-authorized.json beside this script).
+Nothing further was done. Photograph this window for Claude.
+exit=2
+PASS  refused without approval  exit 2
+===== JARVIS running: refused  18:50:05
+STEP 1 of 3: checks before the update to 1.0.17-0d38218c4e1d (nothing in your JARVIS changes)
+
+STOPPED: JARVIS is running. Quit it completely (right-click its icon near the clock > Quit JARVIS completely), then double-click update-step again.
+Nothing further was done. Photograph this window for Claude.
+exit=2
+PASS  refused while JARVIS runs  exit 2
+===== step 1 check  18:50:09
+STEP 1 of 3: checks before the update to 1.0.17-0d38218c4e1d (nothing in your JARVIS changes)
+Checking the package and the Setup against their hashes (a minute or two) ...
+The leftover folder D:\JARVIS-release-work\update-rehearsal-1.0.17-3\staging was renamed to D:\JARVIS-release-work\update-rehearsal-1.0.17-3\staging-before-1.0.17-0d38218c4e1d (nothing deleted).
+Unpacking the package (a few minutes) ...
+Checking every file of your installed JARVIS (a minute or two) ...
+
+STEP 1 PASSED. Tell Claude "step 1 done". Then double-click update-step again for step 2 (the backup).
+exit=0
+PASS  step 1 check  exit 0
+PASS  step 1: stale staging folder moved aside, nothing deleted  D:\JARVIS-release-work\update-rehearsal-1.0.17-3\staging-before-1.0.17-0d38218c4e1d
+PASS  step 1: no entry before  False
+===== step 2 backup  18:50:40
+STEP 2 of 3: a fresh backup of your JARVIS (the same as Settings > Backups: create, then test restore)
+Making the backup (about a minute) ...
+Backup 9d87315a5a9340bd98f2b6b94f81d8b5: 178 files, verified. Testing the restore in a temporary folder ...
+
+STEP 2 PASSED: backup 9d87315a5a9340bd98f2b6b94f81d8b5 made and test-restored; a copy is in D:\JARVIS-release-work\update-rehearsal-1.0.17-3\update\backup. Tell Claude "step 2 done", then double-click update-step again for step 3 (the update).
+exit=0
+PASS  step 2 backup  exit 0
+===== step 3 update through the Setup  18:50:50
+STEP 3 of 3: update your JARVIS from 1.0.16-fccde24e2cc6 to 1.0.17-0d38218c4e1d with its Setup
+Running the Setup (several minutes: it unpacks the package, then its installer copies and checks every file; a line every half minute) ...
+  the Setup still running: 30 s, 5058 files in the package folder
+  the Setup still running: 61 s, 10776 files in the package folder
+  the Setup still running: 91 s, 10776 files in the package folder
+
+STEP 3 PASSED: your JARVIS is now 1.0.17-0d38218c4e1d, every file verified, the sandbox entry registered, the shortcuts withheld as a sandbox run must. It was not started. Tell Claude "step 3 done"; Claude gives you the short check to do when you start it.
+exit=0
+PASS  step 3 update  exit 0
+PASS  update: database unchanged  d398ff658b6c5f5925adfb90a29f93905deed49afea4fef784fa01e6cd4c1b7d
+PASS  update: current is 1.0.17, previous 1.0.16  1.0.17-0d38218c4e1d
+PASS  update: the installer inside the Setup withheld the shortcuts (sandbox)  withheld (the home is not this PC's own install home)
+PASS  update: the entry JARVIS (sandbox) with the version  JARVIS (sandbox) 1.0.17
+PASS  update: the real entry untouched  False
+PASS  update: the Setup logged --no-shortcuts  setup-update-20261007-075051.log
+PASS  sandbox: 1.0.17 running on the same data through JARVIS.exe  1.0.17-0d38218c4e1d
+PASS  sandbox: only JARVIS.exe and python.exe run  JARVIS.exe,python.exe
+===== rerun after the update: nothing to do  18:52:55
+The update to 1.0.17-0d38218c4e1d is complete and recorded. Nothing more to do here.
+exit=0
+PASS  rerun changes nothing  exit 0
+===== rollback (approved)  18:52:55
+ROLLBACK: switch your JARVIS back to 1.0.16-fccde24e2cc6
+
+ROLLBACK PASSED: your JARVIS is back on 1.0.16-fccde24e2cc6; its PowerShell shortcuts and launcher script are back (the Settings > Apps entry still says 1.0.17 until the next update). Tell Claude "rollback done".
+exit=0
+PASS  rollback to 1.0.16  1.0.16-fccde24e2cc6
+PASS  rollback: the entry still says 1.0.17 (as the plan says)  1.0.17
+PASS  sandbox: 1.0.16 running again on the same data  1.0.16-fccde24e2cc6
+===== rerun after the rollback: nothing to do  18:53:20
+This launcher's work is complete and recorded: the update to 1.0.17-0d38218c4e1d was rolled back to 1.0.16-fccde24e2cc6. Nothing more to do here.
+exit=0
+PASS  rerun after rollback changes nothing  exit 0
+PASS  cleanup: the sandbox uninstalled through its own entry  exit 0
+PASS  the owner real shortcuts unchanged throughout  1829581c857b4d28940451d169d630973ad19b67b1e2b50d1c9f10a0ff74a296 0be9b25f28204e577003aaad675df2cb2afb6aaeacdc97d74947e7ecd2771387
+PASS  the real entry absent at the end  HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{DC2C8033-1BBF-5E1C-99A0-BE0E70DC9937}_is1
+live JARVIS processes at the end: 0 (start: 0); sandbox processes at the end: 0
+26 checks, 0 failed
