@@ -255,8 +255,16 @@ only records where the work stands. Historical handover context: `docs/PROJECT-C
   "ask first"** (`permissions.Rule.shipped`, read through `permissions.effective`): every command waits for the
   owner's approval on the PC until the owner sets the switch to Allowed in Settings > Permissions (which a mission
   needs to run commands unattended).
-- Next: the owner's approval of the Stage 7 check of 1.0.17 (build 2), the VM check, the everyday update; then 1.0.18
-  (the Workshop) through the same chain.
+- **The Stage 7 check of 1.0.17 (build 2) is APPROVED BY THE OWNER** ("I approve the Stage 7 check of 1.0.17", first
+  clock reading 2026-10-07T05:00:51Z, recorded 05:02:39Z; record `../governance/STAGE7-1.0.17-APPROVAL-RECORD.json`,
+  plan sha256 `f1c8d9d2…` at commit 9078fe3; repo copy `docs/stage7-1.0.17-evidence/`). The version 4 tools are placed
+  in `D:\JARVIS-S6-FRESHVM\tools\stage7-1.0.17\` (seven files hash-equal to the approved table, plus
+  `stage7-authorized.json`, schema v4, expected snapshot STAGE7-PASS-1.0.16-fccde24e2cc6); the record folders
+  `D:\JARVIS-stage7\1.0.17-0d38218c4e1d\evidence` and `D:\JARVIS-S6-FRESHVM\evidence\guest-egress-01\stage7-1.0.17-0d38218c4e1d`
+  are created; the 1.0.16 disc read again equal to its record. **The owner's seven steps are next** (the plan's
+  table; step 1 the disc, about 940 MB, up to ten minutes; the window left open during the VM's power-on; drive E:
+  inside the VM). After "stage 7 done": the evaluation, manifests, the repo copy, then the everyday-update plan for
+  the owner's approval; then 1.0.18 (the Workshop) through the same chain.
 
 ## Where we are
 
