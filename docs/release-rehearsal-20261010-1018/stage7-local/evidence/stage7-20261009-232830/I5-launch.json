@@ -1,0 +1,15 @@
+{
+    "status":  "PASS",
+    "launched_via":  "JARVIS.exe",
+    "core_ready":  true,
+    "seconds_to_ready":  15.3,
+    "installed_release":  "1.0.18-4afd891c38f4",
+    "source_revision":  "b7e90401d8da1d0b",
+    "identity_matches_package":  true,
+    "memory_saved":  true,
+    "database_in_home":  true,
+    "processes":  8,
+    "process_images_outside_install":  [
+
+                                       ]
+}

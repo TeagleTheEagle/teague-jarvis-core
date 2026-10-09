@@ -1,0 +1,13 @@
+ 20 127.0.0.1', seconds=1)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+D:\JARVIS-release-work\regression-1.0.18\release\app\test_workshop.py:178: ResourceWarning: unclosed file <_io.BufferedReader name=5>
+  thread = threading.Thread(target=lambda: box.update(self.runner.run('ping -n 20 127.0.0.1', seconds=60, cancel=cancel)))
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+D:\JARVIS-release-work\regression-1.0.18\release\app\test_workshop.py:178: ResourceWarning: unclosed file <_io.BufferedReader name=6>
+  thread = threading.Thread(target=lambda: box.update(self.runner.run('ping -n 20 127.0.0.1', seconds=60, cancel=cancel)))
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+......
+----------------------------------------------------------------------
+Ran 808 tests in 1482.320s
+
+OK (skipped=7)

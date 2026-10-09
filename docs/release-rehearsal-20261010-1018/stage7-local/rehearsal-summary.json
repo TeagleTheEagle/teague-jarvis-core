@@ -1,0 +1,84 @@
+{
+    "package":  "D:\\JARVIS-release-work\\pkg-1.0.18",
+    "previous_package":  "D:\\JARVIS-release-work\\pkg-1.0.17",
+    "base":  "D:\\JARVIS-release-work\\stage7-local-1.0.18",
+    "driver":  4,
+    "state":  "finished",
+    "steps":  [
+                  {
+                      "step":  "first start: Install, then the driver asks for the Windows restart",
+                      "exit":  0,
+                      "must_say":  "The install step PASSED",
+                      "said":  true,
+                      "entry_after":  true
+                  },
+                  {
+                      "step":  "second start on the same start of Windows: the restart check must ask for the restart",
+                      "exit":  0,
+                      "must_say":  "Windows has not been restarted since the install step",
+                      "said":  true,
+                      "entry_after":  true
+                  },
+                  {
+                      "step":  "third start as after a restart (-BootIdentityFile): AfterRestart, Uninstall, Update, Interrupt",
+                      "exit":  0,
+                      "must_say":  "ALL STAGE 7 STEPS PASSED",
+                      "said":  true,
+                      "entry_after":  true
+                  },
+                  {
+                      "step":  "fourth start: nothing left to do",
+                      "exit":  0,
+                      "must_say":  "ALL STAGE 7 STEPS PASSED",
+                      "said":  true,
+                      "entry_after":  true
+                  },
+                  {
+                      "step":  "cleanup: the sandbox uninstalled through its own entry",
+                      "cleanup":  {
+                                      "uninstaller":  "D:\\JARVIS-release-work\\stage7-local-1.0.18\\staging\\unins000.exe",
+                                      "present":  true,
+                                      "entry_before_cleanup":  {
+                                                                   "present":  true,
+                                                                   "name":  "JARVIS (sandbox)",
+                                                                   "version":  "1.0.18",
+                                                                   "location":  "D:\\JARVIS-release-work\\stage7-local-1.0.18\\staging\\"
+                                                               },
+                                      "uninstaller_exit":  0,
+                                      "seconds":  14.5,
+                                      "installer_status":  "uninstalled",
+                                      "installer_shortcuts":  "withheld (the home is not this PC\u0027s own install home)",
+                                      "program_files_removed":  21540,
+                                      "kept":  [
+                                                   "data",
+                                                   "config",
+                                                   "profile"
+                                               ],
+                                      "entry_after_cleanup":  {
+                                                                  "present":  false
+                                                              },
+                                      "package_folder_left":  false,
+                                      "data_kept":  true,
+                                      "clean":  true
+                                  }
+                  }
+              ],
+    "real_shortcuts_before":  {
+                                  "desktop":  "7dca25063958c485cd63774ea296b705da59657acfc5ea8b09985800a2d7cb19",
+                                  "startup":  "f8675687f2a435518ebafd6186c253de6b7e239901d49ba0649b1e8e6703554a"
+                              },
+    "real_shortcuts_now":  {
+                               "desktop":  "7dca25063958c485cd63774ea296b705da59657acfc5ea8b09985800a2d7cb19",
+                               "startup":  "f8675687f2a435518ebafd6186c253de6b7e239901d49ba0649b1e8e6703554a"
+                           },
+    "live_processes_before":  8,
+    "live_processes_now":  8,
+    "entry_before":  {
+                         "present":  false
+                     },
+    "entry_now":  {
+                      "present":  false
+                  },
+    "sandbox_processes_now":  0,
+    "real_shortcuts_unchanged":  true
+}
