@@ -240,6 +240,15 @@ only records where the work stands. Historical handover context: `docs/PROJECT-C
     owner's word. Connecting FRIDAY to JARVIS, or FRIDAY editing JARVIS's code, is not to be built (stopped by the
     safety system several times; the owner was told).
   - The Workshop, the devices route, the guard, the You page and the two Core fixes stay on claude/main for 1.0.19.
+- **STAGE 7 CHECK OF 1.0.18 APPROVED BY THE OWNER** ("I approve the Stage 7 check of 1.0.18", first clock reading
+  2026-10-10T22:48:53Z = 09:48:53 local on 2026-10-11; recorded 22:50:37Z in
+  `../governance/STAGE7-1.0.18-APPROVAL-RECORD.json`, repo copy `docs/stage7-1.0.18-evidence/`; plan sha256
+  `161a1033…` as committed in d4becec). Rechecked at the approval: the plan unchanged, the tools equal the table, the VM
+  on STAGE7-PASS-1.0.17-0d38218c4e1d (modified false, 9 snapshots), the 1.0.17 disc and the 1.0.18 zip and Setup equal
+  to their records. Placed: `D:\JARVIS-S6-FRESHVM\tools\stage7-1.0.18\` (7 files hash-checked +
+  `stage7-authorized.json` sha256 `529683e3…`); record folders `D:\JARVIS-stage7\1.0.18-cffb826de043\evidence` and
+  `D:\JARVIS-S6-FRESHVM\evidence\guest-egress-01\stage7-1.0.18-cffb826de043`. The placed launcher's test mode: jonny
+  builds the disc first. **Next: the owner's seven steps (step 1, jonny: double-click stage7-step, "disc built").**
 - **Release 1.0.18 (the time fix) READY FOR THE OWNER'S STAGE 7 APPROVAL (2026-10-11, about 09:50 local):** build
   `1.0.18-cffb826de043` (commit cffb826 on `claude/release-1.0.18`; zip sha256 `312f03c3…`, Setup
   `JARVIS-Setup-1.0.18-cffb826de043.exe` sha256 `9fda6046…`, both in `D:\JARVIS-release-work\pkg-1.0.18-time`) passed
