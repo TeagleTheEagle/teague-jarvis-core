@@ -36,7 +36,7 @@ on the PC; this is its mirror for the app.
 | F. Nudges, notices, announcements | `notices`; `announce`; `status.notices` | R4 |
 | G. Gmail and Calendar | `overview.calendar`, `overview.calendar_connected`, `overview.mail_unread` | R5 |
 | H. Wi-Fi device list, I. Nest | nothing for the phone in this round | |
-| (asked by the Mac) the device ecosystem | `devices` | R6 |
+| (asked by the Mac) the device ecosystem | `devices` (built in 1.0.18, see section 7) | R6 |
 
 ## 2. The routes, exactly
 
@@ -149,7 +149,7 @@ up to 80 characters, `text` up to 400). Response:
   HTTP 400 `{"error": "Invalid announcement."}`.
 - Over the limit: HTTP 400 `{"error": "Announcement limit reached. Wait one minute."}`. While stopped: refused.
 
-### `devices` (new; paired; 120 a minute)
+### `devices` (new; paired; 120 a minute; served from 1.0.18, see section 7)
 
 Request `{}`. Response:
 
@@ -157,8 +157,8 @@ Request `{}`. Response:
 {"devices": [{"id": "...", "name": "iphone-15", "kind": "phone", "online": true, "last_seen": 1759800000.1,
               "allowed": ["microphone", "speakers", "display"], "writes": true, "tools": false, "approve": false,
               "this_device": true}],
- "pc": {"name": "THEGRIZZLYBEAR", "core_version": "1.0.17-...", "online": true},
- "simulated": [{"name": "Glasses test client", "kind": "glasses"}]}
+ "pc": {"name": "thegrizzlybear", "core_version": "1.0.18-...", "online": true},
+ "simulated": [{"name": "Glasses test client", "kind": "glasses", "online": false}]}
 ```
 
 - Paired devices only (revoked ones left out), the PC itself, and the simulated test client marked as such.
@@ -253,3 +253,26 @@ needs that is not above is a request, not something to build around.
   ("Jarvis") or a stop phrase is kept in full in the notice but only announced, never read out ("<name>, Jack
   texted you. The message is on your phone."). Control, format and zero-width characters anywhere: `Invalid
   announcement.`
+
+## 7. The `devices` operation, built in 1.0.18 (2026-10-10)
+
+The form promised `devices` (R6) but 1.0.17 never served it: a 1.0.17 Core answers it with HTTP 400 `{"error":
+"Operation unavailable."}`, which the app shows as "not on this Core yet". The owner decided on 2026-10-10 ("add
+devices to 1.0.18") that release 1.0.18 serves it. As built (`server.App.devices_for_device`,
+`docs/PHONE-DEVICES-1.0.18.md`):
+
+- Request `{}` only; anything else: HTTP 400 `{"error": "Unknown fields."}`. Paired devices only, with no tick
+  needed; counted with the light reads (120 a minute: HTTP 400 "Wearable request limit reached. Wait one minute.").
+  It answers also while the emergency stop holds (a read, like `overview`).
+- `devices`: every paired device that is not revoked, in the order they were paired, with exactly the fields of the
+  example. `online` is whether the device has talked to the Core in the last two minutes (the same as the PC's
+  Devices panel); `last_seen` is when the Core last wrote it down (at most once a minute; seconds since 1970, or
+  null); `allowed` is what the owner allows it, in the order microphone, camera, speakers, display; `writes` is true
+  when either "May save memories and tasks" or "May use this PC's tools" is ticked (as in `hello`); `this_device`
+  marks the device asking.
+- `pc`: `name` is the PC's own name as Windows gives it (on the owner's PC `thegrizzlybear`; "This PC" when Windows
+  gives none), `core_version` the installed release (as in `metrics`), `online` always true.
+- `simulated`: the same-PC test clients as the PC's Devices panel lists them, each with `name`, `kind` and `online`
+  (`online` is new against the first example). On the owner's PC that is "Glasses test client", registered at the
+  Core's start and offline a minute later unless a test runs.
+- Never a key, a pairing code, a revoked device or anything about a device's conversations.

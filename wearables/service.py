@@ -101,7 +101,7 @@ class Service:
                 if len(self.announces)>=6: raise ValueError('Announcement limit reached. Wait one minute.')
                 self.announces.append(now)
                 return self.announce(body)
-            if op in ('conversations','history','metrics','overview','approvals','notices'):
+            if op in ('conversations','history','metrics','overview','approvals','notices','devices'):
                 self.count_read()
                 return self.read(op,body)
             if op=='start':
@@ -248,6 +248,11 @@ class Service:
             return {'tasks_open':len(open_tasks),'projects':projects[:20],'reminders':reminders[:20],'conversations':len(store.conversations_for(self.prefix,1000)),
                     'calendar_connected':calendar_feed.configured(),'calendar':calendar,'mail_unread':self.app.mail_unread.get() if mail.configured() else None,
                     'scope':'Open tasks, projects and the reminders due within 24 hours, from the PC; the conversations are this device\'s own.'}
+        if op=='devices':
+            # 1.0.18: the list of this Core's devices for the app's device panel (docs/MAC-REQUESTS-20261007.md, R6),
+            # the same rows as the owner's Settings > Devices (server.App.devices_for_device). Read only.
+            if body: raise ValueError('Unknown fields.')
+            return self.app.devices_for_device(self.device_id)
         if op=='notices':
             # 1.0.17 item F: what JARVIS said on its own, newest first; reading marks everything returned as read for this
             # device, so status.notices then counts only newer ones.

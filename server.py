@@ -120,6 +120,17 @@ class Fresh:
             self.value, self.at, self.busy = value, time.monotonic(), False
 
 
+def pc_name():
+    """This PC's name as Windows knows it (1.0.18: on a paired device's list of devices); 'This PC' when unknown."""
+    import socket
+    try:
+        name = socket.gethostname().strip()
+    except OSError:
+        name = ''
+    name = name or os.environ.get('COMPUTERNAME', '').strip()
+    return name[:60] if name and name.isprintable() else 'This PC'
+
+
 class Run:
     def __init__(self, conversation):
         self.id = uuid.uuid4().hex
@@ -578,6 +589,26 @@ class App:
             raise ValueError('Devices are not available here.')
         return {'devices': self.device_rows(), 'pairing': self.device_book.pairing(), 'kinds': list(DEVICE_KINDS),
                 'remote': self.remote_devices.status() if self.remote_devices else None}
+
+    def devices_for_device(self, device_id):
+        """What a paired device may read about the devices of this Core (1.0.18; the app's device panel, R6 of
+        docs/MAC-REQUESTS-20261007.md), from the same rows as the owner's panel (device_rows): the paired devices
+        that are not revoked, each with whether it is connected now, when it was last seen, what the owner allows
+        it and the owner's three ticks (`writes` includes the PC's tools, as in hello); this PC with the Core's
+        version; and the same-PC test clients, marked as simulated. Read only. Never a key or a pairing code, never
+        a revoked device, and nothing about any device's conversations."""
+        devices, simulated = [], []
+        for row in self.device_rows():
+            if row.get('builtin'):
+                continue
+            if row['simulated']:
+                simulated.append({'name': row['name'], 'kind': row['kind'], 'online': bool(row['connected'])})
+            elif not row['revoked']:
+                tools = bool(row['tools'])
+                devices.append({'id': row['device_id'], 'name': row['name'], 'kind': row['kind'], 'online': bool(row['connected']),
+                                'last_seen': row['last_seen'], 'allowed': list(row['allowed']), 'writes': bool(row['writes']) or tools,
+                                'tools': tools, 'approve': bool(row['approve']), 'this_device': row['device_id'] == device_id})
+        return {'devices': devices, 'pc': {'name': pc_name(), 'core_version': self.store.release, 'online': True}, 'simulated': simulated}
 
     def devices_action(self, body):
         """The owner's clicks in Settings > Devices. Only the signed-in interface on the PC reaches this."""

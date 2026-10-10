@@ -11,8 +11,10 @@ What it may do is decided here, on every request, from what the owner allows for
   - with "may approve for JARVIS" (1.0.17) it may list and answer what waits for the owner's approval: the same
     list and the same decision as the PC window, with an activity row naming the device;
   - a picture needs the camera to be allowed, a transcription the microphone, a spoken reply the speakers;
-  - it may read its own conversations, the PC's health and an overview of tasks and reminders (1.0.16); never
-    another device's conversations and never the PC's chats;
+  - it may read its own conversations, the PC's health and an overview of tasks and reminders (1.0.16), and
+    (1.0.18) the list of this Core's devices: the paired ones with what the owner allows each, this PC with its
+    JARVIS version, the test clients marked as simulated; never another device's conversations and never the
+    PC's chats;
   - any paired device may stop everything (the emergency stop), and that is never turned away for another
     reason; none can resume;
   - a revoked device is refused from its next request on, and what it was running is cancelled.
@@ -31,7 +33,8 @@ import permissions
 from devices import DeviceError, DeviceRefused, WrongCode
 
 OPS = ('hello', 'status', 'start', 'events', 'cancel', 'transcribe', 'speech', 'stop', 'bye',
-       'conversations', 'history', 'metrics', 'overview', 'approvals', 'approve', 'reject', 'notices', 'announce')
+       'conversations', 'history', 'metrics', 'overview', 'approvals', 'approve', 'reject', 'notices', 'announce',
+       'devices')  # 1.0.18: the list of this Core's devices (the app's device panel), read only
 NEEDS = {'transcribe': 'microphone', 'speech': 'speakers'}
 PAIR_CALLS_A_MINUTE = 10          # per caller
 PAIR_CALLS_A_MINUTE_IN_ALL = 60   # everyone together

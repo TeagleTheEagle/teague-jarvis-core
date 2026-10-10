@@ -80,6 +80,12 @@ desktop app's token, and a device's key opens none of the owner's routes. Decide
 | `stop` | | the emergency stop (docs/PERMISSIONS.md). Any paired device may stop; **none can resume**. A stop is handled before anything else about the request, also as the stop words in a question: it is not turned away because a picture came with it, a capability is not allowed, or the database is busy. (1.0.16: a stop with a valid key is never turned away by the per-caller lockout either; only a wrong key is counted) |
 | `bye` | | marks it disconnected |
 
+Since 1.0.16 a paired device may also read its own conversations, the PC's health and an overview
+(`docs/PHONE-CORE-1.0.16.md` section 3), since 1.0.17 the approvals and notices (`docs/PHONE-ACCESS-1.0.17.md`), and
+since 1.0.18 `devices`: the list of this Core's devices (the paired ones that are not revoked with what the owner
+allows each, this PC with its JARVIS version, the test clients marked as simulated; `docs/PHONE-DEVICES-1.0.18.md`).
+These reads are limited to 120 a minute per device.
+
 Each device has its own session (`wearables.service.Service`): its own questions, its own limit of 20 requests a
 minute. A question's activity rows carry the device's id, and the activity log shows its name. A device is told
 only a few fixed sentences when something is refused; nothing of the program's own error text, no path and nothing
