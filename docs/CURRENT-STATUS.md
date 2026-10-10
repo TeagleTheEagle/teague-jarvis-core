@@ -221,8 +221,13 @@ current record.
 Rules and authority are in `CLAUDE.md` and `../governance/OWNER-DELEGATION.md`; this file
 only records where the work stands. Historical handover context: `docs/PROJECT-CONTEXT.md`.
 
-## 2026-10-10 late night (Opus 5.5, from about 20:45 local; a new session)
+## 2026-10-10 late night (Opus 5.5, from about 20:28 local; a new session, process 4248)
 
+- **One folder for every session (owner, 2026-10-10 about 20:47):** `C:\Users\jonny\JARVIS-claude-workspace` is the
+  one folder every Claude Code session for JARVIS starts in. The owner added a guide `CLAUDE.md` at its top (outside
+  the repo; read 20:50): it maps `repo\`, `friday\`, `governance\`, `reference\` and the places outside the folder,
+  says the rules stay in `repo\CLAUDE.md`, and that the workspace is never moved into OneDrive or synced. Nothing was
+  moved. The old OneDrive handover folder is not a place to start.
 - **Correction to "2026-10-10 night" below:** release 1.0.18 is NOT "FRIDAY alone". The owner later chose "keep
   friday as he is, 1.0.18 time fix only". 1.0.18 = the Core's spoken answer to "what time is it" (the Mac's round 6
   request 8, below) on top of the installed 1.0.17, nothing else.
@@ -235,8 +240,9 @@ only records where the work stands. Historical handover context: `docs/PROJECT-C
     owner's word. Connecting FRIDAY to JARVIS, or FRIDAY editing JARVIS's code, is not to be built (stopped by the
     safety system several times; the owner was told).
   - The Workshop, the devices route, the guard, the You page and the two Core fixes stay on claude/main for 1.0.19.
-- **Two sessions again:** the previous session (PID 15260, started 19:05) was still running at 20:45; the owner was
-  asked to close it.
+- **Other sessions:** the owner closed the other sessions (about 20:47). At 20:51 two older Claude Code session
+  processes were still alive under the desktop app: 15260 (started 19:05) and 20216 (19:43); this session is 4248
+  (20:28). Neither committed anything after 23fe25a. Told to the owner; not ended by Claude.
 
 ## 2026-10-10 night (Opus 5.5, from about 19:45 local; a new session opened in the old OneDrive folder and moved here)
 
