@@ -177,6 +177,8 @@ Prices from third-party listings found on 2026-10-10, in US dollars a month, to 
 | DigitalOcean, Sydney, 2 vCPU / 4 GB / 80 GB | about 24 | Best fit: simplest to set up, the same price in every region, easy backups (+20%) |
 | Vultr, Sydney or Melbourne, 2 vCPU / 4 GB / 80 GB | about 20 to 21 | Close second: slightly cheaper, slightly less beginner-friendly |
 | AWS Lightsail, Sydney, 2 vCPU / 4 GB / 80 GB | about 24 | Works; an AWS account is more to manage |
+| Google Cloud, Sydney or Melbourne, e2-medium (2 shared vCPU / 4 GB) | about 35, plus its disk and outgoing traffic | Works and is fast, but about half as dear again for the same size, a bill in several parts and a much harder console; one Google account would then carry Gmail, Calendar, Nest and the Core together. A one-year commitment brings it to about 22, a three-year one to about 16 |
+| Google Cloud free tier (e2-micro) | free | Not suitable: US regions only, 1 GB of memory, and traffic to Australia is not in the free allowance |
 | Alibaba Cloud Simple Application Server, Singapore, 2 vCPU / 4 GB | about 19 | Next door to Qwen, but one billing problem would stop both the AI and the Core, as the overdue bill did in October 2026 |
 | Hetzner, Singapore | raised on 15 June 2026 | Not recommended: higher prices, 0.5 TB of traffic included |
 | Oracle Cloud free tier | free | Not suitable: halved in 2026, and idle servers may be reclaimed |
@@ -194,4 +196,7 @@ Sources: [DigitalOcean pricing (Fluence)](https://fluence.ai/blog/digitalocean-d
 [Hetzner price adjustment](https://docs.hetzner.com/general/infrastructure-and-availability/price-adjustment/),
 [Hetzner Singapore](https://www.hetzner.com/pressroom/new-location-singapore/),
 [Oracle free tier halved (InfoQ)](https://www.infoq.com/news/2026/07/oracle-cloud-free-tier-limits/),
-[Oracle Always Free resources](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm).
+[Oracle Always Free resources](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm),
+[e2-medium prices by region (cloudprice.net)](https://cloudprice.net/gcp/compute/instances/e2-medium),
+[e2-medium (gcloud-compute.com)](https://gcloud-compute.com/e2-medium.html),
+[Google Cloud free features](https://docs.cloud.google.com/free/docs/free-cloud-features).
