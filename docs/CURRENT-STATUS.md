@@ -267,10 +267,10 @@ only records where the work stands. Historical handover context: `docs/PROJECT-C
   - check Settings > Backups (D:\JARVIS-backups no longer exists).
 - **Next, Claude:** item 18 phase A (mail and calendar with no new sign-in), built for JARVIS's own account; then the
   rest of 1.0.19 in order; the 1.0.18 flaky test, with the lead above.
-- **End:** the owner asked first for sleep ("when your done with what task your doing put my pc into sleep mode"), then
-  changed it ("log out of my pc and leave on"). After this commit the owner's Windows account is signed out, without
-  forcing any app closed, and the PC is left on. The everyday JARVIS stops with the sign-out, so the phone cannot reach
-  it, and it starts again by itself at the next sign-in.
+- **End:** the owner asked for sleep, then for a sign-out with the PC left on and "make sure jarvis is still on", and
+  then settled on sleep: "actually just set it to sleep don't log out sleep my pc". After this commit the PC is put to
+  sleep and nobody is signed out. The everyday JARVIS stays running and carries on when the PC wakes; while it sleeps,
+  JARVIS and the phone's link to him are paused.
 
 ## 2026-10-10 late afternoon (Opus 5.5, at the owner's "handoff"): the guard built, not yet reviewed; Gmail and Calendar plans
 
