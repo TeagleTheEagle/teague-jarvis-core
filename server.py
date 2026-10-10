@@ -142,6 +142,27 @@ class Run:
             self.condition.notify_all()
 
 
+DAY_NAMES = ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')
+MONTH_NAMES = ('January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October',
+               'November', 'December')
+
+
+def spoken_time(stamp):
+    """The Core's own answer to "what time is it", "time", "date" and "what is the date" (actions.local_command): the
+    local time and date as one sentence, "It's 2:36 PM on Saturday 10 October 2026." (1.0.18, docs/RELEASE-1.0.18.md).
+    Before, the reply was the raw clock reading, "Local time: 2026-10-10T14:36:17.893246+11:00", which Siri read out as
+    it was (the Mac's request 8 of 2026-10-10). Names in English whatever the PC's locale; AM and PM in capitals, as
+    iOS writes a time, so a voice says the letters (review finding L1); a reading that cannot be parsed is said as
+    it is."""
+    try:
+        moment = datetime.datetime.fromisoformat(str(stamp))
+    except (TypeError, ValueError):
+        return 'Local time: ' + str(stamp)
+    hour = moment.hour % 12 or 12
+    return (f"It's {hour}:{moment.minute:02d} {'AM' if moment.hour < 12 else 'PM'} on {DAY_NAMES[moment.weekday()]} "
+            f"{moment.day} {MONTH_NAMES[moment.month - 1]} {moment.year}.")
+
+
 class App:
     def __init__(self, root=None):
         self.stage4 = _stage4_context
@@ -1682,7 +1703,7 @@ class App:
         if name == 'research_report':
             return f"Research workspace assembled for {result['query']}: {len(result['sources'])} recent source sets, {len(result['documents'])} matching local documents, and {len(result['notes'])} saved notes. I can now write a cited report or save it as a file."
         if name == 'time_now':
-            return 'Local time: ' + result['time']
+            return spoken_time(result.get('time'))  # 1.0.18: a sentence, not the raw clock reading
         if name == 'suit_diagram':
             return f"Conceptual {result['view']} suit diagram prepared for {result['title']}. I can save the Mermaid source as a report file."
         if name == 'calculate':
