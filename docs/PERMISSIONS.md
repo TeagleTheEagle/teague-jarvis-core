@@ -61,7 +61,7 @@ Every tool call passes `App.tool`: the AI model's, a typed or spoken command's, 
    a restored JSON backup.
 4. A refusal writes an activity row `refused`.
 
-The owner's exact memory commands (`memory.py`: "remember that I prefer ...", "my name is ...", "forget memory: ...", and since 1.0.17 the bare "remember that", which since 1.0.18 saves the owner's own last line, or JARVIS's last answer for "remember what you said": docs/CORE-FIXES-20261010.md)
+The owner's exact memory commands (`memory.py`: "remember that I prefer ...", "my name is ...", "forget memory: ...", and since 1.0.17 the bare "remember that", which since 1.0.18 saves the owner's own line when they told JARVIS something, JARVIS's answer when they asked something, and nothing after a command, the owner's choice; "remember what you said" is always JARVIS's last answer: docs/CORE-FIXES-20261010.md)
 are answered without a tool call. `App.memory_command` asks the same table first (the switch of `save_item` or
 `manage_saved_memory`), so Off refuses them, Ask first makes them wait, and each one now writes an activity row.
 

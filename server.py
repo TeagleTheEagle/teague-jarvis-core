@@ -868,8 +868,9 @@ class App:
             # "Remember that.": the line it points at is found now, while the conversation stands as the owner left
             # it, and carried with an approval (by approval time the last line would be the waiting answer).
             line = memory.previous_line(self.store, run.conversation if run else None, text)
-            if line is None:
-                return memory.NOTHING_BEFORE   # nothing to save and nothing to ask about
+            if line is None or line[0] == 'command':
+                # Nothing to save and nothing to ask about; a command is not a fact (the owner's choice of 2026-10-10).
+                return memory.NOTHING_BEFORE if line is None else memory.COMMAND_HINT
         if governing:
             verdict, why = permissions.decide(governing, None, stopped=self.stopped is not None, mode=self.tool_mode(governing))
             row = 'memory command: ' + permissions.TABLE[governing].label
@@ -877,7 +878,7 @@ class App:
                 self.audit(row, 'refused', run)
                 raise ValueError(why)
             if verdict == 'ask':
-                args = {'command': text, **({'line': line[1]} if line else {})}   # the owner sees what would be saved
+                args = {'command': text, **({'line': memory.saved_value(line)} if line else {})}   # the owner sees what would be saved
                 waiting = self.ask_first(governing, args, run, memory_command=text, memory_line=line)
                 run.emit('tool.completed', {'name': governing, 'result': waiting, 'checked_at': time.time()})
                 self.audit(row, 'awaiting approval', run)
@@ -2185,6 +2186,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.app.require_running()
                 result = actions.image_search(body.get('query','')) if body.get('mode') == 'images' else actions.search(body.get('query',''))
             elif path == '/api/reminder':
+                self.app.require_running()   # 1.0.18 (review 2026-10-10): the window's own timer waits for RESUME, as set_timer does
                 result = self.app.store.reminder(body.get('title'), body.get('seconds'))
             elif path == '/api/reminder/dismiss':
                 self.app.store.dismiss_reminder(body.get('id'))

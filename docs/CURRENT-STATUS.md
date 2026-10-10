@@ -254,14 +254,77 @@ only records where the work stands. Historical handover context: `docs/PROJECT-C
     "Timer started for 2 minutes. It goes off at 10:29.", and the receipt "scheduled; goes off at 10:29". Review:
     no high, 1 medium, 5 low; four applied, two outside the approved scope recorded.
   - (5) "Remember that" saves the owner's own last line, and JARVIS's answer only for "remember what you said".
-    Review: 2 high, 1 medium, 6 low; the medium and five lows applied. **The two highs wait for the owner's
-    decision**: after a question, a command or "analyse my screen", the owner's own line is not worth saving. The
-    choice put to the owner: A, save JARVIS's answer after a question or request and nothing after a command; or B,
-    save nothing and hint "remember what you said".
-  - Found on the way, both older than 1.0.18, each waiting for the owner's word: the window's `/api/reminder` sets a
-    timer while the emergency stop holds; "Call me when the build finishes." saves "when the build finishes" as the
-    owner's name.
-  - Tests of the touched modules pass. The full Python suite is to run before the final commit.
+    Review: 2 high, 1 medium, 6 low; the medium and five lows applied in f9b3088. The two highs (after a question,
+    a command or "analyse my screen", the owner's own line is not worth saving) were put to the owner, who chose
+    **"His answer"**:
+    - a statement keeps the owner's line;
+    - a question or request, including the window's screen question, keeps JARVIS's answer;
+    - a command keeps nothing and says so (`memory.COMMAND_HINT`);
+    - thanks and self-saving lines are looked past.
+  - Found on the way, both older than 1.0.18, **fixed on the owner's "Fix both"**: the window's `/api/reminder` no
+    longer sets a timer while the emergency stop holds, and "Call me when the build finishes." is no longer taken as a
+    name (`memory._NOT_A_NAME`).
+  - The full Python suite at f9b3088 ran 836 tests with 1 error: an older cleanup race in
+    `test_jarvis.LocalTests.test_local_run_emits_terminal_event` (the Ollama side-check writes after the test). The
+    module passes 3 of 3 alone.
+  - The follow-up's own review found 4 high, 4 medium and 5 low:
+    - thanks variants;
+    - statements misread as questions and polite commands as requests;
+    - the name fix bypassed through a saved memory;
+    - "Remember that, Jarvis.";
+    - music words;
+    - live-sharing frames;
+    - and more.
+    All were applied except low 12 (record: `docs/CORE-FIXES-20261010.md` section 3):
+    - `memory.line_kind` was reworked: commands first, a question needs a subject or a "?", thanks checked word by
+      word;
+    - `previous_line` reads exchanges;
+    - one name rule, `memory.name_from`, for the command, `key()` and the store;
+    - the approval card shows "JARVIS said: ...".
+    - The touched modules pass (189 tests).
+  - Recorded for the owner, not built (follow-up review low 12): turning on the private-network door and the Spotify
+    sign-in callback still act while the emergency stop holds.
+- **OpenJarvis** (Stanford's local-first assistant, Apache 2.0; the owner's zip `Downloads\OpenJarvis-main.zip`, sha256
+  `2ad97829…6df`) was compared in `docs/OPENJARVIS-COMPARISON-20261010.md`. Nothing from it was run, installed or
+  copied. Not to be taken: its Pearl cryptocurrency mining and its usage analytics. **The owner: "build all of these"**,
+  the eight items:
+  1. the guard on what JARVIS reads;
+  2. the morning briefing and monitors;
+  3. skills;
+  4. memory suggestions with the owner's OK;
+  5. search by meaning;
+  6. the offline voice;
+  7. messaging apps;
+  8. Apple connectors.
+  They are for 1.0.19, in that order. The owner's own steps are listed in that record: model downloads on permission,
+  a Telegram bot token, and a Mac for the Apple items.
+- **SuperAGI** (2023, MIT; the owner's zip `Desktop\SuperAGI-main (1).zip`, sha256 `40278185…723`) was read for "how we
+  can give jarvis these abilities instead of making multiple agents", in `docs/SUPERAGI-COMPARISON-20261010.md`. Its
+  many agents become missions of the one JARVIS. **The owner: "add the 4 new ones"**, which go on the 1.0.19 list after
+  the eight:
+  - 9: missions side by side;
+  - 10: missions that pause to ask;
+  - 11: a cost cap and spend per mission;
+  - 12: reading a web page's text, after the guard.
+  Then, quoting "Sending email", **"and this"**. **Corrected and told to the owner:** sending email is already built
+  in 1.0.17 (`mail_send`, always asks first; `mail_search`, `mail_read`). It needs only the owner's Gmail app password
+  (`docs/GOOGLE-STEPS.md` section 1), so there is no item 13. GitHub and image generation come only on the owner's word.
+- **The owner: "I want jarvis to have access to my email , messages , calls , calandar and alarms and timers".** What
+  exists, and what is added:
+  - **Email:** built (read, search, send with approval). The owner's step: the Gmail app password,
+    `docs/GOOGLE-STEPS.md` section 1.
+  - **Calendar:** reading is built. The owner's step: the calendar's private address, `docs/GOOGLE-STEPS.md`
+    section 2. **New, item 14:** adding and changing events, through the phone's calendar (the app's part goes to the
+    Mac session) or, with the Mac mini, Apple Calendar.
+  - **Timers:** built, with the clock-time fix of today. **New, item 15:** alarms at a clock time, once or repeating,
+    ringing and spoken on the PC. Real iPhone alarms through iOS 26's AlarmKit are the app's part, for the Mac
+    session.
+  - **Messages:** each new text can already reach JARVIS through an iPhone Shortcuts automation into "Announce to
+    JARVIS" (1.0.17 and the app's round 5b); setting up that automation is the owner's step. **New, item 16:**
+    reading earlier messages and sending texts. With the Mac mini, through Messages on the Mac; on the phone, JARVIS
+    drafts and the owner taps Send (the app's part).
+  - **Calls:** the iPhone lets no app see calls. **New, item 17:** with the Mac mini, call history and calls placed
+    through the iPhone; on the phone, JARVIS starts a call the owner confirms (the app's part).
 - **The Mac mini is not bought yet.** The owner, 2026-10-10: "I don't have the mac mini yet so no transfers are done
   yet physically just blue prints and plans." The order advice was the plan's D1, M6 24 GB / 512 GB at A$2,049, or
   32 GB / 512 GB at A$2,349; the Apple page had 32 GB / 256 GB selected. It rests on JARVIS's real use, measured read
@@ -284,9 +347,12 @@ only records where the work stands. Historical handover context: `docs/PROJECT-C
   the household's myQ owner should agree to a second remote.
 - **FRIDAY** (`C:\Users\jonny\JARVIS-claude-workspace\friday`, 930b56b) is unchanged since 2026-10-07; its tests
   pass, 60 of 60. It needs the owner's Anthropic API key in `friday\.env` and console credits, which stood at $0.00.
-- Next: the owner's A or B for the two highs; then the full Python suite and the final commit. After that, the cause
-  of the intermittent Workshop test, then 1.0.18 build 3 through the chain with both fixes. The Mac mini plan waits
-  for the owner.
+- Next:
+  - the follow-up's commit, after the full Python suite;
+  - then the eight OpenJarvis items for 1.0.19, starting with item 1, the guard;
+  - 1.0.18 build 3, with the timer and "remember that" fixes, needs the cause of the intermittent Workshop test
+    first, and is built from its own commit, before the 1.0.19 work;
+  - the Mac mini plan waits for the owner.
 
 ## 2026-10-10 midday (12:30 local, Opus 5.5): the devices route added to 1.0.18; build 2 in its checks; the cloud plan written
 

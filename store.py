@@ -131,7 +131,7 @@ class Store:
                 raise ValueError('Item type mismatch.')
             db.execute('INSERT INTO items(id,kind,body,created,updated,item_key,category,source,confidence,release) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET body=excluded.body, updated=excluded.updated, item_key=excluded.item_key, category=excluded.category, source=excluded.source, confidence=excluded.confidence, release=excluded.release', (item_id, kind, body.strip(), now, now, item_key or memory.key(body), category or ('project' if kind == 'project' else 'fact'), source, float(confidence), str(release or self.release)[:80]))
             if kind == 'memory' and memory.key(body) == 'profile:name':
-                name = re.sub(r'^(?:my name is|call me|preferred name:)\s*', '', body.strip(), flags=re.I).rstrip('.')[:100]
+                name = memory.name_from(body)[:100]   # one rule for names (1.0.18): key() just found it is one
                 db.execute('INSERT OR REPLACE INTO settings VALUES (?,?)', ('name', json.dumps(name)))
         return {'id': item_id, 'kind': kind, 'body': body.strip()}
 

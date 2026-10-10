@@ -495,6 +495,9 @@ class RouteTests(unittest.TestCase):
         self.assertTrue(self.req('/api/state')['control']['stopped'])
         self.assertEqual(self.refused('/api/chat', {'text': 'hello', 'conversation': 'c'}), (400, permissions.STOPPED_MESSAGE))
         self.assertEqual(self.refused('/api/tool', {'name': 'set_timer', 'args': {'title': 't', 'seconds': 5}}), (400, permissions.STOPPED_MESSAGE))
+        # 1.0.18 (review 2026-10-10): the window's own timer waits for RESUME too; before, it was set while the stop held.
+        self.assertEqual(self.refused('/api/reminder', {'title': 't', 'seconds': 5}), (400, permissions.STOPPED_MESSAGE))
+        self.assertEqual(self.server.app.store.reminders(), [])
         self.assertEqual(self.refused('/api/interface-inspection', {'operation': 'start', 'request': {'panel': 'command', 'focus': 'test'}})[1], permissions.STOPPED_MESSAGE)
         self.assertEqual(self.refused('/api/repair-experiment', {})[1], permissions.STOPPED_MESSAGE)
         self.assertIn('changes', self.req('/api/tool', {'name': 'development_history', 'args': {}}))

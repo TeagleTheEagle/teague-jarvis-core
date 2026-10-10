@@ -81,6 +81,25 @@ before it, whoever said it. After an answer, that line is the answer. "Remember 
 - When only JARVIS's lines come before the command, nothing is saved and the answer is the existing "There is nothing
   before this to remember. ..." sentence.
 
+**The owner's choice, 2026-10-10** (asked after the review's two highs, answered "His answer (Recommended)"): for
+"remember that", "remember this", "remember it" and a bare "remember", the owner's last line decides
+(`memory.line_kind`, `pointer_role` 'auto'):
+- **a statement**, where the owner told JARVIS something ("I did 30 push-ups this morning."): that line is saved;
+- **a question or a request**, where the owner asked something: JARVIS's answer to it is saved, as "JARVIS said: ...".
+  This covers:
+  - a "?" at the end, or a question word first;
+  - a request such as "write", "tell", "show", "analyse", "explain" or "find";
+  - the PC window's screen question (`memory.SCREEN_PROMPT`, kept in step with `static/app.js` by a test);
+- **a command**, where JARVIS was made to do something ("set a timer ...", "play ...", "open ...", the stop words,
+  "resume", and local commands that change something): nothing is saved, and the answer is `memory.COMMAND_HINT`.
+  It reads "Nothing saved: that was a command, not something to remember. Say what to remember, for example “remember
+  that the gate code is 4421”, or “remember what you said” for my answer." With "Ask first" nobody is asked;
+- looked past, with JARVIS's reply to them: a word of thanks or a yes ("Thanks.", "ok", "got it"), and a line that
+  saved itself ("remember that the meeting moved", a note).
+
+"Remember what I said" stays the owner's own line as it is, and "remember what you said" JARVIS's last answer. On an
+approval card the line shown is the one that would be saved.
+
 **Tests:** `test_phone_core_fixes.py`:
 - the phone's case for every owner form;
 - "remember what you said" saves JARVIS's words, and reaches back past the owner's "Thanks.";
@@ -91,7 +110,14 @@ before it, whoever said it. After an answer, that line is the answer. "Remember 
 - the Ask-first approval carries the owner's line after an answer;
 - the phone's case end to end through `App.work` on a device with the tick, with no model asked.
 
-The 1.0.17 test that saved JARVIS's answer for "remember this" is replaced by these.
+The 1.0.17 test that saved JARVIS's answer for "remember this" is replaced by these. For the owner's choice:
+- what kind of line each example is;
+- a question or request keeps JARVIS's answer;
+- after the window's real screen question, read from `static/app.js`, the analysis is kept;
+- after a command nothing is saved and the hint is given, with nobody asked under "Ask first";
+- thanks and self-saving lines are looked past;
+- "remember what I said" keeps the owner's line as it is;
+- with "Ask first" after a question, the approval carries JARVIS's answer.
 
 ## 3. Review
 
@@ -110,18 +136,20 @@ One independent reviewer per item, one at a time. Neither edited anything.
     Core and app change.
   - Low 4: an old `set_timer` record still says "scheduled" after the timer is cancelled or changed, because
     `manage_timer` is not an evidence tool.
-- **Outside this change, found on the way:** the window's own reminder route (`/api/reminder`) sets a timer while
-  the emergency stop holds. This predates 1.0.18 and waits for the owner's word.
+- **Outside this change, found on the way:** the window's own reminder route (`/api/reminder`) set a timer while the
+  emergency stop held. This predates 1.0.18. **Fixed on the owner's word ("Fix both"):** the route now calls
+  `require_running` first, as `set_timer` through `App.tool` does. `test_permissions.py` checks it is refused with
+  the stop sentence and that no reminder is made.
 
 **"Remember that" (item 5):** 2 high, 1 medium, 6 low.
-- **High 1 and High 2 wait for the owner's decision** (2026-10-10). Saving "the owner's own last line" goes wrong
+- **High 1 and High 2: resolved by the owner's choice** (section 2). Saving "the owner's own last line" went wrong
   when that line is not a statement:
   - after "analyse my screen" on the PC, the owner's line is the window's built-in screen prompt (about 500
     characters of instructions);
   - after a question ("When is the meeting?"), it is the question;
   - after a command ("set a timer ..."), it is the command.
-  - The choice put to the owner: A, save JARVIS's answer after a question or request and nothing after a command; or
-    B, save nothing and tell the owner to say "remember what you said".
+  - The two choices put to the owner were A, save JARVIS's answer after a question or request and nothing after a
+    command, or B, save nothing and tell the owner to say "remember what you said". **The owner chose A.**
 - Medium 3, the Core's own lines saved as JARVIS's words: **applied**.
 - Low 4, "remember what you saidplease" got the wrong speaker: **applied**, since the speaker is read from the
   pointer's own match.
@@ -133,6 +161,49 @@ One independent reviewer per item, one at a time. Neither edited anything.
 - **Not built:**
   - Low 7: a file left attached on the PC sends "remember that" to the model, and the model's instructions say
     nothing about the pointer. This predates 1.0.18.
-- **Outside this change, found on the way:** "Call me when the build finishes." is taken as the name command and
-  saves "when the build finishes" as the owner's preferred name (`memory._NAME`). This predates 1.0.18 and waits for
-  the owner's word.
+- **Outside this change, found on the way:** "Call me when the build finishes." was taken as the name command and
+  saved "when the build finishes" as the owner's preferred name (`memory._NAME`). This predates 1.0.18. **Fixed on the
+  owner's word ("Fix both"):** a name may not begin with words such as "when", "if", "after", "at", "in", "back",
+  "later", "tomorrow", "a" or "the" (`memory._NOT_A_NAME`). Such a line goes to the model as any other question.
+  `NameCommandTests` checks those lines, and that "call me Alex", "Call me Mr. Teague." and "my name is Jordan" still
+  work.
+
+**The follow-up** (the owner's choice and the two older fixes) had one reviewer: 4 high, 4 medium, 5 low. It found no
+import cycle and no line-ending change, and confirmed that a command asks nobody and that the stopped reminder route
+shows the stop sentence. What was done about each finding:
+- **High 1**, thanks saved as facts ("Thanks a lot!", "Yes please", "Sounds good"): **applied.** Thanks are now
+  checked word by word (`_COURTESY`, greetings included) instead of with a pattern.
+- **High 2**, the question test ran before the command test and read statements as questions ("May 12 is Mum's
+  birthday.", "Don't use emojis.") and polite commands as requests ("Can you set a timer?"): **applied.**
+  - "Jarvis," and "can you / could you / please" are taken off first, and commands are recognised before questions.
+  - A question needs a "?", a question word with no comma after it, or "is/do/can/..." followed by a subject.
+  - A line that starts with "don't" or "can't" is a statement.
+- **High 3**, the name fix bypassed through a saved memory ("remember that my name is on the lease", or a remembered
+  "Call me when ..."): **applied.** `memory.name_from` is the one rule for the name command, for `key()` and for the
+  store's name setting. It accepts name-shaped values only: up to four words, no digits or commas, never a time, and
+  several words only when each is capitalised. "Call me A.J." and "My name is An Nguyen" now work.
+- **High 4**, "Remember that, Jarvis." saved "that, Jarvis." (older): **applied.** The pointer allows "Jarvis".
+- **Medium 5**, "remember what you said" did not look past thanks: **applied.** The conversation is read as
+  exchanges, each owner line with JARVIS's lines after it.
+- **Medium 6**, music words ("louder", "volume 40"): **applied.** `music.command` is consulted.
+- **Medium 7**, frames the live screen sharing sends by itself: **applied.** They are looked past (`LIVE_FRAME`; a
+  test keeps it in step with `static/app.js`).
+- **Medium 8**, more misreadings: **applied.**
+  - "Lock code ... is 1234." and "Help desk number is ..." are statements, because of the "is".
+  - "Remind me what ..." asks; "I need a / I'd like a ..." is a request.
+- **Low 9**, a pathological thanks line could take seconds: **applied.** The pattern is gone, and a test times it.
+- **Low 10**, the iPhone's curly apostrophe: **applied.**
+- **Low 11**, the approval card showed the bare answer while "JARVIS said: ..." was saved: **applied**
+  (`memory.saved_value`).
+- **Low 12**, other window routes that act while the emergency stop holds (turning on the private-network door,
+  the Spotify sign-in callback): **not built.** They are outside the owner's "Fix both" and are recorded for the
+  owner. The owner's own edits of items while stopped are fine.
+- **Low 13**, the tests: **applied.** Every finding has its case, and the `app.js` check fails cleanly.
+
+Known limit: the kind of line is read from its wording, so an unusual sentence can still be misread. The answer
+"Remembered: ..." always shows what was saved, and a wrong fact is deleted on the Memory page.
+
+**Seen in the full Python suite at f9b3088** (836 tests, 1 error): `test_jarvis.LocalTests.test_local_run_emits_terminal_event`
+could not clean its temporary folder ("The directory is not empty"). The module passes 3 of 3 alone. The test asks
+"What time is it?", one of the Ollama side-check's questions (`ollama_shadow.py`), and that check writes its record in
+the background after the test has ended. This is an older timing race of the test, not of these fixes.
