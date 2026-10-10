@@ -221,6 +221,54 @@ current record.
 Rules and authority are in `CLAUDE.md` and `../governance/OWNER-DELEGATION.md`; this file
 only records where the work stands. Historical handover context: `docs/PROJECT-CONTEXT.md`.
 
+## 2026-10-10 late afternoon (Opus 5.5, at the owner's "handoff"): the guard built, not yet reviewed; Gmail and Calendar plans
+
+- **Head:** f02a48f, then this commit, which adds the guard. Nothing is pushed. The everyday JARVIS is still 1.0.17
+  and was not touched.
+- **Item 1 of 1.0.19, the guard, is built and tested, but not yet reviewed** (`content_guard.py`, `docs/GUARD.md`,
+  `test_content_guard.py` with 12 tests; 190 tests of the touched modules pass):
+  - outside text that tries to instruct the AI is cut out;
+  - hidden characters are removed;
+  - secrets are blacked out;
+  - a question whose results held instructions changes nothing more without approval;
+  - local addresses open only on the owner's own words.
+  **Next session, first:** one reviewer for the guard, apply the findings, the full Python suite, commit.
+- **The owner connected Google Calendar** to the everyday JARVIS ("calandar done"; TEST passed by the owner's
+  account of it). Gmail is not connected yet; the steps were given (`docs/GOOGLE-STEPS.md` section 1).
+- **Open, seen by the owner:** Google Calendar shows "will's party", Sat 10 Oct 15:30–23:00, on "Jarvis's & Mr.
+  Teague", but JARVIS answered "today's empty" at 14:04 and 14:06. Not yet diagnosed. Candidates:
+  - the event was made after the feed was read (JARVIS caches the feed 10 minutes, `calendar_feed.CACHE_SECONDS`);
+  - Google's secret iCal address lags behind on Google's side;
+  - a parsing or zone bug in `calendar_feed.py`.
+  Next: test `calendar_feed` with a synthetic feed holding that event, then ask the owner to ask again.
+- **The owner: "make him be able to do everything he cant do for both gmail and calandar"**, with JARVIS's own two
+  lists. The plan given to the owner, built straight after the guard, as item 18:
+  - **Phase A**, with no new sign-in, over IMAP, SMTP and the iCal address:
+    - HTML mail and attachments, sent and received;
+    - every folder;
+    - mark read or unread, star, label, archive, move to Trash (never a permanent delete);
+    - drafts, and threaded replies;
+    - checking a sent mail is in Sent;
+    - reading invites inside mails;
+    - calendar reading for any range, past ones too;
+    - each change under the permission switches.
+  - **Phase B**, after a one-time Google sign-in the owner sets up: calendar create, edit, move and delete, guests and
+    RSVP, recurrence, reminders and colours; Gmail filters, forwarding, signatures, out-of-office, contacts, other
+    addresses. Google's current rules must be checked first. An OAuth app in "testing" loses its sign-in after
+    seven days (`mail.py`'s note); whether an unverified app "in production" is usable for the owner alone must be
+    confirmed before the steps are written.
+  - **Impossible or the owner's:** read confirmations, fixing a sign-in, permanent delete.
+- **The owner's question, not yet answered: "can I give jarvis his own google account that he has full acess to?"**
+  The answer being prepared:
+  - Yes, and it is safer: the owner's own account stays out of JARVIS's reach.
+  - The owner makes the account (accounts are the owner's).
+  - The owner shares their calendar with it, "Make changes to events".
+  - JARVIS's own Gmail can send as JARVIS and receive forwarded mail.
+  - Calendar writes still need a Google sign-in (Phase B) as that account. Without one, JARVIS can organise events
+    by sending calendar invitations from his own address, which Google adds to the owner's calendar; that works only
+    for events JARVIS organised.
+  - The owner's own inbox still needs the owner's app password.
+
 ## 2026-10-10 afternoon (Opus 5.5): the Mac's six requests answered; the owner approved two Core fixes, built and reviewed
 
 - The session opened in the old OneDrive folder and was moved to the repo. Head 8280b3c with a clean tree at the

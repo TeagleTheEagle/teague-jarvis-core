@@ -64,6 +64,7 @@ from inspection_jobs import JOBS as inspection_jobs
 from interface_inspection import validate_request
 import connection_checks
 import computer_tools
+import content_guard
 from voice_engine import VoiceEngine
 from local_stt import LocalSTT
 import conversation_context
@@ -1000,6 +1001,7 @@ class App:
         # this tool, and whether the owner is asked first.
         verdict, refusal = permissions.decide(name, args, stopped=self.stopped is not None, by_jarvis=run is not None,
             wearable=bool(run and getattr(run, 'wearable', False)), writes=self.device_writes(run), tools=self.device_tools(run), approved=approved,
+            tainted=bool(run is not None and getattr(run, 'tainted', False)),   # 1.0.19: outside text tried to instruct the AI
             mode=self.tool_mode(name) if run is not None and not self.stage4 else permissions.DEFAULT)
         if verdict == 'refuse':
             self.audit(name, 'refused', run)
@@ -1079,6 +1081,10 @@ class App:
             elif name == 'computer_run_tests':
                 result = computer_tools.run_tests(ROOT)
             elif name == 'computer_open_page':
+                # 1.0.19 (the guard): an address on this PC or the home network only on the owner's own words.
+                if run is not None and content_guard.local_address(args['url']) and not content_guard.owner_named(args['url'], run.user_text):
+                    raise ValueError('JARVIS opens an address on this PC, the home network or the private network only when your own words name it. '
+                                     'Open it yourself, or ask again with the address in your words.')
                 result = computer_tools.open_page(args['url'])
             elif name == 'preview_action':
                 target = args['action']
@@ -1232,6 +1238,13 @@ class App:
                           'now': datetime.datetime.now().astimezone().isoformat(timespec='minutes')}
             else:
                 raise ValueError('Unknown tool.')
+            # 1.0.19, the guard (content_guard.py, docs/GUARD.md): what came from outside is cleaned before the AI model
+            # reads it; a question whose results held instructions or hidden text changes nothing more without approval.
+            result, found = content_guard.guard(result)
+            if found:
+                if run is not None and content_guard.taints(found):
+                    run.tainted = True
+                self.audit('guard: ' + name, content_guard.summary(found), run)
             self.audit(name, result.get('status', 'completed'), run)
             if run and not run.cancel.is_set():
                 run.emit('response.timing', {'stage':'tool '+name,'ms':round((time.perf_counter()-tool_started)*1000)})
@@ -1539,8 +1552,9 @@ class App:
                            **({'saved_facts_note': memory.STAMP_NOTE} if any(r.get('release') for r in facts) else {})}  # 1.0.17 item E: the rule only when a stamped fact is there
                 if os.getenv('JARVIS_DESKTOP_TOKEN'):
                     context['desktop_capabilities'] = {'screen_vision': 'Live local sharing on explicit start; AI receives changed frames periodically and notes are saved in Communications. Screenshot commands request one immediate frame. Commands: analyse my screen, take a screenshot Jarvis, start screen sharing, stop sharing.', 'companion': 'Floating hologram with analyse screen, microphone and stop controls. Command: show hologram.', 'limits': 'AI receives sampled images, not every video frame. No arbitrary mouse/keyboard control. Only claim to see supplied images. Screen observations are analysis-only; separate explicit user commands can use existing tools.'}
-                context['recent_research'] = self.store.recent_research(run.conversation)
-                context['recent_tool_evidence'] = self.store.recent_evidence(run.conversation)
+                # Earlier results come back through the guard too (1.0.19): research was saved as it came.
+                context['recent_research'] = content_guard.guard(self.store.recent_research(run.conversation))[0]
+                context['recent_tool_evidence'] = content_guard.guard(self.store.recent_evidence(run.conversation))[0]
                 if getattr(self, 'workshop', None) is not None:
                     try:
                         workshop_context = self.workshop.context(text)  # the lessons these words match; the latest mission (docs/WORKSHOP.md)

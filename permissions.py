@@ -210,7 +210,12 @@ def modes_for(name):
     return (DEFAULT, ASK, OFF) if rule.effect == CHANGES and rule.asks == NEVER and rule.reach != SCREEN else (DEFAULT, OFF)
 
 
-def decide(name, args=None, *, stopped=False, by_jarvis=True, wearable=False, mode=DEFAULT, approved=False, writes=False, tools=False):
+TAINTED_MESSAGE = ('Text JARVIS read for this question tried to give the AI instructions, so nothing is changed in this question '
+                   'without your approval, and this cannot wait for one. Ask again in your own words.')
+
+
+def decide(name, args=None, *, stopped=False, by_jarvis=True, wearable=False, mode=DEFAULT, approved=False, writes=False, tools=False,
+           tainted=False):
     """('run' | 'ask' | 'refuse', message) for one tool call.
 
     by_jarvis: the call belongs to a question JARVIS is answering (the AI model or a typed or spoken
@@ -219,6 +224,8 @@ def decide(name, args=None, *, stopped=False, by_jarvis=True, wearable=False, mo
     writes: the question comes from a paired device the owner ticked "may save memories and tasks" for.
     tools: the question comes from a paired device the owner ticked "may use this PC's tools" for (1.0.17,
     docs/PHONE-ACCESS-1.0.17.md): it may call every tool the PC's question may, under the same switches.
+    tainted: text JARVIS read earlier in this question tried to instruct the AI or hid text (1.0.19, content_guard.py):
+    every change then waits for the owner's approval, whatever its switch, or is refused when it cannot wait for one.
     """
     rule = TABLE.get(name)
     if rule is None:
@@ -235,6 +242,8 @@ def decide(name, args=None, *, stopped=False, by_jarvis=True, wearable=False, mo
         return 'refuse', 'This operation is unavailable from the wearable client.'
     if by_jarvis and mode == OFF:
         return 'refuse', f'"{rule.label}" is switched off in Settings > Permissions. Only the owner can switch it on.'
+    if by_jarvis and tainted and does == CHANGES and not approved:
+        return ('ask', '') if ASK in modes_for(name) else ('refuse', TAINTED_MESSAGE)
     if by_jarvis and mode == ASK and ASK in modes_for(name) and does == CHANGES and not approved:
         return 'ask', ''
     return 'run', ''
