@@ -60,3 +60,25 @@ shipped). The rest: the 3,986 bytecode files and the 29 pip launcher/RECORD file
 pinned inputs are identical except the two that carry the version number: `electron/JARVIS.exe`, whose two copies (both
 246,257,152 bytes) differ in exactly 4 bytes, all in the version resource (17 to 18 twice, "7" to "8" twice), and
 `electron/resources/app/package.json`, whose only change is `"version": "1.0.17"` to `"1.0.18"`.
+
+## Release regression, run 1: NOT PASSED, one test (`regression-1.0.18-cffb826de043-run1.output.txt`, `...python-log.txt`)
+
+`tools/release_regression.py --package D:\JARVIS-release-work\release\JARVIS-1.0.18-cffb826de043 --work
+D:\JARVIS-release-work\regression-1.0.18-time`, with the release's own Python and `JARVIS.exe` (no development
+environment, no system node; TEMP on D:), run alone, 21:46 to 22:13 local: 782 Python tests in 1,389 s with **1
+failure** and 7 skipped (the same 7 as for 1.0.17, by their own conditions); 60 desktop (190 s), 18 Intelligence and
+the 26 interface scripts passed; 110 test files overlaid from cffb826; the release verified unchanged before and after.
+
+The failure: `test_music.OneThreadForTheMediaInterfaceTests.test_a_song_opened_on_a_thread_that_ended_can_still_be_seen_and_stopped`,
+the test against the real Windows media interface (a one-second silent tone): "the real media interface refused the
+open: Windows did not answer the music command in time" (`music.Mci`'s 10 s wait for Windows). `music.py` and
+`test_music.py` are byte-identical to 1.0.17's, whose regression this test passed; it passed in tonight's development
+suites. Reproduced right after, alone, with the release's own Python in the regression's copy and TEMP on D:: **5 runs
+of 5 passed, 0.4 to 0.8 s each** (`repeat_music_test.ps1` in the session's scratchpad). Taken as Windows' media
+interface not answering in time at that moment (the same kind of stall as drive C: earlier), not as a defect of the
+build; the build is not changed. The regression runs again, alone, on the same build (run 2 below); the build is
+accepted only on a run that passes.
+
+## Release regression, run 2: stopped by the owner, no result
+
+Started alone at about 22:17 local on the same build (`--work D:\JARVIS-release-workegression-1.0.18-time-run2`); stopped from the owner's side during the Python suite (noticed at 22:29): no suite finished, no log written, no process left running. The build is not yet accepted: the regression must pass in a complete run before the Setup, the rehearsals and the sandbox Stage 7 pass.

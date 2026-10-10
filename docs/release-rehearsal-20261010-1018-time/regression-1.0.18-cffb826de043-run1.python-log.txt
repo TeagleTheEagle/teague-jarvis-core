@@ -1,0 +1,14 @@
+.....................................................................................................................................................................................................................................s...........................................................................................F.............................................................................sssss..................................................................................................................................................................................................................................................................................................................................s.......................................................
+======================================================================
+FAIL: test_a_song_opened_on_a_thread_that_ended_can_still_be_seen_and_stopped (test_music.OneThreadForTheMediaInterfaceTests.test_a_song_opened_on_a_thread_that_ended_can_still_be_seen_and_stopped)
+The owner's case against the real media interface: a one-second silent tone (volume 0).
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\JARVIS-release-work\regression-1.0.18-time\release\app\test_music.py", line 558, in test_a_song_opened_on_a_thread_that_ended_can_still_be_seen_and_stopped
+    self.fail('the real media interface refused the open: ' + outcome['error'])
+AssertionError: the real media interface refused the open: Windows did not answer the music command in time.
+
+----------------------------------------------------------------------
+Ran 782 tests in 1386.724s
+
+FAILED (failures=1, skipped=7)
