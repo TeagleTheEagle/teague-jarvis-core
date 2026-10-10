@@ -43,7 +43,8 @@ OWN = frozenset((
     'conversation_search', 'conversation_read', 'project_catalog', 'project_read', 'project_link_chat',
     'project_save_document', 'computer_files', 'computer_read_file', 'development_history', 'development_read',
     'development_propose', 'development_edit', 'development_rollback', 'navigate_panel', 'open_app', 'play_music',
-    'device_registry', 'response_timings', 'service_status', 'time_now', 'calculate', 'suit_diagram'))
+    'device_registry', 'response_timings', 'service_status', 'time_now', 'calculate', 'suit_diagram',
+    'about_you', 'remember_about_you'))
 # The parts of a result that are the AI model's own arguments shown back to the owner (the approval card, a preview, a
 # diff, and the summary of a call that waits for approval): never changed and never a reason to mark the question.
 MODEL_OWN_KEYS = ('approval', 'preview', 'diff')

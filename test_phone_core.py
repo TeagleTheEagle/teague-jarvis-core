@@ -272,7 +272,8 @@ class ReadTests(DeviceCase):
 
 class PermissionTableTests(unittest.TestCase):
     def test_the_tick_opens_only_the_saving_tools(self):
-        self.assertEqual(permissions.DEVICE_WRITE_TOOLS, frozenset({'save_item', 'set_timer', 'manage_timer', 'manage_saved_memory'}))
+        self.assertEqual(permissions.DEVICE_WRITE_TOOLS, frozenset({'save_item', 'set_timer', 'manage_timer', 'manage_saved_memory',
+                                                                    'remember_about_you'}))   # 1.0.19: an offer for the You page, still approved by the owner
         for name in permissions.DEVICE_WRITE_TOOLS:
             self.assertEqual(permissions.TABLE[name].reach, permissions.LOCAL)
             self.assertEqual(permissions.decide(name, {}, wearable=True, writes=True)[0], 'run')

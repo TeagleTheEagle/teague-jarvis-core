@@ -19,6 +19,7 @@ import unittest
 from unittest.mock import Mock, patch
 import uuid
 
+import about_you
 import content_guard
 import development
 import permissions
@@ -46,6 +47,7 @@ def app_fixture():
         ROOT=ROOT, runtime_paths=runtime_paths, threading=threading, time=time, uuid=uuid, re=re,
         providers=providers, permissions=permissions, development=development, companion_tools=types.SimpleNamespace(stamp=lambda: {'at': 0}),
         content_guard=content_guard,   # 1.0.19: a question's context and tool results pass the guard (docs/GUARD.md)
+        about_you=about_you,           # 1.0.19: the You page's guidance in the instructions (about_you.py)
     ))
     app = ns['App'].__new__(ns['App'])
     app.stage4 = None

@@ -72,6 +72,7 @@ import maps
 import mail
 import calendar_feed
 import nudges
+import about_you
 import speaker
 import network_devices
 import providers
@@ -236,6 +237,8 @@ class App:
                                  allowed=lambda: self.stopped is None, note=lambda status: self.audit('mail unread count (background)', status))
         self.calendar_day = Fresh(600, lambda: calendar_feed.upcoming(1)[0] if calendar_feed.configured() else None,
                                   allowed=lambda: self.stopped is None, note=lambda status: self.audit('calendar day (background)', status))
+        # The You page (1.0.19, about_you.py, docs/ABOUT-YOU.md): what the owner told JARVIS about their life.
+        self.profile = about_you.Profile(self.store)
         # The owner's routine, its nudges and the notices JARVIS keeps (1.0.17 item F, nudges.py). The clock that looks
         # once a minute is started in main(); an App made by a test starts nothing by itself.
         if self.stage4:
@@ -307,6 +310,7 @@ class App:
         tools: the owner lets that device use this PC's tools (1.0.17, docs/PHONE-ACCESS-1.0.17.md)."""
         system = ((self.store.root / 'personality.txt') if self.stage4 else runtime_paths.personality_file()).read_text(encoding='utf-8')
         system += '\n' + conversation_context.TOOL_GUIDANCE
+        system += '\n' + about_you.GUIDANCE   # the You page (1.0.19)
         system += '\n' + verified_status.GUIDANCE
         if wearable and tools:
             system += ('\nThis is a conversation from a paired device whose owner lets it use this PC\'s tools: the same tools as a question'
@@ -1237,6 +1241,29 @@ class App:
                 rows, notes = calendar_feed.upcoming(args['days'])
                 result = {'status': 'completed', 'days': args['days'], 'count': len(rows), 'events': rows[:60], 'notes': notes,
                           'now': datetime.datetime.now().astimezone().isoformat(timespec='minutes')}
+            elif name == 'about_you':
+                # The You page (1.0.19, about_you.py, docs/ABOUT-YOU.md).
+                found = self.profile.search(args['query'])
+                result = {'status': 'completed', 'count': len(found), 'entries': found[:120],
+                          'coming_up': [about_you.Profile.soon_words(s) for s in self.profile.upcoming()],
+                          'note': 'What the owner told JARVIS on the You page (the Memory section).'}
+            elif name == 'remember_about_you':
+                month, day, year = about_you.parse_date(args['date'])
+                fields = self.profile.check(args['section'], args['title'], args['detail'], month, day, year)
+                if approved:
+                    row = self.profile.add(**fields)
+                    result = {'status': 'saved', 'section': about_you.SECTION_NAMES[row['section']], 'line': about_you.Profile.line(row)}
+                else:
+                    # Always the owner's OK first (permissions: asks ALWAYS): the card shows exactly what would be kept, and the
+                    # approval saves exactly that.
+                    shown = {'section': fields['section'], 'title': fields['title'], 'detail': fields['detail'], 'date': args['date'].strip(),
+                             'reason': ' '.join(str(args['reason']).split())[:200]}
+                    approval = {'id': uuid.uuid4().hex, 'tool': name, 'args': shown, 'generic': True, 'label': permissions.TABLE[name].label,
+                                'created': time.time(), 'expires': time.time()+APPROVAL_SECONDS, 'run_id': run.id if run else None,
+                                'conversation': run.conversation if run else None, 'device': getattr(run, 'device', 'pc')}
+                    self.keep_approval(approval)
+                    result = {'approval': approval, 'status': 'awaiting approval',
+                              'summary': 'Waiting for your OK to keep this on the You page: ' + about_you.Profile.line(fields) + '. Nothing is saved yet.'}
             else:
                 raise ValueError('Unknown tool.')
             self.audit(name, result.get('status', 'completed'), run)
@@ -1341,6 +1368,33 @@ class App:
                                  'Automatic backup done.' if status.startswith('verified') else 'Automatic backup: ' + status)
             except Exception:
                 pass
+
+    def profile_state(self):
+        """The You page as the window shows it (1.0.19, about_you.py, docs/ABOUT-YOU.md)."""
+        return {'entries': [{**row, 'line': about_you.Profile.line(row)} for row in self.profile.entries()],
+                'coming_up': [about_you.Profile.soon_words(s) for s in self.profile.upcoming()],
+                'sections': [{'id': s, 'name': about_you.SECTION_NAMES[s]} for s in about_you.SECTIONS]}
+
+    def profile_action(self, body):
+        """The owner's own clicks on the You page (1.0.19): add, change or remove an entry. Only the signed-in
+        interface on the PC reaches this. The Activity log names the section, not the entry."""
+        action = body.get('action')
+        if action == 'add':
+            row = self.profile.add(body.get('section'), body.get('title'), body.get('detail') or '',
+                                   body.get('month') or None, body.get('day') or None, body.get('year') or None)
+            self.audit('you page: added', about_you.SECTION_NAMES[row['section']])
+        elif action == 'update':
+            changes = {key: (body.get(key) or None) if key in ('month', 'day', 'year') else body.get(key)
+                       for key in ('title', 'detail', 'month', 'day', 'year') if key in body}
+            row = self.profile.update(body.get('id'), **changes)
+            self.audit('you page: changed', about_you.SECTION_NAMES[row['section']])
+        elif action == 'remove':
+            row = self.profile.get(body.get('id'))
+            self.profile.remove(row['id'])
+            self.audit('you page: removed', about_you.SECTION_NAMES[row['section']])
+        else:
+            raise ValueError('Unknown action.')
+        return self.profile_state()
 
     def routine_action(self, body):
         """The owner's clicks in Settings > Routine (1.0.17 item F). Only the signed-in interface on the PC reaches this."""
@@ -1550,6 +1604,10 @@ class App:
                 # tried to instruct the AI is still in front of the model, this question is marked as that one was.
                 context['recent_research'], context['recent_tool_evidence'] = content_guard.earlier(
                     self.store.recent_research(run.conversation), self.store.recent_evidence(run.conversation), run, self.audit)
+                # The You page (1.0.19, about_you.py): a short summary of the owner's life with every question.
+                about_owner = self.profile.context() if getattr(self, 'profile', None) is not None else None
+                if about_owner:
+                    context['about_owner'] = about_owner
                 if getattr(self, 'workshop', None) is not None:
                     try:
                         workshop_context = self.workshop.context(text)  # the lessons these words match; the latest mission (docs/WORKSHOP.md)
@@ -1969,6 +2027,8 @@ class Handler(BaseHTTPRequestHandler):
                 if self.app.routine is None:
                     return self.send(404, {'error': 'Unknown endpoint.'})
                 return self.send(200, {'blocks': self.app.routine.blocks(), 'days': list(nudges.DAYS)})
+            if path == '/api/profile':
+                return self.send(200, self.app.profile_state())   # the You page (1.0.19)
             if path == '/api/notices':
                 return self.send(200, {'items': self.app.notices.recent(50) if self.app.notices else []})
             if path == '/api/control-requests':
@@ -2009,7 +2069,7 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send(200, {'events': run.events[max(0, after + 1):], 'done': run.done})
             if path == '/api/export':
                 with self.app.store.connect() as db:
-                    result = {table: [dict(r) for r in db.execute('SELECT * FROM ' + table)] for table in ('items', 'messages', 'reminders', 'settings')}
+                    result = {table: [dict(r) for r in db.execute('SELECT * FROM ' + table)] for table in ('items', 'messages', 'reminders', 'settings', 'profile')}
                 return self.send(200, result, extra={'Content-Disposition': 'attachment; filename="jarvis-data.json"'})
             if path.startswith('/api/files/'):
                 name = urllib.parse.unquote(path[len('/api/files/'):])
@@ -2031,7 +2091,7 @@ class Handler(BaseHTTPRequestHandler):
                 # a style change has been approved; the program's own style files are never changed.
                 file = runtime_paths.config_dir_for(ROOT) / 'owner-style.css'
                 return self.send(200, file.read_bytes() if file.is_file() else b'', 'text/css; charset=utf-8')
-            mapping = {'/permissions.js':'permissions.js','/permissions.css':'permissions.css','/devices.js':'devices.js','/devices.css':'devices.css','/music.js':'music.js','/music.css':'music.css','/workshop.js':'workshop.js','/workshop.css':'workshop.css','/connectors.js':'connectors.js','/connectors.css':'connectors.css','/routine.js':'routine.js','/routine.css':'routine.css','/latency.js':'latency.js','/voice-core.js':'voice-core.js','/teague.js':'teague.js','/teague.css':'teague.css','/command-dashboard.js':'command-dashboard.js','/command-dashboard.css':'command-dashboard.css','/horizon.js':'horizon.js','/horizon.css':'horizon.css','/world-map.js':'world-map.js','/dashboard-model.js':'dashboard-model.js','/markdown-view.js':'markdown-view.js','/assets/branding/teague/jarvis-mark.svg':'assets/branding/teague/jarvis-mark.svg','/recovery.js':'recovery.js', '/assistant-controls.js':'assistant-controls.js', '/desktop-updates.js':'desktop-updates.js', '/inspection-client.js':'inspection-client.js', '/voice-lab.html': 'voice-lab.html', '/voice-lab.js': 'voice-lab.js', '/voice-lab.css': 'voice-lab.css', '/': 'index.html', '/app.js': 'app.js', '/diagrams.js': 'diagrams.js', '/workspaces.js': 'workspaces.js', '/voice-preview.js': 'voice-preview.js', '/maps.js': 'maps.js', '/reliability.js': 'reliability.js', '/reliability.css': 'reliability.css', '/maps.css': 'maps.css', '/map-canvas.html': 'map-canvas.html', '/map-canvas.js': 'map-canvas.js', '/map-canvas.css': 'map-canvas.css', '/style.css': 'style.css', '/gallery.css': 'gallery.css', '/pro.css': 'pro.css', '/voice.js': 'voice.js', '/mic-worklet.js': 'mic-worklet.js', '/assets/branding/teague/teague-mark.svg': 'assets/branding/teague/teague-mark.svg', '/assets/branding/teague/command-background.png': 'assets/branding/teague/command-background.png'}
+            mapping = {'/permissions.js':'permissions.js','/permissions.css':'permissions.css','/devices.js':'devices.js','/devices.css':'devices.css','/music.js':'music.js','/music.css':'music.css','/workshop.js':'workshop.js','/workshop.css':'workshop.css','/connectors.js':'connectors.js','/connectors.css':'connectors.css','/routine.js':'routine.js','/routine.css':'routine.css','/you.js':'you.js','/you.css':'you.css','/latency.js':'latency.js','/voice-core.js':'voice-core.js','/teague.js':'teague.js','/teague.css':'teague.css','/command-dashboard.js':'command-dashboard.js','/command-dashboard.css':'command-dashboard.css','/horizon.js':'horizon.js','/horizon.css':'horizon.css','/world-map.js':'world-map.js','/dashboard-model.js':'dashboard-model.js','/markdown-view.js':'markdown-view.js','/assets/branding/teague/jarvis-mark.svg':'assets/branding/teague/jarvis-mark.svg','/recovery.js':'recovery.js', '/assistant-controls.js':'assistant-controls.js', '/desktop-updates.js':'desktop-updates.js', '/inspection-client.js':'inspection-client.js', '/voice-lab.html': 'voice-lab.html', '/voice-lab.js': 'voice-lab.js', '/voice-lab.css': 'voice-lab.css', '/': 'index.html', '/app.js': 'app.js', '/diagrams.js': 'diagrams.js', '/workspaces.js': 'workspaces.js', '/voice-preview.js': 'voice-preview.js', '/maps.js': 'maps.js', '/reliability.js': 'reliability.js', '/reliability.css': 'reliability.css', '/maps.css': 'maps.css', '/map-canvas.html': 'map-canvas.html', '/map-canvas.js': 'map-canvas.js', '/map-canvas.css': 'map-canvas.css', '/style.css': 'style.css', '/gallery.css': 'gallery.css', '/pro.css': 'pro.css', '/voice.js': 'voice.js', '/mic-worklet.js': 'mic-worklet.js', '/assets/branding/teague/teague-mark.svg': 'assets/branding/teague/teague-mark.svg', '/assets/branding/teague/command-background.png': 'assets/branding/teague/command-background.png'}
             if path not in mapping:
                 return self.send(404, {'error': 'Not found.'})
             file = ROOT / 'static' / mapping[path]
@@ -2172,6 +2232,8 @@ class Handler(BaseHTTPRequestHandler):
                 result = self.app.devices_action(body)
             elif path == '/api/routine':
                 result = self.app.routine_action(body)
+            elif path == '/api/profile':
+                result = self.app.profile_action(body)   # the You page (1.0.19)
             elif path == '/api/remote-devices':
                 result = self.app.remote_devices_action(body)
             elif path == '/api/music':

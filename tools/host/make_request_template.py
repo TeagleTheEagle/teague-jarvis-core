@@ -12,6 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
+import about_you  # noqa: E402  (the You page's guidance, 1.0.19)
 import actions  # noqa: E402
 import conversation_context  # noqa: E402
 import development  # noqa: E402
@@ -26,7 +27,7 @@ def development_paragraph():
 
 def main():
     system = (ROOT / 'personality.txt').read_text(encoding='utf-8')
-    system += '\n' + conversation_context.TOOL_GUIDANCE + '\n' + verified_status.GUIDANCE + development_paragraph()
+    system += '\n' + conversation_context.TOOL_GUIDANCE + '\n' + about_you.GUIDANCE + '\n' + verified_status.GUIDANCE + development_paragraph()
     here = Path(__file__).resolve().parent
     (here / 'jarvis-request-system.txt').write_text(system, encoding='utf-8', newline='\n')
     (here / 'jarvis-request-tools.json').write_text(json.dumps(actions.TOOLS, ensure_ascii=False), encoding='utf-8', newline='\n')
