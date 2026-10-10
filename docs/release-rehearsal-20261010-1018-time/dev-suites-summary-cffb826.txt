@@ -1,0 +1,34 @@
+tree D:\JARVIS-release-work\src-1.0.18 head cffb826 Release 1.0.18: the time fix only (owner: "keep friday as he is, 1.0.18 time fix only"): the Core's own answer to "what time is it", "time", "date" and "what is the date" is one sentence (It's 2:36 PM on Saturday 10 October 2026.) instead of the raw ISO reading Siri read out (the Mac's round 6, request 8); test_time_reply.py (6 tests, a real Core from the PC and a paired phone); release notes; docs/RELEASE-1.0.18.md with the independent review (no high, 1 medium, 6 low, all applied)
+uncommitted: none
+started 2026-10-10 21:26:23
+python unittest                          exit=0 769.9s :: OK
+desktop node --test                      exit=0 155.8s :: ℹ duration_ms 155747.8627
+intelligence node --test                 exit=0 0.2s :: ℹ duration_ms 111.1265
+test_barge_in.cjs                        exit=0 0.1s :: PASS: sustained interruption, pre-roll, silence/noise rejection, disabled playback, ended conversation and stop.
+test_connectors_view.cjs                 exit=0 0.1s :: connectors view: ok
+test_conversation_voice.cjs              exit=0 0.1s :: Conversation mode: persistent session, single nudge, pause tolerance, resume and exact end phrase passed.
+test_dashboard_model.cjs                 exit=0 0.1s :: Dashboard model checks passed.
+test_devices_view.cjs                    exit=0 0.1s :: devices view (1.0.17): ok
+test_local_voice_main.cjs                exit=0 0.1s :: Main local voice: continuous audio, playback suppression, PCM and stale-wake checks passed.
+test_markdown_view.cjs                   exit=0 0.1s :: Formatted reply parser checks passed.
+test_music_view.cjs                      exit=0 0.1s :: music view: ok
+test_navigation.cjs                      exit=0 0.1s :: Navigation commands and non-navigation exclusions passed.
+test_permissions_view.cjs                exit=0 0.1s :: permissions view: ok
+test_proactive_voice.cjs                 exit=0 0.1s :: PASS: invited conversation, muted microphone, end phrase latch and explicit restart.
+test_prompt_speech.cjs                   exit=0 0.1s :: PASS: prompt acknowledgement, explicit read-aloud and clarification handling.
+test_routine_view.cjs                    exit=0 0.1s :: routine view: ok
+test_screen_intent.cjs                   exit=0 0.1s :: PASS: screen session voice intent and unrelated conversation.
+test_screen_vision.cjs                   exit=0 0.1s :: PASS: unified start, observations, fresh question capture, deduplication, stop, limit and cancelled picker.
+test_settings_version.cjs                exit=0 0.1s :: PASS: Settings > About shows the installed release, the development revision, or says it is not in this view.
+test_timer_fast_path.cjs                 exit=0 0.1s :: PASS: timer fast path, qualified timing, empty/expired/multiple timers, read failure, cancellation, configured cloud voice.
+test_voice.cjs                           exit=0 0.1s :: Voice tests passed: wake gate, interruption, silence, timeout, mute, WAV format.
+test_voice_cancellation.cjs              exit=0 0.1s :: PASS: superseded speech aborts; cancellation is silent; old cleanup preserves current request.
+test_voice_diagnostics.cjs               exit=0 0.1s :: PASS: live RMS during playback/processing, no monitoring requests, stopped capture and bounded metadata.
+test_voice_lab.cjs                       exit=0 0.1s :: Voice lab: ordered audio, cancellation and overload checks passed.
+test_voice_recovery.cjs                  exit=0 0.1s :: PASS: selected-input recovery, standby, mute cancellation and bounded retries.
+test_voice_thinking_wake.cjs             exit=0 0.1s :: PASS: wake word alive while thinking (also in an open conversation), silent while speaking, push to talk unchanged, late and failing requests tolerated.
+test_wake_race.cjs                       exit=0 0.1s :: PASS: stale pause/reset failures ignored; current failures reported; new session preserved.
+test_wake_startup.cjs                    exit=0 0.1s :: PASS: preparation precedes capture; mute during preparation prevents capture.
+test_world_map.cjs                       exit=0 0.1s :: World map land, sea, sun position and day/night checks passed.
+ended 2026-10-10 21:41:51
+FAILED: none
