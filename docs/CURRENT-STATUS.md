@@ -1,7 +1,7 @@
 # JARVIS: current status (living document)
 
 **Read this first in every new Claude Code session, and update it at the end of each one.**
-Last updated: 2026-10-10 (evening; the section "2026-10-10 evening" below is the newest: the guard's review applied, the calendar mismatch explained, JARVIS's own Google account) (STAGE_6_COMPLETE, SWITCH-OVER COMPLETE, STAGE_7_COMPLETE for 1.0.14, 1.0.15 AND 1.0.16;
+Last updated: 2026-10-10 (late evening; the section "2026-10-10 late evening" below is the newest: the You page built and reviewed, findings not yet applied; the memory roadmap for approval; voice recognition researched) (STAGE_6_COMPLETE, SWITCH-OVER COMPLETE, STAGE_7_COMPLETE for 1.0.14, 1.0.15 AND 1.0.16;
 **the everyday JARVIS is 1.0.17-0d38218c4e1d (EVERYDAY_UPDATE_COMPLETE, 2026-10-07 evening, the first update made by the release's own Setup: JARVIS.exe, the Installed-apps entry, the shortcuts at JARVIS.exe); 1.0.16, 1.0.15, 1.0.14 and 1.0.11 stay installed as rollback copies.
 **CORE RELEASE 1.0.16 ("the phone release", now also with the Qwen voice link fix): BUILT AND CHECKED ON THIS PC as build 2 `1.0.16-fccde24e2cc6` (commit fccde24; comparison, release regression, zip install and sandbox Stage 7 all PASS; build 1 `1.0.16-4e54fc946bc3` superseded, never offered); `docs/STAGE7-CHECK-1.0.16.md` APPROVED BY THE OWNER ("I approve the Stage 7 check of 1.0.16", first clock reading 2026-10-06T06:50:25Z; record `../governance/STAGE7-1.0.16-APPROVAL-RECORD.json`, repo copy `docs/stage7-1.0.16-evidence/`); the tools are placed in `D:\JARVIS-S6-FRESHVM\tools\stage7-1.0.16\` and the record folders created; **THE VM CHECK OF 1.0.16 IS COMPLETE: `STAGE_7_COMPLETE`, 27 of 27 checks** (owner "stage 7 done" 2026-10-06 about 20:00 local; evaluation `docs/stage7-1.0.16-evidence/stage7-evaluation.json`, evaluated 09:02:54Z; snapshot STAGE7-PASS-1.0.16-fccde24e2cc6 c91c7f1a… taken 08:59:38Z after a clean shutdown, all eight snapshots kept; the first install's 646 s against the 600 s bound dispositioned as a VM limitation under the owner's rule of 2026-10-06, every update, rollback and stop inside the bound; no incident this time). **THE UPDATE OF THE EVERYDAY JARVIS TO 1.0.16 IS COMPLETE: `EVERYDAY_UPDATE_COMPLETE`** ("I approve the update of my everyday JARVIS to 1.0.16", 2026-10-06T09:11:04Z; record `../governance/UPDATE-1.0.16-APPROVAL-RECORD.json`; steps 1 to 5 run by the owner 20:16 to 20:40 local: check, backup 351 files with test restore, update 108.5 s with the database byte-for-byte unchanged, the owner's check, a PC restart with JARVIS 1.0.16 starting by itself 5.7 min after sign-in; evaluation and MANIFEST in `D:\JARVIS-update-1.0.16\evidence`, repo copy `docs/update-1.0.16-evidence/`; the Private network switch stays off until the owner sets up Tailscale). **THE PHONE IS PAIRED AND TALKING TO THE CORE OVER THE PRIVATE NETWORK (22:15 local):** Tailscale on the PC (`thegrizzlybear`, 100.103.95.28) and the phone (`iphone-15`), both set up by the owner; the Private network switch on; the door on 100.103.95.28:8790; PAIR with the address; the Ask screen ONLINE with Core 1.0.16, AI READY, link 22 ms; a conversation answered. Result record `docs/PHONE-V1-RESULT.md` (in progress: checks 1 and 2 DONE at 22:20 on cellular with Wi-Fi off, hold-to-speak heard, THINKING on the PC, SPEAKING in JARVIS's voice, link about 200 ms; checks 4, 5, 6 and 10 DONE at 22:23 to 22:24 (Chats with the conversation and its messages, Status with the readouts and the overview, STOP ALL from the phone and RESUME on the PC, the PC's Devices page showing the phone online with every tick); checks 7, 8 and 9 DONE at 22:28 to 22:31 (revoke then pair again, Tailscale off gives CORE NOT REACHED, "remember that" saved and shown on the PC's Memory page, though as the word "that"); check 3 FAILS (the owner: closing the app mid-conversation shows a fresh one; the id is kept but the lines are not reloaded); **VERSION 1: 9 of 10 checks met, the app's next round fixes check 3, the header at the phone's width, the stale stop note and the icon**; two fixes on the way: the phone had signed into a second Tailscale network, and the app crashed after pairing until the microphone usage entry was added to the Info list). **NEXT: the owner's remaining section 10 checks; a fix round for the header layout at the phone's width (ONLINE wraps, STOP ALL squeezed) and the icon; then release 1.0.17.** The check's course: step 1 done (disc `JARVIS-STAGE7-1.0.16-fccde24e2cc6.iso`, sha256 dd3a1abe…, built 06:55Z, checked by Claude), step 2 done (VM started on FRESH-PREREQ), step 3 PASS (the Install phase, all nine checks E0 and I1 to I8, 18:04:42 to 18:35:49 local; the install took 646 s against the 600 s Gate 20 bound, copy 301 s and verify 225 s, the VM's disk as in the 1.0.15 check, for the owner's disposition at the evaluation); step 4 (quit, restart, the second run of stage7, about 50 min) is the owner's next act; steps 5 to 7 pending ("stage 7 done" ends them), then the evaluation and the everyday-update plan. THE IPHONE APP (step 7 of the phone plan) IS WRITTEN under `phone/ios/`, independently reviewed with every finding applied (1 high, 5 medium, 19 low: `docs/PHONE-APP.md` section 5), and zipped for the Mac at `D:\JARVIS-release-work\phone\JARVIS-ios-v1-20261006-1810.zip` (sha256 62d873f1…); not built here (the owner builds it on the Mac, `phone/ios/README.md`, fix rounds expected). On the Mac the owner has created the Xcode project `JARVIS` (bundle id `com.teagueindustries.jarvis`, team Benjamin Teague, Display Name JARVIS, iOS 26 as the minimum by the owner's choice, the two Info keys, the three build settings); THE APP IS BUILT AND RUNNING ON THE OWNER'S IPHONE (19:00 local): the twelve files dragged in, Build Succeeded at the first attempt with no fix round (Xcode's bridging-header prompt answered Don't Create), installed by Product > Run after Xcode's one-time symbol copy, the pairing screen shown as designed (picture `docs/phone-evidence/phone-app-first-launch-20261006-1900.png`); not pairable until 1.0.16 is the everyday JARVIS and Tailscale is set up (plan steps 5 and 6). **`docs/OWN-APP-PLAN.md` IS APPROVED BY THE OWNER** ("I approve the own app plan can we make the app icon this image as well as the app icon for the ios app", then the exact "I approve the own-app plan"; first clock reading 2026-10-06T08:23:24Z; record `../governance/OWN-APP-PLAN-APPROVAL-RECORD.json`, repo copy `docs/own-app-evidence/`): release 1.0.17 after 1.0.16 and the phone: JARVIS.exe with the icon and name, no PowerShell step, JARVIS-Setup.exe built with Inno Setup (the owner installs it once), an Installed-apps entry, version 4 Stage 7 scripts; D1 to D4 and D6 as recommended; **D5 changed by the owner: the icon is the Teague Industries badge the owner supplied**, kept at `static/assets/branding/teague/teague-industries-badge.png` and rendered on approval into `desktop/jarvis.ico`, `desktop/tray.png` (the tray image the desktop code pointed at and the repo lacked) and `phone/ios/AppIcon-1024.png` (copy for the Mac `D:\JARVIS-release-work\phone\JARVIS-AppIcon-1024.png`; the owner drags it into Xcode's Assets > AppIcon). Nothing else of 1.0.17 is built. **THE LOOK APPLIED TO THE IPHONE APP** (owner: "apply the look", from a mock-up zip the owner supplied; `docs/PHONE-APP.md` section 6): the badge as the header logo, the space scene faint behind every screen, a turning orbital graphic on the pairing screen; `phone/ios/JARVIS/Theme.swift` and `PairingView.swift` changed, assets `phone/ios/assets/TeagueBadge.png` and `JARVISBackground.jpeg`, reviewed (no high or medium, 4 low, 2 applied); zip for the Mac `D:\JARVIS-release-work\phone\JARVIS-ios-look-20261006-1946.zip` (sha256 cc87bdab…), steps `phone/ios/README-look.md`; **BUILT AND SEEN ON THE PHONE at 21:12 local** (screenshot `docs/phone-evidence/phone-app-look-20261006-2112.png`; the home-screen icon needs one delete-and-reinstall of the app to refresh, told to the owner). The VM check's second run: AfterRestart, Uninstall and Update phases PASS (driver log 07:55, 08:07, 08:40Z), the interrupted-update phase started 19:40 local. Open for the owner: the voice tool run again after the fix (expected "qwen voice SPEAKS"), the approval, the C: cleanup steps (parked on the owner's word: "focus on the app"), later the Phone Link / contacts / Gmail idea**).
 
@@ -220,6 +220,104 @@ current record.
 
 Rules and authority are in `CLAUDE.md` and `../governance/OWNER-DELEGATION.md`; this file
 only records where the work stands. Historical handover context: `docs/PROJECT-CONTEXT.md`.
+
+## 2026-10-10 late evening (Opus 5.5, about 19:00 to 20:30 local, at the owner's "handoff")
+
+- **State at the handoff.**
+  - Head is this commit, after 160568a. Nothing is pushed.
+  - At about 19:06 the PC was awake (the owner pressed the power button at 16:44). The everyday JARVIS 1.0.17 was running
+    with 8 processes. Tailscale was connected (thegrizzlybear and iphone-15). The phone door was listening on
+    100.103.95.28:8790.
+  - The session moved to the repo; its memory folder is the repo project's.
+- **The You page: built, but its review findings are NOT applied yet.**
+  - What it is: release 1.0.19, from the owner's "lets make jarvis and me more connected personally". The owner chose
+    "He knows my life".
+  - Commit b4f169c; record `docs/ABOUT-YOU.md`. The pieces:
+    - `about_you.py`, with the `profile` table;
+    - `static/you.js` and `static/you.css`: a YOU panel at the top of the Memory section;
+    - `about_you` (reads) and `remember_about_you` (an offer; always asks; approval card), registered in `OWN`;
+    - `GET`/`POST /api/profile`, `context['about_owner']` and `about_you.GUIDANCE`.
+  - Tests: `test_about_you.py` (12) and `test_you_view.cjs`. Full suite: 881 Python, 880 OK. The one failure was
+    `test_phone_core` pinning the device-write tools; it was updated and passes. 28 interface scripts OK.
+  - Seen in a browser against the sandbox Core.
+  - One reviewer found no high finding: no save without approval, no crash. **To apply next, in this order:**
+    1. Plain passwords, PINs and card numbers are accepted. Refuse what `store.put` refuses (password, api key, secret,
+       bearer), plus PIN and card shapes.
+    2. Hidden and instruction text (tag characters, U+202E, "ignore previous instructions") is stored and goes
+       unguarded into every question. Refuse when `content_guard.clean` reports `hidden` or `instruction`, and strip
+       invisible characters.
+    3. The card shows the date as raw MM-DD and the section as its id. Show words on the card and the device rows.
+    4. A date in next year shows "in N days" with negative years, and the text says "1 years".
+    5. "At most one offer per answer" is not enforced (a run flag).
+    6. With `about_you` switched off, the summary still goes. The offer sentence in `GUIDANCE` goes even when
+       `remember_about_you` is not offered.
+    7. Search: natural queries miss; the 120-entry cap is silent; ids are sent.
+    8. Duplicate offers still make cards; an offer about an existing person adds a second one. SQLite `lower()` folds
+       ASCII only.
+    9. The 2,500-character bound is measured with `ensure_ascii=False`, but sent escaped.
+    10. `/api/import` drops `profile`. The ABOUT-YOU.md claim about restores must be corrected or the import extended.
+    11. The owner's clicks work during the emergency stop (as `/api/item` does). Decide and say.
+    12. Panel details:
+        - a partial date is silently dropped;
+        - `maxLength` must be per section;
+        - "OPEN MEMORY BANK" does not refresh the panel;
+        - the toast shows on a duplicate.
+    13. An approved offer has no `summary` ("Kept on the You page: ...").
+    14. An unknown section in `search()` raises KeyError.
+    15. Test gaps.
+
+    Then: the full suite, the record and a commit.
+- **The memory roadmap: written and committed for the owner's approval** (160568a, `docs/MEMORY-ROADMAP.md`).
+  - The owner asked for a roadmap so JARVIS saves context and memories and gains an ever-increasing understanding of
+    them. The semantic layer sits under the UI, separate from the LLM. Open source is reused.
+  - Four research agents fed it: the frameworks, the building blocks, the patterns and evidence, and the code map.
+  - Proposed:
+    - a memory service in the Core over the one SQLite file;
+    - FTS5 plus vectors (first as BLOBs with numpy, sqlite-vec at scale);
+    - local ONNX embeddings through FastEmbed: granite-embedding-small-english-r2 vs Qwen3-Embedding-0.6B, chosen by
+      measurement;
+    - a provider-neutral `extract(schema, text)`;
+    - learning after conversations, from the owner's own words only, through a daily review card;
+    - facts with validity periods, tombstones, and a personal evaluation set first;
+    - five phases, about 10 sessions;
+    - the Mem0 / Hindsight checkpoint in Phase 4.
+  - Decisions D1 to D8. Approval wording: "I approve the memory roadmap, accept all recommendations". No answer yet.
+- **Voice recognition** (the owner: "jarvis only answers to my voice"): researched, NOT built. Recommended design:
+  - Model: 3D-Speaker CAM++ English ONNX (Apache-2.0, 29.6 MB), on the shipped onnxruntime, with kaldi-native-fbank
+    (0.3 MB wheel).
+  - Where: the check sits at the top of `App.transcribe_speech` (`server.py`), before the cloud decision.
+  - Rejected audio never goes to the cloud. Only the stop phrase passes for anyone.
+  - Enrolment: 6 phrases from the window's microphone.
+  - A grace period inside one conversation. Silent rejection by default.
+  - Typing, hold-to-talk and the phone are never checked.
+  - A voice match never grants authority (NIST SP 800-63B).
+  - The owner's sample: `C:\Users\jonny\.claude\uploads\2d0de0e8-9a51-4dad-a3a8-54b1f74880fe\6f71074f-Taleeban_Rd.m4a`.
+    - It is an iPhone voice memo: 43.8 s, about 42 s of speech, 48 kHz mono AAC.
+    - It was transcribed locally only: the owner introduces himself as Ben Teague, founder of Teague Industries, and
+      asks JARVIS to answer only his voice.
+    - Keep it out of the repo. PC-microphone enrolment is preferred, with this file as an extra sample.
+  - Found on the way: faster-whisper's own `decode_audio` fails with the installed PyAV (`metadata_errors`). The live
+    path passes PCM arrays.
+- **Network** (the owner: "read the wifi and see all devices and connect to them"):
+  - The owner's answers: "all devices on the wifi", and scan "only when I ask".
+  - Plan: "scan my network" on the owner's own words only (address sweep, the neighbour table, SSDP, mDNS, the Wi-Fi
+    details). Then control for the device kinds actually found (casting, DLNA, Sonos, Hue, Kasa, printers, Roku).
+  - A read-only adapter/netsh check was declined by the permission prompt and not retried.
+- **FRIDAY:**
+  - 60 of 60 tests pass; still at commit 930b56b.
+  - The owner added US$20 in the Claude Console.
+  - **The key is not saved yet.** There is no `friday\.env` (only `.env.example`), and Notepad was still open at the
+    handoff. The owner was told to press Ctrl+S, or Save As to `"C:\Users\jonny\JARVIS-claude-workspace\friday\.env"`.
+  - Then: check that the line is present without reading it, and give FRIDAY a tiny first job with
+    `supervisor.py --program "..."` (Opus 5.5, about US$0.25 per attempt, at most 5 attempts).
+- **The agreed order:**
+  1. the You page findings;
+  2. voice recognition;
+  3. the network scan and device control;
+  4. Gmail and Calendar phase A, once JARVIS's own account exists;
+  5. the memory roadmap phases after approval (D8).
+- **Tools:** "ultracode" showed as on throughout. Per the owner's rule no workflow was started; single agents were used
+  (5 researchers, 1 reviewer).
 
 ## 2026-10-10 evening (Opus 5.5, 14:13 to about 15:15 local): the guard reviewed and its findings applied
 
