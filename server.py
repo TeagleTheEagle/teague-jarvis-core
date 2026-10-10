@@ -865,7 +865,7 @@ class App:
         governing = memory.governed_by(text)
         line = None
         if governing and memory.is_pointer(text):
-            # "Remember that.": the line before it is found now, while the conversation stands as the owner left
+            # "Remember that.": the line it points at is found now, while the conversation stands as the owner left
             # it, and carried with an approval (by approval time the last line would be the waiting answer).
             line = memory.previous_line(self.store, run.conversation if run else None, text)
             if line is None:
@@ -1042,6 +1042,15 @@ class App:
                     mentioned=[r for r in active if r['id'] in run.user_text or re.search(r'\b'+re.escape(r['title'])+r'\b',run.user_text,re.I)]
                     if len(active)>1 and (len(mentioned)!=1 or mentioned[0]['id']!=args.get('timer_id')): raise ValueError('More than one active timer matches or no timer was identified. Ask which timer.')
                 result = companion_tools.manage_timer(self.store, **args)
+                # As set_timer's result (1.0.18): each time also on this PC's clock; a listing also says the time now
+                # and what is left of each timer, so "how long is left?" is read, not worked out (docs/CORE-FIXES-20261010.md).
+                now = time.time()
+                for timer in result.get('timers', []) + ([result] if 'due' in result else []):
+                    timer['due_local'] = answer_evidence.stamp(timer['due'])
+                if 'timers' in result:
+                    result['now'] = answer_evidence.stamp(now)
+                    for timer in result['timers']:
+                        timer['seconds_left'] = max(0, round(timer['due'] - now))
             elif name == 'manage_saved_memory':
                 if run and not re.search(r'\b(update|correct|change|delete|remove|forget)\b', run.user_text, re.I):
                     raise ValueError('An explicit saved-memory change request is required.')
@@ -1119,7 +1128,9 @@ class App:
                 result = {'items': self.store.items(args['kind'])}
             elif name == 'set_timer':
                 result = self.store.reminder(args['title'], args['seconds'])
-                result.update(status='scheduled', seconds=args['seconds'])
+                # The alert's time on this PC's clock beside the bare timestamp (1.0.18): from the number alone the model
+                # said "07:19" for an alert due at 10:29 (docs/CORE-FIXES-20261010.md).
+                result.update(status='scheduled', seconds=args['seconds'], due_local=answer_evidence.stamp(result['due']))
             elif name == 'web_search':
                 result = actions.search(args['query'])
                 if run: self.store.save_research(run.conversation, args['query'], result)
@@ -1802,7 +1813,7 @@ class App:
             if 'result' in result: return f"Calculation result: {result['result']}"
             return 'Statistics: ' + json.dumps(result, separators=(', ', ': '))
         if name == 'set_timer':
-            return f"Timer started for {result['seconds']:g} seconds. Keep JARVIS running for the alert."
+            return f"Timer started for {answer_evidence.duration(result['seconds'])}. It goes off at {answer_evidence.clock(result['due'])}. Keep JARVIS running for the alert."
         if name == 'web_search':
             return '\n\n'.join(r['title'] + '\n' + r['url'] for r in result['results'])
         if name == 'open_app':

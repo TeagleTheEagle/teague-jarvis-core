@@ -221,7 +221,7 @@ current record.
 Rules and authority are in `CLAUDE.md` and `../governance/OWNER-DELEGATION.md`; this file
 only records where the work stands. Historical handover context: `docs/PROJECT-CONTEXT.md`.
 
-## 2026-10-10 afternoon (Opus 5.5): the Mac's six requests answered; two Core defects found, not fixed
+## 2026-10-10 afternoon (Opus 5.5): the Mac's six requests answered; the owner approved two Core fixes, built and reviewed
 
 - The session opened in the old OneDrive folder and was moved to the repo. Head 8280b3c with a clean tree at the
   start, so no second session was committing. The pasted handover's "ultracode" switched the multi-agent mode on
@@ -246,18 +246,47 @@ only records where the work stands. Historical handover context: `docs/PROJECT-C
   - (3) `devices` comes with 1.0.18, which is not released;
   - (6) "Wearable service busy." always comes before any work, in 1.0.17 and 1.0.18, so one resend never does
     anything twice.
-- **Two Core defects found, not fixed.** Each needs the owner's word and a release.
-  - (4) The timer's tool result gives the model the due time only as a Unix timestamp (`store.reminder` →
-    `"due"`), and no time comes with a question. JARVIS guessed "07:19" for an alert at about 10:29. Proposed fix:
-    add the local clock time to the result.
-  - (5) "Remember that" saves the line just before it (`memory.previous_line`), which after a reply is JARVIS's
-    reply. "Remember what I said" does the same. Proposed fix: the owner's own last line for "that/this/it/what I
-    said", and JARVIS's reply only for "what you said".
-- The owner asked about the Mac mini order: the Apple page had M6 32 GB / 256 GB selected at A$2,049. The advice
-  was the plan's D1, 24 GB / 512 GB at the same A$2,049, or 32 GB / 512 GB at A$2,349. The Mac mini plan is still
-  not approved.
-- Next, unchanged from the midday section: find the cause of the intermittent Workshop test, and the owner's
-  answer on the Mac mini plan. Fixes (4) and (5) go into the next release on the owner's word.
+- **Two Core defects, found then and approved by the owner the same afternoon:** "I approve both Core fixes from
+  MAC-ANSWERS-20261010.md: item 4 (a timer's reply gives the local clock time) and item 5 ("remember that" saves my
+  own last line)." Both are **built for 1.0.18 and reviewed**, one reviewer each and one at a time. Record:
+  **`docs/CORE-FIXES-20261010.md`**.
+  - (4) The timer: `due_local` beside the bare `due` timestamp, `now` and `seconds_left` in a listing, the reply
+    "Timer started for 2 minutes. It goes off at 10:29.", and the receipt "scheduled; goes off at 10:29". Review:
+    no high, 1 medium, 5 low; four applied, two outside the approved scope recorded.
+  - (5) "Remember that" saves the owner's own last line, and JARVIS's answer only for "remember what you said".
+    Review: 2 high, 1 medium, 6 low; the medium and five lows applied. **The two highs wait for the owner's
+    decision**: after a question, a command or "analyse my screen", the owner's own line is not worth saving. The
+    choice put to the owner: A, save JARVIS's answer after a question or request and nothing after a command; or B,
+    save nothing and hint "remember what you said".
+  - Found on the way, both older than 1.0.18, each waiting for the owner's word: the window's `/api/reminder` sets a
+    timer while the emergency stop holds; "Call me when the build finishes." saves "when the build finishes" as the
+    owner's name.
+  - Tests of the touched modules pass. The full Python suite is to run before the final commit.
+- **The Mac mini is not bought yet.** The owner, 2026-10-10: "I don't have the mac mini yet so no transfers are done
+  yet physically just blue prints and plans." The order advice was the plan's D1, M6 24 GB / 512 GB at A$2,049, or
+  32 GB / 512 GB at A$2,349; the Apple page had 32 GB / 256 GB selected. It rests on JARVIS's real use, measured read
+  only on the PC:
+  - memory: 1.30 GB in 8 processes (Core 0.36 GB);
+  - processor: the Core about 1% of one core while waiting, and the window's animations about 0.86 of one core;
+  - storage: 1.1 GB per release, 5 kept, and the database 1.3 MB;
+  - the PC as a whole: 12.1 GB of memory in use.
+  The Mac mini plan is still not approved.
+- **Noticed while measuring, told to the owner:**
+  - `D:\JARVIS-backups` does not exist. D: has "TEAGUE INDUSTRIES - JARVIS INTELLIGENCE DATABASE BACK UPS",
+    changed 2026-10-06 16:54. If JARVIS's backup setting still names the old folder, the daily backups fail, since
+    the folder is not recreated. The owner is asked to check Settings > Backups. The backup folder itself was not
+    opened: it is owner-only.
+  - Ollama holds only `llama3.2:latest` (2.0 GB), not `qwen3:4b`, which is the default model for offline answers.
+    The owner was given `ollama pull qwen3:4b`. qwen3.8-max is JARVIS's online model and cannot run locally.
+- **The garage (Merlin MS127MYQ, myQ built in, made 2025-03-07):** myQ admits no outside app, and Siri, Shortcuts,
+  HomeKit and Matter are unsupported. The suggested route is a spare Merlin remote with a low-voltage Wi-Fi relay
+  across its button, plus a door sensor. It is local, with no cloud. It waits for the owner's "plan the garage", and
+  the household's myQ owner should agree to a second remote.
+- **FRIDAY** (`C:\Users\jonny\JARVIS-claude-workspace\friday`, 930b56b) is unchanged since 2026-10-07; its tests
+  pass, 60 of 60. It needs the owner's Anthropic API key in `friday\.env` and console credits, which stood at $0.00.
+- Next: the owner's A or B for the two highs; then the full Python suite and the final commit. After that, the cause
+  of the intermittent Workshop test, then 1.0.18 build 3 through the chain with both fixes. The Mac mini plan waits
+  for the owner.
 
 ## 2026-10-10 midday (12:30 local, Opus 5.5): the devices route added to 1.0.18; build 2 in its checks; the cloud plan written
 

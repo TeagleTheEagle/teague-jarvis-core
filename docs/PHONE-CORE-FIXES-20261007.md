@@ -60,6 +60,10 @@ and the refusal is the answer, with an activity row. On the phone the command re
 save memories and tasks" tick (the D2 decision), as before; without it the words go the old way and a device may not
 save.
 
+**Changed in 1.0.18 on the owner's word (2026-10-10):** after the owner's line and JARVIS's answer, the line just
+before the pointer is the answer, and the owner means their own line. The pointer now saves the owner's own last line,
+and JARVIS's last answer only for "remember what you said" (`memory.pointer_role`; `docs/CORE-FIXES-20261010.md`).
+
 **Tests:** `test_phone_core_fixes.py`: the owner's line saved; JARVIS's line saved as JARVIS's words; the forms that
 point back (the spoken ones too) and the ones that do not; nothing before it; the confirmations of other commands
 never the line; a line given with the command; a repeated pointer and its confirmation skipped; a long line collapsed

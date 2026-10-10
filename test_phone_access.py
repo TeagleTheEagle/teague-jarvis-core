@@ -182,16 +182,20 @@ class ApprovalTests(DeviceCase):
         # Approved from the phone: exactly what was shown runs, once; the PC's conversation says so.
         _, events = self.pc_question('Wake me in five minutes please', [calls('set_timer', title='Wake', seconds=300), DONE])
         ident_two = events['tool.completed']['result']['approval']['id']
-        self.assertEqual(self.device('approve', {'id': ident_two}, key), (200, {'status': 'applied', 'result': 'scheduled'}))
+        status, answer = self.device('approve', {'id': ident_two}, key)
+        self.assertEqual((status, sorted(answer), answer['status']), (200, ['result', 'status'], 'applied'))
+        self.assertRegex(answer['result'], r'^scheduled; goes off at \d\d:\d\d(?: on \w+ \d+ \w+(?: \d{4})?)?$')   # 1.0.18: the receipt says when
         self.assertEqual([r['title'] for r in self.app.store.reminders()], ['Wake'])
         self.assertEqual(self.device('approve', {'id': ident_two}, key), (200, {'status': 'unknown'}))  # once only
         self.assertEqual(len(self.app.store.reminders()), 1)
         self.assertIn('approved from My phone', [r['status'] for r in self.app.store.logs() if r['action'] == 'set_timer'])
-        self.assertEqual(self.app.store.history('pc-chat')[-1]['content'], 'Approved from My phone: Set a timer. Result: scheduled.')
+        self.assertRegex(self.app.store.history('pc-chat')[-1]['content'],
+                         r'^Approved from My phone: Set a timer\. Result: scheduled; goes off at \d\d:\d\d(?: on \w+ \d+ \w+(?: \d{4})?)?\.$')
         # The PC's own answer is unchanged in its words.
         _, events = self.pc_question('Wake me in five minutes please', [calls('set_timer', title='Again', seconds=300), DONE])
         self.app.approve(events['tool.completed']['result']['approval']['id'], True)
-        self.assertEqual(self.app.store.history('pc-chat')[-1]['content'], 'Approved on screen: Set a timer. Result: scheduled.')
+        self.assertRegex(self.app.store.history('pc-chat')[-1]['content'],
+                         r'^Approved on screen: Set a timer\. Result: scheduled; goes off at \d\d:\d\d(?: on \w+ \d+ \w+(?: \d{4})?)?\.$')
 
     def test_waiting_counts_only_for_a_device_that_may_approve_and_the_pc_may_answer_a_devices_item(self):
         paired = self.pair()

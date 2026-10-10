@@ -58,20 +58,34 @@ _NAME = re.compile(r'(?:my name is|call me|remember (?:that )?my name is)\s+([^\
 _PROJECT = re.compile(r'(?:remember |save |update )?project\s+([^:\n]{1,80}):\s*(.{1,4000})', re.I | re.S)
 _REPLACE = re.compile(r'replace memory:\s*(.+?)\s*=>\s*(.+)', re.I | re.S)
 _FORGET = re.compile(r'forget memory:\s*(.+)', re.I | re.S)
-# "Remember that." said after a statement (1.0.17): the thing to remember is the line before it in the conversation.
-# Only the bare pointer, in its spoken forms ("remember that, please", "remember it for me"): "remember that I
-# prefer tea" and "remember to buy milk" carry their own words and are handled as before.
-_POINTER = re.compile(r'(?:please\s+)?(?:remember|memori[sz]e)(?:\s+(?:that|this|it|what\s+i\s+(?:just\s+)?said|what\s+you\s+(?:just\s+)?said))?'
-                      r'(?:[,\s]*(?:please|for me))?[.!,]*', re.I)
-# What JARVIS answers to a command of its own: never the line "remember that" points at.
+# "Remember that." said after a statement (1.0.17): the thing to remember is a line said before it in the
+# conversation; since 1.0.18 (the owner's word, docs/CORE-FIXES-20261010.md) the owner's own last line, and JARVIS's
+# last answer only for "remember what you said". Only the bare pointer, in its spoken forms ("remember that, please",
+# "remember it for me"): "remember that I prefer tea" and "remember to buy milk" carry their own words and are
+# handled as before.
+# "yours" is the one form that points at JARVIS's words, not the owner's (1.0.18). Review 2026-10-10: "please" and
+# "for me" any number of times, and "?" or "…" at the end ("Remember that?" saved the word "that?" before).
+_POINTER = re.compile(r'(?:please\s+)?(?:remember|memori[sz]e)(?:\s+(?:that|this|it|what\s+i\s+(?:just\s+)?said|(?P<yours>what\s+you\s+(?:just\s+)?said)))?'
+                      r'(?:[,\s]*(?:please|for me))*[.!?,…]*', re.I)
+# What JARVIS answers to a command of its own, and the Core's own lines in a conversation (approvals, refusals):
+# never the line "remember that" points at.
 _CONFIRMATIONS = ('Remembered: ', 'Saved: ', 'Saved that preference', 'Saved the current details', 'Updated that', 'Deleted that',
-                  'I’ll call you ', 'Emergency stop is on', 'Waiting for approval on screen', 'Approved on screen', 'Use the exact saved')
+                  'I’ll call you ', 'Emergency stop is on', 'Waiting for approval on screen', 'Approved on screen', 'Approved from ',
+                  'Use the exact saved', 'There is nothing before this to remember', 'Credentials cannot be saved as memory',
+                  'I couldn’t identify one')
 NOTHING_BEFORE = 'There is nothing before this to remember. Say what to remember, for example “remember that I prefer short answers”.'
 
 
 def is_pointer(text):
     """"Remember that" and its spoken forms, with any spacing, case and punctuation."""
     return _POINTER.fullmatch(' '.join(text.split())) is not None
+
+
+def pointer_role(text):
+    """Whose line a pointer means (1.0.18): JARVIS's ('assistant') for "remember what you (just) said", the owner's
+    ('user') for every other form. Read from the same match as is_pointer, so the two never disagree."""
+    match = _POINTER.fullmatch(' '.join(text.split()))
+    return 'assistant' if match and match['yours'] else 'user'
 
 
 def governed_by(text):
@@ -87,17 +101,22 @@ def governed_by(text):
 
 
 def previous_line(store, conversation, command):
-    """The line said before `command` in this conversation (the command itself is already on record), as
-    (role, text), or None. Skipped: another memory command of the owner's (it saved itself, a repeated pointer
-    included) and JARVIS's answers to such commands; whitespace is collapsed and the text cut at 500 characters."""
+    """The line `command` points at in this conversation (the command itself is already on record), as (role, text),
+    or None: the owner's own last line, or JARVIS's last answer for "remember what you said" (pointer_role; 1.0.18,
+    before which it was simply the line before, which after an answer was JARVIS's answer). Skipped: another memory
+    command of the owner's (it saved itself, a repeated pointer included) and JARVIS's answers to such commands;
+    whitespace is collapsed and the text cut at 500 characters. The last 20 lines are looked at (8 before 1.0.18: only
+    one speaker's lines count now, and approval receipts can stand between)."""
     if not conversation:
         return None
-    rows = [r for r in store.history(conversation, 8) if r.get('role') in ('user', 'assistant') and isinstance(r.get('content'), str)]
+    wanted = pointer_role(command)
+    rows = [r for r in store.history(conversation, 20) if r.get('role') in ('user', 'assistant') and isinstance(r.get('content'), str)]
     if rows and rows[-1]['role'] == 'user' and rows[-1]['content'].strip() == command.strip():
         rows = rows[:-1]
     for row in reversed(rows):
         body = ' '.join(row['content'].split())
-        if not body or (row['role'] == 'user' and governed_by(body)) or (row['role'] == 'assistant' and body.startswith(_CONFIRMATIONS)):
+        if (not body or row['role'] != wanted or (row['role'] == 'user' and governed_by(body))
+                or (row['role'] == 'assistant' and body.startswith(_CONFIRMATIONS))):
             continue
         return row['role'], body[:500]
     return None
@@ -105,8 +124,8 @@ def previous_line(store, conversation, command):
 
 def command(store, text, conversation=None, line=None):
     """An exact memory command, answered without the model; None when `text` is not one. `conversation` lets
-    "remember that" find the line before it; `line` (role, text) is that line found earlier and carried with an
-    approval (server.App.memory_command)."""
+    "remember that" find the line it points at (previous_line); `line` (role, text) is that line found earlier and
+    carried with an approval (server.App.memory_command)."""
     text = text.strip()
     if is_pointer(text):
         previous = tuple(line) if line else previous_line(store, conversation, text)

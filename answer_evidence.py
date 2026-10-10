@@ -7,8 +7,27 @@ import time
 import permissions
 
 
-def stamp(value):
-    return datetime.datetime.fromtimestamp(value,datetime.timezone.utc).astimezone().isoformat(timespec='seconds')
+def stamp(value, tz=None):
+    return datetime.datetime.fromtimestamp(value,datetime.timezone.utc).astimezone(tz).isoformat(timespec='seconds')
+
+
+def clock(value, now=None, tz=None):
+    """A moment as the owner reads it on this PC's clock (1.0.18, docs/CORE-FIXES-20261010.md): "10:29" today,
+    "07:00 on Monday 12 October" on another day, and the year too when it is not this year. `tz` is for tests."""
+    moment=datetime.datetime.fromtimestamp(value,datetime.timezone.utc).astimezone(tz)
+    today=datetime.datetime.fromtimestamp(time.time() if now is None else now,datetime.timezone.utc).astimezone(tz).date()
+    if moment.date()==today: return f'{moment:%H:%M}'
+    return f'{moment:%H:%M} on {moment:%A} {moment.day} {moment:%B}'+('' if moment.year==today.year else f' {moment.year}')
+
+
+def duration(seconds):
+    """A length of time in words (1.0.18): "2 minutes", "1 hour 30 minutes", "1 second"; whole seconds, the two
+    largest units that are not zero."""
+    left=max(0,round(seconds));parts=[]
+    for size,unit in ((86400,'day'),(3600,'hour'),(60,'minute'),(1,'second')):
+        count,left=divmod(left,size)
+        if count:parts.append(f'{count} {unit}'+('' if count==1 else 's'))
+    return ' '.join(parts[:2]) or '0 seconds'
 
 
 def command(text):
@@ -83,6 +102,8 @@ def briefing_details(result):
 def receipt(name,result):
     if result.get('error'):return 'failed'
     status=result.get('status')
+    if status and name in ('set_timer','manage_timer') and isinstance(result.get('due'),(int,float)) and not isinstance(result['due'],bool):
+        return f"{status}; goes off at {clock(result['due'])}"   # 1.0.18: also when a timer starts on approval, later
     if status:return str(status)
     if name=='save_item' and result.get('id'):return 'saved'
     if name=='create_file' and result.get('url'):return 'file created'

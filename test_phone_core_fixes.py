@@ -1,6 +1,7 @@
 """Release 1.0.17, the three Core items from the phone checks (docs/PHONE-CORE-FIXES-20261007.md): "remember that"
 saves the line before it; the action guard puts the truth under a reply instead of replacing it; a device's question
-appears as it is written (that one is in test_reply_stream.py)."""
+appears as it is written (that one is in test_reply_stream.py). Since 1.0.18 (the owner's word, docs/CORE-FIXES-20261010.md)
+"remember that" saves the owner's own last line, and JARVIS's last answer only for "remember what you said"."""
 import os
 import tempfile
 import unittest
@@ -27,12 +28,71 @@ class RememberThatTests(unittest.TestCase):
         self.assertEqual(memory.command(self.store, 'Remember that.', 'c1'), 'Remembered: My car is a blue Tesla.')
         self.assertEqual(self.bodies(), ['My car is a blue Tesla.'])
 
-    def test_what_jarvis_said_is_remembered_as_jarvis_words(self):
+    def test_after_an_answer_the_owners_own_line_is_remembered(self):
+        """1.0.18, the phone's check of 2026-10-10: after the owner's line and JARVIS's answer, "remember that" saved the
+        answer; the owner means their own line."""
+        self.store.message('c1', 'user', 'I did 30 push-ups this morning.')
+        self.store.message('c1', 'assistant', 'Already logged, Mr. Teague. Nice work.')
+        for text in ('Remember that', 'remember this', 'Remember it.', 'remember what I said', 'Remember what I just said!', 'remember'):
+            with self.subTest(text=text):
+                self.assertEqual(memory.command(self.store, text, 'c1'), 'Remembered: I did 30 push-ups this morning.')
+        self.assertEqual(self.bodies(), ['I did 30 push-ups this morning.'])
+
+    def test_remember_what_you_said_keeps_jarvis_words_as_his(self):
         self.store.message('c1', 'user', 'When is the meeting?')
         self.store.message('c1', 'assistant', 'Your meeting is at 3 pm on Friday.')
-        self.store.message('c1', 'user', 'remember this')
-        self.assertEqual(memory.command(self.store, 'remember this', 'c1'), 'Remembered: JARVIS said: Your meeting is at 3 pm on Friday.')
+        self.store.message('c1', 'user', 'remember what you said')
+        self.assertEqual(memory.command(self.store, 'remember what you said', 'c1'), 'Remembered: JARVIS said: Your meeting is at 3 pm on Friday.')
+        self.assertEqual(memory.command(self.store, 'Remember what you just said.', 'c1'), 'Remembered: JARVIS said: Your meeting is at 3 pm on Friday.')
         self.assertEqual(self.bodies(), ['JARVIS said: Your meeting is at 3 pm on Friday.'])
+
+    def test_whose_line_each_form_means(self):
+        for text in ('remember that', 'Remember this.', 'remember it for me', 'Remember', 'please remember that', 'remember what I said', 'memorise that'):
+            self.assertEqual(memory.pointer_role(text), 'user', text)
+        for text in ('remember what you said', 'Remember what you just said!', 'remember  what  you  said, please'):
+            self.assertTrue(memory.is_pointer(text), text)
+            self.assertEqual(memory.pointer_role(text), 'assistant', text)
+
+    def test_with_only_jarvis_lines_before_it_nothing_is_saved(self):
+        self.store.message('c7', 'assistant', 'Good morning. Your first meeting is at 9.')
+        self.store.message('c7', 'user', 'remember that')
+        self.assertEqual(memory.command(self.store, 'remember that', 'c7'), memory.NOTHING_BEFORE)
+        self.assertEqual(self.bodies(), [])
+
+    def test_remember_what_you_said_reaches_back_past_the_owners_thanks(self):
+        """Review 2026-10-10, finding 9: the answer is found past a later line of the owner's (the old rule saved "Thanks.")."""
+        self.store.message('c8', 'user', 'What is the gate code?')
+        self.store.message('c8', 'assistant', 'The gate code is 4421.')
+        self.store.message('c8', 'user', 'Thanks.')
+        self.store.message('c8', 'user', 'remember what you said')
+        self.assertEqual(memory.command(self.store, 'remember what you said', 'c8'), 'Remembered: JARVIS said: The gate code is 4421.')
+
+    def test_the_cores_own_lines_are_never_what_jarvis_said(self):
+        """Review finding 3: a refusal, "nothing before this" and an approval from the phone are not answers to remember."""
+        for line in (memory.NOTHING_BEFORE, 'Credentials cannot be saved as memory.', 'Approved from My phone. Remembered: The spare key is under the pot.',
+                     'Approved from My phone: Set a timer. Result: scheduled; goes off at 10:29.', 'I’ll call you Ben. Your preferred name is saved.',
+                     'I couldn’t identify one saved memory to replace. Use Edit in the Memory Bank.'):
+            with self.subTest(line=line):
+                self.store.message('c9', 'assistant', line)
+                self.assertEqual(memory.previous_line(self.store, 'c9', 'remember what you said'), None)
+
+    def test_whose_line_comes_from_the_same_match_as_the_pointer(self):
+        """Review findings 4 and 5: no separator before "please", a question mark, "…", "for me, please"."""
+        for text in ('remember what you saidplease', 'remember what you said?', 'Remember what you just said, for me, please.'):
+            self.assertTrue(memory.is_pointer(text), text)
+            self.assertEqual(memory.pointer_role(text), 'assistant', text)
+        for text in ('Remember that?', 'Remember that…', 'Remember that for me, please', 'remember it, please, for me!'):
+            self.assertTrue(memory.is_pointer(text), text)
+            self.assertEqual(memory.governed_by(text), 'save_item', text)
+            self.assertEqual(memory.pointer_role(text), 'user', text)
+
+    def test_the_owners_line_is_found_past_approval_receipts(self):
+        """Review finding 6: twenty lines are looked at, so a run of receipts does not hide the owner's line."""
+        self.store.message('c10', 'user', 'The spare key is under the pot.')
+        for n in range(10):
+            self.store.message('c10', 'assistant', f'Approved on screen: Set a timer. Result: scheduled; goes off at 10:{n:02d}.')
+        self.store.message('c10', 'user', 'remember that')
+        self.assertEqual(memory.command(self.store, 'remember that', 'c10'), 'Remembered: The spare key is under the pot.')
 
     def test_the_forms_that_point_back_and_the_ones_that_do_not(self):
         for text in ('remember that', 'Remember that.', 'remember this', 'remember it', 'Remember what I just said!',
@@ -119,6 +179,40 @@ class RememberThatThroughTheCoreTests(unittest.TestCase):
             done = app.approve(approval['id'], True)
             self.assertEqual(done['result']['summary'], 'Remembered: The spare key is under the pot.')
             self.assertEqual([r['body'] for r in app.store.items('memory')], ['The spare key is under the pot.'])
+
+    def test_ask_first_carries_the_owners_line_after_an_answer(self):
+        """1.0.18: with "Ask first" the line carried in the approval is the owner's own, not JARVIS's answer."""
+        folder = tempfile.TemporaryDirectory()
+        self.addCleanup(folder.cleanup)
+        with patch.dict(os.environ, {}, clear=True):
+            app = App(folder.name)
+            app.set_permission('save_item', 'ask')
+            run = Run('phone-5')
+            run.wearable, run.writes, run.device, run.user_text = False, False, 'pc', 'Remember that.'
+            app.runs[run.id] = run
+            app.store.message('phone-5', 'user', 'I did 30 push-ups this morning.')
+            app.store.message('phone-5', 'assistant', 'Already logged, Mr. Teague. Nice work.')
+            app.store.message('phone-5', 'user', 'Remember that.')
+            app.store.message('phone-5', 'assistant', app.memory_command(run, 'Remember that.'))
+            approval = next(iter(app.approvals.values()))
+            self.assertEqual(approval['args'], {'command': 'Remember that.', 'line': 'I did 30 push-ups this morning.'})
+            self.assertEqual(app.approve(approval['id'], True)['result']['summary'], 'Remembered: I did 30 push-ups this morning.')
+            self.assertEqual([r['body'] for r in app.store.items('memory')], ['I did 30 push-ups this morning.'])
+
+    def test_the_phones_case_end_to_end(self):
+        """The phone's check of 2026-10-10 through App.work: a device with the tick, the owner's line, JARVIS's answer,
+        then "Remember that." with no model asked."""
+        folder = tempfile.TemporaryDirectory()
+        self.addCleanup(folder.cleanup)
+        with patch.dict(os.environ, {'OPENAI_API_KEY': 'test'}, clear=True), patch('providers.chat', side_effect=AssertionError('no model needed')):
+            app = App(folder.name)
+            run = Run('device-x-2')
+            run.wearable, run.writes, run.device = True, True, 'device-x'
+            app.runs[run.id] = run
+            app.store.message('device-x-2', 'user', 'I did 30 push-ups this morning.')
+            app.store.message('device-x-2', 'assistant', 'Already logged, Mr. Teague. Nice work.')
+            app.work(run, 'Remember that.', None)
+            self.assertEqual([r['body'] for r in app.store.items('memory')], ['I did 30 push-ups this morning.'])
 
     def test_nothing_before_it_asks_nobody(self):
         folder = tempfile.TemporaryDirectory()

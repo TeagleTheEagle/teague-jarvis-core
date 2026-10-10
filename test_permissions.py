@@ -258,7 +258,8 @@ class StopTests(AppCase):
         self.assertEqual(self.app.store.reminders(), [])
         # The owner can still look at what happened.
         self.assertIn('changes', self.app.tool('development_history', {}))
-        self.assertEqual(self.app.tool('manage_timer', {'action': 'list'}), {'timers': []})
+        listed = self.app.tool('manage_timer', {'action': 'list'})
+        self.assertEqual((listed['timers'], sorted(listed)), ([], ['now', 'timers']))   # 1.0.18: a listing also says the time now
         self.assertTrue(self.app.state()['control']['stopped'])
         # A second stop changes nothing and writes no second row.
         self.assertEqual(self.app.emergency_stop('pc', 'again')['reason'], 'test')
@@ -345,7 +346,9 @@ class AskFirstTests(AppCase):
         with self.assertRaises(ValueError): self.app.approve(approval['id'], True)  # once only
         self.assertEqual(len(self.app.store.reminders()), 1)
         self.assertEqual({(r['run_id'], r['device']) for r in self.rows('set_timer')}, {(run.id, 'pc')})
-        self.assertIn('Approved on screen: Set a timer. Result: scheduled.', self.app.store.history('permissions-test')[-1]['content'])
+        # 1.0.18 (docs/CORE-FIXES-20261010.md): an approved timer's receipt says when it goes off.
+        self.assertRegex(self.app.store.history('permissions-test')[-1]['content'],
+                         r'Approved on screen: Set a timer\. Result: scheduled; goes off at \d\d:\d\d(?: on \w+ \d+ \w+(?: \d{4})?)?\.')
 
     def test_denied_or_expired_nothing_happens(self):
         self.app.set_permission('set_timer', 'ask')
