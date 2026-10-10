@@ -1,0 +1,8 @@
+{
+    "schema":  "jarvis-stage7-install-boot-v1",
+    "utc":  "2026-10-10T22:34:25.5870578Z",
+    "boot_id":  65,
+    "os_start_record":  19598,
+    "uptime_seconds":  3583,
+    "last_boot_utc":  "2026-10-10T21:34:42.5000000Z"
+}

@@ -85,3 +85,73 @@ Started alone at 22:15 local on the same build (`--work D:\JARVIS-release-work\r
 stopped from the owner's side during the Python suite (noticed at 22:29): no suite finished, no log written, no process
 left running. The build is not yet accepted: the regression must pass in a complete run before the Setup, the
 rehearsals and the sandbox Stage 7 pass.
+
+## Release regression, run 3: PASS (`regression-1.0.18-cffb826de043-run3.output.txt`, `...python-log.txt`, `...desktop-log.txt`)
+
+2026-10-11, after the PC's restart at 08:34, on the same build, alone (`--work
+D:\JARVIS-release-work\regression-1.0.18-time-run3`), 08:55 to 09:21 local, with the release's own Python and
+`JARVIS.exe` (no development environment, no system node; TEMP on D:): **782 Python tests OK (1,345 s; 7 skipped, the
+same 7 as for 1.0.17 by their own conditions), 60 desktop (133 s), 18 Intelligence, 26 interface scripts; 110 test
+files overlaid from cffb826; the release verified unchanged before and after.** `test_music`'s media-interface test,
+the one failure of run 1, passed. **Build `1.0.18-cffb826de043` is accepted on this PC's regression.**
+
+## The Setup (`JARVIS-Setup-1.0.18-cffb826de043.setup.json`, `setup-1.0.18-time.log.txt`)
+
+Built by `tools/setup/build_setup.py` with Inno Setup 6.7.3 (ISCC sha256 `0a875703…`, the same as for 1.0.17) from
+this package, 09:22 to 09:24 local, in 137.7 s: `JARVIS-Setup-1.0.18-cffb826de043.exe`, 406,919,489 bytes, sha256
+`9fda604615c583edea95e49f4d69ffef892830157fe8ec5bba8939d30c1a8b57`; the template unchanged since 1.0.17 (sha256
+`82c2d322…`); unsigned (decision D3); both application ids as for 1.0.17.
+
+## Zip install: PASS (`zip_install_rehearsal_v2-1.0.18-cffb826de043.output.txt`)
+
+The zip against its record, extracted, `install.cmd` into a sandbox home on D: in 29 s (the shortcuts withheld, no
+launcher script), launched through `releases\1.0.18-cffb826de043\electron\JARVIS.exe` (the Core answering in 19.8 s, 8
+processes: `JARVIS.exe` and `python.exe`), verified after use, uninstalled: all 10,768 program files removed, data,
+config and profile kept, nothing left running.
+
+## The Setup rehearsal, version 2: PASS (`setup-rehearsal-v2-1.0.18-cffb826de043.json`, `...output.txt`)
+
+`docs/release-rehearsal-20261007-1017/rehearse-setup-v2.ps1 -Base D:\JARVIS-release-work\setup-rehearsal-v2-1.0.18-time`,
+09:24 to 09:31 local. The owner's real Desktop and Startup `JARVIS.lnk` carry the same sha256 before, after every step
+and at the end (desktop `7dca2506…`, startup `f8675687…`: the shortcuts at 1.0.17's `JARVIS.exe`); the live JARVIS had
+8 processes before and after; the Installed-apps entry absent before and after. The silent install with `/DIR`,
+`/HOME` and `/NOSHORTCUTS` in 86.1 s (the installer inside it: verify package 9.3 s, copy 11.9 s, verify copy 8.5 s,
+switch 0.1 s; `withheld`), the program, the package release and the uninstaller present, no `JARVIS.ps1`; `JARVIS.exe`
+started (the Core up in 20.1 s; `JARVIS.exe` and `python.exe` only) and shut down cleanly (0 left); the reinstall in
+61.3 s; the uninstall through the entry's own uninstaller in 11.6 s: 10,768 program files removed, data, config and
+profile kept.
+
+## `pkg-1.0.18-time` (09:33)
+
+`D:\JARVIS-release-work\pkg-1.0.18-time` holds the zip, its record, the Setup and its record, read back equal to the
+records (zip `312f03c3…`, Setup `9fda6046…`; the Setup's record names the same zip). `pkg-1.0.18` holds the superseded
+Workshop build and is not used.
+
+## Stage 7 pass in a sandbox, 1.0.17 -> 1.0.18, version 4 scripts: ALL PASSED (`stage7-local/`)
+
+`docs/release-rehearsal-20261007-1017/rehearse-stage7-release-v4.ps1 -Package D:\JARVIS-release-work\pkg-1.0.18-time
+-PreviousPackage D:\JARVIS-release-work\pkg-1.0.17 -Base D:\JARVIS-release-work\stage7-local-1.0.18-time`, started by
+full path, 09:32-09:46 local (14 minutes; nothing else running). **ALL STAGE 7 STEPS PASSED for 1.0.18-cffb826de043**:
+28 check records PASS across the five phases plus the restart check (simulated "one start later" through
+`-BootIdentityFile`), the same as 1.0.17's sandbox and VM passes (29 checks). The driver needed no change. The owner's
+real shortcuts carry the same hashes before, after every start of the driver and at the end; 8 live JARVIS processes
+before and after, never addressed; the sandbox's entry "JARVIS (sandbox)" 1.0.18 removed by its own uninstaller at the
+cleanup (absent afterwards); 0 sandbox processes left. The records: `rehearsal-summary.json` (state `finished`),
+`rehearsal.output.txt`, `evidence/` (the five run folders with their check records; the four Inno Setup logs of 2 to
+4.5 MB each stay on D: only). The run folders carry UTC names (`stage7-20261010-2232..`), local 09:32 on 2026-10-11.
+
+| Phase | Result and timings (the installer's own seconds inside the Setup) |
+|---|---|
+| Install (09:32-09:34) | the zip and the Setup against their records; the Setup silently in 71.2 s wall (inside: verify package 8.3 s, copy 12.3 s, verify copy 7.6 s, switch 0.4 s; `withheld`); the entry; the files verified; launch through `JARVIS.exe` in 14.8 s (8 processes); duplicate Core refused; local speech recognition; "restart Windows" asked for |
+| Restart check | refused on the same start of Windows, passed with "one start later" (R1 in 0.3 s, 8 processes) |
+| Uninstall (09:34-09:36) | through the entry's own uninstaller in 10 s (stop 1.6 s, remove 2.4 s; data kept); reinstall from the Setup in 73.2 s wall (verify package 8.4 s, copy 12.3 s, verify copy 8.6 s, switch 1.4 s); final stop |
+| Update (09:36-09:43) | 1.0.17 extracted and installed (copy 8.6 s), updated to 1.0.18 while running (30.4 s wall; stop 1.6 s), rolled back (12 s), updated again (21.2 s), one update through the Setup (67.4 s wall; stop 1.9 s); 0 processes left after each |
+| Interrupt (09:43-09:46) | 1.0.17 running, the update killed mid-copy, the update run again: installed (26.9 s wall) |
+
+Every install, update and rollback is far inside the Gate 20 bound (600 s on the installer's own seconds; the longest
+lap here is copy 12.3 s) and every stop inside 120 s (the longest 2.4 s). E0 again shows Git Bash's `whoami` refusing
+`/groups` (the artefact of this PC noted for 1.0.17; E0 passes on its other readings).
+
+**Build `1.0.18-cffb826de043` has passed every check this PC can give it:** the development suites, the review, the
+comparison, the release regression (run 3), the Setup, the zip install, the Setup rehearsal and the sandbox Stage 7
+pass.

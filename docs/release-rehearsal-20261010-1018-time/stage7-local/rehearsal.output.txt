@@ -1,0 +1,107 @@
+live JARVIS processes at the start: 8; real shortcuts: {"desktop":"7dca25063958c485cd63774ea296b705da59657acfc5ea8b09985800a2d7cb19","startup":"f8675687f2a435518ebafd6186c253de6b7e239901d49ba0649b1e8e6703554a"}; Installed-apps entry before: {"present":false}
+===== first start: Install, then the driver asks for the Windows restart  09:32:04
+
+=== Install (1.0.18-cffb826de043) started 09:32:04; each line below is one finished check ===
+powershell.exe : /usr/bin/whoami: extra operand '/groups'
+At C:\Users\jonny\JARVIS-claude-workspace\repo\docs\release-rehearsal-20261007-1017\rehearse-stage7-release-v4.ps1:82 
+char:12
++     $out = & powershell -NoProfile -ExecutionPolicy Bypass -File $Dri ...
++            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (/usr/bin/whoami: extra operand '/groups':String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Try '/usr/bin/whoami --help' for more information.
+E0-not-elevated                PASS
+I1-package                     PASS
+    the Setup (install) still running: 30 s, 5,430 files in the package folder
+    the Setup (install) still running: 60 s, 10,776 files in the package folder
+I2-setup-install               PASS
+I3-installed-apps              PASS
+I4-verify                      PASS
+I5-launch                      PASS
+I6-duplicate-core              PASS
+I7-local-stt                   PASS
+I8-restart                     PASS
+JARVIS is running. On the VM the next phase is AfterRestart, after quitting JARVIS from the tray and restarting Windows.
+stage7 Install : PASS  (D:\JARVIS-release-work\stage7-local-1.0.18-time\evidence\stage7-20261010-223204)
+
+The install step PASSED. JARVIS is running. Now do this:
+  1. Near the clock, right-click the JARVIS icon (click the ^ arrow if it is hidden) and choose "Quit JARVIS completely".
+  2. Start > Power > Restart.
+  3. Sign in again, wait one minute, then open this disc and double-click stage7 again.
+
+exit=0  09:34:26
+===== second start on the same start of Windows: the restart check must ask for the restart  09:34:26
+
+Windows has not been restarted since the install step. Do this now:
+  1. Near the clock, right-click the JARVIS icon (click the ^ arrow if it is hidden) and choose "Quit JARVIS completely".
+  2. Start > Power > Restart.
+  3. Sign in again, wait one minute, then open this disc and double-click stage7 again.
+
+exit=0  09:34:27
+===== third start as after a restart (-BootIdentityFile): AfterRestart, Uninstall, Update, Interrupt  09:34:27
+
+=== AfterRestart (1.0.18-cffb826de043) started 09:34:27; each line below is one finished check ===
+powershell.exe : /usr/bin/whoami: extra operand '/groups'
+At C:\Users\jonny\JARVIS-claude-workspace\repo\docs\release-rehearsal-20261007-1017\rehearse-stage7-release-v4.ps1:82 
+char:12
++     $out = & powershell -NoProfile -ExecutionPolicy Bypass -File $Dri ...
++            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (/usr/bin/whoami: extra operand '/groups':String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Try '/usr/bin/whoami --help' for more information.
+E0-not-elevated                PASS
+R1-after-restart               PASS
+stage7 AfterRestart : PASS  (D:\JARVIS-release-work\stage7-local-1.0.18-time\evidence\stage7-20261010-223428)
+
+=== Uninstall (1.0.18-cffb826de043) started 09:34:28; each line below is one finished check ===
+/usr/bin/whoami: extra operand '/groups'
+Try '/usr/bin/whoami --help' for more information.
+E0-not-elevated                PASS
+U1-uninstall                   PASS
+    the Setup (reinstall) still running: 30 s, 5,430 files in the package folder
+    the Setup (reinstall) still running: 60 s, 10,776 files in the package folder
+U2-reinstall                   PASS
+U3-final-stop                  PASS
+stage7 Uninstall : PASS  (D:\JARVIS-release-work\stage7-local-1.0.18-time\evidence\stage7-20261010-223429)
+
+=== Update (1.0.18-cffb826de043) started 09:36:26; each line below is one finished check ===
+/usr/bin/whoami: extra operand '/groups'
+Try '/usr/bin/whoami --help' for more information.
+E0-not-elevated                PASS
+G1-packages                    PASS
+G2-extract-previous            PASS
+G3-previous-installed          PASS
+G4-update                      PASS
+G5-rollback                    PASS
+G6-update-again                PASS
+    the Setup (update) still running: 30 s, 4,588 files in the package folder
+    the Setup (update) still running: 60 s, 10,776 files in the package folder
+G7-update-through-setup        PASS
+stage7 Update : PASS  (D:\JARVIS-release-work\stage7-local-1.0.18-time\evidence\stage7-20261010-223626)
+
+=== Interrupt (1.0.18-cffb826de043) started 09:43:57; each line below is one finished check ===
+/usr/bin/whoami: extra operand '/groups'
+Try '/usr/bin/whoami --help' for more information.
+E0-not-elevated                PASS
+X0-starting-point              PASS
+X1-previous-running            PASS
+X2-killed-mid-copy             PASS
+X3-update-after-interruption   PASS
+stage7 Interrupt : PASS  (D:\JARVIS-release-work\stage7-local-1.0.18-time\evidence\stage7-20261010-224358)
+
+ALL STAGE 7 STEPS PASSED for 1.0.18-cffb826de043.
+Now shut Windows down: Start > Power > Shut down. Wait until the VM window closes.
+Then, on the PC in the jarvis-s6-val account, double-click stage7-step again (it takes the snapshot) and tell Claude: stage 7 done
+
+exit=0  09:46:09
+===== fourth start: nothing left to do  09:46:09
+
+ALL STAGE 7 STEPS PASSED for 1.0.18-cffb826de043.
+Now shut Windows down: Start > Power > Shut down. Wait until the VM window closes.
+Then, on the PC in the jarvis-s6-val account, double-click stage7-step again (it takes the snapshot) and tell Claude: stage 7 done
+
+exit=0  09:46:09
+cleanup: {"uninstaller":"D:\\JARVIS-release-work\\stage7-local-1.0.18-time\\staging\\unins000.exe","present":true,"entry_before_cleanup":{"present":true,"name":"JARVIS (sandbox)","version":"1.0.18","location":"D:\\JARVIS-release-work\\stage7-local-1.0.18-time\\staging\\"},"uninstaller_exit":0,"seconds":15.4,"installer_status":"uninstalled","installer_shortcuts":"withheld (the home is not this PC\u0027s own install home)","program_files_removed":21536,"kept":["data","config","profile"],"entry_after_cleanup":{"present":false},"package_folder_left":false,"data_kept":true,"clean":true}
+live JARVIS processes at the end: 8 (start: 8); sandbox processes at the end: 0; real shortcuts unchanged: True; entry now: False

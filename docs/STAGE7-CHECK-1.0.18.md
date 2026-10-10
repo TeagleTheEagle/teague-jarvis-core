@@ -1,8 +1,9 @@
 # Stage 7 check of 1.0.18 (plan for your approval)
 
-Status: **DRAFT (2026-10-10 late night, Claude Code): not for approval until every check on this PC below has passed.**
-Approving lets Claude place the tools and create this check's record folders; every VirtualBox step stays yours, as for
-1.0.11, 1.0.14, 1.0.15, 1.0.16 and 1.0.17.
+Status: **READY FOR YOUR APPROVAL (2026-10-11, about 09:50 local, Claude Code).** Every check on this PC has passed for
+`1.0.18-cffb826de043` and is recorded in `docs/release-rehearsal-20261010-1018-time/README.md`. Nothing has run in the
+VM. Approving lets Claude place the tools and create this check's record folders; every VirtualBox step stays yours, as
+for 1.0.11, 1.0.14, 1.0.15, 1.0.16 and 1.0.17.
 
 This file was first written on 2026-10-10 morning for a Workshop build of 1.0.18 that was never offered (its text is in
 git history, commit 7d56861 and earlier). 1.0.18 is now the time fix only (your words: "keep friday as he is, 1.0.18 time
@@ -24,9 +25,12 @@ data kept throughout. Updating your everyday JARVIS afterwards is a separate dec
 
 - **1.0.18-cffb826de043** (commit cffb826 on branch `claude/release-1.0.18`, which starts from 1.0.17's commit 0d38218):
   zip `D:\JARVIS-release-work\release\JARVIS-1.0.18-cffb826de043.zip`, 533,364,533 bytes, sha256
-  `312f03c383c9496910106f3bed4af0c9f1643865393d378082444f50b9138b57`; its Setup: SETUP PENDING. The same four files go
-  into `D:\JARVIS-release-work\pkg-1.0.18-time`, the folder the disc is built from (`pkg-1.0.18` holds the superseded
-  Workshop build and is not used).
+  `312f03c383c9496910106f3bed4af0c9f1643865393d378082444f50b9138b57`; its Setup
+  `D:\JARVIS-release-work\release\JARVIS-Setup-1.0.18-cffb826de043.exe`, 406,919,489 bytes, sha256
+  `9fda604615c583edea95e49f4d69ffef892830157fe8ec5bba8939d30c1a8b57` (record `JARVIS-Setup-1.0.18-cffb826de043.setup.json`
+  beside it: built from this package's manifest; unsigned, decision D3). The same four files are in
+  `D:\JARVIS-release-work\pkg-1.0.18-time`, the folder the disc is built from (hashes read back equal; `pkg-1.0.18`
+  holds the superseded Workshop build and is not used).
 - What is new since 1.0.17: `server.py` (the spoken time) and the 1.0.18 entry of `release-notes.json`. Nothing else
   changed in the program.
 - Previous build: **1.0.17-0d38218c4e1d** from its existing Stage 7 disc `JARVIS-STAGE7-1.0.17-0d38218c4e1d.iso`
@@ -45,10 +49,25 @@ Records: `docs/release-rehearsal-20261010-1018-time/README.md`.
   of the shipped source exactly 2 files changed (`server.py`, `release-notes.json`), none added or removed; `JARVIS.exe`
   and its bootstrap differ only in the version number they carry (4 bytes of the program's version stamp, one line of
   the bootstrap).
-- Release regression: PENDING.
-- Zip install in a sandbox: PENDING.
-- The Setup rehearsed in a sandbox with your real Desktop and Startup shortcuts recorded before and after: PENDING.
-- The whole Stage 7 pass 1.0.17 -> 1.0.18 in a sandbox with the version 4 scripts: PENDING.
+- Release regression with the release's own Python and Electron (`JARVIS.exe`), run alone on the PC: **PASS** in its
+  third run (2026-10-11, 08:55-09:21: 782 Python tests OK with 7 skipped by their own conditions, the same 7 as for
+  1.0.17; 60 desktop, 18 Intelligence, 26 interface scripts; the release verified unchanged before and after). Run 1
+  (2026-10-10 evening) had one failure: the test against the real Windows media interface waited 10 s for Windows to
+  open a silent tone and got no answer; that test and `music.py` are unchanged from 1.0.17, and it passed 5 times of 5
+  alone right after and in run 3. Run 2 was stopped part-way with no result. The build was not changed between runs.
+- Zip install in a sandbox: installed in 29 s, launched through `JARVIS.exe` (the Core up in 19.8 s, 8 processes),
+  verified, then uninstalled: all 10,768 program files removed, data kept, nothing left running.
+- The Setup rehearsed in a sandbox with your real Desktop and Startup shortcuts recorded before and after every step
+  and required unchanged: PASS (silent install 86.1 s, launch through `JARVIS.exe` in 20.1 s, reinstall 61.3 s, the
+  uninstall through the entry's own uninstaller 11.6 s with all program files removed and the data kept); your real
+  shortcuts' hashes the same before and after; your running JARVIS untouched (8 processes before and after).
+- The whole Stage 7 pass 1.0.17 -> 1.0.18 in a sandbox with the version 4 scripts: **ALL STAGE 7 STEPS PASSED**
+  (2026-10-11, 09:32-09:46, 29 checks): install from the Setup (71.2 s wall; the installer inside it: verify package
+  8.3 s, copy 12.3 s, verify copy 7.6 s, switch 0.4 s), the sandbox entry, launch through `JARVIS.exe` (8 processes);
+  the restart check; uninstall through the entry (10 s) and reinstall from the Setup (73.2 s wall); 1.0.17 installed
+  and updated to 1.0.18 while running (30.4 s wall), rollback to 1.0.17 (12 s), update again (21.2 s wall), one update
+  through the Setup (67.4 s wall); and the interrupted update (the rerun 26.9 s wall). Every lap far inside the Gate 20
+  bound. The driver needed no change; your real shortcuts and your running JARVIS were untouched.
 
 ## Your steps (about two hours, mostly waiting; the same seven as for 1.0.17)
 
@@ -83,8 +102,7 @@ The verdict on what is tested does not depend on the timings.
    approval's table, read again on 2026-10-10 late night on `claude/main`: unchanged). No new tool.
 3. **The previous build now has its own program and Setup.** In the update steps the VM's 1.0.17 runs through its
    own `JARVIS.exe`, and after the rollback to 1.0.17 its shortcuts point at 1.0.17's `JARVIS.exe` (for 1.0.17's check
-   they pointed at PowerShell after the rollback). The sandbox pass shows whether the driver handles this without
-   change (the Workshop build's sandbox pass of 2026-10-10 morning did).
+   they pointed at PowerShell after the rollback). The sandbox pass shows the driver handles this without change.
 4. **Start point:** the VM is on the snapshot `STAGE7-PASS-1.0.17-0d38218c4e1d` (uuid
    `26a2163a-8d6b-4892-ae97-6f10e9bfb676`; read from its settings file on 2026-10-10 at about 20:55: currentStateModified
    false, last state change 2026-10-07T07:04:19Z, nothing changed since). The launcher restores FRESH-PREREQ only if the
@@ -137,4 +155,4 @@ Tool hashes (sha256, read on 2026-10-10 late night on `claude/main`; equal to th
 
 ## Approval
 
-Not yet: this plan is a draft until the checks above marked PENDING have passed.
+Reply in your own words that you approve this check, for example: "I approve the Stage 7 check of 1.0.18".

@@ -1,0 +1,23 @@
+{
+    "status":  "PASS",
+    "result":  "rolled_back",
+    "release":  "1.0.17-0d38218c4e1d",
+    "previous":  "1.0.18-cffb826de043",
+    "wall_seconds":  12,
+    "output":  null,
+    "processes_left_after_rollback":  0,
+    "verify":  "verified",
+    "verified_release":  "1.0.17-0d38218c4e1d",
+    "running":  {
+                    "core_ready":  true,
+                    "seconds_to_ready":  5.8,
+                    "installed_release":  "1.0.17-0d38218c4e1d",
+                    "identity_matches":  true,
+                    "gate17_memory":  true,
+                    "gate19_memory":  true,
+                    "processes":  8,
+                    "processes_from_other_releases":  [
+
+                                                      ]
+                }
+}
