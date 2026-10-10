@@ -120,7 +120,7 @@ Owner-only gains: the server account, billing, administrator access, its firewal
 
 | Function | After the move | Why |
 |---|---|---|
-| Recognising what you say into the phone | a little slower (measured in the check) | the server's two shared processors instead of your PC's; Qwen's cloud recognition or a larger server if needed |
+| Recognising what you say into the phone | a little slower on the US$24 server (measured in the check) | two shared server processors instead of the PC's Ryzen 7 3700X (8 cores); the CPU-Optimized server (about US$42) or Qwen's cloud recognition should close the gap |
 | The JARVIS window | slightly slower to open and answer; nothing at all if your internet is down | every request crosses the internet to Sydney (tens of milliseconds) instead of staying on the PC |
 | Screen analysis | a moment slower | the screenshot is sent from the PC to the server before it goes to the vision model; still needs the PC on |
 | The Workshop | slower for heavy jobs, Linux instead of Windows, your PC's files out of reach | it runs on the small server; in exchange missions run with the PC off |
@@ -176,6 +176,7 @@ Prices from third-party listings found on 2026-10-10, in US dollars a month, to 
 |---|---|---|
 | DigitalOcean, Sydney, 2 vCPU / 4 GB / 80 GB | about 24 | Best fit: simplest to set up, the same price in every region, easy backups (+20%) |
 | Vultr, Sydney or Melbourne, 2 vCPU / 4 GB / 80 GB | about 20 to 21 | Close second: slightly cheaper, slightly less beginner-friendly |
+| DigitalOcean CPU-Optimized, 2 dedicated vCPU / 4 GB / 25 GB | about 42 | The closest match to the PC's speed: processors not shared with other customers, so speech recognition and the Workshop should come close to the PC's (measured in the check); 4 dedicated vCPUs about 84 if not |
 | AWS Lightsail, Sydney, 2 vCPU / 4 GB / 80 GB | about 24 | Works; an AWS account is more to manage |
 | Google Cloud, Sydney or Melbourne, e2-medium (2 shared vCPU / 4 GB) | about 35, plus its disk and outgoing traffic | Works and is fast, but about half as dear again for the same size, a bill in several parts and a much harder console; one Google account would then carry Gmail, Calendar, Nest and the Core together. A one-year commitment brings it to about 22, a three-year one to about 16 |
 | Google Cloud free tier (e2-micro) | free | Not suitable: US regions only, 1 GB of memory, and traffic to Australia is not in the free allowance |
@@ -199,4 +200,5 @@ Sources: [DigitalOcean pricing (Fluence)](https://fluence.ai/blog/digitalocean-d
 [Oracle Always Free resources](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm),
 [e2-medium prices by region (cloudprice.net)](https://cloudprice.net/gcp/compute/instances/e2-medium),
 [e2-medium (gcloud-compute.com)](https://gcloud-compute.com/e2-medium.html),
-[Google Cloud free features](https://docs.cloud.google.com/free/docs/free-cloud-features).
+[Google Cloud free features](https://docs.cloud.google.com/free/docs/free-cloud-features),
+[DigitalOcean Droplet pricing (official)](https://www.digitalocean.com/pricing/droplets).
