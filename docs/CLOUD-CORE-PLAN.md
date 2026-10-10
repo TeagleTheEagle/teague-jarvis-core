@@ -1,6 +1,8 @@
 # JARVIS's Core in the cloud (plan for your approval)
 
-Status: **WRITTEN, WAITING FOR YOUR DECISIONS AND APPROVAL (2026-10-10, Claude Code).** Owner, 2026-10-10: "im looking
+Status: **SUPERSEDED (2026-10-10): the owner chose a Mac mini at home instead ("so no cloud I would run jarvis's core
+fully on the mac mini and we'd use it as like everything"); see `docs/MAC-MINI-PLAN.md`. Kept as the record of the
+cloud comparison.** Before that: WRITTEN, WAITING FOR YOUR DECISIONS AND APPROVAL (2026-10-10, Claude Code). Owner, 2026-10-10: "im looking
 to move to cloud and run everything there so my pc doesn't need to be on to use the app and the core runs on a cloud
 find me the best fit for jarvis's core", then "write the cloud plan" after the comparison of providers. Nothing in this
 plan has started. Release 1.0.18 (the Workshop and the device list) carries on through its checks meanwhile; this move

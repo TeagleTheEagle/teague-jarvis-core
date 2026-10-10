@@ -244,7 +244,15 @@ only records where the work stands. Historical handover context: `docs/PROJECT-C
   new address, reachable only over Tailscale; the PC a client with a helper for the seven PC and window tools; the
   Workshop on the server; checks on a temporary server first; a cutover like 2026-10-04's; release 1.1.0 after 1.0.18;
   about five to seven sessions of work. It changes the binding rule "The Core lives on the owner's PC" only on the
-  owner's approval. Nothing of it has started.
+  owner's approval. Nothing of it has started. Then, after the comparison (Google Cloud added; no cloud keeps
+  everything as fast as the PC; the dedicated-processor server about US$42 the closest) and the Mac mini prices
+  (M6 from A$1,449; 24 GB / 512 GB about A$2,049): **the owner chose a Mac mini at home** ("so no cloud I would run
+  jarvis's core fully on the mac mini and we'd use it as like everything"). **`docs/MAC-MINI-PLAN.md` written for the
+  owner's decisions D0 to D10 and approval** ("I approve the Mac mini plan, accept all decisions"); the cloud plan is
+  marked superseded. The Mac mini plan: the Core, voice, music, the Workshop and the device door on the Mac mini,
+  always on; the phone and every future device pair with it; the PC a client; a Mac version of JARVIS built and
+  checked on the empty Mac mini first; about four to five sessions; D0 asks whether to finish 1.0.18 on the PC
+  (recommended: only if the Workshop is wanted sooner). Nothing of it has started.
 
 ## 2026-10-10 morning (10:55 local, Opus 5.5): release 1.0.18 (the Workshop) built and checked on this PC; its Stage 7 plan ready
 
