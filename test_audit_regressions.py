@@ -19,6 +19,7 @@ import unittest
 from unittest.mock import Mock, patch
 import uuid
 
+import content_guard
 import development
 import permissions
 import providers
@@ -44,6 +45,7 @@ def app_fixture():
     ns = definitions('server.py', {'Run', 'App', 'WEARABLE_READ_TOOLS'}, dict(
         ROOT=ROOT, runtime_paths=runtime_paths, threading=threading, time=time, uuid=uuid, re=re,
         providers=providers, permissions=permissions, development=development, companion_tools=types.SimpleNamespace(stamp=lambda: {'at': 0}),
+        content_guard=content_guard,   # 1.0.19: a question's context and tool results pass the guard (docs/GUARD.md)
     ))
     app = ns['App'].__new__(ns['App'])
     app.stage4 = None

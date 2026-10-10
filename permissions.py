@@ -210,8 +210,9 @@ def modes_for(name):
     return (DEFAULT, ASK, OFF) if rule.effect == CHANGES and rule.asks == NEVER and rule.reach != SCREEN else (DEFAULT, OFF)
 
 
-TAINTED_MESSAGE = ('Text JARVIS read for this question tried to give the AI instructions, so nothing is changed in this question '
-                   'without your approval, and this cannot wait for one. Ask again in your own words.')
+TAINTED_MESSAGE = ('Text JARVIS read in this conversation tried to give the AI instructions, so in this question nothing is '
+                   'changed without your approval, and this change cannot wait for one. Do it yourself, or start a new '
+                   'conversation and ask in your own words.')
 
 
 def decide(name, args=None, *, stopped=False, by_jarvis=True, wearable=False, mode=DEFAULT, approved=False, writes=False, tools=False,
@@ -226,6 +227,8 @@ def decide(name, args=None, *, stopped=False, by_jarvis=True, wearable=False, mo
     docs/PHONE-ACCESS-1.0.17.md): it may call every tool the PC's question may, under the same switches.
     tainted: text JARVIS read earlier in this question tried to instruct the AI or hid text (1.0.19, content_guard.py):
     every change then waits for the owner's approval, whatever its switch, or is refused when it cannot wait for one.
+    A tool that always asks keeps its own approval, which shows exactly this call, and a tool that needs the owner's
+    own words keeps that check, which outside text cannot meet (review of 2026-10-10, finding 8).
     """
     rule = TABLE.get(name)
     if rule is None:
@@ -242,7 +245,7 @@ def decide(name, args=None, *, stopped=False, by_jarvis=True, wearable=False, mo
         return 'refuse', 'This operation is unavailable from the wearable client.'
     if by_jarvis and mode == OFF:
         return 'refuse', f'"{rule.label}" is switched off in Settings > Permissions. Only the owner can switch it on.'
-    if by_jarvis and tainted and does == CHANGES and not approved:
+    if by_jarvis and tainted and does == CHANGES and not approved and rule.asks not in (ALWAYS, WORDS):
         return ('ask', '') if ASK in modes_for(name) else ('refuse', TAINTED_MESSAGE)
     if by_jarvis and mode == ASK and ASK in modes_for(name) and does == CHANGES and not approved:
         return 'ask', ''

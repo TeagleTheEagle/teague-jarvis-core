@@ -21,6 +21,7 @@ import uuid
 from collections import namedtuple
 from pathlib import Path
 
+import content_guard
 import runtime_paths
 
 OWNER_FILES = ('personality.txt', 'owner-style.css')
@@ -217,6 +218,9 @@ def prepare(root, path, content, reason, restoring=False):
     before = read(where, path)
     if not isinstance(content, str) or len(content) > 200000 or (not content.strip() and path != 'owner-style.css'):
         raise ValueError('Replacement must contain 1–200000 characters.')
+    held = content_guard.placeholders(content, before)   # the guard's stand-ins would replace real text (1.0.19)
+    if held:
+        raise ValueError(content_guard.WRITE_BACK.format(what=held[0]))
     if path.endswith('.css') and not (restoring and path in OWNER_FILES):
         _check_css(path, content)
     validation = validate(where, path, content)
