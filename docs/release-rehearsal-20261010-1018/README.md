@@ -18,7 +18,7 @@ the Workshop's last code commit (0773df5) change docs and `tools/host/update-1.0
 
 ## The build: `1.0.18-4afd891c38f4` (commit 4afd891)
 
-- `build-1.0.18.log`, `JARVIS-1.0.18-4afd891c38f4.release.json`: 10,772 files, 1,186,294,251 bytes; zip
+- `build-1.0.18.log.txt`, `JARVIS-1.0.18-4afd891c38f4.release.json`: 10,772 files, 1,186,294,251 bytes; zip
   `D:\JARVIS-release-work\release\JARVIS-1.0.18-4afd891c38f4.zip`, 533,444,176 bytes, sha256
   `8d44eba680bacf2e9a7e0c0a0cabd29c243412639ecf5a51154b56c10b845bc4`; built from the clean tree, 09:46-09:49 local.
 - `JARVIS-1.0.18-4afd891c38f4.compare-1.0.17.json` (`docs/release-rehearsal-20261004-1012/compare_manifests.py`):
@@ -105,3 +105,30 @@ by the Mac, the app's R6 device panel), and the Mac built the panel against it. 
 missing (checked in `device_gateway.py` and `wearables/service.py`). Put to the owner: add the route to 1.0.18 as build
 2 (the checks above run again) or leave it for a later release. The Mac brief (`docs/MAC-BRIEF-20261010.md`) tells the
 Mac session the route is not served yet.
+
+## Build 2: `1.0.18-fd2b6fa82121` (commit fd2b6fa), with the devices route (owner: "add devices to 1.0.18")
+
+Build 1 is superseded by the owner's decision to add the phone's `devices` route (`docs/PHONE-DEVICES-1.0.18.md`;
+commits 381b1f5 and fd2b6fa, the review applied). Development suites at fd2b6fa: 817 Python OK, 60 desktop, 18
+Intelligence, 27 interface scripts (`D:\JARVIS-release-work\dev-suites-1.0.18-build2`). Built 11:20-11:24 local:
+10,772 files, zip 533,446,531 bytes, sha256 `f5e1e1c41859b0817dc0a5a2c28e926f09d4c4ba1d8deb7c26869266644c2238`
+(`build-1.0.18-build2.log.txt`, `JARVIS-1.0.18-fd2b6fa82121.release.json`). Against build 1
+(`...compare-build1.json`): only `device_gateway.py`, `release-notes.json`, `server.py` and `wearables/service.py`
+changed (the files of `git diff 4afd891 fd2b6fa` outside docs and tests), plus the bytecode and pip records; the pinned
+inputs identical, `JARVIS.exe` included. Against 1.0.17 (`...compare-1.0.17.json`): as build 1's comparison plus the
+route.
+
+### Release regression of build 2: NOT PASSED (`regression-1.0.18-fd2b6fa82121.output.txt`, `...python-log.txt`, `...desktop-log.txt`)
+
+Run alone, 11:26-11:57 local, with the release's own Python and `JARVIS.exe`: **816 Python tests, 1 failure and 1
+error (7 skipped as before), both in one test, `test_workshop.MissionTests.test_the_tool_call_limit`**: the test's
+mission (a stand-in model asking for `workshop_files` four times with the limit patched to 2) did not end within the
+test's 30 seconds ("the mission did not end"), and the temporary folder could not be removed afterwards because the
+mission's database file was still in use (WinError 32). Desktop (60), Intelligence (18) and the 27 interface scripts
+passed. The Python suite took 1,696 s against build 1's 1,482 s on the same PC. The Workshop's code is unchanged
+between build 1 (whose regression passed) and build 2; the test passed 5 times of 5 alone and the whole
+`test_workshop` module passed with the development Python right afterwards. **Cause not established**: an
+intermittent hang of the mission loop at the tool-call limit, or a stall of the test machine, are both open. **Build 2
+is not accepted.** Next: reproduce it (the test in a loop with the release's Python, also under load), read the
+mission loop's path at the tool-call limit (`workshop.Mission`), fix the cause (code or test), build 3, and run the
+chain again. The Setup, the rehearsals and the sandbox Stage 7 pass were not run on build 2.

@@ -1,19 +1,37 @@
-# JARVIS on a Mac mini at home (plan for your approval)
+# Moving JARVIS fully from the PC to a Mac mini (plan for your approval)
 
 Status: **WRITTEN, WAITING FOR YOUR DECISIONS AND APPROVAL (2026-10-10, Claude Code).** Owner, 2026-10-10: "all i want is
 that the app doesn't need the pc to be on ... and also all future devices", then, after the cloud comparison and the
-Mac mini prices: "so no cloud I would run jarvis's core fully on the mac mini and we'd use it as like everything". This
+Mac mini prices: "so no cloud I would run jarvis's core fully on the mac mini and we'd use it as like everything", and
+then: "no I don;y just want to run it for just phone purposes I want to take the core on this pc and move it fully to
+the mac mini", and "and the mac mini will become my main computer for everything". This
 plan replaces the cloud plan (`docs/CLOUD-CORE-PLAN.md`, kept as the record of the comparison). Nothing has started,
 and nothing changes on your PC until you approve.
 
 ## In plain words
 
-A Mac mini at home becomes JARVIS's home. His Core (his memory, his conversations, his tools, the door your devices
-use) runs on it day and night, and so do the things he does himself: speaking, music through its speakers, "Hey
-JARVIS" (with a microphone attached), the Workshop's missions, the routine and the reminders. Your phone and every
-future device connect to the Mac mini exactly as the phone connects to your PC today, so **the app works with your PC
-off**. Your PC becomes a client: you use JARVIS on it in a window that opens the Mac mini over your home network. There
-is still ONE Core and ONE memory; it only moves house.
+**All of JARVIS moves from your PC to the Mac mini, not just what the phone needs.** The Core that runs on your PC today
+(his memory, his conversations, his settings and personality, his tools, the Workshop, the door your devices use) is
+taken off the PC and runs on the Mac mini from then on, day and night, and so does everything he does himself:
+speaking, music through its speakers, "Hey JARVIS" (with a microphone attached), the Workshop's missions, the routine
+and the reminders. You use him on the Mac mini itself, on your phone, and on every future device, and the app works
+with your PC off. Afterwards the PC holds no JARVIS Core: only its old copy, kept switched off for a month as the way
+back and then removed on your word. If you also want JARVIS on the PC, a window there opens the Mac mini (D6); you do
+not have to. There is still ONE Core and ONE memory; it moves house completely.
+
+**The Mac mini is also your main computer for everything.** So JARVIS runs on it the way he runs on your PC today: in
+your own account, his window and voice opening when you sign in, while his Core runs in the background from the
+moment the Mac mini starts, so your phone and devices reach him even before you sign in. And I move with him: the
+JARVIS repository and my work go to the Mac mini (D2), and this PC session hands over and stops.
+
+## What moves from the PC to the Mac mini
+
+Everything that is JARVIS: the database (memories, conversations, tasks, projects, reminders, the routine, notices,
+the activity log, the music nicknames, the Workshop's missions and lessons), the config folder (your personality text,
+your style, your settings), your music files, the Workshop's folder and its files, and the backups history. Your keys
+move too, typed by you into the Mac mini's key file (I never read them). The phone and any other device pair again
+with the Mac mini (their keys belong to an installation and are never copied). Nothing of JARVIS stays running on the
+PC.
 
 ## What changes and what does not
 
@@ -23,7 +41,7 @@ is still ONE Core and ONE memory; it only moves house.
 | The phone app | pairs with the PC's Tailscale name | pairs again with the Mac mini's name (its pairing screen already takes any address); works with the PC off |
 | Future devices | pair with the PC | pair with the Mac mini from Settings > Devices with a code, the same way |
 | Speaking aloud, music, "Hey JARVIS", the Workshop, reminders, routines, mail, calendar, web | on the PC | on the Mac mini (a microphone and speakers attached to it if you want to talk to it directly) |
-| Your PC | the Core and the window | a client: a window on the Mac mini over the home network, typing and press to talk |
+| Your PC | the Core and the window | no Core; if you want, a window on the Mac mini over the home network (D6) |
 | Your data, keys, personality | on the PC | moved to the Mac mini by one backup and restore; your keys typed by you into its key file |
 | Backups | daily to `D:\JARVIS-backups` | daily on the Mac mini, and a copy to `D:\JARVIS-backups` whenever the PC is on |
 | Updates | your Setup, on your approval | a Mac release, on your approval, with the same check and rollback |
@@ -38,45 +56,49 @@ is still ONE Core and ONE memory; it only moves house.
    for JARVIS as he is today; the 24 GB leaves room for an offline AI model and a voice of his own later; the storage
    cannot be upgraded after purchase). If you want to talk to it directly: a USB speakerphone or a microphone and
    speakers (the Mac mini has a small speaker and no microphone). Buying it is yours.
-2. **D2, how I work on it:** from this PC, over SSH through your Tailscale network only (the Mac's own Remote Login,
-   limited to Tailscale, with a key you create from my steps), as an ordinary user without administrator rights. The repository and all writing of the Core stay here (one writer, as now); the Mac mini is where the Mac
-   version is built, tested and run. The one-time administrator setup is yours, from written steps. Alternative: you
-   run every command on the Mac mini yourself (much slower).
-3. **D3, always on:** the Core as a background service that starts when the Mac mini starts, before anyone signs in;
-   the Mac mini set never to sleep and to start by itself after a power cut; it signs in to a JARVIS user by itself so
-   that speaking, music and "Hey JARVIS" work after a restart (anyone in your home who reaches its keyboard can then
-   use it; the Mac mini's own screen lock still applies when you walk away from it).
+2. **D2, where I work:** on the Mac mini itself, since it becomes your main computer. You install Claude Code there
+   (as on the PC; steps from me); I prepare a handover from this PC: the whole JARVIS repository with its history, the
+   governance records, my notes and the status, in one bundle you copy across; the Claude Code session on the Mac mini
+   then becomes JARVIS's only writer and builds the Mac version where it runs, and this PC session stops (one writer,
+   as now). The iPhone app's own Mac session is not affected. Alternative: I stay on this PC and reach the Mac mini over
+   SSH through Tailscale (slower, and the PC must stay on while I work).
+3. **D3, always on:** the Core as a background service that starts when the Mac mini starts, before anyone signs in,
+   so the phone and your devices reach JARVIS even after a restart or a power cut; the Mac mini set never to sleep
+   (its screen may) and to start by itself after a power cut. JARVIS's window, voice, music and "Hey JARVIS" run in
+   your own account and open when you sign in, as on your PC today. Signing in by itself after a restart stays your
+   choice in macOS's settings (off is safer for a main computer).
 4. **D4, the Workshop on the Mac mini:** missions and commands run there (macOS commands and Python), as a separate
    restricted user that cannot reach the Core's own address, with the same switches (commands "ask first").
 5. **D5, what the Mac mini does itself:** music through its speakers, speaking nudges and announcements aloud, "Hey
    JARVIS" and speech recognition, opening its own apps and pages, analysing its own screen, the home-network list,
    its own hardware readings. All of JARVIS's 56 tools have a home on it.
-6. **D6, your PC as a client:** a JARVIS window on the PC that opens the Mac mini over your home network (Tailscale's
-   HTTPS address, so the microphone works), typing and press to talk. Your PC's own screen and apps from JARVIS only in
-   a later stage, if you want them.
-7. **D7, checks before anything moves:** on the Mac mini itself while it is still empty, the same kind of pass as
-   Stage 7: install, restart with automatic start, update while running, rollback, an update killed midway, uninstall
+6. **D6, your PC afterwards, optional:** if you want JARVIS on the PC too, a JARVIS window there opens the Mac mini
+   over your home network (Tailscale's HTTPS address, so the microphone works), typing and press to talk; otherwise
+   the PC has no JARVIS at all. Your PC's own screen and apps from JARVIS only in a later stage, if you want them.
+7. **D7, checks before anything moves:** on the Mac mini, in a separate test user and test folders that your own
+   account never sees, before your data moves; the same kind of pass as Stage 7: install, restart with automatic start, update while running, rollback, an update killed midway, uninstall
    and reinstall, backup and restore, the phone paired. Its plan comes to you for approval first.
 8. **D8, the move:** like the switch-over of 2026-10-04: a verified backup on the PC, restored on the Mac mini and
    checked table by table; the phone pairs again with the Mac mini's address (device keys never travel in a backup);
    your PC's JARVIS stops starting at sign-in but stays installed for a month, as the way back.
 9. **D9, backups:** daily on the Mac mini (as Settings > Backups now), a copy to `D:\JARVIS-backups` whenever the PC
    is on, and, if you like, Time Machine to an external drive.
-10. **D10, the Mac app unsigned for now**, as the Windows app is (installed by me over SSH, so macOS does not stop it);
-    signing it with your Apple Developer membership later is your step.
+10. **D10, the Mac app unsigned for now**, as the Windows app is (built and installed on the Mac mini itself, so
+    macOS does not stop it); signing it with your Apple Developer membership later is your step.
 
 ## The stages
 
 | Stage | Who | What | Roughly |
 |---|---|---|---|
 | 0 | You | Answer D0 to D10 (or "accept all"), approve this plan | now |
-| 1 | You | Buy the Mac mini; set it up with the steps I write: your administrator account, a JARVIS user, Tailscale, Remote Login limited to Tailscale, the power and sign-in settings, a microphone and speakers if wanted | an hour |
-| 2 | Me | JARVIS for Mac: the Core and the window on macOS (its own Python and Electron for Apple silicon, the speech and wake-word models), the Mac versions of music, speaking aloud, opening apps, the screen, the home-network list, the hardware readings and the Workshop's runner; the installer with the same verify, update and rollback; the background service; one reviewer per item | 3 sessions |
-| 3 | Me, then you | The check on the empty Mac mini (plan for your approval, then the pass); the PC's window as a client; the move plan for your approval | 1 to 2 sessions, about an hour of yours |
+| 1 | You, then me | Buy the Mac mini and set it up as your main computer, with my steps for JARVIS's part: Tailscale, the power settings, a microphone and speakers if wanted, Claude Code; then the handover bundle from this PC copied across and opened in Claude Code there | an hour |
+| 2 | Me, on the Mac mini | JARVIS for Mac: the Core and the window on macOS (its own Python and Electron for Apple silicon, the speech and wake-word models), the Mac versions of music, speaking aloud, opening apps, the screen, the home-network list, the hardware readings and the Workshop's runner; the installer with the same verify, update and rollback; the background service; one reviewer per item | 3 sessions |
+| 3 | Me, then you | The check on the Mac mini in its test user (plan for your approval, then the pass); the PC's window as a client if you want one (D6); the move plan for your approval | 1 to 2 sessions, about an hour of yours |
 | 4 | You | The move: backup, restore, the phone paired again, the PC's JARVIS off at sign-in. **From here the app works with the PC off.** A month later the PC's old JARVIS removed, on your word | an hour |
 
 The project's binding rule "The Core lives on the owner's PC" (CLAUDE.md) changes with your approval to: the Core
-lives on your Mac mini at home; the PC, the phone and every other device are clients. Owner-only gains: the Mac mini's
+lives on your Mac mini at home, your main computer; the phone, the PC if used and every other device are clients;
+JARVIS's repository and its one writer move to the Mac mini with the handover. Owner-only gains: the Mac mini's
 administrator account, its macOS and sign-in settings, its Apple ID, Tailscale on it.
 
 ## What performs worse, the same, or better
