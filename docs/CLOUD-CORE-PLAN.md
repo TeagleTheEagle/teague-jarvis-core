@@ -23,6 +23,7 @@ few things say plainly that the PC is off; everything else keeps working from th
 | Where the Core runs | your PC, while it is on and you are signed in | your server in Sydney, always on |
 | The phone app | pairs with the PC's Tailscale name, works while the PC is on | pairs again with the server's Tailscale name (the pairing screen already takes any address), works any time |
 | The JARVIS window on the PC | starts its own Core | opens the cloud Core over Tailscale's HTTPS address and starts the PC helper |
+| "Hey JARVIS" and the window's speech recognition | the window streams the microphone to the Core on the PC, which listens for the wake word and turns speech into text | stay on the PC, in the helper: the microphone never streams to the server; only the text of what you said (or the recording of one question) goes there |
 | Chat, memory, tasks, reminders, routines, notices, approvals, mail, calendar, web, the Workshop | on the PC | on the server (the Workshop's missions run with the PC off) |
 | Music through the PC's speakers, speaking aloud on the PC, opening apps and pages, screen analysis, the home-network list, the PC's hardware details | on the PC | through the PC helper, only while the PC is on |
 | AI providers (Qwen, OpenAI, Fish Audio) and their keys | key file on the PC | the same keys in the server's key file, typed by you |
@@ -67,9 +68,12 @@ PC" or "the JARVIS window" (Settings > Permissions shows each one's reach): the 
    the cloud Core and checked table by table; the phone pairs again with the new address (device keys are tied to an
    installation, so they never travel in a backup); the PC's JARVIS stops starting at sign-in but stays installed for a
    month, as the way back.
-9. **D9, speech:** speech recognition stays local on the server (the same small model as today, private, no extra
-   cost); Qwen's cloud recognition (built in 1.0.15, not yet tried with the real service) stays the choice you can
-   switch to.
+9. **D9, speech:** on the PC, the wake word and the recognition of what you say to the window run in the helper, as
+   fast as today, and the microphone never streams to the server (today the window streams it to the Core on the PC
+   all the time to listen for "Hey JARVIS"; to a server that would cost speed, data and privacy). Recordings from the
+   phone are recognised on the server with the same small model (`base.en`), private and at no extra cost, but on two
+   shared server processors rather than your PC's: a little slower, measured in the check (D7). If it is too slow,
+   Qwen's cloud recognition (built in 1.0.15, not yet tried with the real service) or a larger server size.
 10. **D10, offline answers (Ollama):** not on the server. It is always online, and a phone without internet cannot
     reach it anyway. The PC keeps Ollama for the time being; nothing uses it after the move.
 
@@ -88,6 +92,22 @@ The project's binding rule "The Core lives on the owner's PC" (CLAUDE.md) change
 on your server at DigitalOcean Sydney, reachable only over your Tailscale network; the PC is a client with a helper.
 Owner-only gains: the server account, billing, administrator access, its firewall and Tailscale, deleting a server.
 
+## What performs worse, the same, or better
+
+| Function | After the move | Why |
+|---|---|---|
+| Recognising what you say into the phone | a little slower (measured in the check) | the server's two shared processors instead of your PC's; Qwen's cloud recognition or a larger server if needed |
+| The JARVIS window | slightly slower to open and answer; nothing at all if your internet is down | every request crosses the internet to Sydney (tens of milliseconds) instead of staying on the PC |
+| Screen analysis | a moment slower | the screenshot is sent from the PC to the server before it goes to the vision model; still needs the PC on |
+| The Workshop | slower for heavy jobs, Linux instead of Windows, your PC's files out of reach | it runs on the small server; in exchange missions run with the PC off |
+| The dashboard's processor, memory and disk readings | show the server, not your PC | the Core reads the machine it runs on (the helper could add the PC's later) |
+| Offline answers, and a voice model of your own on the PC's graphics card later | not on the server | the server has no graphics card; such a model would run on the PC through the helper, only while it is on |
+| Music, speaking aloud on the PC, opening apps and pages, the home-network list | the same, a fraction of a second later | one more hop from the server to the PC helper; PC on, as today |
+| Chat answers, the voice of the replies, web, news, mail, calendar, directions, Spotify | the same | the AI and those services are on the internet either way; Sydney reaches Singapore about as fast as your PC does |
+| Memory, tasks, reminders, conversations | the same | the database is small |
+| The phone app, reminders and timers, routine nudges, Workshop missions | better: they work with the PC off | the Core never sleeps |
+| JARVIS after your PC restarts | better: no wait | today JARVIS starts about four minutes after you sign in; the server is already running |
+
 ## Costs
 
 | Item | About |
@@ -105,6 +125,9 @@ Owner-only gains: the server account, billing, administrator access, its firewal
 - **One place to fail.** If DigitalOcean, the server or Tailscale is down, JARVIS is down everywhere (today: if the PC
   is off). The way back stays open for a month (D8), and the backups reach your PC.
 - **PC features need the PC.** The seven PC tools and the window work only while the PC is on and signed in.
+- **No JARVIS at home when your internet is down.** Today the PC's JARVIS keeps working without the internet (with
+  local answers from Ollama); after the move the window and the phone both need the internet to reach the server.
+- **Some things get slower (next section).**
 - **Latency.** Sydney keeps the phone quick; each AI call adds a trip to Singapore of well under a second. Not
   measured yet: the check pass measures it.
 - **The amount of work.** About five to seven long sessions of mine before the move, plus your steps above. Release
