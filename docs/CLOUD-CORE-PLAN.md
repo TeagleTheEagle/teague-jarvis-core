@@ -6,6 +6,29 @@ find me the best fit for jarvis's core", then "write the cloud plan" after the c
 plan has started. Release 1.0.18 (the Workshop and the device list) carries on through its checks meanwhile; this move
 comes after it, as release 1.1.0.
 
+## Your goal, and the shortest way to it
+
+Owner, 2026-10-10: "all i want is that the app doesn't need the pc to be on ... and also all future devices". For that,
+JARVIS's Core has to live on something that is always on, and your PC cannot be that while it is off. So the Core
+moves, and the phone and every later device connect to it exactly as the phone connects to your PC today. The plan is
+in two stages so that your goal comes first:
+
+- **Stage 1, your goal:** the Core on the server; the phone paired with it; any later device paired the same way; your
+  PC's JARVIS window opens the server instead of starting its own Core, and on the PC you type or press to talk. After
+  Stage 1 the app works with the PC off. About four sessions of my work and about two hours of yours.
+- **Stage 2, the PC's extras:** "Hey JARVIS" on the PC again, music through the PC's speakers, opening apps and pages,
+  screen analysis, the home-network list and the PC's hardware details, through a small helper on the PC (D5, D9).
+  About two sessions, delivered as an update after the move. Until then those wait.
+
+**Every future device** pairs with the server from Settings > Devices with a code, like the phone: a second phone, the
+glasses (through the phone, as planned), a Mac or another computer, a watch. Nothing in the Core changes per device;
+each device needs only its own app, and a computer can use the same JARVIS window as your PC.
+
+**The other way to the same goal:** a small always-on computer at home instead of a cloud server. Today's Windows
+build runs on it unchanged (no Linux version needed), your data stays at home and there is no monthly fee, for a
+one-off purchase and its power. Your phone, your future devices and your PC would connect to it the same way, so
+everything else in this plan stays. Say so if you prefer it; the comparison of cloud providers is at the end.
+
 ## In plain words
 
 JARVIS's Core (his memory, his conversations, his tools and the door your phone uses) moves from your PC to a small
@@ -83,10 +106,11 @@ PC" or "the JARVIS window" (Settings > Permissions shows each one's reach): the 
 |---|---|---|---|
 | 0 | You | Answer D1 to D10 (or "accept all"), approve this plan | now |
 | 1 | You | DigitalOcean account with two-step sign-in, payment; the temporary check server (exact settings from me); run my setup script in its web console: Tailscale with its SSH, the `jarvis` user, the firewall, your time zone (Sydney, so routines, quiet hours and greetings keep your time) | about 45 minutes |
-| 2 | Me | The server version of the Core: a Linux release (no Electron, its own Python), paths, the server's health readings, the Workshop's Linux runner, a service that starts at boot, the installer's Linux side with the same verify, update and rollback; rehearsed on the check server; one reviewer | 2 sessions |
-| 3 | Me | Your screens over Tailscale's HTTPS address, the PC helper and the desktop app's cloud mode, the backup copy to the PC, the "PC is off" answers; the Mac brief for the new address; one reviewer per item | 2 to 3 sessions |
-| 4 | Me, then you | The check on the check server (plan for your approval, then the pass); then the live server (your setup script again); then the move plan for your approval | 1 session, about 2 hours of yours |
-| 5 | You | The move: backup, restore, the phone paired again, the PC's JARVIS off at sign-in; a week of use; then the check server deleted, and after a month the PC's old Core removed on your word | an hour, then a month |
+| 2 (Stage 1) | Me | The server version of the Core: a Linux release (no Electron, its own Python), paths, the server's health readings, the Workshop's Linux runner, a service that starts at boot, the installer's Linux side with the same verify, update and rollback; the seven PC and window tools answering "This needs the JARVIS helper on your PC, which comes in Stage 2."; rehearsed on the check server; one reviewer | 2 sessions |
+| 3 (Stage 1) | Me | Your screens over Tailscale's HTTPS address; the desktop app's cloud mode (the window opens the server, typing and press to talk; its always-on listening for "Hey JARVIS" off, because it would stream the microphone to the server); the backup copy to the PC; the Mac brief for the new address; one reviewer per item | 1 session |
+| 4 (Stage 1) | Me, then you | The check on the check server (plan for your approval, then the pass); then the live server (your setup script again); then the move plan for your approval | 1 session, about 2 hours of yours |
+| 5 (Stage 1) | You | The move: backup, restore, the phone paired again, the PC's JARVIS off at sign-in. **From here the app works with the PC off.** A week of use; then the check server deleted, and after a month the PC's old Core removed on your word | an hour, then a month |
+| 6 (Stage 2) | Me, then you | The PC helper (D5, D9): "Hey JARVIS" and speech recognition on the PC, the seven PC and window tools, speaking aloud on the PC, the "PC is off" answers; reviewed, checked, installed as an update on your approval | 2 sessions |
 
 The project's binding rule "The Core lives on the owner's PC" (CLAUDE.md) changes with your approval to: the Core lives
 on your server at DigitalOcean Sydney, reachable only over your Tailscale network; the PC is a client with a helper.
@@ -130,8 +154,10 @@ Owner-only gains: the server account, billing, administrator access, its firewal
 - **Some things get slower (next section).**
 - **Latency.** Sydney keeps the phone quick; each AI call adds a trip to Singapore of well under a second. Not
   measured yet: the check pass measures it.
-- **The amount of work.** About five to seven long sessions of mine before the move, plus your steps above. Release
-  1.0.18 finishes first.
+- **The amount of work.** About four long sessions of mine for Stage 1 (your goal), plus your steps above, and about
+  two more for Stage 2. Release 1.0.18 finishes first.
+- **Between the stages the PC is plainer.** On the PC you type or press to talk, and the seven PC and window tools say
+  they need the helper; everything else works, on the PC and from the phone.
 - **Not part of this plan:** your PC's own folders reachable from the server's Workshop, a second Core of any kind
   (never), the Mac and the phone app beyond the new address (the Mac session checks its pairing screen; no change is
   expected).
