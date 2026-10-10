@@ -230,6 +230,13 @@ only records where the work stands. Historical handover context: `docs/PROJECT-C
   `31b6baa3c3cfefa916e472b6808ea1e3eed1b441a4a857ad52072d713f797679`) is kept unedited under
   `phone/ios/mac/20261010-1200/`. Every file was checked byte for byte against the zip. It covers rounds 4, 5 and
   5b, which the Mac checked against Core 1.0.17.
+- **Replaced on the owner's word** ("Keep it under phone/ios/mac; it replaces the 1200 copy") by the Mac's newer
+  copy `JARVIS-ios-mac-20261010-1218.zip` (sha256 `f0b54583ae209cd8f779a2e14b990cfa549c3751cc6b3421a8a0ce2abc9096e6`,
+  the owner's stated hash, matched; 114 entries, 96 files, each checked byte for byte), now under
+  `phone/ios/mac/20261010-1218/`. The 1200 copy stays in git history (commit 22892b5). Against 1200 only three
+  files differ: `SessionModel.swift`, `SiriIntents.swift` and `STATUS.md`. Round 5c applied the PC's answers in the
+  app: announcement words cleaned by the Core's Unicode 15.0 rule, and the stop sentence quoted. Its STATUS.md
+  lists all six requests as answered and asks nothing new of the PC.
 - Its STATUS.md section "Requests for the PC" (six items) is answered in **`docs/MAC-ANSWERS-20261010.md`**, for the
   owner to carry to the Mac. The answers come from the code of 1.0.17 (0d38218) and of head:
   - (1) the exact stop sentence, `permissions.STOPPED_MESSAGE`, the same since 1.0.16; device routes answer it as a

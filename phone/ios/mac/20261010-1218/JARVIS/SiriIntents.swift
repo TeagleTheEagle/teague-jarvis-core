@@ -95,12 +95,15 @@ struct AnnounceToJarvisIntent: AppIntent {
         }
     }
 
-    /// The words as the Core takes them. It refuses an announcement with control, format or zero-width characters
-    /// anywhere ("Invalid announcement."), and a text message often has line breaks and emoji joined by zero-width
-    /// joiners: line breaks, tabs and other separators become one plain space; format characters, every character
-    /// Unicode marks as invisible (joiners, direction marks, the soft hyphen, variation selectors and the like),
-    /// private-use and unassigned characters, and Messages' attachment marker (U+FFFC, a photo) are taken out; the
-    /// ends are trimmed. Accents, apostrophes and single emoji stay; an emoji made of several joined ones comes apart.
+    /// The words as the Core takes them. The Core refuses an announcement holding any character whose Unicode
+    /// general category starts with C (controls, format, surrogates, private use, unassigned) by its own tables,
+    /// Unicode 15.0 in 1.0.17 (docs/MAC-ANSWERS-20261010.md, item 2), with "Invalid announcement.". A text message
+    /// often has line breaks and emoji joined by zero-width joiners, and may have emoji newer than Unicode 15.0.
+    /// So: line breaks, tabs, other controls and separators become one plain space; format, surrogate, private-use
+    /// and unassigned characters, every character newer than Unicode 15.0 (unassigned on the Core), and Messages'
+    /// attachment marker (U+FFFC, a photo) are taken out; the ends are trimmed. Everything the Core accepts stays as
+    /// it is: accents, apostrophes, variation selectors (the emoji style), skin tones, flags of two letters, keycaps.
+    /// An emoji made of several joined ones comes apart into its parts.
     static func announceable(_ raw: String) -> String {
         var kept = String.UnicodeScalarView()
         var lastWasSpace = true   // no space at the start
@@ -112,7 +115,8 @@ struct AnnounceToJarvisIntent: AppIntent {
             case .format, .privateUse, .surrogate, .unassigned:
                 continue
             default:
-                if properties.isDefaultIgnorableCodePoint || properties.isVariationSelector || scalar.value == 0xFFFC { continue }
+                guard let age = properties.age, (age.major, age.minor) <= (15, 0) else { continue }   // unknown to the Core
+                if scalar.value == 0xFFFC { continue }
                 kept.append(scalar)
                 lastWasSpace = false
             }

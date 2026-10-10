@@ -21,7 +21,9 @@ final class SessionModel: ObservableObject {
         // When a later hello, status or metrics reading says the stop has lifted, the stop's note goes with it
         // (docs/PHONE-V1-RESULT.md, item 7).
         didSet {
-            if oldValue && !stopped, let note = notice, note.localizedCaseInsensitiveContains("emergency stop") { notice = nil }
+            // Every note of the stop goes: the Core's sentence and the phone's own ("... Press RESUME on the PC ...").
+            if oldValue && !stopped, let note = notice,
+               note.localizedCaseInsensitiveContains("emergency stop") || note.contains("RESUME") { notice = nil }
             if stopped && !oldValue { approvals = [] }   // the stop drops every waiting approval on the Core
         }
     }
@@ -1243,7 +1245,9 @@ final class SessionModel: ObservableObject {
         state = .error
     }
 
-    /// The Core's refusal while the emergency stop holds: its stop sentence ("Emergency stop is on. ..."), which the
+    /// The Core's refusal while the emergency stop holds: its stop sentence, "JARVIS is stopped (emergency stop).
+    /// Nothing runs until you press RESUME on the PC." (permissions.STOPPED_MESSAGE, the same in 1.0.16 to 1.0.18 and
+    /// the only device error with "emergency stop" in it: docs/MAC-ANSWERS-20261010.md, item 1), which the
     /// question routes and the 1.0.17 approval routes send as HTTP 400 (a 403 carrying it is read the same way).
     /// While the stop holds the Core refuses start (but the stop words), transcribe, speech, approvals, approve,
     /// reject and announce; the reads, hello, status, events, cancel and bye answer as usual (MAC-BRIEF-20261010.md).

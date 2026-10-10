@@ -1,7 +1,8 @@
 # JARVIS iPhone app: status (the Mac's living record)
 
 **Read this first in every session in this folder; update it before a session ends.**
-Last updated: 2026-10-10, 12:00 local (Core 1.0.17 is on the PC; the PC's briefs of today applied as round 5b,
+Last updated: 2026-10-10, 12:20 local (the PC's answers to the six requests; round 5c installed);
+earlier: 12:00 local (Core 1.0.17 is on the PC; the PC's briefs of today applied as round 5b,
 reviewed, installed and checked against the real Core: R1 to R4 and R6 met, R7 answered, one app defect fixed).
 
 ## Where the app stands
@@ -98,6 +99,13 @@ reviewed, installed and checked against the real Core: R1 to R4 and R6 met, R7 a
   R4 (notices; an announcement through Siri, "Announced by JARVIS.", "1 unread"), R6 ("not on this Core yet") met;
   R7 answered that no display is authorised on the PC; R5 skipped. App defect found and fixed: the restored
   conversation came back in one relaunch of three; now three of three.
+- **Round 5c, after the PC's answers** (docs/MAC-ANSWERS-20261010.md): the announcement's words follow the Core's
+  exact rule (general category C* by its Unicode 15.0 tables): characters newer than Unicode 15.0 are taken out,
+  variation selectors are kept (the emoji style); checked on the Mac with thirteen sample texts (line breaks, a
+  joined emoji, a Unicode 16 emoji, a tag flag, accents, skin tone, keycap, the photo marker); the stop sentence
+  quoted in the code. Reviewed by the round's reviewer (nothing wrong; one low finding in older code applied: the
+  phone's own stop note "JARVIS is stopped. Press RESUME on the PC to continue." now also goes when RESUME is
+  pressed on the PC, round 2 check 3). Built and installed on the phone at 12:17 (install only, the app not opened).
 - **Core request handled (release 1.0.17, relayed 2026-10-07):** the Core will send `assistant.draft` events for a
   phone's question while the reply is written (when the PC's "Show replies while they are written" setting is on);
   each carries the whole text so far, an empty text takes the draft away. `SessionModel.follow` keeps it as
@@ -109,29 +117,35 @@ reviewed, installed and checked against the real Core: R1 to R4 and R6 met, R7 a
 
 ## Requests for the PC (carried by the owner)
 
-1. The exact text of `permissions.STOPPED_MESSAGE` (the app recognises the stop by "emergency stop" in the Core's
-   fixed error sentences; a later change of that sentence would be missed).
-2. The exact rule behind "Invalid announcement." (Python's `str.isprintable()`, Unicode categories C*, a list of
-   zero-width characters?). The app takes out controls, format, invisible, private-use and unassigned characters;
-   emoji newer than the Core's Python Unicode tables would still be refused if the rule is category-based.
-3. The `devices` route when the PC adds it (the app is ready for the form's shape; the panel asks once per Core
-   version).
-4. Seen from the phone, for the Core's side: a reply set a two-minute timer and said "it should fire around 07:19" at
-   10:27 local; asked where 07:19 came from, JARVIS said it had not checked the clock. And on 2026-10-10 at about
-   11:09 the phone lost the Core while JARVIS answered "Remember that"; the Core had not restarted (UP 1 H 51 MIN at
-   11:16), so it was the link (Tailscale or the network), back by 11:14.
-5. "Remember that" (1.0.17): the word "that" is no longer saved, but after a line the owner typed and JARVIS's reply
-   to it, "Remember that" saved JARVIS's reply ("Remembered: JARVIS said: Already logged, Mr. Teague — ...") instead
-   of the owner's line. The owner means their own last line; the saved fact is junk (the owner may delete it on the
-   PC's Memory page).
-6. Please confirm that "Wearable service busy." always comes before any work for the 1.0.17 and 1.0.18 ops too
-   (approve, reject, announce, approvals, notices, devices): the app sends any request once more on that answer
-   (core-reference shows it for the 1.0.16 ops).
+**All six answered by the PC on 2026-10-10** (docs/MAC-ANSWERS-20261010.md, kept verbatim; read from the code of
+1.0.17-0d38218 and of 1.0.18 as built; no Core code changed for them):
+
+1. The stop sentence is exactly "JARVIS is stopped (emergency stop). Nothing runs until you press RESUME on the PC."
+   (the same in 1.0.16 to 1.0.18; HTTP 400 on start, transcribe, speech, announce, approvals, approve, reject and
+   pair; no `stopped` field on device 400s; the only device error with "emergency stop" in it). The app's match is
+   exact; nothing to change. A `stopped` field beside it is possible in a later Core release, on the owner's word.
+2. "Invalid announcement.": any character of a general category C* by the Core's tables (Python 3.12.10, Unicode
+   15.0.0), lengths in code points. **Done in the app on 2026-10-10:** every character newer than Unicode 15.0 is
+   taken out too, and the variation selectors the Core accepts are kept (round 5c below).
+3. `devices`: built for 1.0.18, which is not released (build 2 failed an intermittent Workshop test; the owner's
+   "Mac mini plan", decision D0, also decides where 1.0.18 is finished). "This Core does not serve the device list
+   yet." stays right until then.
+4. The "07:19": a Core defect, cause found (the timer's result gives the model only a Unix timestamp); fix proposed
+   on the owner's word (the alert's local clock time beside it). The 11:09 link loss: nothing on the PC explains it
+   (Tailscale or the phone's network); hold-and-send covers it.
+5. "Remember that": a Core defect, confirmed; fix proposed on the owner's word ("remember that / this / it / what I
+   said" save the owner's own last line; only "remember what you said" saves JARVIS's reply).
+6. "Wearable service busy." always comes before any work, in 1.0.17 and 1.0.18 as built: one resend can never do
+   anything twice. Not covered: a request with no answer at all (the link dropped) may have been done; the app sends
+   none of those again by itself (an approve again would answer `unknown`; a held question is checked against the
+   conversation first; an announcement is not resent).
 
 ## Open now, in order
 
 1. ~~The restored-conversation fix on the phone~~: done 2026-10-10, three relaunches, the lines back each time.
-2. **The owner on the PC:** "Set a timer" back to what it was before the test (Settings > Permissions); if wanted,
+2. **The owner's word to the PC session**, if wanted: the two Core fixes the PC proposes (a timer's reply with the
+   local clock time; "remember that" saving the owner's own last line), docs/MAC-ANSWERS-20261010.md items 4 and 5.
+   **The owner on the PC:** "Set a timer" back to what it was before the test (Settings > Permissions); if wanted,
    delete the two test facts on the Memory page (the round 5 phone check note, and "JARVIS said: Already logged,
    ..."); "Show replies while they are written" (Settings > AI) only if wanted.
 3. **The milestone zip for the PC** after the fix is checked (see "Copies back to the PC"), with the requests above.
@@ -192,7 +206,8 @@ decision), replies appearing as written, HTTPS inside Tailscale, the Halo glasse
 ## Known Core-side defects seen from the phone (recorded on the PC, not the app's to fix)
 
 Checked against 1.0.17 on 2026-10-10: "Remember that" no longer saves the word "that", but it saves JARVIS's last
-reply instead of the owner's line (Requests for the PC, item 5). The action guard (it now adds its note under the
+reply instead of the owner's line (Requests for the PC, item 5: confirmed by the PC, fix proposed on the owner's
+word). A timer's reply may name a wrong clock time (item 4: cause found, fix proposed on the owner's word). The action guard (it now adds its note under the
 reply) was not triggered in the phone's checks, so it is neither confirmed nor ruled out. Until 1.0.17: "Remember
 that" saved the word "that"; the action guard replaced a prose reply that sounded like a finished action.
 
@@ -234,3 +249,9 @@ copy under `phone/ios` in its repository and does not edit it.
   c81165662fc4224ef6d41536842dc451476c75a9a786d8d0b5919f92f9f308e8, at commit 727fb7f; the same 52 files as the
   0227 copy, the app files byte for byte the same, only STATUS.md, RESULTS.md and ROUND4-LOCK-SCREEN-BUTTON.md
   changed (the owner's "all good" of about 13:20).
+- **Round 5 checked against Core 1.0.17 (supersedes the 1323 copy):** `~/Downloads/JARVIS-ios-mac-20261010-1200.zip`,
+  sha256 31b6baa3c3cfefa916e472b6808ea1e3eed1b441a4a857ad52072d713f797679, 7,275,241 bytes, 114 entries, made with
+  `git archive` at commit 7e050f1: the sources with Assets.xcassets, the UI tests, the extension, Config/, the
+  project file and shared scheme, STATUS.md, RESULTS.md, the round records, PC-REQUESTS-20261007.md, CLAUDE.md and
+  records/ (now with round5-20261010/). For the PC: STATUS.md "Requests for the PC" items 1 to 6.
+
