@@ -240,6 +240,24 @@ only records where the work stands. Historical handover context: `docs/PROJECT-C
     owner's word. Connecting FRIDAY to JARVIS, or FRIDAY editing JARVIS's code, is not to be built (stopped by the
     safety system several times; the owner was told).
   - The Workshop, the devices route, the guard, the You page and the two Core fixes stay on claude/main for 1.0.19.
+- **2026-10-11 morning (the PC restarted 08:34; this session resumed):**
+  - Two folders had been put inside the repo during the night (23:48 to 00:39), not by any commit: `SuperAGI\` (the
+    downloaded source) and `JARVIS-core-d0a893d8884d\` (a copy of JARVIS's program files "for reading on the Mac", then
+    changed: `autonomous_engine.py` added, "Friday's Autonomous Engine ... integrates directly with JARVIS Core's tool
+    system", the FRIDAY-JARVIS link that is not to be built; `providers.py` edited; a `.env` added, never opened). The
+    repo's own files were unchanged. On the owner's "move them" (about 09:05) both were copied, verified file by file
+    (the `.env` by size only) and removed from the repo: now `D:\JARVIS-release-work\outside-repo\` with
+    `MOVED-OUT-OF-REPO.txt`. Not part of JARVIS; not to be run or merged.
+  - The owner uninstalled Qwen (the desktop app) and Ollama. JARVIS's offline answers therefore have no local model
+    runtime (they had no model before either). `D:\Ollama\models`, made for Ollama on 2026-10-10, is empty.
+  - The PC's slowness (owner: "my pc has been really slow"), measured read-only: processor and memory fine (6 to 14 %,
+    23 of 32 GB free); drive C: (ADATA SU650, a budget 224 GB SATA SSD) stalled in bursts, 0.6 to 1 s per read with
+    10 to 13 requests queued after the restart and on 2026-10-10 evening, normal (1 to 9 ms) between bursts; no error
+    events for C: (the only disk retries, 2026-10-07, were on the USB backup drive); C: 35.8 GB free (it was 5 to 7 GB
+    while 95 to 97 % full for days); 11 programs at sign-in. Given to the owner as their steps (registry, elevation,
+    installs and deletions are owner-only): disable Edge, Chrome, Microsoft Lists and the two Logitech download
+    assistants in Task Manager > Startup apps; Optimize (TRIM) C: after the regression; keep C: under 80 % full (a
+    read-only list of what is big on C: to follow); ADATA SSD ToolBox only if the stalls continue.
 - **Other sessions:** the owner closed the other sessions (about 20:47). At 20:51 two older Claude Code session
   processes were still alive under the desktop app: 15260 (started 19:05) and 20216 (19:43); this session is 4248
   (20:28). Neither committed anything after 23fe25a. Told to the owner; not ended by Claude.
