@@ -5,6 +5,7 @@ each; this PC with its JARVIS version; the test client marked as simulated. Read
 """
 import json
 import os
+import threading
 import time
 import unittest
 from unittest.mock import patch
@@ -55,6 +56,51 @@ class DeviceListTests(DeviceCase):
         self.assertTrue(rows[glasses['device_id']]['online'])
         rows = {d['id']: d for d in self.device('devices', {}, glasses['credential'])[1]['devices']}
         self.assertEqual((rows[glasses['device_id']]['this_device'], rows[phone['device_id']]['this_device']), (True, False))
+
+    def test_what_is_declared_but_not_allowed_never_shows_and_the_saving_tick_alone_is_writes(self):
+        # Review L5: a capability the device declares later is not allowed by itself and appears nowhere in the list.
+        phone = self.pair()
+        status, hello = self.device('hello', {'capabilities': ['microphone', 'speakers', 'display']}, phone['credential'])
+        self.assertEqual((status, hello['declared'], hello['allowed']), (200, ['microphone', 'speakers', 'display'], ['microphone', 'speakers']))
+        listing = self.device('devices', {}, phone['credential'])[1]
+        self.assertEqual(listing['devices'][0]['allowed'], ['microphone', 'speakers'])
+        self.assertNotIn('display', json.dumps(listing))
+        # The tick "may save memories and tasks" alone: writes, not tools.
+        self.assertEqual(self.owner('/api/devices', {'action': 'writes', 'id': phone['device_id'], 'allowed': True})[0], 200)
+        row = self.device('devices', {}, phone['credential'])[1]['devices'][0]
+        self.assertEqual((row['writes'], row['tools'], row['approve']), (True, False, False))
+
+    def test_bye_makes_a_device_offline_at_once_and_a_key_of_another_installation_is_left_out(self):
+        phone = self.pair()
+        glasses = self.pair('My glasses', 'glasses', ('camera',))
+        self.assertEqual(self.device('hello', {}, glasses['credential'])[0], 200)
+        rows = {d['id']: d for d in self.device('devices', {}, phone['credential'])[1]['devices']}
+        self.assertTrue(rows[glasses['device_id']]['online'])
+        self.assertEqual(self.device('bye', {}, glasses['credential'])[0], 200)
+        rows = {d['id']: d for d in self.device('devices', {}, phone['credential'])[1]['devices']}
+        self.assertFalse(rows[glasses['device_id']]['online'])
+        # Review L2: a device whose key was made for another installation (restored data) can never reach this Core:
+        # left out of the phone's list (the PC's panel shows it with "pair it again").
+        with self.app.store.connect() as db:
+            db.execute('UPDATE devices SET secret_id=? WHERE id=?', ('0' * 16, glasses['device_id']))
+        self.assertFalse(self.rows()[glasses['device_id']]['key_valid'])
+        listing = self.device('devices', {}, phone['credential'])[1]
+        self.assertEqual([d['id'] for d in listing['devices']], [phone['device_id']])
+        self.assertNotIn(glasses['device_id'], json.dumps(listing))
+
+    def test_it_waits_for_its_turn_instead_of_answering_busy(self):
+        # Review L1: another request of the same device holding the session (an overview being read) makes the list
+        # wait, not fail; the app may load its panels side by side.
+        phone = self.pair()
+        self.assertEqual(self.device('status', {}, phone['credential'])[0], 200)
+        session = self.app.device_gateway.session(phone['device_id'])
+        self.assertTrue(session.lock.acquire(timeout=5))
+        threading.Timer(0.3, session.lock.release).start()
+        began = time.monotonic()
+        status, listing = self.device('devices', {}, phone['credential'])
+        self.assertEqual(status, 200, listing)
+        self.assertGreaterEqual(time.monotonic() - began, 0.25)  # it waited for the session, then answered
+        self.assertEqual(listing['devices'][0]['id'], phone['device_id'])
 
     def test_an_empty_request_only_counted_with_the_light_reads_and_only_for_a_paired_device(self):
         phone = self.pair()

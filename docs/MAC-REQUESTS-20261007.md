@@ -19,8 +19,15 @@ on the PC; this is its mirror for the app.
   `{"error": "Operation unavailable."}` and sends `hello`/`status` without the new fields. The app treats a missing
   field as false or zero and a 400 "Operation unavailable." as "not on this Core yet", and shows nothing invented.
 - Protocol stays 2. Feature presence is read from the fields, not from a version number.
-- The emergency stop: raised anywhere, lifted only on the PC; while it holds, every op below except `stop`,
-  `hello`, `status` and `bye` is refused with the stopped sentence, and `status.stopped` is true.
+- The emergency stop: raised anywhere, lifted only on the PC; `status.stopped` is true while it holds. Then `start`
+  (except the stop words themselves), `transcribe`, `speech`, `approvals`, `approve`, `reject` and `announce` are
+  refused with the stopped sentence (HTTP 400); `stop`, `hello`, `status`, `bye`, `events`, `cancel` and the reads
+  `conversations`, `history`, `metrics`, `overview`, `notices` and `devices` (1.0.18) answer as usual. (Corrected on
+  2026-10-10: this line used to say that everything but `stop`, `hello`, `status` and `bye` was refused, which was
+  never what the Core did.)
+- A device's requests share one session on the PC: two sent at the same moment can get HTTP 400 `{"error":
+  "Wearable service busy."}`. Send reads one after another, or retry such a request once. (`devices` waits up to two
+  seconds for its turn instead, 1.0.18.)
 - Real data only on screen. Face ID before an approval, always (see R1), whether or not "Lock with Face ID" is on.
 - One independent reviewer per round, findings applied, a zip back to the PC at the milestone (the standing rule).
 
@@ -263,16 +270,21 @@ devices to 1.0.18") that release 1.0.18 serves it. As built (`server.App.devices
 
 - Request `{}` only; anything else: HTTP 400 `{"error": "Unknown fields."}`. Paired devices only, with no tick
   needed; counted with the light reads (120 a minute: HTTP 400 "Wearable request limit reached. Wait one minute.").
-  It answers also while the emergency stop holds (a read, like `overview`).
+  It answers also while the emergency stop holds (a read, like `overview`; section 0). While another request of the
+  same device holds its session, it waits up to two seconds for its turn, then answers "Wearable service busy."
 - `devices`: every paired device that is not revoked, in the order they were paired, with exactly the fields of the
-  example. `online` is whether the device has talked to the Core in the last two minutes (the same as the PC's
-  Devices panel); `last_seen` is when the Core last wrote it down (at most once a minute; seconds since 1970, or
+  example. Left out as well: a device whose key was made for another installation (after the owner restored data
+  into a new installation; it can never reach this Core, and the PC's panel asks the owner to pair it again).
+  `kind` is one of `phone`, `glasses`, `computer`, `other` (the PC session's own Claude Code helper pairs as
+  `computer`); show any other value as "other". `online` is whether the device has talked to the Core in the last
+  two minutes and has not said `bye` since (after `bye` it is offline at once; the same as the PC's Devices panel);
+  `last_seen` is when the Core last wrote it down (at most once a minute; seconds since 1970, or
   null); `allowed` is what the owner allows it, in the order microphone, camera, speakers, display; `writes` is true
   when either "May save memories and tasks" or "May use this PC's tools" is ticked (as in `hello`); `this_device`
   marks the device asking.
 - `pc`: `name` is the PC's own name as Windows gives it (on the owner's PC `thegrizzlybear`; "This PC" when Windows
   gives none), `core_version` the installed release (as in `metrics`), `online` always true.
-- `simulated`: the same-PC test clients as the PC's Devices panel lists them, each with `name`, `kind` and `online`
-  (`online` is new against the first example). On the owner's PC that is "Glasses test client", registered at the
+- `simulated`: the same-PC test clients as the PC's Devices panel lists them, each with `name`, `kind` (`glasses`
+  or `other`) and `online` (`online` is new against the first example). On the owner's PC that is "Glasses test client", registered at the
   Core's start and offline a minute later unless a test runs.
 - Never a key, a pairing code, a revoked device or anything about a device's conversations.

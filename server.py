@@ -596,14 +596,16 @@ class App:
         that are not revoked, each with whether it is connected now, when it was last seen, what the owner allows
         it and the owner's three ticks (`writes` includes the PC's tools, as in hello); this PC with the Core's
         version; and the same-PC test clients, marked as simulated. Read only. Never a key or a pairing code, never
-        a revoked device, and nothing about any device's conversations."""
+        a revoked device, never one whose key belongs to another installation (restored data: it can never reach
+        this Core, and the PC's panel asks the owner to pair it again; review L2), and nothing about any device's
+        conversations."""
         devices, simulated = [], []
         for row in self.device_rows():
             if row.get('builtin'):
                 continue
             if row['simulated']:
                 simulated.append({'name': row['name'], 'kind': row['kind'], 'online': bool(row['connected'])})
-            elif not row['revoked']:
+            elif not row['revoked'] and row['key_valid']:
                 tools = bool(row['tools'])
                 devices.append({'id': row['device_id'], 'name': row['name'], 'kind': row['kind'], 'online': bool(row['connected']),
                                 'last_seen': row['last_seen'], 'allowed': list(row['allowed']), 'writes': bool(row['writes']) or tools,

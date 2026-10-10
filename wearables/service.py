@@ -73,6 +73,7 @@ class Service:
             self.runs.add(result['run_id']);return result
         if op=='events' and 'after' in body: return self.events_after(body)  # waits outside the lock (below)
         if op in ('approve','reject'): return self.answer_approval(op,body)  # the approved tool runs outside the lock (below)
+        if op=='devices': return self.list_devices(body)  # 1.0.18: read outside the lock (below)
         if not self.lock.acquire(blocking=False): raise ValueError('Wearable service busy.')
         try:
             self.app.devices.heartbeat('pc')
@@ -101,7 +102,7 @@ class Service:
                 if len(self.announces)>=6: raise ValueError('Announcement limit reached. Wait one minute.')
                 self.announces.append(now)
                 return self.announce(body)
-            if op in ('conversations','history','metrics','overview','approvals','notices','devices'):
+            if op in ('conversations','history','metrics','overview','approvals','notices'):
                 self.count_read()
                 return self.read(op,body)
             if op=='start':
@@ -198,6 +199,17 @@ class Service:
         finally: self.lock.release()
         return self.read(op,body)
 
+    def list_devices(self, body):
+        """The list of this Core's devices for the app's device panel (1.0.18; docs/MAC-REQUESTS-20261007.md R6 and
+        section 7; server.App.devices_for_device): counted with the light reads under the lock and read outside it,
+        waiting up to two seconds for the lock instead of answering "busy" at once, so that the app may load its
+        panels side by side (review L1). Paired devices only (count_read). Read only."""
+        if not self.lock.acquire(timeout=2): raise ValueError('Wearable service busy.')
+        try: self.count_read()
+        finally: self.lock.release()
+        if body: raise ValueError('Unknown fields.')
+        return self.app.devices_for_device(self.device_id)
+
     def events_after(self, body):
         """The events of one of this device's questions after a cursor, waiting up to ten seconds for new ones (as the
         PC window's /api/runs/<id>/events does): a phone on cellular asks a few times, not every tenth of a second.
@@ -248,11 +260,6 @@ class Service:
             return {'tasks_open':len(open_tasks),'projects':projects[:20],'reminders':reminders[:20],'conversations':len(store.conversations_for(self.prefix,1000)),
                     'calendar_connected':calendar_feed.configured(),'calendar':calendar,'mail_unread':self.app.mail_unread.get() if mail.configured() else None,
                     'scope':'Open tasks, projects and the reminders due within 24 hours, from the PC; the conversations are this device\'s own.'}
-        if op=='devices':
-            # 1.0.18: the list of this Core's devices for the app's device panel (docs/MAC-REQUESTS-20261007.md, R6),
-            # the same rows as the owner's Settings > Devices (server.App.devices_for_device). Read only.
-            if body: raise ValueError('Unknown fields.')
-            return self.app.devices_for_device(self.device_id)
         if op=='notices':
             # 1.0.17 item F: what JARVIS said on its own, newest first; reading marks everything returned as read for this
             # device, so status.notices then counts only newer ones.
