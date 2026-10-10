@@ -1,6 +1,11 @@
 # Stage 7 check of 1.0.18 (plan for your approval)
 
-Status: **READY FOR YOUR APPROVAL (2026-10-10, 10:50 local, Claude Code), with one decision of yours first: whether the
+Status: **SUPERSEDED, NOT FOR APPROVAL (2026-10-10 late night).** This plan was for the Workshop build
+`1.0.18-4afd891c38f4`, which was never offered; the Workshop moves to 1.0.19, and 1.0.18 is now the time fix only
+(owner: "keep friday as he is, 1.0.18 time fix only"; `docs/RELEASE-1.0.18.md` on branch `claude/release-1.0.18`). This
+file will be rewritten for the time-fix build. The text below is kept as it was.
+
+Former status: **READY FOR YOUR APPROVAL (2026-10-10, 10:50 local, Claude Code), with one decision of yours first: whether the
 missing `devices` route for the phone goes into 1.0.18 (see "Before you approve").** Every check on this PC has passed
 for `1.0.18-4afd891c38f4` and is recorded in `docs/release-rehearsal-20261010-1018/README.md`. Nothing has run in the
 VM. Approving lets Claude place the tools and create this check's record folders; every VirtualBox step stays yours, as
