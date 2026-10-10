@@ -81,4 +81,7 @@ accepted only on a run that passes.
 
 ## Release regression, run 2: stopped by the owner, no result
 
-Started alone at about 22:17 local on the same build (`--work D:\JARVIS-release-workegression-1.0.18-time-run2`); stopped from the owner's side during the Python suite (noticed at 22:29): no suite finished, no log written, no process left running. The build is not yet accepted: the regression must pass in a complete run before the Setup, the rehearsals and the sandbox Stage 7 pass.
+Started alone at 22:15 local on the same build (`--work D:\JARVIS-release-work\regression-1.0.18-time-run2`);
+stopped from the owner's side during the Python suite (noticed at 22:29): no suite finished, no log written, no process
+left running. The build is not yet accepted: the regression must pass in a complete run before the Setup, the
+rehearsals and the sandbox Stage 7 pass.
