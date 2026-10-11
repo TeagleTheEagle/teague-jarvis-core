@@ -1,0 +1,15 @@
+{
+    "status":  "PASS",
+    "entry":  {
+                  "present":  true,
+                  "key":  "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{7A3F1C52-9E4B-4D16-8C0D-2B5E6F7A9D31}_is1",
+                  "name":  "JARVIS (sandbox)",
+                  "version":  "1.0.18",
+                  "publisher":  "Teague Industries",
+                  "uninstall":  "\"D:\\JARVIS-release-work\\stage7-local-1.0.18-time\\staging\\unins000.exe\"",
+                  "location":  "D:\\JARVIS-release-work\\stage7-local-1.0.18-time\\staging\\"
+              },
+    "expected_name":  "JARVIS (sandbox)",
+    "expected_version":  "1.0.18",
+    "expected_uninstaller":  "D:\\JARVIS-release-work\\stage7-local-1.0.18-time\\staging\\unins000.exe"
+}

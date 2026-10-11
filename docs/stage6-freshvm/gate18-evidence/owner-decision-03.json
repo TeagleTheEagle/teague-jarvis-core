@@ -1,0 +1,37 @@
+{
+    "schema":  "stage6-owner-decision-v1",
+    "id":  "gate18-owner-decision-03",
+    "recorded_utc":  "2026-10-04T07:19:45Z",
+    "incident":  "gate18-incident-03 (incident-03-k2-jarvis-running.json)",
+    "question":  "Repeat Gate 18 in the same VM session after quitting JARVIS in the VM, same disc and script, failed run folder moved aside unchanged, recorded as a rerun",
+    "owner_answer_literal":  "approve",
+    "source":  "direct human message in the Claude Code chat, 2026-10-04 (local)",
+    "moved":  {
+                  "from":  "D:\\JARVIS-S6-FRESHVM\\evidence\\guest-egress-01\\gate18-20261004-065046",
+                  "to":  "D:\\JARVIS-S6-FRESHVM\\evidence\\guest-egress-01\\incident-03-run1\\gate18-20261004-065046",
+                  "files":  [
+                                {
+                                    "name":  "K0-not-elevated.json",
+                                    "bytes":  113,
+                                    "sha256":  "5dc70e9d50db91c514d5c11bbe8dfa2c48f82d3675277ed439678a67baf3ac0b"
+                                },
+                                {
+                                    "name":  "K1-backup-identity.json",
+                                    "bytes":  453,
+                                    "sha256":  "5e64b4237d79a0d11bd8751d2b8bfd3db6b51884a41d0f0c5434ff0b8499bacf"
+                                },
+                                {
+                                    "name":  "K2-starting-point.json",
+                                    "bytes":  367,
+                                    "sha256":  "41c393a1ad480a4b67ecd0a87adacd54815e99ca7d50d6ba9d64154dc416f204"
+                                },
+                                {
+                                    "name":  "SUMMARY.json",
+                                    "bytes":  1011,
+                                    "sha256":  "37ac6d9fbdf94625a52776c3638623d5d3dfeb4b960caa06fd67329ac5cbff0c"
+                                }
+                            ],
+                  "hashes_equal_after_move":  true
+              },
+    "recorded_by":  "Claude Code (Claude Fable 5.1)"
+}

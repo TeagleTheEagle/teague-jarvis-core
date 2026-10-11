@@ -1,0 +1,29 @@
+{
+    "schema":  "jarvis-everyday-update-check-v1",
+    "utc":  "2026-10-06T02:09:08.1746982Z",
+    "performed_by":  "THEGRIZZLYBEAR\\jonny",
+    "elevated":  false,
+    "script":  {
+                   "name":  "Invoke-EverydayUpdate.ps1",
+                   "sha256":  "1c555b022337865c1734b7e9908c5baf66eb96bc33b74d29d97e6e8c0ea952d2"
+               },
+    "final":  "1.0.15-63362929d7ad",
+    "previous":  "1.0.14-e03872680e1d",
+    "zip":  "D:\\JARVIS-release-work\\release\\JARVIS-1.0.15-63362929d7ad.zip",
+    "zip_sha256":  "1019dce00702da4e15dac5ea8203a1a1034311fbbe30b352097517b16deec027",
+    "unpack_seconds":  16.3,
+    "package":  "D:\\JARVIS-update-1.0.15\\package\\JARVIS-1.0.15-63362929d7ad",
+    "install_home":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS",
+    "current":  {
+                    "release":  "1.0.14-e03872680e1d",
+                    "previous":  "1.0.11-60d406fb6398",
+                    "switched_at":  1791172116.1139598
+                },
+    "installed_verified":  "verified",
+    "free_bytes":  11045978112,
+    "jarvis_processes":  0,
+    "shortcuts":  {
+                      "desktop":  true,
+                      "startup":  true
+                  }
+}

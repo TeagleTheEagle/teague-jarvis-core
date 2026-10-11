@@ -1,0 +1,15 @@
+{
+    "schema":  "stage6-gate17-incident-v1",
+    "subject":  "Gate 17: the guest driver reported \"Windows has not been restarted\" although it had been (harness defect, clock skew in the guest)",
+    "written_utc":  "2026-10-04T04:25:27Z",
+    "facts":  {
+                  "install_phase_finished":  "guest clock 2026-10-04T04:15:32Z (SUMMARY.json of gate17-20261004-035322); the host wrote that file at 04:15:38Z",
+                  "windows_restart":  "host VBox.log: RUNNING -\u003e RESETTING at 00:31:27 after log start = 2026-10-04T04:18:07Z, guest-initiated (owner: Start \u003e Power \u003e Restart, after \"Quit JARVIS completely\"); Guest Additions service log opened at host 04:18:51Z",
+                  "guest_clock_after_boot":  "the Guest Additions log line written at host 04:18:51Z carries guest time 04:15:55Z: the guest clock was about 2 min 56 s behind the host right after the boot. The same lag is visible after the first boot (guest 03:47:20Z at host 03:47:22Z is in step, but guest 03:48:57Z at host 03:51:53Z after the 03:51 reset). During the previous Windows session the clock caught up to within 6 seconds.",
+                  "driver_decision":  "gate-driver-log.jsonl, guest clock 04:24:02Z: \"waiting for the Windows restart\". Invoke-Gate.ps1 compares the guest\u0027s LastBootUpTime with the Install phase\u0027s finished_utc; with the guest clock about 3 minutes slow at boot, the boot time reads earlier than 04:15:32Z.",
+                  "jarvis_after_restart":  "the owner reports JARVIS opened by itself after sign-in (owner-statements.jsonl; photograph jarvis-after-restart-photo-20261004-042216.jpg)"
+              },
+    "assessment":  "False negative of the driver\u0027s restart check, not a failure of any gate phase and not a JARVIS defect: no phase was started and nothing was written except the driver log line. The restart itself is proven independently by the host-side VBox.log.",
+    "handling":  "The owner starts the driver once from a Command Prompt inside the VM with the switch that skips only this comparison (E:\\gate -NoRestartCheck). Every phase still runs and judges itself; the AfterRestart record carries last_boot as the guest saw it. The switch was written for local rehearsal; its use here is recorded as a deviation. Fix for later tooling: judge the restart by uptime or by a boot identifier, not by wall-clock comparison.",
+    "recorded_by":  "Claude Code (Claude Fable 5.1), owner account"
+}

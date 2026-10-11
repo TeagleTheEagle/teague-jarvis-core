@@ -1,0 +1,14 @@
+{
+    "status":  "PASS",
+    "install":  "installed",
+    "release":  "1.0.11-60d406fb6398",
+    "installer_seconds":  {
+                              "verify_package":  53.529,
+                              "copy":  66.806,
+                              "verify_copy":  69.728,
+                              "switch":  0.032
+                          },
+    "wall_seconds":  203.9,
+    "verify":  "verified",
+    "output":  null
+}

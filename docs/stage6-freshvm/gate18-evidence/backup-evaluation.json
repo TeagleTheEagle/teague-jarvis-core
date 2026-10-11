@@ -1,0 +1,21 @@
+{
+  "schema": "stage6-gate18-step-evaluation-v1",
+  "step": "Gate 18 step 2: the owner's backup (after incidents 01 and 02; owner decisions 01 'A' and 02 'approved')",
+  "recorded_utc": "2026-10-04T06:21:38Z",
+  "records_checked": ["old-backup-made.json", "backup-copy.json"],
+  "checks": {
+    "helper_is_the_approved_one": "PASS: New-OldJarvisBackup.ps1 sha256 a324f7a8f5a380f882e79e3b647f78ef0daae3e8ca4bbb2708a7059613c1d056 (owner-decision-02.json)",
+    "copy_script": "PASS: Copy-BackupForGate18-v2.ps1 sha256 165c302f4e5b0e2a169353d7ee3a39a057d1612eb991507868b3b46176ce6225 (prep-tools-hashes.txt)",
+    "backup_code_is_the_rehearsed_one": "PASS: the everyday JARVIS's recovery.py sha256 5895c92407c2caec9cf778f219096f31edf0c3e4914d2e4381bbcd9e34a68721 equals the repo baseline e6fc40b used in the old-format rehearsal (K0-K9 PASS)",
+    "python": "FINAL package Python 3.12.10 (D:\\JARVIS-release-work\\release\\JARVIS-1.0.11-60d406fb6398\\release\\python\\python.exe)",
+    "backup_made": "PASS: backup_verified, id bcc2753f736f43ba946ec3f342b35c3a, 398 files, 4,659,473 bytes, created 2026-10-04T06:20:25Z",
+    "test_restore": "PASS: restore_rehearsal_passed, database counts equal to the backup's",
+    "archive": "PASS: format 1, manifest id matches, 399 entries (398 + manifest.json), data/jarvis.sqlite3 present, 0 key files",
+    "hashes": "PASS: source before = source after = copy; the copy in D:\\JARVIS-S6-FRESHVM\\media re-hashed by Claude equals the record",
+    "size": "PASS: 4,659,473 bytes, far below the 600 MB disc builder limit",
+    "real_data": "the database counts show real use (for example 1,133 messages, 689 audit rows, 26 research rows, 6 items, 6 documents; 18 tables, a newer schema than the 10-table baseline used in the rehearsal: what Gate 18 tests). Only counts were read; no content."
+  },
+  "result": "PASS: Gate 18 step 2 complete. Launcher re-enabled: gate18-authorized.SUSPENDED-incident-01.json renamed back to gate18-authorized.json.",
+  "next": "owner, jonny account: double-click gate18-step in D:\\JARVIS-S6-FRESHVM\\tools (builds JARVIS-RECOVERY.iso)",
+  "recorded_by": "Claude Code (Claude Opus 5.5)"
+}

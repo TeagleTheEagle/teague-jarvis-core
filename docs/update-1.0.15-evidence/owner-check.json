@@ -1,0 +1,19 @@
+{
+  "schema": "jarvis-everyday-update-owner-check-v1",
+  "release": "1.0.15-63362929d7ad",
+  "recorded_utc": "2026-10-06T02:21:39Z",
+  "owner_text": "step 4 done",
+  "owner_screenshot": "2026-10-06 13:15 local, sent by the owner before the last four checks: JARVIS 1.0.15 running at %LOCALAPPDATA%\\JARVIS on the owner's data: v1.0.15 in the corner, the new look (eight sections, dashboard), LOCAL NODE ONLINE, SYSTEMS ALL CONFIGURED (6 of 6: Core, AI, Memory, Voice, Search, Devices), Core overview with this PC online, phone not paired, glasses simulated only; 3 memories, 7 documents, 4 notes, 95 conversations; 'Core up 0m, no reply yet, qwen3.8-max'; the activity log showed 'No microphone was found' and 'Microphone starts muted' (the PC's microphone, not the update)",
+  "checks_asked": [
+    "the new look: one header with eight sections and the dashboard",
+    "Settings > About shows Version 1.0.15-63362929d7ad (installed)",
+    "memories and recent conversations are there",
+    "JARVIS answers a question (the owner's provider, Qwen)",
+    "voice works (or the microphone was not connected: noted, not the update)",
+    "Settings > Permissions lists the tools; Settings > Devices lists this PC; Settings > AI shows Answer speed and the Backup provider ticked",
+    "Quit JARVIS completely from the icon near the clock: no 'Core stopped' box"
+  ],
+  "taken_as": "step 4 of docs/UPDATE-EVERYDAY-1.0.15.md PASS, as reported by the owner ('step 4 done' after the list; the screenshot shows the version, the look, the systems, the data and the provider; the question, the Settings pages, voice and the quiet quit are the owner's report, not observed by Claude). JARVIS processes 0 at 13:18 local, so it was quit.",
+  "next": "step 5: one PC restart, JARVIS starts by itself after sign-in (for 1.0.14 about 6.5 minutes after sign-in)",
+  "recorded_by": "Claude Code (Claude Fable 5.1)"
+}

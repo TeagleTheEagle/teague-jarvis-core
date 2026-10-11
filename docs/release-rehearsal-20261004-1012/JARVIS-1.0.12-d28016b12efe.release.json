@@ -1,0 +1,18 @@
+{
+  "release_id": "1.0.12-d28016b12efe",
+  "version": "1.0.12",
+  "commit": "d28016b12efe0f9b55a2d9f26859cfa8d04a7333",
+  "zip": "JARVIS-1.0.12-d28016b12efe.zip",
+  "zip_sha256": "744056508ab607bed8e7f89c14809e879b8320ea28df1eb9b8d60c25b6b3c991",
+  "zip_bytes": 525629601,
+  "manifest_sha256": "d0440bc92701ce2855b5478770c5af97213e584b8dbaedfe97147665c799935d",
+  "files": 10645,
+  "release_bytes": 1177430195,
+  "canonical_data_path": "%LOCALAPPDATA%\\JARVIS\\data",
+  "config_path": "%LOCALAPPDATA%\\JARVIS\\config",
+  "backup_format": "recovery.py format 1 (zip + manifest.json)",
+  "deferred": [
+    "Qwen/OpenAI provider selection is owner configuration (config\\.env)",
+    "physical glasses integration not included"
+  ]
+}

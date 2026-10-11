@@ -1,0 +1,12 @@
+using System;using System.IO;using System.Text;using System.Diagnostics;using System.Collections.Generic;using System.Linq;
+// Bounded diagnostic instrumentation. Per-stage single-thread ownership; final serialization after writer join.
+public sealed class WriterTiming {
+ class Meter {public long count,sum,max;public long[] sample=new long[8192];public uint rng=1234567;public void Add(long n){count++;sum+=n;max=Math.Max(max,n);if(count<=sample.Length)sample[count-1]=n;else{rng^=rng<<13;rng^=rng>>17;rng^=rng<<5;long index=rng%count;if(index<sample.Length)sample[index]=n;}}}
+ static readonly string[] names={"producerLockWait","producerLockHold","envelopeSerialization","UTF8Encoding","recordValidation","writerLockWait","writerLockHoldIncludingIdleWait","queueDequeue","segmentOpen","durableFlush","segmentDispose","incrementalSHA256","finalSHA256","segmentManifestMetadata","rolloverTotal","fileWrite","countSizeUpdate","finalManifest"};
+ readonly Meter[] meters=Enumerable.Range(0,18).Select(i=>new Meter()).ToArray();readonly List<string> points=new List<string>();readonly List<string> marks=new List<string>();
+ public void Add(int i,long start){meters[i].Add(Stopwatch.GetTimestamp()-start);}
+ public void Point(long t,string why,long a,long p,int q,long b){if(points.Count>=10000)throw new InvalidOperationException("Diagnostic point capacity");points.Add("{\"qpc\":"+t+",\"why\":\""+why+"\",\"accepted\":"+a+",\"persisted\":"+p+",\"queue\":"+q+",\"bytes\":"+b+"}");}
+ public void Mark(string name){marks.Add("{\"name\":\""+name+"\",\"qpc\":"+Stopwatch.GetTimestamp()+"}");}
+ public static void SaveNew(string p,string text){using(var f=new FileStream(p,FileMode.CreateNew,FileAccess.Write,FileShare.Read)){byte[] b=Encoding.UTF8.GetBytes(text);f.Write(b,0,b.Length);f.Flush(true);}}
+ public void Save(string path){var rows=new List<string>();for(int i=0;i<meters.Length;i++){var m=meters[i];var a=m.sample.Take((int)Math.Min(m.count,8192)).OrderBy(n=>n).ToArray();Func<double,long> quant=p=>a.Length==0?0:a[(int)Math.Ceiling((a.Length-1)*p)];rows.Add("{\"stage\":\""+names[i]+"\",\"count\":"+m.count+",\"ticks\":"+m.sum+",\"max\":"+m.max+",\"median\":"+quant(.5)+",\"p95\":"+quant(.95)+",\"p99\":"+quant(.99)+",\"sampleCount\":"+a.Length+"}");}SaveNew(path,"{\"frequency\":"+Stopwatch.Frequency+",\"quantiles\":\"reservoir estimates; sums/counts/max exact; nested stages not additive\",\"stages\":["+string.Join(",",rows)+"],\"queue\":["+string.Join(",",points)+"],\"marks\":["+string.Join(",",marks)+"]}");}
+}

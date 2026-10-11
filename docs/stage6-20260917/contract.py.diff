@@ -1,0 +1,13 @@
+--- accepted/deployment_test/contract.py
++++ candidate/deployment_test/contract.py
+@@ -162,6 +162,10 @@
+         files = sorted(directory.glob('intent-*.dpapi'))
+         need(len(files) <= 128 and [p.name for p in files] ==
+              [f'intent-{i:06d}.dpapi' for i in range(1,len(files)+1)], 'UPDATE_HISTORY_GAP')
++        for prefix in ('commit','abort','enrolled'):
++            for record in directory.glob(prefix+'-*.dpapi'):
++                suffix=record.name[len(prefix):]
++                need((directory/('intent'+suffix)).is_file(),'ORPHAN_UPDATE_RECORD')
+         for index, file in enumerate(files, 1):
+             intent = read_protected(file)
+             need(intent['binding'] == self.seal and intent['sequence'] == index and

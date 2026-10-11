@@ -1,0 +1,11 @@
+--- C:\Users\jonny\Documents\Codex\2026-09-07\cr\outputs\jarvis\docs\stage6-small-combined-20260922\combined.py
++++ D:\JARVIS-STAGE6-LIVE\5d7476373d4a4ad38017e89f15a538f0\checker-v2\combined.py
+@@ -3,7 +3,7 @@
+ from pathlib import Path
+ from coverage import coverage,identity
+ R=Path(__file__).parent
+-spec=importlib.util.spec_from_file_location('kernel_contract',R.parent/'stage6-durable-kernel-20260921/qualification.py');q=importlib.util.module_from_spec(spec);spec.loader.exec_module(q)
++spec=importlib.util.spec_from_file_location('kernel_contract',R/'qualification.py');q=importlib.util.module_from_spec(spec);spec.loader.exec_module(q)
+ require=q.require
+ 
+ def read_bundle(root,analysis,host):

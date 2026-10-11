@@ -1,0 +1,40 @@
+{
+  "schema": "stage6-owner-decision-record-v1",
+  "subject": "Simplified acceptance for the rest of Stage 6 (Gates 17-20, Stage 7 scope) and the JARVIS roadmap",
+  "utc": "2026-10-02T06:03:43Z",
+  "owner_message": "Direct human message in the Claude Code chat, 2026-10-02 (local): \"Both Approved\", in reply to Claude's description of what each approval would put into effect; no edits requested",
+  "approved_texts": {
+    "simplified_acceptance": {
+      "path": "repo\\docs\\stage6-freshvm\\SIMPLIFIED-ACCEPTANCE-PROPOSAL.md",
+      "sha256": "cafa237c3fef36e680594c9c6d17795076b88c9a13a9c0129cc8a2017d75e07b",
+      "note": "hash of the text including its Approval section as committed after approval"
+    },
+    "roadmap": {
+      "path": "repo\\docs\\ROADMAP.md",
+      "sha256": "faa4a52dd3082c4f23c48882adb9e8cd517d6e8c3f91d31c4b14aa67c802491d",
+      "note": "hash of the text including its Approval section as committed after approval"
+    }
+  },
+  "effect": {
+    "in_force_from": "Gate 17. Gate 16R continues under its approved execution prompt (STAGE6-GATE16R-EXECUTION-PROMPT.md, sha256 922302aa...) and RESUME_STAGE6_FRESH_VM.",
+    "changes": [
+      "evidence by JSON records on D: read by Claude; photographs only on STOP or for dialog-only screens",
+      "one guest script per gate on the tools disc; one command per gate inside the VM",
+      "one host next-step launcher that runs whatever is next in the account it is started from; individual step launchers kept for recovery",
+      "every VM start through the start launcher (localhost-reachable re-applied and proven from VBox.log), as decided 2026-10-02T04:12Z",
+      "hang rule: no progress for 15 minutes means reset, recorded as a rerun",
+      "Gate 19 (previous build from a second package disc, update to FINAL, verify, rollback, verify, per-phase seconds) runs in the same VM session as Gate 17, before Gate 18",
+      "owner decisions batched: FINAL, the Gates 17-20 prompt and this procedure in one sitting",
+      "Stage 7 as one scripted pass on the same VM and snapshots (roadmap Phase 1), after cutover and on the owner's word"
+    ],
+    "unchanged": [
+      "checkpoints P2-P5, each only on the owner's explicit run Pn",
+      "stop rules; UAC prompt is a STOP; no silent retry",
+      "RESUME_STAGE6_RECOVERY before Gate 18; FINAL selection; cutover; Stage 7 start: separate owner decisions",
+      "two accounts; single evidence egress; hash records; the protected original and the backup source never written",
+      "no source change until cutover (the tested build is the shipped build)"
+    ]
+  },
+  "roadmap_order": "Phase 0 finish Stage 6 on the frozen build; Phase 1 cutover and lean Stage 7; Phase 2 codebase clean-up and two providers; Phase 3 automatic backups; Phase 4 device pairing and the phone client; Phase 5 glasses, everything else parked. Each phase starts only on the owner's word.",
+  "recorded_by": "Claude Code (Claude Fable 5.1), owner account. This record documents the owner's act; it grants no gate token and no authority beyond the texts it names."
+}

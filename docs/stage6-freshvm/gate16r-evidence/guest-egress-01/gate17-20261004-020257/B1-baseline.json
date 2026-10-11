@@ -1,0 +1,66 @@
+{
+    "status":  "PASS",
+    "at":  "2026-10-04T02:03:03.1727740Z",
+    "os_caption":  "Microsoft Windows 11 Home",
+    "os_architecture":  "64-bit",
+    "edition":  "Windows 10 Home",
+    "display_version":  "26H2",
+    "build":  "26300.9457",
+    "edition_id":  "Core",
+    "activation_license_status":  5,
+    "hypervisor_present":  true,
+    "windows_update_pause_expiry":  "2026-11-06T05:27:32Z",
+    "account":  "JARVIS-S6-FRESH\\jarvis-s6-guest",
+    "is_administrator":  false,
+    "path":  "C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\WINDOWS\\System32\\OpenSSH\\;C:\\Users\\jarvis-s6-guest\\AppData\\Local\\Microsoft\\WindowsApps;",
+    "development_tools_on_path":  [
+
+                                  ],
+    "store_app_execution_aliases":  [
+                                        "python -\u003e C:\\Users\\jarvis-s6-guest\\AppData\\Local\\Microsoft\\WindowsApps\\python.exe (Microsoft Store app execution alias, 0 bytes; nothing installed)"
+                                    ],
+    "development_tool_folders":  [
+
+                                 ],
+    "jarvis_install_present":  false,
+    "jarvis_processes":  0,
+    "env_files_in_profile":  [
+
+                             ],
+    "jarvis_credentials":  false,
+    "credential_entries":  2,
+    "credential_targets":  [
+                               "MicrosoftAccount:target=SSO_POP_Device",
+                               "WindowsLive:target=virtualapp/didlogical"
+                           ],
+    "account_principal_source":  "Local",
+    "onedrive_account_configured":  false,
+    "jarvis_services":  [
+
+                        ],
+    "jarvis_scheduled_tasks":  [
+
+                               ],
+    "jarvis_named_pipes":  [
+
+                           ],
+    "named_pipes_enumerated":  55,
+    "jarvis_folders":  [
+
+                       ],
+    "pipes_named_after_the_account":  [
+                                          "\\\\.\\pipe\\VBoxTrayIPC-jarvis-s6-guest"
+                                      ],
+    "name_matching_note":  "the account name \u0027jarvis-s6-guest\u0027 and the computer name \u0027JARVIS-S6-FRESH\u0027 are removed from names before testing for \u0027jarvis\u0027",
+    "global_package_folders":  [
+
+                               ],
+    "non_default_path_entries":  [
+
+                                 ],
+    "owner_disposition_required":  [
+                                       "credential-manager entries exist (2); section 6(f) lists credential-manager entries under \u0027no secrets\u0027; recorded for the owner\u0027s disposition, not failed by the script"
+                                   ],
+    "installed_programs":  6,
+    "services":  260
+}

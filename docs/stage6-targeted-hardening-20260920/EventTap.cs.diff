@@ -1,0 +1,18 @@
+--- original/EventTap.cs
++++ candidate/EventTap.cs
+@@ -23,6 +23,7 @@
+   if(r.seq>20000) { Interlocked.Increment(ref Overflow);return; } rows.Enqueue(r);
+  }
+  public static void Capture(object a,string kind,string stage,object collection) {
++  using(LoopTiming.Span("callback."+stage)){
+   try {
+    var r=new TapRow {kind=kind,stage=stage,eventId=-1,queueDepth=-1};
+    object args=a;
+@@ -46,6 +47,7 @@
+    Add(r);
+   } catch(Exception e) {Interlocked.Increment(ref Errors);Add(new TapRow{stage=stage,kind=kind,error=e.GetType().Name+": "+e.Message});}
+  }
++ }
+  static string Attach(object target,string eventName,string kind,string stage,object collection) {
+   EventInfo ev=target.GetType().GetEvent(eventName)??throw new InvalidOperationException("Missing public event "+eventName);
+   var ps=ev.EventHandlerType.GetMethod("Invoke").GetParameters().Select(p=>Expression.Parameter(p.ParameterType,p.Name)).ToArray();

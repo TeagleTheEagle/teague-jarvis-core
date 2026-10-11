@@ -1,0 +1,13 @@
+# Gate 18 tools in D:\JARVIS-S6-FRESHVM\tools, hashed 2026-10-04T05:42:55Z after RESUME_STAGE6_RECOVERY
+b14a29cf24e76b6cf28a8989eb45a70c86da980f6f4dc9bbc99c5cfd5d6e98d8  Copy-BackupForGate18.ps1
+68311f308d41dcde916d167fc239deb260321570e326b4a4d8e8c0d077b0d924  gate18-authorized.json
+6249ca7879f115c1264ad2d9b1baac4e4eb9a2cbcbf576b6784d7582f0432d35  gate18-step.cmd
+f5e4ff3a5b420abb25f02e96a7d86b3e542170d8a572029d2c5438205e2727fa  Invoke-Gate18Step.ps1
+60ac5f5b7a29a12c9c828cf75c5195fd7473031f5d00290c6a97d3c751750775  New-Gate18RecoveryDisc.ps1
+d456da091c335e74c2f057068409cb5fe1a44ef3dcc156d780a83f16868a59a2  Start-FreshVm.ps1
+626a757dc51a5f8c7beb91c731d9d4a27e64a08c421aca7dac2a54258f0fe6f4  Start-Gate18Vm.ps1
+f4065b26a4abecf0bc71e6b219ee423832775ce822bde3588a764608bca3cad8  Take-FreshVmSnapshot.ps1
+# 2026-10-04T05:53:09Z after incident 01 (owner decision A): copy script v2 added; gate18-authorized.json suspended
+165c302f4e5b0e2a169353d7ee3a39a057d1612eb991507868b3b46176ce6225  Copy-BackupForGate18-v2.ps1
+# 2026-10-04T06:10:50Z after incident 02 (everyday JARVIS cannot start): backup helper added, pending owner approval
+a324f7a8f5a380f882e79e3b647f78ef0daae3e8ca4bbb2708a7059613c1d056  New-OldJarvisBackup.ps1

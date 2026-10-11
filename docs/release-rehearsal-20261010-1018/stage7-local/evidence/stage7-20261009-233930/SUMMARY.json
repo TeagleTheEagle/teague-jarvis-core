@@ -1,0 +1,36 @@
+{
+    "schema":  "jarvis-stage7-run-v1",
+    "overall":  "PASS",
+    "phase":  "Interrupt",
+    "home":  "D:\\JARVIS-release-work\\stage7-local-1.0.18\\home",
+    "package":  "D:\\JARVIS-release-work\\pkg-1.0.18",
+    "started_utc":  "2026-10-09T23:39:30.1481501Z",
+    "finished_utc":  "2026-10-09T23:41:47.2776744Z",
+    "steps":  [
+                  {
+                      "step":  "E0-not-elevated",
+                      "status":  "PASS",
+                      "at":  "2026-10-09T23:39:30.2762386Z"
+                  },
+                  {
+                      "step":  "X0-starting-point",
+                      "status":  "PASS",
+                      "at":  "2026-10-09T23:39:30.8886716Z"
+                  },
+                  {
+                      "step":  "X1-previous-running",
+                      "status":  "PASS",
+                      "at":  "2026-10-09T23:40:23.7307504Z"
+                  },
+                  {
+                      "step":  "X2-killed-mid-copy",
+                      "status":  "PASS",
+                      "at":  "2026-10-09T23:40:46.4563979Z"
+                  },
+                  {
+                      "step":  "X3-update-after-interruption",
+                      "status":  "PASS",
+                      "at":  "2026-10-09T23:41:47.2776744Z"
+                  }
+              ]
+}

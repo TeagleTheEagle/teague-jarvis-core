@@ -1,0 +1,58 @@
+{
+  "schema": "stage6-evidence-manifest-v1",
+  "generated_utc": "2026-10-06T01:47:24Z",
+  "root": "D:\\JARVIS-stage7\\1.0.15-63362929d7ad",
+  "folders": [
+    "evidence"
+  ],
+  "not_listed": "this manifest itself; the sealed P0 folder is never read",
+  "files": 9,
+  "bytes": 95775,
+  "entries": [
+    {
+      "file": "evidence/incident-01-vm-start-record.json",
+      "bytes": 5090,
+      "sha256": "a1e1aaf5ff4de45333bbaea3fec48e0ba8e802de573bf08deacc259c033169ad"
+    },
+    {
+      "file": "evidence/owner-note-01-first-window-closed.json",
+      "bytes": 920,
+      "sha256": "176232e358b886d8db62fac3f2b68eca0b3dbcfb9b9894cdd5b73c390d9c77e6"
+    },
+    {
+      "file": "evidence/prep-tools-hashes.txt",
+      "bytes": 1364,
+      "sha256": "fd17e1a03a705604d8638d50f311e88a76ec31697da3cc6f99a0da20b5c4623f"
+    },
+    {
+      "file": "evidence/STAGE7-1.0.15-APPROVAL-RECORD.json",
+      "bytes": 5375,
+      "sha256": "90d50c61441090abd6798164c7c4391789e7c9f8508151f41188f7100d2c62ab"
+    },
+    {
+      "file": "evidence/stage7-disc-1.0.15-63362929d7ad.json",
+      "bytes": 2030,
+      "sha256": "021d01a4d10eb8cf2046926f68fe64254940838a22f9b7b3e0b55e12a94e88c1"
+    },
+    {
+      "file": "evidence/stage7-evaluation.json",
+      "bytes": 10726,
+      "sha256": "d73616dfebde681349d3e57e6f0147d5d5752d1a8d398601fc433f6a065d4de6"
+    },
+    {
+      "file": "evidence/vm/JARVIS-S6-FRESH.vbox.STAGE7-PASS-1.0.15-63362929d7ad-copy",
+      "bytes": 59761,
+      "sha256": "92f8515d5e77f4973beaa3bd844daf80254422192ef8dbcde64a8184a051c0e1"
+    },
+    {
+      "file": "evidence/vm/snapshot-STAGE7-PASS-1.0.15-63362929d7ad-20261006-014348.json",
+      "bytes": 7236,
+      "sha256": "b623c970e67289340956d1fa208c14c5af961cf8fedb5e992fe311751c2b5730"
+    },
+    {
+      "file": "evidence/vm/stage7-start-20261005-235205.json",
+      "bytes": 3273,
+      "sha256": "d6d9cf12616bab53245add9e8e5867494e029e6fe63f571d41939c564cfb0968"
+    }
+  ]
+}

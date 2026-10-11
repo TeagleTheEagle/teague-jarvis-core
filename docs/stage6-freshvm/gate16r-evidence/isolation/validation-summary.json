@@ -1,0 +1,9 @@
+{
+    "schema":  "stage6-isolation-check-v1",
+    "utc":  "2026-10-02T01:46:41.4686655Z",
+    "account":  "jarvis-s6-val",
+    "cases":  37,
+    "failed":  5,
+    "status":  "FIRST_FAIL_STOP",
+    "short_name_listing":  " Volume in drive D is New Volume\r\n Volume Serial Number is 74F9-D5F1\r\n\r\n Directory of D:\\JARVIS-S6-FRESHVM\\synthetic\\isolation-01\r\n\r\n02/10/2026  11:43 AM    \u003cDIR\u003e                       .\r\n02/10/2026  11:43 AM    \u003cDIR\u003e                       ..\r\n02/10/2026  11:43 AM    \u003cDIR\u003e                       aliases\r\n02/10/2026  11:43 AM    \u003cDIR\u003e                       restricted\r\n02/10/2026  11:43 AM    \u003cDIR\u003e                       runner\r\n02/10/2026  11:43 AM    \u003cDIR\u003e                       scratch\r\n               0 File(s)              0 bytes\r\n               6 Dir(s)  1,729,144,446,976 bytes free\r\n"
+}

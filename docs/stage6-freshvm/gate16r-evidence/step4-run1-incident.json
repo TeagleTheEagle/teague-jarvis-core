@@ -1,0 +1,30 @@
+{
+  "schema": "stage6-gate16r-step-incident-v1",
+  "step": "4a: New-Stage6Storage.ps1 (AMENDMENT-v2 section 7(c),(d))",
+  "utc": "2026-10-02T02:35:00Z",
+  "what_happened": {
+    "run1": "owner double-clicked step4a-prepare-storage.cmd (owner account) at 2026-10-02T02:12:59Z: vbox-home, machines and media were created (owner THEGRIZZLYBEAR\\jonny; DACL = inherited D: defaults plus the explicit Allow jarvis-s6-val Modify) and the copy of Windows11_Client_x64_en-us_26300_9457.iso into media began; its last write is 02:13:38Z; the run ended without copying the other three discs and without writing step4-storage.json; the owner reports the window was blank when it went away (the script prints only at the end), consistent with the window being closed while the copy was still running",
+    "run2": "a second double-click stopped by design at New-Stage6Storage.ps1 line 26, 'already exists, not touched: D:\\JARVIS-S6-FRESHVM\\vbox-home' (owner's screenshot); it created, copied and changed nothing; the launcher then printed 'Finished. Next: ...', which is misleading after an error, so the launcher was revised to print STOPPED on a non-zero exit (hash in step4-tools-hashes.txt); New-Stage6Storage.ps1 is unchanged",
+    "step4b": "step4b-set-vbox-home.cmd ran in the jarvis-s6-val session at 02:14:28Z: VBOX_USER_HOME set (user scope) and the section 7(b) account check PASS (account/validation-account-check.json); unaffected by this incident and not to be repeated"
+  },
+  "diagnosis_by_claude": {
+    "partial_copy_sha256": "53895867b924cb8b7c198ae3296afbd01470c1c7f695d1eff508c60f225dd711",
+    "partial_copy_bytes": 9047330816,
+    "identical_to_source_up_to_byte": 2620391424,
+    "after_that": "6130 x 1 MiB blocks to the end of the file, every one entirely zeros; 0 blocks equal to the source, 0 blocks holding other data. The Windows copy engine pre-sizes the destination to the full length, so a copy stopped at 2.44 GiB (29%) looks exactly like this. Not corruption.",
+    "source_rehashed_now": "bd4307df32bc8af33b39ccecb1174aeb345386630f89a2b86c7a4e36b55ea650 (equals Microsoft's published value and the step-0 record)",
+    "controlled_copy": "Claude copied the same source with Copy-Item to D:\\JARVIS-release-work\\scratch\\copytest-win11.iso: 41 s, SHA-256 equal to the source; the scratch copy was removed afterwards",
+    "volume": "D: NTFS, HealthStatus Healthy, OperationalStatus OK, 1602 GiB free",
+    "script_hash_check": "never reached (the copy did not finish), so the script raised no STOP; run 1 was interrupted, it did not fail a check"
+  },
+  "state_at_record_time": {
+    "vbox-home": "exists, empty",
+    "machines": "exists, empty",
+    "media": "exists, holds only the partial Windows image",
+    "step4-storage.json": "absent",
+    "script_processes": "none running"
+  },
+  "recovery": "The owner removes the three unfinished folders (vbox-home, machines, media; nothing under evidence\\ is touched and the folders hold no evidence, only the partial copy), then double-clicks step4a-prepare-storage.cmd once more, once, and leaves the window open until it prints 'Finished OK'. The unchanged script recreates the folders as new objects, as the approved prompt requires. Claude did not write a folder-removing tool: the auto-mode safety check declined it, and removal stays an owner act.",
+  "route_status": "No AMENDMENT-v2 stop rule was triggered: no check failed. The retry is documented here and will be referenced in step4-evaluation.json; it is not a silent retry and not an in-place repair.",
+  "recorded_by": "Claude Code (Claude Fable 5.1), owner account"
+}

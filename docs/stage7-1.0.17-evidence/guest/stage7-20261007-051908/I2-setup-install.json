@@ -1,0 +1,39 @@
+{
+    "status":  "PASS",
+    "setup":  "JARVIS-Setup-1.0.17-0d38218c4e1d.exe",
+    "setup_exit":  0,
+    "seconds":  749.2,
+    "switches":  [
+                     "/VERYSILENT",
+                     "/SUPPRESSMSGBOXES",
+                     "/NORESTART"
+                 ],
+    "setup_log":  "setup-install.log",
+    "result":  {
+                   "status":  "installed",
+                   "release":  "1.0.17-0d38218c4e1d",
+                   "previous":  null,
+                   "home":  "C:\\Users\\jarvis-s6-guest\\AppData\\Local\\JARVIS",
+                   "seconds":  {
+                                   "verify_package":  17.427,
+                                   "copy":  187.45,
+                                   "verify_copy":  395.812,
+                                   "switch":  0.794
+                               },
+                   "shortcuts":  "written"
+               },
+    "raw":  null,
+    "installer_seconds":  {
+                              "verify_package":  17.427,
+                              "copy":  187.45,
+                              "verify_copy":  395.812,
+                              "switch":  0.794
+                          },
+    "staging":  "C:\\Users\\jarvis-s6-guest\\AppData\\Local\\JARVIS-package",
+    "package_unpacked_release":  "1.0.17-0d38218c4e1d",
+    "uninstaller_present":  true,
+    "has_installer":  true,
+    "files_in_package":  10775,
+    "shortcuts_word":  "written",
+    "shortcuts_expected":  "written"
+}

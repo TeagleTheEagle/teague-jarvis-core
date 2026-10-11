@@ -1,0 +1,8 @@
+{
+    "status":  "PASS",
+    "stop":  {
+                 "core_stopped_on_request":  true,
+                 "shell_processes_ended":  7,
+                 "processes_now":  0
+             }
+}

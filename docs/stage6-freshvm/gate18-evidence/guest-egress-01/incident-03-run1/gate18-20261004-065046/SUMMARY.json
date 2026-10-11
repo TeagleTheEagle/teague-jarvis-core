@@ -1,0 +1,27 @@
+{
+    "schema":  "jarvis-gate18-run-v1",
+    "overall":  "FAIL",
+    "phase":  "Restore",
+    "first_home":  "C:\\Users\\jarvis-s6-guest\\AppData\\Local\\JARVIS",
+    "restore_home":  "C:\\Users\\jarvis-s6-guest\\AppData\\Local\\JARVIS-restore",
+    "disc":  "E:\\",
+    "started_utc":  "2026-10-04T06:50:46.6269522Z",
+    "finished_utc":  "2026-10-04T06:53:54.5218820Z",
+    "steps":  [
+                  {
+                      "step":  "K0-not-elevated",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T06:50:47.8162082Z"
+                  },
+                  {
+                      "step":  "K1-backup-identity",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T06:50:49.7605642Z"
+                  },
+                  {
+                      "step":  "K2-starting-point",
+                      "status":  "FAIL",
+                      "at":  "2026-10-04T06:53:54.5140793Z"
+                  }
+              ]
+}

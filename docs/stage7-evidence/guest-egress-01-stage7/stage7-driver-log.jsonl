@@ -1,0 +1,6 @@
+{"utc":"2026-10-04T09:53:00.5798200Z","mode":"","package":"E:\\","outcome":"phase passed","phase":"Install","exit_code":0}
+{"utc":"2026-10-04T09:52:49.4500706Z","mode":"","package":"E:\\","outcome":"phase passed","phase":"AfterRestart","exit_code":0}
+{"utc":"2026-10-04T10:03:22.8812551Z","mode":"","package":"E:\\","outcome":"phase passed","phase":"Uninstall","exit_code":0}
+{"utc":"2026-10-04T10:39:15.2863677Z","mode":"","package":"E:\\","outcome":"phase passed","phase":"Update","exit_code":0}
+{"utc":"2026-10-04T10:50:29.6523665Z","mode":"","package":"E:\\","outcome":"phase passed","phase":"Interrupt","exit_code":0}
+{"utc":"2026-10-04T10:50:29.6703100Z","mode":"","package":"E:\\","ran_now":["AfterRestart","Uninstall","Update","Interrupt"],"outcome":"all phases passed"}

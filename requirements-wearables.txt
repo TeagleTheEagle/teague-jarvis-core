@@ -1,0 +1,2 @@
+# Optional PC microphone input only. Core and mock demos use existing dependencies.
+sounddevice>=0.5,<0.6

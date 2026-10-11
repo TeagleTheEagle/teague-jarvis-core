@@ -1,0 +1,92 @@
+--- before/stage4_runtime.py
++++ after/stage4_runtime.py
+@@ -87,6 +87,9 @@
+         self.audio_results = {}
+         self.voice_requests = {}
+         self.voice_leases = {}
++        self.inspection_jobs = {}
++        self.inspection_runner = None
++        self.inspection_finish = None  # Trusted synthetic fixture only; no capture/provider.
+         from stage4_response_history import History
+         self.response_history = History(self.data/'jarvis.sqlite3')
+         self.text_router = None
+@@ -227,6 +230,47 @@
+             self.app.runs[run.id]=run
+             ready.set()
+             return {'request_id':wid,'response_id':rid,'request_mode':'text-only','simulated':self.text_router.local_simulated,'openai_simulated':True}
++
++    def start_inspection(self, token, request):
++        """Register the existing singleton job and archive callback as one worker."""
++        from inspection_jobs import JOBS
++        from interface_inspection import validate_request
++        request = validate_request(request)
++        require(self.inspection_runner is not None and self.inspection_finish is not None, 'TEST_INSPECTION_UNAVAILABLE')
++        ready = threading.Event()
++        mapping = {}
++        def work(cancel):
++            if not ready.wait(2):
++                return 'UNKNOWN'
++            wid = mapping['work']
++            def registered(key):
++                with self.owners.lock:
++                    self.inspection_jobs[wid] = key
++            try:
++                result = JOBS.run_registered(request, self.inspection_runner, on_finish=self.inspection_finish,
++                    cancel=cancel, before_step=lambda: self.owners.next_step(wid), registered=registered)
++            except ValueError:
++                # Busy/invalid job before effects; unexpected worker failures are
++                # retained by Lifecycle rather than asserted to be safe cleanup.
++                if wid in self.inspection_jobs:
++                    raise
++                return 'FAILED'
++            if result['archive'].get('status') != 'archived':
++                return 'UNKNOWN'  # A failed archive may have left partial writes.
++            return 'SUCCEEDED' if result['status'] == 'completed' else 'FAILED'
++        wid = self.lifecycle.dispatch(token, self.epoch, 'inspection', work)
++        mapping['work'] = wid
++        ready.set()
++        return {'request_id':wid, 'mode':'STAGE4_TEST', 'capture':'UNAVAILABLE_SYNTHETIC_ONLY'}
++
++    def inspection_status(self, token, wid):
++        from inspection_jobs import JOBS
++        with self.owners.lock:
++            self.owners.check_owner(token, self.epoch, wid)
++            require(self.owners.work[wid].kind == 'inspection', 'WORK_KIND')
++            key = self.inspection_jobs.get(wid)
++            done = self.owners.work[wid].done.is_set()
++        return {'request_id':wid, 'done':done, 'job':JOBS.get(key) if key else None}
+ 
+ 
+ def construct_app(context):
+@@ -338,6 +382,12 @@
+         if op == 'request-text-only':
+             authentication.fields(args, ('text','operation'))
+             return self.context.start_text_request(token,args['text'],args['operation'])
++        if op == 'inspection-start':
++            authentication.fields(args, ('request',))
++            return self.context.start_inspection(token, args['request'])
++        if op == 'inspection-status':
++            authentication.fields(args, ('request_id',))
++            return self.context.inspection_status(token, args['request_id'])
+         if op == 'deep-review':
+             authentication.fields(args, ('review',))
+             from stage4_deep_review import admit
+@@ -415,7 +465,7 @@
+         raise Denied('OPERATION_DENIED')
+ 
+ 
+-def serve(root, configuration):
++def serve(root, configuration, *, inspection_setup=None):
+     """Explicit isolated child entry; caller coordinates startup under supervisor.lock.
+ 
+     No stdin lifetime ownership and no restart loop. Credentials arrive only from
+@@ -440,6 +490,9 @@
+             context.allow_local_ollama=True
+             context.text_router=real_router()
+         app=construct_app(context)
++        if configuration.get('inspection_fixture') is True:
++            require(inspection_setup is not None, 'TRUSTED_INSPECTION_FIXTURE_REQUIRED')
++            inspection_setup(context)
+         metadata={**exclusion.process_identity(os.getpid()),'namespace':root.name,'mode':'TEST','epoch':context.epoch}
+         exclusion.write(root/'core.json',metadata)
+         identity={**transport.identity(os.getpid()),'mode':'TEST','namespace':root.name,

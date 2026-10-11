@@ -1,0 +1,21 @@
+{
+    "schema":  "jarvis-gate17-run-v1",
+    "overall":  "PASS",
+    "phase":  "AfterRestart",
+    "home":  "C:\\Users\\jarvis-s6-guest\\AppData\\Local\\JARVIS",
+    "package":  "E:\\",
+    "started_utc":  "2026-10-04T04:26:46.5186687Z",
+    "finished_utc":  "2026-10-04T04:26:48.4037975Z",
+    "steps":  [
+                  {
+                      "step":  "E0-not-elevated",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T04:26:46.8594980Z"
+                  },
+                  {
+                      "step":  "R1-after-restart",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T04:26:48.3972271Z"
+                  }
+              ]
+}

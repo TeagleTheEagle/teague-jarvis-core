@@ -1,0 +1,19 @@
+{
+  "schema": "jarvis-stage7-incident-v1",
+  "check": "1.0.14-e03872680e1d",
+  "recorded_utc": "2026-10-04T15:47:58Z",
+  "observed": "Inside the VM (jarvis-s6-guest), the first double-click of stage7 on the JARVIS_S7 disc ended at once with: Join-Path : Cannot find drive. A drive with the name 'Z' does not exist. At E:\\guest\\Invoke-Stage7Pass.ps1:57 char:17 ($Evidence = Join-Path $EgressRoot $target.egress_folder). Reported by the owner with a photo of the VM window (guest clock 2:46 AM local).",
+  "when": "after the VM start recorded in vm\\start-20261004-154116.json (2026-10-04T15:42:39Z, LocalhostReachable 0) and before the owner's photo; no guest timestamp exists because nothing was written",
+  "cause": "Defect in the version 2 guest driver tools/guest/stage7-v2/Invoke-Stage7Pass.ps1: it builds the evidence path with Join-Path on Z:\\ (line 57) before mounting Z: (line 63, net use Z: \\\\VBOXSVR\\guest-egress-01 /persistent:no); in PowerShell 5.1 Join-Path refuses a drive that does not exist. The 1.0.11 driver (tools/guest/Invoke-Stage7Pass.ps1) used the string default 'Z:\\stage7' and mounted Z: before using it. Not caught on the PC: the sandbox rehearsal passes -Evidence and the decision tests pass -EgressRoot with existing scratch folders, so the unmounted-Z: path never ran.",
+  "state": {
+    "vm": "running; restored from STAGE7-PASS (no change recorded since) to FRESH-PREREQ by Start-Stage7Vm.ps1, every snapshot kept (vm\\stage7-start-20261004-154116.json); LocalhostReachable 0 from VBox.log",
+    "guest_records": "D:\\JARVIS-S6-FRESHVM\\evidence\\guest-egress-01\\stage7-1.0.14-e03872680e1d is empty: no phase ran, no cycle marker, no driver log, nothing installed",
+    "disc": "unchanged, as approved (stage7-disc-1.0.14-e03872680e1d.json)"
+  },
+  "owner_decision_required": {
+    "A_recommended": "Continue this check unchanged, with Z: connected by hand before each start of stage7 that follows a sign-in (now, and again after the Windows restart): a normal Command Prompt (not as administrator) in the VM, net use Z: \\\\VBOXSVR\\guest-egress-01 /persistent:no, then double-click stage7. This is the manual mount used at Gate 16R step 8; the disc, the scripts and every check stay as approved; the deviation is recorded.",
+    "B": "Stop this check; fix the driver in a new copy (version 3) with a test that starts it with Z: unmounted, build a new disc, a new approval, and start again from the clean snapshot under a new label."
+  },
+  "follow_up": "Fix in a version 3 copy before the next release check (mount before Join-Path, or Test-Path on the string path as version 1 did) and add a decision test with the egress drive unmounted. The version 2 files stay unchanged as evidence once a disc carries them.",
+  "recorded_by": "Claude Code (Claude Opus 5.5)"
+}

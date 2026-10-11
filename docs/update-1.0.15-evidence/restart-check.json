@@ -1,0 +1,20 @@
+{
+  "schema": "jarvis-everyday-update-restart-check-v1",
+  "release": "1.0.15-63362929d7ad",
+  "recorded_utc": "2026-10-06T02:34:30Z",
+  "observed_by": "Claude Code, read-only (process list, the Startup folder and the StartupApproved registry key were read; nothing was started, stopped or changed; config\\.env and the data were not read)",
+  "facts": {
+    "pc_last_boot_local": "2026-10-06 13:25:30",
+    "sign_in_local": "2026-10-06 13:26:21 (first Explorer process of the jonny session)",
+    "jarvis_first_process_local": "2026-10-06 13:31:46 (electron.exe, release 1.0.15-63362929d7ad, command line with --login-launch: started by the Startup shortcut)",
+    "jarvis_processes": 8,
+    "jarvis_processes_release": "all eight from releases\\1.0.15-63362929d7ad (electron.exe x7, python.exe x1; the Core's python.exe at 13:31:55)",
+    "minutes_after_sign_in": 5.4,
+    "startup_shortcut": "%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\JARVIS.lnk (last written 2026-10-04 19:27, unchanged by the update)",
+    "startup_approved": "no StartupApproved entry for JARVIS.lnk (enabled by default)",
+    "other_startup_items_seen": "Ollama.lnk in the same folder"
+  },
+  "owner_text": "step 5 done",
+  "result": "PASS: JARVIS 1.0.15 started by itself after the PC restart, about 5.4 minutes after sign-in, from the Startup shortcut, with all eight processes from the 1.0.15 release. The delay is Windows' own scheduling of Startup-folder apps after sign-in, as for 1.0.14 (6.5 minutes).",
+  "recorded_by": "Claude Code (Claude Fable 5.1)"
+}

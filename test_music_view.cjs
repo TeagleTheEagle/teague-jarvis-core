@@ -1,0 +1,21 @@
+// What the Music panel says (static/music.js). The Core plays and decides; these are only the words on screen.
+const assert=require('node:assert/strict');
+const m=require('./static/music.js');
+assert.equal(m.nowText(null),'Nothing is playing.');
+assert.equal(m.nowText({state:'nothing'}),'Nothing is playing.');
+assert.equal(m.nowText({state:'playing',title:'Shoot to Thrill',nickname:'workshop warrior'}),'Playing: Shoot to Thrill (workshop warrior)');
+assert.equal(m.nowText({state:'paused',title:'Shoot to Thrill',nickname:null}),'Paused: Shoot to Thrill');
+assert.equal(m.timeText(0),'0:00');
+assert.equal(m.timeText(65000),'1:05');
+assert.equal(m.timeText(null),'');
+assert.equal(m.timeText(-5),'');
+assert.equal(m.filesText(0),'No music files yet.');
+assert.equal(m.filesText(1),'1 music file.');
+assert.equal(m.filesText(7),'7 music files.');
+assert.equal(m.volumeText(80),'Volume 80%');
+assert.equal(m.rowText({present:true,title:'Shoot to Thrill',file:'Shoot to Thrill.mp3'}),'Shoot to Thrill');
+assert.equal(m.rowText({present:false,title:'Gone',file:'Gone.mp3'}),'Gone.mp3 (file not in the folder)','a missing file is said, never shown as playable');
+assert.equal(m.startupText('',false),'No start-up song: after his greeting at sign-in, JARVIS stays quiet.');
+assert.equal(m.startupText('workshop warrior',true),'After his greeting at sign-in, JARVIS plays: workshop warrior. Not in quiet hours, and not while the emergency stop holds.');
+assert.equal(m.startupText('Gone.mp3',false),'After his greeting at sign-in, JARVIS plays: Gone.mp3 (not in the folder, so nothing plays). Not in quiet hours, and not while the emergency stop holds.','a start-up song whose file is gone is said, not promised');
+console.log('music view: ok');

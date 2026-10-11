@@ -1,0 +1,26 @@
+{
+    "package":  "D:\\JARVIS-release-work\\pkg-1.0.14",
+    "previous_package":  "D:\\JARVIS-release-work\\pkg-1.0.11",
+    "base":  "D:\\JARVIS-release-work\\stage7-local-1.0.14",
+    "steps":  [
+                  {
+                      "step":  "first start: Install, then the driver asks for the Windows restart",
+                      "exit":  0
+                  },
+                  {
+                      "step":  "second start without a restart: the uptime check must refuse",
+                      "exit":  0
+                  },
+                  {
+                      "step":  "second start with -NoRestartCheck: AfterRestart, Uninstall, Update, Interrupt",
+                      "exit":  0
+                  },
+                  {
+                      "step":  "third start: nothing left to do",
+                      "exit":  0
+                  }
+              ],
+    "live_processes_before":  0,
+    "live_processes_after":  0,
+    "sandbox_processes_after":  0
+}

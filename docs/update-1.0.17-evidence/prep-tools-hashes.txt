@@ -1,0 +1,6 @@
+# Update of the everyday JARVIS to 1.0.17-0d38218c4e1d, launcher placed by Claude Code on the owner's approval (record: C:\Users\jonny\JARVIS-claude-workspace\governance\UPDATE-1.0.17-APPROVAL-RECORD.json). The plan's hash below was read before its status line was updated and equals the approved hash in the record (commit 08cbb7b).
+66c8cce6e4b16e302a0201aff690158d43684eba8315d1b2a6b7e542bd84365b  D:\JARVIS-update-1.0.17\tools\Invoke-EverydayUpdate.ps1
+9c469bd44002e59066f5b8e7e2b077173826780840b37e7f4151e99be86d3388  D:\JARVIS-update-1.0.17\tools\update-step.cmd
+aca6b9cb0def5000ae57da77ce3120d3e07170de72725bfb46e190736b3dfaf5  D:\JARVIS-update-1.0.17\tools\update-authorized.json
+3351e6260e101bd0f0cda4966f3d7d68545ffc42667590a1326e703f265f9932  C:\Users\jonny\JARVIS-claude-workspace\governance\UPDATE-1.0.17-APPROVAL-RECORD.json
+f74fff6f2adff377a19c5b9dbad19367905573002adb5618f58705f254b3e57f  C:\Users\jonny\JARVIS-claude-workspace\repo\docs\UPDATE-EVERYDAY-1.0.17.md

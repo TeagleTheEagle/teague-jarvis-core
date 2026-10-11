@@ -1,0 +1,94 @@
+{
+  "schema": "jarvis-owner-decision-record-v1",
+  "subject": "Owner approval of the Stage 7 check of release 1.0.18 (the time fix, 1.0.18-cffb826de043)",
+  "issued_utc": "2026-10-10T22:48:53Z",
+  "issued_utc_basis": "first clock reading by Claude in the turn that received the message (2026-10-11 09:48:53 local)",
+  "recorded_utc": "2026-10-10T22:50:37Z",
+  "owner_messages": [
+    {
+      "text": "I approve the Stage 7 check of 1.0.18",
+      "taken_as": "approval of docs/STAGE7-CHECK-1.0.18.md as presented for 1.0.18-cffb826de043, with every difference from docs/STAGE7-CHECK-1.0.17.md listed in it"
+    }
+  ],
+  "earlier_words_not_taken_as_approval": "the owner's \"carry on\" and \"continue\" during the checks on this PC were not taken as the approval, which only the exact sentence above gives",
+  "approved_plan": {
+    "path": "C:\\Users\\jonny\\JARVIS-claude-workspace\\repo\\docs\\STAGE7-CHECK-1.0.18.md",
+    "sha256": "161a1033d9803836d0c2c4b5731c4891ac281cb22adc17e171b788abf4fb1026",
+    "repo_commit": "d4becec",
+    "note": "offered at that commit; unchanged at the head d4becec when the approval arrived"
+  },
+  "previous_plan_text_superseded": "the same path held a plan for a Workshop build 1.0.18-4afd891c38f4 (2026-10-10 morning), never approved and marked superseded in commit 7d56861",
+  "standard_plan": {
+    "path": "C:\\Users\\jonny\\JARVIS-claude-workspace\\repo\\docs\\STAGE7-PLAN.md",
+    "approval": "C:\\Users\\jonny\\JARVIS-claude-workspace\\governance\\STAGE7-APPROVAL-RECORD.json"
+  },
+  "builds": {
+    "final": "1.0.18-cffb826de043",
+    "final_commit": "cffb826de04382cbbd2a944ec0194a5d1174c6db",
+    "final_branch": "claude/release-1.0.18 (from 0d38218, the installed 1.0.17)",
+    "final_zip": "D:\\JARVIS-release-work\\release\\JARVIS-1.0.18-cffb826de043.zip",
+    "final_zip_sha256": "312f03c383c9496910106f3bed4af0c9f1643865393d378082444f50b9138b57",
+    "final_zip_bytes": 533364533,
+    "final_setup": "D:\\JARVIS-release-work\\release\\JARVIS-Setup-1.0.18-cffb826de043.exe",
+    "final_setup_sha256": "9fda604615c583edea95e49f4d69ffef892830157fe8ec5bba8939d30c1a8b57",
+    "final_setup_bytes": 406919489,
+    "package_folder": "D:\\JARVIS-release-work\\pkg-1.0.18-time (the zip, its record, the Setup and its record; the zip and the Setup read back equal to their records again at this approval; pkg-1.0.18 holds the superseded Workshop build and is not used)",
+    "final_note": "release 1.0.18 is the time fix only (owner, 2026-10-10: \"keep friday as he is, 1.0.18 time fix only\"); two earlier Workshop builds called 1.0.18 (4afd891c38f4, fd2b6fa82121) were never offered",
+    "previous": "1.0.17-0d38218c4e1d",
+    "previous_disc": "D:\\JARVIS-S6-FRESHVM\\media\\JARVIS-STAGE7-1.0.17-0d38218c4e1d.iso",
+    "previous_disc_sha256": "519c0257e32127f87b46e6658bac5b5f5d418cff16238e90e056a23d8ab16a19",
+    "previous_disc_note": "1.0.17's own Stage 7 disc, carrying that build's zip, Setup and records at its root; read again at this approval: equal to its record"
+  },
+  "label": "1.0.18-cffb826de043",
+  "expected_current_snapshot": "STAGE7-PASS-1.0.17-0d38218c4e1d",
+  "expected_current_snapshot_basis": "D:\\JARVIS-S6-FRESHVM\\machines\\JARVIS-S6-FRESH\\JARVIS-S6-FRESH.vbox read at this approval: currentSnapshot 26a2163a-8d6b-4892-ae97-6f10e9bfb676 (STAGE7-PASS-1.0.17-0d38218c4e1d), currentStateModified false, lastStateChange 2026-10-07T07:04:19Z; 9 snapshots present, none removed",
+  "vm_windows_update_paused_until_utc": "2026-11-06T05:27:32Z",
+  "discs_in_the_vm": "both discs carry the volume label JARVIS_S7: the previous build's (1.0.17) on SATA port 1, drive D: in the VM; this check's on SATA port 2, drive E: in the VM; the plan tells the owner to open drive E: and check that the files on it say 1.0.18",
+  "scripts": "version 4, unchanged since the 1.0.17 approval (tools/guest/stage7-v4, tools/host/stage7-v4; docs/STAGE7-DRIVER-V4.md); rehearsed in a sandbox on this build: ALL STAGE 7 STEPS PASSED, 29 checks (docs/release-rehearsal-20261010-1018-time/README.md)",
+  "timing_bound": "the Gate 20 bound (install, update and rollback each within 600 s, stopping JARVIS within 120 s) applies, per the owner's decision of 2026-10-06 (\"accept the VM time\"), measured on the installer's own seconds inside the Setup, not on the Setup's unpacking: a measurement outside it is accepted as a disposition only when this check's records show the cause to be the VM; otherwise the step is repeated before acceptance, on the owner's decision",
+  "tool_hashes": {
+    "tools/guest/stage7-v4/Invoke-Stage7Pass.ps1": "99085e0c5d31324d575ba6a04cc335f68e1b919667b37b6dea98f18c463396c9",
+    "tools/guest/stage7-v4/Invoke-Stage7.ps1": "d2c8257e09f58b682bf9cbff667cd48e1ce0f743e908d00c83e53cc301b60e89",
+    "tools/guest/stage7-v4/stage7.cmd": "a72b44d5a22a3273bf33f0607c3dd930af0bbd1b76ac3fa33a8793e2fc49c3fb",
+    "tools/host/stage7-v4/Invoke-Stage7Step.ps1": "2f0f5631bb43bc63fe0ac539bdd08bf31ab66335eb7eed43f714db9fc47f69cb",
+    "tools/host/stage7-v4/New-Stage7Disc.ps1": "76921cc433b999bd1e0c47f8da2eb78ecf055a52caefbe3afb6714d721f97e73",
+    "tools/host/stage7-v4/Start-Stage7Vm.ps1": "a5fea2db7db308562598599a2bf34f2491f93c700d752f642701c5c7d6a7140b",
+    "tools/host/stage7-v4/stage7-step.cmd": "5576c2232ae861a4b2e572319d86041cdef742419e8caa7f6a1367a68c4e6ad6",
+    "tools/host/stage7-v4/New-PackageIso.ps1": "cc5962c6a61f82539c178aa58c238b3691a44b559e73f34fcf3303a9ffec8961",
+    "tools/host/Start-FreshVm.ps1": "d456da091c335e74c2f057068409cb5fe1a44ef3dcc156d780a83f16868a59a2",
+    "tools/host/Take-FreshVmSnapshot.ps1": "f4065b26a4abecf0bc71e6b219ee423832775ce822bde3588a764608bca3cad8"
+  },
+  "tool_hashes_basis": "sha256 of the files at repo head d4becec, read again at this approval: equal to the table in the approved plan and to the table approved for 1.0.17",
+  "tools_placed": {
+    "folder": "D:\\JARVIS-S6-FRESHVM\\tools\\stage7-1.0.18",
+    "files_sha256": {
+      "Invoke-Stage7Step.ps1": "2f0f5631bb43bc63fe0ac539bdd08bf31ab66335eb7eed43f714db9fc47f69cb",
+      "New-Stage7Disc.ps1": "76921cc433b999bd1e0c47f8da2eb78ecf055a52caefbe3afb6714d721f97e73",
+      "Start-Stage7Vm.ps1": "a5fea2db7db308562598599a2bf34f2491f93c700d752f642701c5c7d6a7140b",
+      "stage7-step.cmd": "5576c2232ae861a4b2e572319d86041cdef742419e8caa7f6a1367a68c4e6ad6",
+      "New-PackageIso.ps1": "cc5962c6a61f82539c178aa58c238b3691a44b559e73f34fcf3303a9ffec8961",
+      "Start-FreshVm.ps1": "d456da091c335e74c2f057068409cb5fe1a44ef3dcc156d780a83f16868a59a2",
+      "Take-FreshVmSnapshot.ps1": "f4065b26a4abecf0bc71e6b219ee423832775ce822bde3588a764608bca3cad8",
+      "stage7-authorized.json": "529683e3e5bbce9f4daf325384456a5f397dd196aa185ae5a2e3a050fcb62901"
+    },
+    "record_folders_created": [
+      "D:\\JARVIS-stage7\\1.0.18-cffb826de043\\evidence",
+      "D:\\JARVIS-S6-FRESHVM\\evidence\\guest-egress-01\\stage7-1.0.18-cffb826de043"
+    ],
+    "note": "each copy hashed after the copy and equal to the approved hash; the authorization file written from this record"
+  },
+  "places": {
+    "launcher_folder": "D:\\JARVIS-S6-FRESHVM\\tools\\stage7-1.0.18",
+    "host_records": "D:\\JARVIS-stage7\\1.0.18-cffb826de043\\evidence",
+    "guest_records": "D:\\JARVIS-S6-FRESHVM\\evidence\\guest-egress-01\\stage7-1.0.18-cffb826de043",
+    "stage7_disc": "D:\\JARVIS-S6-FRESHVM\\media\\JARVIS-STAGE7-1.0.18-cffb826de043.iso",
+    "final_snapshot": "STAGE7-PASS-1.0.18-cffb826de043",
+    "repo_copy": "C:\\Users\\jonny\\JARVIS-claude-workspace\\repo\\docs\\stage7-1.0.18-evidence"
+  },
+  "effect": {
+    "authorized": "the owner runs the plan's seven steps with D:\\JARVIS-S6-FRESHVM\\tools\\stage7-1.0.18\\stage7-step.cmd (disc build in the jonny account; restore to FRESH-PREREQ only from STAGE7-PASS-1.0.17-0d38218c4e1d with no change recorded since, disc attach, VM start and the snapshot STAGE7-PASS-1.0.18-cffb826de043 in the jarvis-s6-val account) and stage7 inside the VM from drive E:; Claude places the launcher folder and creates the two record folders",
+    "not_authorized": "any VirtualBox operation by Claude or under the owner account; provider keys or personal data in the VM; deleting any snapshot, the VM or the data copies; any change to the owner's installed JARVIS (updating it to 1.0.18 is a separate owner decision); turning anything on in the VM beyond the plan; the 1.0.11, 1.0.14, 1.0.15, 1.0.16 and 1.0.17 tool folders, discs and records stay as they are",
+    "stop_rules": "a failed step stops the pass, nothing repeated without the owner's decision; a UAC prompt is a STOP; no progress for 15 minutes (the half-minute lines while a Setup runs count as progress): tell Claude before any reset; every VM start through the launcher, its window left open until it closes by itself; VirtualBox only in jarvis-s6-val; run before the VM's Windows Update pause ends (2026-11-06) or re-pause it first"
+  },
+  "recorded_by": "Claude Code (Claude Opus 5.5). This record documents the owner's act; it grants no authority of its own."
+}

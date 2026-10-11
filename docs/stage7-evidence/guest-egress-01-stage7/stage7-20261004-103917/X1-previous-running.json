@@ -1,0 +1,26 @@
+{
+    "status":  "PASS",
+    "uninstall":  "uninstalled",
+    "install":  "installed",
+    "release":  "1.0.10-915e906516dc",
+    "installer_seconds":  {
+                              "verify_package":  124.845,
+                              "copy":  28.727,
+                              "verify_copy":  70.922,
+                              "switch":  0.024
+                          },
+    "output":  null,
+    "running":  {
+                    "core_ready":  true,
+                    "seconds_to_ready":  26.3,
+                    "installed_release":  "1.0.10-915e906516dc",
+                    "identity_matches":  true,
+                    "gate17_memory":  true,
+                    "gate19_memory":  true,
+                    "processes":  8,
+                    "processes_from_other_releases":  [
+
+                                                      ]
+                },
+    "new_release_present":  false
+}

@@ -1,0 +1,12 @@
+{
+  "schema": "stage6-incident-v1",
+  "id": "gate18-incident-03",
+  "recorded_utc": "2026-10-04T07:15:07Z",
+  "gate": "Gate 18, step 5 (gate18 inside the VM), guest run guest-egress-01\\gate18-20261004-065046",
+  "what_happened": "K0-not-elevated PASS, K1-backup-identity PASS (the backup on the disc equals the copy record, 399 entries, manifest and database present, 0 credential files), K2-starting-point FAIL: first_install_verify 'verified', release 1.0.11-60d406fb6398, restore_target_exists false, extracted_package true, but first_install_processes = 8. The script stopped before K3: no second install was made, nothing was imported, nothing in the VM was changed by Gate 18 (K0-K2 only read).",
+  "cause": "The Gate 17 install created the Startup shortcut (gate17-20261004-035322 I4-verify: startup_shortcut true), so JARVIS starts when jarvis-s6-guest signs in. Snapshot GATE17-19-PASS was taken with the VM powered off, so every boot and sign-in starts the first install again; the owner's photo shows the JARVIS companion window in the VM. K2 requires the first install to be stopped. The Gate 18 steps (GATE18-STEPS.md) and the rehearsal did not include 'quit JARVIS first': the rehearsal sandbox was installed with --no-shortcuts and its JARVIS was not running. A gap in the prepared steps, not a defect of the build or the backup.",
+  "why_restoring_the_snapshot_does_not_help": "after restoring GATE17-19-PASS, the next sign-in starts JARVIS again in the same way.",
+  "proposed_repeat_for_owner_decision": "In the VM: tray > 'Quit JARVIS completely', wait until its processes are gone, then double-click gate18 on the same disc again. The guest script refuses a second run while a gate18-* folder is in the evidence share; with the owner's decision Claude moves the failed run's folder, unchanged, to guest-egress-01\\incident-03-run1\\gate18-20261004-065046 (kept as evidence) so that the unchanged script on the unchanged disc can run. The repeat is recorded as a rerun.",
+  "status": "Gate 18 STOPPED at K2. Not repeated without the owner's decision.",
+  "recorded_by": "Claude Code (Claude Fable 5.1)"
+}

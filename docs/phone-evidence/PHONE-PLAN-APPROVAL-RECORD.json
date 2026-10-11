@@ -1,0 +1,27 @@
+{
+  "schema": "jarvis-owner-decision-record-v1",
+  "subject": "Owner approval of the phone plan, version 1 (docs/PHONE-PLAN.md)",
+  "issued_utc": "2026-10-06T03:09:22Z",
+  "issued_utc_basis": "first clock reading by Claude in the turn that received the message (2026-10-06 14:09 local)",
+  "recorded_utc": "2026-10-06T03:10:27Z",
+  "owner_messages": [
+    { "text": "I approve the phone plan", "taken_as": "approval of docs/PHONE-PLAN.md as presented, with the recommended answers of its section 9: D1 A (the Core's device door on the PC's Tailscale address, plain HTTP inside the Tailscale tunnel), D2 yes (a per-device tick 'may save memories and tasks', off for every new device), D3 no (whole replies in version 1, no streaming to the phone), D4 iOS 18 minimum, D5 the zip on D: moved to the Mac by the owner, D6 the phone release 1.0.16 before the installer release. Questions Q1 (does the September Xcode project still exist on the Mac) and Q2 (the iPhone's iOS version) were not answered and stay open; they are needed at step 7 of the plan, not before." }
+  ],
+  "approved_plan": {
+    "path": "C:\\Users\\jonny\\JARVIS-claude-workspace\\repo\\docs\\PHONE-PLAN.md",
+    "sha256": "89f061e2dcc0b1b589d3372327ff81c0c69d155f8ceb2af0d08b2f03c9430f4b",
+    "repo_commit": "ac99cb6",
+    "note": "the hash is of the plan as committed in ac99cb6; a later commit adds the approval to the plan's status line and changes nothing else in it"
+  },
+  "basis": {
+    "owner_decisions_of_2026_10_06": "iPhone app only; home Wi-Fi and cellular over a private network (Tailscale) set up by the owner; the PC stays awake for version 1; Mac with Xcode and an active Apple Developer membership; TestFlight; 'go with your recommendation'",
+    "records": "docs/DEVICES.md, docs/SPEECH.md, docs/ROADMAP.md Phase 4 (approved 2026-10-02), docs/owner/JARVIS-MASTER-ARCHITECTURE.md sections 7, 8 and 18, the design canvas claude.ai artifact N7JboAbsdEFwPFhrFFdAcs (three artboards), a read-only code survey of 2026-10-06 (nothing run)"
+  },
+  "effect": {
+    "authorized": "Claude builds section 5 of the plan in the repo (Core release 1.0.16: the Settings > Devices switch OFF BY DEFAULT with the device-routes-only door on a fixed port at the PC's Tailscale address, per-caller pairing limits, the device routes for own conversations, PC health, an overview and a waiting events route, the per-device 'may save memories and tasks' tick), with tests, one independent reviewer per item, release notes and the record docs/PHONE-CORE-1.0.16.md; then the release checks on this PC (build, comparison, regression, zip install, sandbox Stage 7) and docs/STAGE7-CHECK-1.0.16.md for the owner's approval; writes the iPhone app under phone/ios in the repo and the zip on D:\\JARVIS-release-work\\phone; writes docs/PHONE-TAILSCALE-STEPS.md and the Mac and TestFlight steps; all under the standing authority of CLAUDE.md",
+    "not_authorized": "turning the switch on; starting any Core (sandbox or installed) that listens on an address other than 127.0.0.1 (tests use a second loopback address only); installing or configuring Tailscale; the Stage 7 check of 1.0.16 and the update of the everyday JARVIS (each needs its own approval); any push, upload or sync; reading config\\.env or any key file; touching %LOCALAPPDATA%\\JARVIS; anything else in the OWNER-ONLY list of CLAUDE.md",
+    "stop_rules": "a failed check stops; a UAC prompt is a STOP; a contradiction between records is reported, not resolved by choice"
+  },
+  "next": "step 2 of the plan's section 8: build Core release 1.0.16, items 1 to 4 of section 5",
+  "recorded_by": "Claude Code (Claude Fable 5.1). This record documents the owner's act; it grants no authority of its own."
+}

@@ -1,0 +1,13 @@
+{
+    "status":  "PASS",
+    "release_under_acceptance":  "1.0.11-60d406fb6398",
+    "previous_release":  "1.0.10-915e906516dc",
+    "previous_zip":  "JARVIS-1.0.10-915e906516dc.zip",
+    "previous_zip_bytes":  525619975,
+    "previous_zip_sha256":  "a945b38a3aff733d3228d617812c8ab7f85f0f8b09c66b2aaed5212c2ec771d4",
+    "previous_zip_matches_record":  true,
+    "hash_seconds":  2.5,
+    "extracted_package":  "1.0.11-60d406fb6398",
+    "installed_before":  "1.0.11-60d406fb6398",
+    "processes_before":  0
+}

@@ -1,0 +1,128 @@
+{
+  "schema": "stage6-evidence-manifest-v1",
+  "generated_utc": "2026-10-04T05:11:32Z",
+  "root": "D:\\JARVIS-S6-FRESHVM\\evidence",
+  "folders": [
+    "gate17"
+  ],
+  "not_listed": "this manifest itself; the sealed P0 folder is never read",
+  "files": 23,
+  "bytes": 1782587,
+  "entries": [
+    {
+      "file": "gate17/checkpoints/p3-20261004-051026/census-after.json",
+      "bytes": 6,
+      "sha256": "b423bb45501e0fa49d3b77e635f800a29f1fdcf5a58e00c7e04a7ff7833045f2"
+    },
+    {
+      "file": "gate17/checkpoints/p3-20261004-051026/census-before.json",
+      "bytes": 6,
+      "sha256": "b423bb45501e0fa49d3b77e635f800a29f1fdcf5a58e00c7e04a7ff7833045f2"
+    },
+    {
+      "file": "gate17/checkpoints/p3-20261004-051026/CHECKPOINT.json",
+      "bytes": 874,
+      "sha256": "2dc60cfaebdcfa7ee06dd69ebce0a6faf7b69f5bc20a718ccb652792e90ad29c"
+    },
+    {
+      "file": "gate17/checkpoints/p3-20261004-051026/control-hashes.json",
+      "bytes": 264,
+      "sha256": "ecf0933ccfecb18092d24207bf298e86a4ee9914ae7f471b416ef3c1d2687f27"
+    },
+    {
+      "file": "gate17/checkpoints/p3-20261004-051026/dacl.json",
+      "bytes": 627,
+      "sha256": "2eaa7473a71816bb9919a37ef733c8f2cf6886590d2dca4aedeac7b7eaa2524d"
+    },
+    {
+      "file": "gate17/checkpoints/p3-20261004-051026/protected-config-inventory.json",
+      "bytes": 2330,
+      "sha256": "5d1fec69d0e6fd7fc9a0f76dde9de53c2900e4a3d54a8487bbef7f2ee5f152f0"
+    },
+    {
+      "file": "gate17/checkpoints/p3-20261004-051026/protected-vm-inventory.json",
+      "bytes": 1854,
+      "sha256": "e5dac26433fafa28f0fb693e5ac5bff1be399647ad604032c8bcc6a1cb9d415f"
+    },
+    {
+      "file": "gate17/gate17-evaluation.json",
+      "bytes": 7568,
+      "sha256": "1989cb3d2db76dca626053efc0f7ef7371b22696171785a9c35a0328479b7a1c"
+    },
+    {
+      "file": "gate17/gate19-evaluation.json",
+      "bytes": 4646,
+      "sha256": "e9912504b4fa45455487f7a3f40cf2b5da71e0de420a6caf65fbd9e4f4058907"
+    },
+    {
+      "file": "gate17/jarvis-after-restart-photo-20261004-042216.jpg",
+      "bytes": 885797,
+      "sha256": "07563b2e1da17f9ec792448a79f019a59907f9caeec0635ffe244118b39e8df6"
+    },
+    {
+      "file": "gate17/jarvis-window-photo-20261004-041508.jpg",
+      "bytes": 827263,
+      "sha256": "12fece0cac2e875e0957195ae88be0bc5da39c7f37b9718f849352d277092962"
+    },
+    {
+      "file": "gate17/owner-statements.jsonl",
+      "bytes": 480,
+      "sha256": "c99c5df547e999f2d1428573979fa6e45120919006ef751e8ce1c5f5733ba7cb"
+    },
+    {
+      "file": "gate17/p3-evaluation.json",
+      "bytes": 2458,
+      "sha256": "f9078767d966a933e321d19d96ca8cde9000f6cf1f66ea07297d097e31491e04"
+    },
+    {
+      "file": "gate17/package-disc-1.0.10-915e906516dc.json",
+      "bytes": 1098,
+      "sha256": "fc560d2319eafe4b5bc511218e9cdc721252cd595f7a3f6bd3ee186833009cd6"
+    },
+    {
+      "file": "gate17/package-disc-1.0.11-60d406fb6398.json",
+      "bytes": 1744,
+      "sha256": "29c53d98e1a68571b643e6639bbd309cd8216beebdd9cff45817235872081f01"
+    },
+    {
+      "file": "gate17/prep-tools-hashes.txt",
+      "bytes": 1542,
+      "sha256": "fa0b382ab3a4b6f0f033a91cbbf342a81417f05d7877ae16c174049fddad631a"
+    },
+    {
+      "file": "gate17/restart-check-false-negative-20261004.json",
+      "bytes": 2478,
+      "sha256": "e1616a1d2155383fda1ec85a9b3432cc220aae856f3df4677d17b62fc93d49a6"
+    },
+    {
+      "file": "gate17/snapshot-GATE17-19-PASS-check.json",
+      "bytes": 1469,
+      "sha256": "284c089aa415b6bc6c50089f2d1557ee6d27fceab972955da7bd1257de5cd378"
+    },
+    {
+      "file": "gate17/vm-reset-before-signin-20261004.json",
+      "bytes": 2801,
+      "sha256": "5c79bf6100389ecf1710f93b97f230ff272a9952c992521e4b516f0c5c3362e4"
+    },
+    {
+      "file": "gate17/vm/gate17-discs-20261004-034636.json",
+      "bytes": 2727,
+      "sha256": "fcf117749867577c7eeb9f6fb8bbb42ce0406f2a03bcd7904f4febec60abbfa5"
+    },
+    {
+      "file": "gate17/vm/JARVIS-S6-FRESH.vbox.GATE17-19-PASS-copy",
+      "bytes": 29440,
+      "sha256": "be48cc89d9e80ed5bc31c1416ee786425a432d252154e41f054120e5edd2baf9"
+    },
+    {
+      "file": "gate17/vm/snapshot-GATE17-19-PASS-20261004-050541.json",
+      "bytes": 3746,
+      "sha256": "ecf72fd3aa791307dbb44a48d603557a179a8f0f83f2345304e7825af198b7ec"
+    },
+    {
+      "file": "gate17/vm/start-20261004-034636.json",
+      "bytes": 1369,
+      "sha256": "7ec032aff93ff47b0379c28ac8e23c11b51afdaea7e48ffa1d0971fbe60c8e75"
+    }
+  ]
+}

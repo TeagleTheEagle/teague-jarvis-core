@@ -1,0 +1,115 @@
+{
+    "schema":  "stage6-fresh-vm-snapshot-v1",
+    "utc":  "2026-10-05T03:33:23.0598846Z",
+    "account":  "jarvis-s6-val",
+    "vm_name":  "JARVIS-S6-FRESH",
+    "vm_uuid":  "4ef16bdd-2a1b-46af-83db-ee69c2f868bb",
+    "snapshot_name":  "STAGE7-PASS-1.0.14-e03872680e1d",
+    "snapshot_uuid":  "0b7c12fa-5067-4f3d-b24f-ee43b6c42257",
+    "description":  "Stage 7 check 1.0.14-e03872680e1d passed inside the VM with 1.0.14-e03872680e1d (update from 1.0.11-60d406fb6398, interrupted update, rollback, uninstall, reinstall); taken after a clean shutdown",
+    "current_snapshot_name":  "STAGE7-PASS-1.0.14-e03872680e1d",
+    "current_snapshot_uuid":  "0b7c12fa-5067-4f3d-b24f-ee43b6c42257",
+    "before":  {
+                   "vbox_sha256":  "e40df65f9eedecb0df17cd425f0325644745dab2e592acea21deffb507627a1c",
+                   "nvram_sha256":  "fe756e59372b102d0a81f4bfa6966b109697a2e2b47d12763fb89fe5dbb94d8b",
+                   "snapshots":  [
+                                     "FRESH-CLEAN-BASELINE",
+                                     "FRESH-PREREQ",
+                                     "GATE17-19-PASS",
+                                     "GATE18-PASS",
+                                     "STAGE7-PASS"
+                                 ]
+               },
+    "vbox_file":  "D:\\JARVIS-S6-FRESHVM\\machines\\JARVIS-S6-FRESH\\JARVIS-S6-FRESH.vbox",
+    "vbox_sha256_after":  "7b53698c30a939e46c16e7438d6eda506ca913829c4268fb6db01308c3fd0ae6",
+    "nvram_sha256_after":  "fe756e59372b102d0a81f4bfa6966b109697a2e2b47d12763fb89fe5dbb94d8b",
+    "all_snapshots":  [
+                          {
+                              "name":  "FRESH-CLEAN-BASELINE",
+                              "uuid":  "0da943df-12e5-4eac-93bf-727c03dd5d94"
+                          },
+                          {
+                              "name":  "FRESH-PREREQ",
+                              "uuid":  "9f1d7bec-e410-4ed0-bc2f-4966125329ad"
+                          },
+                          {
+                              "name":  "GATE17-19-PASS",
+                              "uuid":  "3023e9a7-0f60-42ed-bac0-8b7f0ff06368"
+                          },
+                          {
+                              "name":  "GATE18-PASS",
+                              "uuid":  "5dcbb9f0-0d6c-4311-8b57-7ba329290edf"
+                          },
+                          {
+                              "name":  "STAGE7-PASS",
+                              "uuid":  "2503a110-bd71-49d8-8ff1-3193c2c20cd3"
+                          },
+                          {
+                              "name":  "STAGE7-PASS-1.0.14-e03872680e1d",
+                              "uuid":  "0b7c12fa-5067-4f3d-b24f-ee43b6c42257"
+                          }
+                      ],
+    "snapshots_folder":  [
+                             {
+                                 "name":  "2026-10-04T02-40-17-827151100Z.nvram",
+                                 "bytes":  547328,
+                                 "last_write_utc":  "2026-10-04T02:26:33.6341554Z"
+                             },
+                             {
+                                 "name":  "2026-10-04T03-04-55-784457300Z.nvram",
+                                 "bytes":  547328,
+                                 "last_write_utc":  "2026-10-04T02:26:33.6341554Z"
+                             },
+                             {
+                                 "name":  "2026-10-04T05-05-41-042534400Z.nvram",
+                                 "bytes":  547328,
+                                 "last_write_utc":  "2026-10-04T05:05:21.7020491Z"
+                             },
+                             {
+                                 "name":  "2026-10-04T07-55-13-845107700Z.nvram",
+                                 "bytes":  547328,
+                                 "last_write_utc":  "2026-10-04T07:53:52.1409159Z"
+                             },
+                             {
+                                 "name":  "2026-10-04T10-58-04-178736700Z.nvram",
+                                 "bytes":  547328,
+                                 "last_write_utc":  "2026-10-04T10:53:34.1021293Z"
+                             },
+                             {
+                                 "name":  "2026-10-05T03-33-22-824607800Z.nvram",
+                                 "bytes":  547328,
+                                 "last_write_utc":  "2026-10-05T03:32:26.7277328Z"
+                             },
+                             {
+                                 "name":  "{0ce553cb-05a3-4bf6-9942-1dd6f29d562e}.vdi",
+                                 "bytes":  2097152,
+                                 "last_write_utc":  "2026-10-05T03:33:22.8246078Z"
+                             },
+                             {
+                                 "name":  "{0d8d6176-2b81-4fc8-90d9-e2007869cc58}.vdi",
+                                 "bytes":  2097152,
+                                 "last_write_utc":  "2026-10-04T02:40:17.8271511Z"
+                             },
+                             {
+                                 "name":  "{7e72e0b9-bb74-47ce-bdc2-c478462709e7}.vdi",
+                                 "bytes":  13759414272,
+                                 "last_write_utc":  "2026-10-04T07:53:52.1290164Z"
+                             },
+                             {
+                                 "name":  "{979ac965-1d18-4965-bc20-64bc957b4346}.vdi",
+                                 "bytes":  8969519104,
+                                 "last_write_utc":  "2026-10-04T05:05:21.6880885Z"
+                             },
+                             {
+                                 "name":  "{b17ece74-d849-42bc-89f4-f7b63095e06e}.vdi",
+                                 "bytes":  12007243776,
+                                 "last_write_utc":  "2026-10-04T10:53:34.0881280Z"
+                             },
+                             {
+                                 "name":  "{e0f54be8-6331-4494-96a7-1bfbfda9a961}.vdi",
+                                 "bytes":  23087546368,
+                                 "last_write_utc":  "2026-10-05T03:32:26.7148611Z"
+                             }
+                         ],
+    "vm_state":  "poweroff"
+}

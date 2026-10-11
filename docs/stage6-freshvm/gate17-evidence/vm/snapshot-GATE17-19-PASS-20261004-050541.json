@@ -1,0 +1,70 @@
+{
+    "schema":  "stage6-fresh-vm-snapshot-v1",
+    "utc":  "2026-10-04T05:05:41.1978437Z",
+    "account":  "jarvis-s6-val",
+    "vm_name":  "JARVIS-S6-FRESH",
+    "vm_uuid":  "4ef16bdd-2a1b-46af-83db-ee69c2f868bb",
+    "snapshot_name":  "GATE17-19-PASS",
+    "snapshot_uuid":  "3023e9a7-0f60-42ed-bac0-8b7f0ff06368",
+    "description":  "Gates 17 and 19 passed inside the VM with 1.0.11-60d406fb6398; taken after a clean shutdown, before P3",
+    "current_snapshot_name":  "GATE17-19-PASS",
+    "current_snapshot_uuid":  "3023e9a7-0f60-42ed-bac0-8b7f0ff06368",
+    "before":  {
+                   "vbox_sha256":  "0a42693bf2f7e6c9b5a1fe2346061a7fb9bd4a3b04ac0afd8f9fe9ea3840b36a",
+                   "nvram_sha256":  "2835827166568ba8fd7b9b0eaad6481c0e01f95f8e54321a87635032406ec3d0",
+                   "snapshots":  [
+                                     "FRESH-CLEAN-BASELINE",
+                                     "FRESH-PREREQ"
+                                 ]
+               },
+    "vbox_file":  "D:\\JARVIS-S6-FRESHVM\\machines\\JARVIS-S6-FRESH\\JARVIS-S6-FRESH.vbox",
+    "vbox_sha256_after":  "be48cc89d9e80ed5bc31c1416ee786425a432d252154e41f054120e5edd2baf9",
+    "nvram_sha256_after":  "2835827166568ba8fd7b9b0eaad6481c0e01f95f8e54321a87635032406ec3d0",
+    "all_snapshots":  [
+                          {
+                              "name":  "FRESH-CLEAN-BASELINE",
+                              "uuid":  "0da943df-12e5-4eac-93bf-727c03dd5d94"
+                          },
+                          {
+                              "name":  "FRESH-PREREQ",
+                              "uuid":  "9f1d7bec-e410-4ed0-bc2f-4966125329ad"
+                          },
+                          {
+                              "name":  "GATE17-19-PASS",
+                              "uuid":  "3023e9a7-0f60-42ed-bac0-8b7f0ff06368"
+                          }
+                      ],
+    "snapshots_folder":  [
+                             {
+                                 "name":  "2026-10-04T02-40-17-827151100Z.nvram",
+                                 "bytes":  547328,
+                                 "last_write_utc":  "2026-10-04T02:26:33.6341554Z"
+                             },
+                             {
+                                 "name":  "2026-10-04T03-04-55-784457300Z.nvram",
+                                 "bytes":  547328,
+                                 "last_write_utc":  "2026-10-04T02:26:33.6341554Z"
+                             },
+                             {
+                                 "name":  "2026-10-04T05-05-41-042534400Z.nvram",
+                                 "bytes":  547328,
+                                 "last_write_utc":  "2026-10-04T05:05:21.7020491Z"
+                             },
+                             {
+                                 "name":  "{0d8d6176-2b81-4fc8-90d9-e2007869cc58}.vdi",
+                                 "bytes":  2097152,
+                                 "last_write_utc":  "2026-10-04T02:40:17.8271511Z"
+                             },
+                             {
+                                 "name":  "{7e72e0b9-bb74-47ce-bdc2-c478462709e7}.vdi",
+                                 "bytes":  2097152,
+                                 "last_write_utc":  "2026-10-04T05:05:41.0425344Z"
+                             },
+                             {
+                                 "name":  "{979ac965-1d18-4965-bc20-64bc957b4346}.vdi",
+                                 "bytes":  8969519104,
+                                 "last_write_utc":  "2026-10-04T05:05:21.6880885Z"
+                             }
+                         ],
+    "vm_state":  "poweroff"
+}

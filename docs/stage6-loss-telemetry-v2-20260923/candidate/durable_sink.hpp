@@ -1,0 +1,151 @@
+#include "trace_telemetry.hpp"
+#pragma once
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+// Sacrificial TEST evidence only. No execution or VM/file-management capabilities.
+#include <windows.h>
+#include <bcrypt.h>
+#include <deque>
+#include <condition_variable>
+#include <mutex>
+#include <thread>
+#include <atomic>
+#include <memory>
+#include <string>
+#include <vector>
+#include <sstream>
+#include <iomanip>
+#include <stdexcept>
+#include <filesystem>
+#include <algorithm>
+
+class DurableSink {
+ using U=unsigned long long;
+ enum State {ACTIVE,CLOSED,DURABILITY_PENDING,DURABLY_COMMITTED,HASH_VERIFIED,MANIFESTED};
+ struct Hash {
+  BCRYPT_ALG_HANDLE alg=nullptr;BCRYPT_HASH_HANDLE h=nullptr;std::vector<BYTE> obj;
+  Hash(){DWORD n=0,d=0;if(BCryptOpenAlgorithmProvider(&alg,BCRYPT_SHA256_ALGORITHM,nullptr,0)<0||BCryptGetProperty(alg,BCRYPT_OBJECT_LENGTH,(PUCHAR)&n,sizeof(n),&d,0)<0)throw std::runtime_error("hash init");obj.resize(n);if(BCryptCreateHash(alg,&h,obj.data(),n,nullptr,0,0)<0)throw std::runtime_error("hash create");}
+  void add(const char*p,size_t n){if(BCryptHashData(h,(PUCHAR)p,ULONG(n),0)<0)throw std::runtime_error("hash append");}
+  std::string end(){BYTE b[32];if(BCryptFinishHash(h,b,32,0)<0)throw std::runtime_error("hash final");std::ostringstream o;for(auto v:b)o<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(v);return o.str();}
+  ~Hash(){if(h)BCryptDestroyHash(h);if(alg)BCryptCloseAlgorithmProvider(alg,0);}
+ };
+ struct Segment {
+  HANDLE handle=INVALID_HANDLE_VALUE;std::string name,expected,actual;U number=0,first=0,last=0,count=0,bytes=0;State state=ACTIVE;
+  U enqueued=0,dequeued=0,completed=0,flushBegin=0,flushEnd=0,hashBegin=0,hashEnd=0,waitBegin=0,waitEnd=0;
+  std::vector<int> states{ACTIVE};std::unique_ptr<Hash> hash;
+  void advance(State next){if(int(next)!=int(state)+1)throw std::runtime_error("state skip");state=next;states.push_back(next);}
+  ~Segment(){if(handle!=INVALID_HANDLE_VALUE)j6t::close(handle);}
+ };
+ struct Item{U seq;std::string raw;U admitted;};
+ struct Snapshot{U tick,kind,id,rawBytes,input,inflight,bytes,sealed,pending,pendingBytes;};
+ static constexpr U telemetryCap=65536;std::vector<Snapshot> telemetry;
+ U clockFrequency=0,backpressureStarted=0,backpressureCompleted=0,backpressureInterrupted=0,blockedTicks=0;
+ U dequeuedCount=0,completedCount=0,dequeueLagTicks=0,maxDequeueLagTicks=0,completionLagTicks=0,maxCompletionLagTicks=0;
+ std::wstring root;std::string prefix;U limit,queueBytes=0,inflightItems=0,accepted=0,attempted=0,total=0,written=0,peakQueue=0,peakItems=0;
+ U pending=0,pendingBytes=0,peakPending=0,peakPendingBytes=0;const U pendingLimit=2,memoryLimit=67108864,itemLimit=65536,storageLimit=137438953472ULL,recordLimit=196531200ULL;
+ std::deque<Item> input;std::deque<std::unique_ptr<Segment>> sealed;std::vector<std::unique_ptr<Segment>> done;
+ std::mutex gate;std::condition_variable cv;std::thread writer,finalizer;bool closing=false,writerDone=false,finished=false;std::atomic<unsigned> failure{0};int inject;
+ std::atomic<bool> writerExited{false},finalizerExited{false};
+ double serializeSeconds=0,lockSeconds=0,appendSeconds=0,rollSeconds=0,flushSeconds=0,hashSeconds=0,maxFlush=0,maxAppend=0,backpressureSeconds=0;
+ long long born=0,firstWrite=0,lastWrite=0,firstFinal=0,lastFinal=0;U progressedWhileFinalizing=0;
+ static long long q(){LARGE_INTEGER x;QueryPerformanceCounter(&x);return x.QuadPart;}
+ static double seconds(long long start){LARGE_INTEGER f;QueryPerformanceFrequency(&f);return double(q()-start)/f.QuadPart;}
+ void fail(unsigned code){unsigned zero=0;failure.compare_exchange_strong(zero,code);cv.notify_all();}
+ void snapshot(U kind,U id=0,U raw=0){
+  j6d::diagnostic.queueState(inflightItems,queueBytes,pending);j6d::diagnostic.admitted=accepted;
+  if(telemetry.size()>=telemetryCap||(inject==18&&telemetry.size()>=4)){fail(15);return;}
+  telemetry.push_back({U(q()),kind,id,raw,U(input.size()),inflightItems,queueBytes,U(sealed.size()),pending,pendingBytes});
+ }
+ std::string telemetryJson(){
+  std::ostringstream o;o<<"{\"schema\":\"stage6-writer-telemetry-v1\",\"frequency\":"<<clockFrequency<<",\"capacity\":"<<telemetryCap<<",\"snapshotBytes\":"<<sizeof(Snapshot)<<",\"allocatedBytes\":"<<telemetryCap*sizeof(Snapshot)<<",\"overflow\":"<<(failure==15?"true":"false")
+   <<",\"backpressure\":{\"started\":"<<backpressureStarted<<",\"completed\":"<<backpressureCompleted<<",\"interrupted\":"<<backpressureInterrupted<<",\"ticks\":"<<blockedTicks<<"}"
+   <<",\"lag\":{\"dequeued\":"<<dequeuedCount<<",\"completed\":"<<completedCount<<",\"dequeueTicks\":"<<dequeueLagTicks<<",\"maxDequeueTicks\":"<<maxDequeueLagTicks<<",\"completionTicks\":"<<completionLagTicks<<",\"maxCompletionTicks\":"<<maxCompletionLagTicks<<"}"
+   <<",\"windows\":{\"firstWrite\":"<<firstWrite<<",\"lastWrite\":"<<lastWrite<<",\"firstFinal\":"<<firstFinal<<",\"lastFinal\":"<<lastFinal<<"},\"snapshots\":[";
+  bool first=true;for(const auto&x:telemetry){if(!first)o<<",";first=false;o<<"["<<x.tick<<","<<x.kind<<","<<x.id<<","<<x.rawBytes<<","<<x.input<<","<<x.inflight<<","<<x.bytes<<","<<x.sealed<<","<<x.pending<<","<<x.pendingBytes<<"]";}return o.str()+"]}";
+ }
+ void fault(int id){if(inject==id)throw std::runtime_error("injected "+std::to_string(id));}
+ static void writeAll(HANDLE f,const std::string&s){DWORD n=0;if(!j6t::write(f,s.data(),DWORD(s.size()),&n,nullptr)||n!=s.size())throw std::runtime_error("write/partial write");}
+ std::wstring path(const std::string&n){return root+L"\\"+std::wstring(n.begin(),n.end());}
+ std::unique_ptr<Segment> open(U number){
+  if(number>=16384)throw std::runtime_error("segment bound");auto s=std::make_unique<Segment>();s->number=number;s->name=prefix+"-"+std::to_string(number)+".jsonl";
+  s->handle=CreateFileW(path(s->name).c_str(),GENERIC_READ|GENERIC_WRITE,FILE_SHARE_READ,nullptr,CREATE_NEW,FILE_ATTRIBUTE_NORMAL,nullptr);
+  if(s->handle==INVALID_HANDLE_VALUE)throw std::runtime_error("create segment");s->hash=std::make_unique<Hash>();return s;
+ }
+ void transfer(std::unique_ptr<Segment>&s){j6d::Span diagnosticRotation(j6d::Rotation);
+  if(!s)return;auto t=q();fault(3);s->advance(CLOSED);s->expected=s->hash->end();s->hash.reset();fault(4);
+  std::unique_lock<std::mutex> l(gate);auto b=q();if(inject==9&&pending>=pendingLimit)throw std::runtime_error("injected bounded backlog");
+  bool blocked=!failure&&pending>=pendingLimit;
+  if(blocked){backpressureStarted++;s->waitBegin=U(q());snapshot(8,s->number);if(inject==19)fail(19);}
+  cv.wait(l,[&]{return failure||pending<pendingLimit;});backpressureSeconds+=seconds(b);
+  if(blocked){s->waitEnd=U(q());blockedTicks+=s->waitEnd-s->waitBegin;if(failure){backpressureInterrupted++;snapshot(10,s->number);}else{backpressureCompleted++;snapshot(9,s->number);}}
+  if(failure)throw std::runtime_error("failed before transfer");
+  s->advance(DURABILITY_PENDING);pending++;pendingBytes+=s->bytes;peakPending=std::max(peakPending,pending);peakPendingBytes=std::max(peakPendingBytes,pendingBytes);
+  s->enqueued=U(q());U id=s->number;sealed.push_back(std::move(s));snapshot(4,id);cv.notify_all();rollSeconds+=seconds(t);
+ }
+ void writeLoop(){
+  std::unique_ptr<Segment> s;U number=0;
+  try{for(;;){Item item;{std::unique_lock<std::mutex> l(gate);cv.wait(l,[&]{return failure||closing||!input.empty();});if(failure)break;if(input.empty()&&closing)break;item=std::move(input.front());input.pop_front();snapshot(2,item.seq,item.raw.size());U lag=telemetry.back().tick-item.admitted;dequeuedCount++;dequeueLagTicks+=lag;maxDequeueLagTicks=std::max(maxDequeueLagTicks,lag);}
+    auto serial=q();std::string row;{j6d::Span diagnosticSerialization(j6d::Serialization);row="{\"seq\":"+std::to_string(item.seq)+",\"raw\":"+item.raw+"}\n";}serializeSeconds+=seconds(serial);
+    if(row.size()>8192||row.size()>limit)throw std::runtime_error("record bound");
+    if(s&&s->bytes+row.size()>limit)transfer(s);if(!s)s=open(number++);
+    if(s->state!=ACTIVE)throw std::runtime_error("append after transfer");fault(14);fault(1);if(inject==2){writeAll(s->handle,row.substr(0,row.size()/2));throw std::runtime_error("partial write injected");}
+    auto t=q();writeAll(s->handle,row);auto dt=seconds(t);appendSeconds+=dt;maxAppend=std::max(maxAppend,dt);s->hash->add(row.data(),row.size());
+    s->bytes+=row.size();if(!s->count)s->first=item.seq;s->last=item.seq;s->count++;written++;if(!firstWrite)firstWrite=t;lastWrite=q();
+    {std::lock_guard<std::mutex> l(gate);if(pending)progressedWhileFinalizing++;queueBytes-=item.raw.size();inflightItems--;snapshot(3,item.seq,item.raw.size());U lag=telemetry.back().tick-item.admitted;completedCount++;completionLagTicks+=lag;maxCompletionLagTicks=std::max(maxCompletionLagTicks,lag);}
+   }if(!failure)transfer(s);
+  }catch(...){fail(100+inject);}
+  s.reset();{std::lock_guard<std::mutex> l(gate);writerDone=true;}writerExited=true;cv.notify_all();
+ }
+ void finalizeLoop(){
+  try{fault(5);for(;;){std::unique_ptr<Segment>s;{std::unique_lock<std::mutex> l(gate);cv.wait(l,[&]{return failure||writerDone||!sealed.empty();});if(failure)break;if(sealed.empty()&&writerDone)break;s=std::move(sealed.front());sealed.pop_front();s->dequeued=U(q());snapshot(5,s->number);}
+    if(inject==19){std::unique_lock<std::mutex>l(gate);cv.wait(l,[&]{return failure.load()!=0;});throw std::runtime_error("controlled wait-interruption fixture");}
+    fault(13);if(!firstFinal)firstFinal=q();
+    if(inject==6||inject==9){for(int i=0;i<150&&!failure;i++)Sleep(1);if(inject==6)throw std::runtime_error("injected flush delay refusal");}
+    fault(7);auto t=q();s->flushBegin=U(t);if(!j6t::flush(s->handle))throw std::runtime_error("durable flush");s->flushEnd=U(q());auto dt=double(s->flushEnd-s->flushBegin)/clockFrequency;flushSeconds+=dt;maxFlush=std::max(maxFlush,dt);s->advance(DURABLY_COMMITTED);j6d::diagnostic.persisted+=s->count;j6d::diagnostic.persistedBytes+=s->bytes;
+    LARGE_INTEGER zero{};if(!SetFilePointerEx(s->handle,zero,nullptr,FILE_BEGIN))throw std::runtime_error("readback seek");Hash check;U bytes=0,records=0,next=s->first;std::string line;char buf[65536];DWORD n=0;t=q();s->hashBegin=U(t);
+    while(ReadFile(s->handle,buf,sizeof(buf),&n,nullptr)&&n){check.add(buf,n);bytes+=n;for(DWORD i=0;i<n;i++){if(buf[i]=='\n'){std::string start="{\"seq\":"+std::to_string(next)+",\"raw\":";if(line.rfind(start,0)!=0)throw std::runtime_error("readback sequence");records++;next++;line.clear();}else{line+=buf[i];if(line.size()>8192)throw std::runtime_error("readback line bound");}}}
+    s->actual=check.end();fault(8);if(!line.empty()||bytes!=s->bytes||records!=s->count||next!=s->last+1||s->actual!=s->expected)throw std::runtime_error("readback mismatch");s->hashEnd=U(q());hashSeconds+=double(s->hashEnd-s->hashBegin)/clockFrequency;s->advance(HASH_VERIFIED);
+    if(!j6t::close(s->handle))throw std::runtime_error("handle close");s->handle=INVALID_HANDLE_VALUE;lastFinal=q();
+    {std::lock_guard<std::mutex> l(gate);pending--;pendingBytes-=s->bytes;s->completed=U(q());U id=s->number;done.push_back(std::move(s));++j6d::diagnostic.finalizations;snapshot(6,id);cv.notify_all();}
+   }
+  }catch(...){fail(200+inject);}
+  finalizerExited=true;cv.notify_all();
+ }
+ std::string metadata(){std::ostringstream o;o<<"[";bool first=true;for(auto&s:done){if(!first)o<<",";first=false;o<<"{\"number\":"<<s->number<<",\"name\":\""<<s->name<<"\",\"first\":"<<s->first<<",\"last\":"<<s->last<<",\"records\":"<<s->count<<",\"bytes\":"<<s->bytes<<",\"sha256\":\""<<s->actual<<"\",\"states\":[";for(size_t i=0;i<s->states.size();i++){if(i)o<<",";o<<s->states[i];}o<<"],\"timing\":{\"enqueued\":"<<s->enqueued<<",\"dequeued\":"<<s->dequeued<<",\"completed\":"<<s->completed<<",\"flushBegin\":"<<s->flushBegin<<",\"flushEnd\":"<<s->flushEnd<<",\"hashBegin\":"<<s->hashBegin<<",\"hashEnd\":"<<s->hashEnd<<",\"waitBegin\":"<<s->waitBegin<<",\"waitEnd\":"<<s->waitEnd<<"}}";}return o.str()+"]";}
+ void durableFile(const std::string&name,const std::string&data){HANDLE h=CreateFileW(path(name).c_str(),GENERIC_READ|GENERIC_WRITE,FILE_SHARE_READ,nullptr,CREATE_NEW,FILE_ATTRIBUTE_NORMAL,nullptr);if(h==INVALID_HANDLE_VALUE)throw std::runtime_error("manifest create");try{writeAll(h,data);if(!j6t::flush(h))throw std::runtime_error("manifest flush");LARGE_INTEGER z{};if(!SetFilePointerEx(h,z,nullptr,FILE_BEGIN))throw std::runtime_error("manifest seek");std::string got(data.size(),'\0');DWORD n=0;if(!ReadFile(h,got.data(),DWORD(got.size()),&n,nullptr)||n!=got.size()||got!=data)throw std::runtime_error("manifest readback");}catch(...){j6t::close(h);throw;}if(!j6t::close(h))throw std::runtime_error("manifest close");}
+public:
+ DurableSink(std::wstring r,std::string p="durable",U segment=65536,int faultCode=0):root(r),prefix(p),limit(segment),inject(faultCode){
+  if(root.rfind(L"D:\\JARVIS-STAGE6-LIVE\\",0)!=0||root.find(L"..")!=std::wstring::npos||!std::filesystem::is_directory(root)||p.empty()||p.find_first_not_of("abcdefghijklmnopqrstuvwxyz-")!=std::string::npos||segment<8192||segment>8388608)throw std::runtime_error("bounded D workspace required");
+  for(auto a=std::filesystem::path(root);!a.empty();a=a.parent_path()){if(GetFileAttributesW(a.c_str())&FILE_ATTRIBUTE_REPARSE_POINT)throw std::runtime_error("reparse forbidden");if(a==a.parent_path())break;}
+  for(auto&e:std::filesystem::directory_iterator(root))if(e.path().filename().wstring().rfind(std::wstring(p.begin(),p.end()),0)==0)throw std::runtime_error("existing stream");born=q();LARGE_INTEGER freq{};if(!QueryPerformanceFrequency(&freq)||freq.QuadPart<=0)throw std::runtime_error("telemetry clock");clockFrequency=U(freq.QuadPart);telemetry.reserve(telemetryCap);snapshot(0);
+  finalizer=std::thread([this]{finalizeLoop();});writer=std::thread([this]{writeLoop();});
+ }
+ bool add(std::string raw){auto t=q();std::lock_guard<std::mutex>l(gate);lockSeconds+=seconds(t);attempted++;if(failure||closing){fail(10);return false;}
+  // Charge framing conservatively too; no memory/item/storage limit expansion.
+  if(raw.size()>8100||accepted>=recordLimit||total+raw.size()+64>storageLimit||queueBytes+raw.size()+64>memoryLimit||inflightItems>=itemLimit){fail(11);return false;}
+  accepted++;total+=raw.size()+64;queueBytes+=raw.size();inflightItems++;peakQueue=std::max(peakQueue,queueBytes);peakItems=std::max(peakItems,inflightItems);U size=raw.size();input.push_back({accepted,std::move(raw),U(q())});snapshot(1,accepted,size);input.back().admitted=telemetry.back().tick;cv.notify_all();return true;
+ }
+ std::string finish(){
+  {std::lock_guard<std::mutex>l(gate);if(finished)throw std::runtime_error("already finished");finished=true;closing=true;}cv.notify_all();
+  HANDLE threads[]={writer.native_handle(),finalizer.native_handle()};DWORD wait=WaitForMultipleObjects(2,threads,TRUE,5000);if(wait!=WAIT_OBJECT_0){fail(12);CancelSynchronousIo(threads[0]);CancelSynchronousIo(threads[1]);}writer.join();finalizer.join();
+  std::string telemetryRef;
+  try{{std::lock_guard<std::mutex>l(gate);snapshot(7);}
+   if(failure)throw std::runtime_error("worker failed");if(pending||pendingBytes||!input.empty()||!sealed.empty()||written!=accepted||accepted!=attempted)throw std::runtime_error("incomplete stream");
+   U next=1,bytes=0;for(auto&s:done){if(s->state!=HASH_VERIFIED||s->first!=next||s->last-s->first+1!=s->count)throw std::runtime_error("segment sequence");next=s->last+1;bytes+=s->bytes;}
+   if(next!=accepted+1)throw std::runtime_error("total sequence");
+   // Verify persisted paths independently, after original-handle flush/readback.
+   if(inject==10&&!done.empty())DeleteFileW(path(done[0]->name).c_str());
+   if(inject==11&&!done.empty()){HANDLE f=CreateFileW(path(done[0]->name).c_str(),GENERIC_WRITE,0,nullptr,OPEN_EXISTING,0,nullptr);if(f!=INVALID_HANDLE_VALUE){writeAll(f,"!");j6t::close(f);}}
+   for(auto&s:done){HANDLE f=CreateFileW(path(s->name).c_str(),GENERIC_READ,FILE_SHARE_READ,nullptr,OPEN_EXISTING,0,nullptr);if(f==INVALID_HANDLE_VALUE)throw std::runtime_error("missing segment");Hash h;char b[65536];DWORD n=0;U size=0;while(ReadFile(f,b,sizeof(b),&n,nullptr)&&n){h.add(b,n);size+=n;}j6t::close(f);if(size!=s->bytes||h.end()!=s->actual)throw std::runtime_error("corrupt persisted segment");}
+   fault(12);fault(16);auto ts=telemetryJson();durableFile(prefix+"-telemetry.json",ts);Hash th;th.add(ts.data(),ts.size());auto telemetryHash=th.end();
+   fault(17);telemetryRef="{\"schema\":\"stage6-writer-telemetry-v1\",\"name\":\""+prefix+"-telemetry.json\",\"sha256\":\""+telemetryHash+"\"}";
+   std::string manifest="{\"format\":\"durable-segments-v1\",\"accepted\":"+std::to_string(accepted)+",\"bytes\":"+std::to_string(bytes)+",\"telemetry\":"+telemetryRef+",\"segments\":"+metadata()+"}";
+   durableFile(prefix+"-manifest.json",manifest);for(auto&s:done)s->advance(MANIFESTED);Hash mh;mh.add(manifest.data(),manifest.size());durableFile(prefix+"-seal.json","{\"manifestSHA256\":\""+mh.end()+"\",\"segments\":"+std::to_string(done.size())+",\"accepted\":"+std::to_string(accepted)+"}");
+  }catch(...){fail(300+inject);}
+  {std::lock_guard<std::mutex>l(gate);sealed.clear();input.clear();pending=pendingBytes=queueBytes=inflightItems=0;}
+  std::ostringstream o;o<<std::setprecision(12)<<"{\"fault\":"<<failure<<",\"accepted\":"<<accepted<<",\"written\":"<<written<<",\"attempted\":"<<attempted<<",\"segmentBytes\":"<<limit<<",\"pendingLimit\":2,\"warningSegments\":1,\"peakPending\":"<<peakPending<<",\"peakPendingBytes\":"<<peakPendingBytes<<",\"peakQueueBytes\":"<<peakQueue<<",\"peakQueueItems\":"<<peakItems<<",\"remaining\":0,\"threadsExited\":"<<(writerExited&&finalizerExited?"true":"false")<<",\"progressedWhileFinalizing\":"<<progressedWhileFinalizing<<",\"serializeSeconds\":"<<serializeSeconds<<",\"producerLockWaitSeconds\":"<<lockSeconds<<",\"appendSeconds\":"<<appendSeconds<<",\"maxAppendSeconds\":"<<maxAppend<<",\"rolloverSeconds\":"<<rollSeconds<<",\"backpressureSeconds\":"<<backpressureSeconds<<",\"flushSeconds\":"<<flushSeconds<<",\"maxFlushSeconds\":"<<maxFlush<<",\"hashSeconds\":"<<hashSeconds<<",\"telemetry\":"<<(telemetryRef.empty()?"null":telemetryRef)<<",\"elapsedSeconds\":"<<seconds(born)<<",\"segments\":"<<metadata()<<"}";durableFile(prefix+"-result.json",o.str());return o.str();
+ }
+ unsigned fault()const{return failure.load();}
+ ~DurableSink(){if(writer.joinable()||finalizer.joinable()){fail(999);{std::lock_guard<std::mutex>l(gate);closing=true;}cv.notify_all();if(writer.joinable())writer.join();if(finalizer.joinable())finalizer.join();}}
+};

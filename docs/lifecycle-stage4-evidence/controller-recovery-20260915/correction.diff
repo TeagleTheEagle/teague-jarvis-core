@@ -1,0 +1,299 @@
+--- before/stage4_sessions.py
++++ current/stage4_sessions.py
+@@ -33,6 +33,7 @@
+     protocol: int
+     generation: int
+     expires: float
++    recovery: bool = False
+ 
+ 
+ @dataclass
+@@ -89,6 +90,19 @@
+         self.sessions[digest(token)] = record
+         return token
+ 
++    def recover_verified(self, client, protocol):
++        """Fresh authenticated lifecycle enrollment only; never ordinary admission."""
++        with self.lock:
++            self._expire()
++            require(self.state in ('SUSPENDED','DRAINING','CANCELLING','RECOVERY_REQUIRED'), 'RECOVERY_STATE')
++            require(client in self.enrollments and client not in self.disabled)
++            scopes = frozenset({'attach','lifecycle'})
++            require(scopes <= self.enrollments[client], 'SCOPE')
++            require(type(protocol) is int and protocol in (2,3), 'PROTOCOL')
++            require(len(self.sessions) < 128, 'SESSION_LIMIT')
++            return self._issue(Session(client,secrets.token_hex(16),scopes,protocol,
++                self.generations[client],self.clock()+self.session_seconds,recovery=True))
++
+     def _expire(self):
+         now = self.clock()
+         for key, record in list(self.sessions.items()):
+@@ -113,7 +127,7 @@
+         with self.lock:
+             s = self._session(token, epoch)
+             require(s.client == authenticated_client)
+-            require(self.state == 'RUNNING', 'ADMISSION_CLOSED')
++            require(self.state == 'RUNNING' and not s.recovery, 'ADMISSION_CLOSED')
+             del self.sessions[digest(token)]
+             return self._issue(Session(s.client, s.family, s.scopes, s.protocol,
+                                        s.generation, self.clock()+self.session_seconds))
+--- before/stage4_runtime.py
++++ current/stage4_runtime.py
+@@ -497,6 +497,10 @@
+         op, token, args = request['op'], request['token'], request['args']
+         require(type(args) is dict and client in self.enrollments, 'REQUEST')
+         o = self.context.owners
++        if op == 'recovery-attach':
++            authentication.fields(args, ());require(token is None)
++            issued=o.recover_verified(client,selected)
++            return {'result':'RECOVERY_ATTACHED','token':issued,'epoch':o.epoch,'identity':self.identity}
+         if op == 'attach':
+             authentication.fields(args, ('scopes',));require(token is None)
+             require(type(args['scopes']) is list and all(type(s) is str for s in args['scopes']), 'SCOPES')
+@@ -508,6 +512,8 @@
+         with o.lock:
+             s = o._session(token, o.epoch)
+             require(s.client == client and s.protocol == selected, 'CLIENT_BINDING')
++            if s.recovery:
++                require(op in ('lifecycle-status','shutdown','detach'), 'RECOVERY_SCOPE')
+         if op == 'renew':
+             authentication.fields(args, ())
+             issued=o.renew_verified(token,o.epoch,client)
+@@ -609,7 +615,7 @@
+         raise Denied('OPERATION_DENIED')
+ 
+ 
+-def serve(root, configuration, *, inspection_setup=None, repair_setup=None):
++def serve(root, configuration, *, inspection_setup=None, repair_setup=None, expiry_setup=None):
+     """Explicit isolated child entry; caller coordinates startup under supervisor.lock.
+ 
+     No stdin lifetime ownership and no restart loop. Credentials arrive only from
+@@ -639,6 +645,9 @@
+             # hook. No request callback or provider code runs during bootstrap.
+             context.repair_loop = RepairLoopHost(mode='STAGE4_TEST')
+         app=construct_app(context)
++        if configuration.get('controller_expiry_fixture') is True:
++            require(expiry_setup is not None, 'TRUSTED_EXPIRY_FIXTURE_REQUIRED')
++            expiry_setup(context)
+         if configuration.get('inspection_fixture') is True:
+             require(inspection_setup is not None, 'TRUSTED_INSPECTION_FIXTURE_REQUIRED')
+             inspection_setup(context)
+--- before/tests/lifecycle_stage4/fixtures.py
++++ current/tests/lifecycle_stage4/fixtures.py
+@@ -348,6 +348,30 @@
+     h.event(context.root,'repair_fixture_ready',project=project,task=task)
+ 
+ 
++def controller_action(call, tokens, identity, scopes, command):
++    """Explicit TEST operator actions only; never retry work or print a token."""
++    if command in ('REAUTH','RECOVER'):
++        recovery=command=='RECOVER'
++        result=call('controller','recovery-attach' if recovery else 'attach',{} if recovery else {'scopes':scopes})
++        if result.get('result')=='DENIED':return {'result':'DENIED'}
++        if (result.get('result')!=('RECOVERY_ATTACHED' if recovery else 'ATTACHED') or
++                result.get('identity')!=identity or result.get('epoch')!=identity['startup_epoch']):
++            raise ValueError('TEST controller reattachment identity mismatch')
++        tokens['controller']=result['token']
++        return {'result':'RECOVERY_AUTHENTICATED' if recovery else 'REAUTHENTICATED','identity':identity}
++    if command not in ('STATUS','SHUTDOWN'):raise ValueError('Unknown TEST operator action')
++    return call('controller','lifecycle-status' if command=='STATUS' else 'shutdown',{} if command=='STATUS' else {'operation':uuid.uuid4().hex})
++
++
++def bind_expiry_fixture(context):
++    """Fixed parent-only TEST clock steps. No protocol operation can set time."""
++    def clock():
++        # Immutable existence latches avoid racing a read against a partial write.
++        step=sum((context.root/name).exists() for name in ('TEST-expire-1','TEST-expire-2'))
++        return time.monotonic()+901*step
++    context.owners.clock=clock
++
++
+ def real_app_probe(final_case='normal'):
+     import secrets
+     repo=Path(__file__).resolve().parents[2];sys.path.insert(0,str(repo))
+@@ -366,6 +390,7 @@
+         config['inspection_fixture'] = True
+     if final_case.startswith('repair-'):
+         config['repair_fixture'] = True
++    if final_case=='controller-expiry':config['controller_expiry_fixture']=True
+     env={k.upper():v for k,v in os.environ.items() if k.upper() in ('SYSTEMROOT','WINDIR','TEMP','TMP')}
+     report=[];tokens={};ready=None;core=None;measurements={}
+     def record(case,ok):
+@@ -373,7 +398,7 @@
+         if not ok:raise AssertionError(case)
+     def call(client,op,args=None,token=None):
+         return b.client(name,ready['peer'],ready['identity'],key,client,bytes.fromhex(enrolled[client]['key']),
+-                        {'op':op,'token':None if op=='attach' else tokens.get(client) if token is None else token,'args':args or {}})
++                        {'op':op,'token':None if op in ('attach','recovery-attach') else tokens.get(client) if token is None else token,'args':args or {}})
+     try:
+         with h.Lock(root,'supervisor.lock'):
+             with h.Lock(root,'core.lock'):pass
+@@ -478,6 +503,32 @@
+             state=call('controller','emergency-stop',{'operation':uuid.uuid4().hex})
+             record('owner emergency suspends but does not shut down Core',state['state']=='SUSPENDED' and core.poll() is None)
+             record('suspended Core refuses new work',call('teague','request',{'text':'what time is it'}).get('result')=='DENIED')
++        if final_case=='controller-expiry':
++            prior=tokens['controller']
++            (root/'TEST-expire-1').touch()
++            record('expired controller STATUS denied',call('controller','lifecycle-status').get('result')=='DENIED')
++            result=controller_action(call,tokens,ready['identity'],enrolled['controller']['scopes'],'REAUTH')
++            record('explicit REAUTH pins same surviving Core',result['identity']==ready['identity'] and core.poll() is None)
++            record('old controller token remains denied',call('controller','lifecycle-status',token=prior).get('result')=='DENIED')
++            oldwork=call('controller','request',{'text':'what time is it'})['request_id']
++            until=time.monotonic()+3
++            while not call('controller','request-status',{'request_id':oldwork})['done']:
++                if time.monotonic()>until:raise TimeoutError('TEST controller work')
++                time.sleep(.01)
++            controller_before=tokens['controller']
++            call('controller','emergency-stop',{'operation':uuid.uuid4().hex})
++            (root/'TEST-expire-2').touch()
++            record('expired suspended controller shutdown denied',call('controller','shutdown',{'operation':uuid.uuid4().hex}).get('result')=='DENIED')
++            record('ordinary attach still closed while suspended',call('teague','attach',{'scopes':enrolled['teague']['scopes']}).get('result')=='DENIED')
++            record('ordinary client denied recovery enrollment',call('teague','recovery-attach').get('result')=='DENIED')
++            result=controller_action(call,tokens,ready['identity'],enrolled['controller']['scopes'],'RECOVER')
++            record('fresh lifecycle recovery pins same Core',result['identity']==ready['identity'] and core.poll() is None)
++            record('recovery STATUS sees suspension unchanged',controller_action(call,tokens,ready['identity'],enrolled['controller']['scopes'],'STATUS')['state']=='SUSPENDED')
++            record('expired predecessor still denied',call('controller','lifecycle-status',token=controller_before).get('result')=='DENIED')
++            for op,args in [('request',{'text':'what time is it'}),('request-status',{'request_id':oldwork}),('cancel',{'request_id':oldwork}),('shared',{}),('renew',{}),('emergency-stop',{'operation':uuid.uuid4().hex})]:
++                record('recovery scope rejects '+op,call('controller',op,args).get('result')=='DENIED')
++            record('recovery attach does not execute/replay repair',not list(root.glob('*-repair_attempt_started.json')))
++            # Existing final branch performs the separate authorized shutdown.
+         if final_case.startswith('repair-'):
+             import sqlite3, budgeted_repair
+             fixture=h.read(next(root.glob('*-repair_fixture_ready.json')))
+@@ -622,13 +673,13 @@
+             # Never discard the only controller credentials on an unresolved
+             # failure. Hold them in this TEST parent; no retry/forced termination.
+             # An explicit operator command can request another authorized shutdown.
+-            print('TEST_CONTROLLER_RETAINED: unresolved TEST Core; commands STATUS or SHUTDOWN',flush=True)
++            print('TEST_CONTROLLER_RETAINED: unresolved TEST Core; commands STATUS, REAUTH, RECOVER or SHUTDOWN',flush=True)
+             while core.poll() is None:
+                 line=sys.stdin.readline().strip()
+-                if line not in ('STATUS','SHUTDOWN'):
++                if line not in ('STATUS','SHUTDOWN','REAUTH','RECOVER'):
+                     time.sleep(1);continue
+                 try:
+-                    result=call('controller','lifecycle-status' if line=='STATUS' else 'shutdown',{} if line=='STATUS' else {'operation':uuid.uuid4().hex})
++                    result=controller_action(call,tokens,ready['identity'],enrolled['controller']['scopes'],line)
+                     print('TEST_OPERATOR_RESULT',json.dumps(result),flush=True)
+                 except Exception as error:print('TEST_OPERATOR_DENIED',type(error).__name__,flush=True)
+     if final_case=='failure-cleanup' and core.poll()==0 and any(r.get('detail')=='EXPECTED_FAILURE_BEFORE_LIFECYCLE' for r in report) and any(r['case']=='authenticated failure cleanup' and r['passed'] for r in report):
+@@ -802,9 +853,10 @@
+     elif '--real-app-repair-detach' in sys.argv:real_app_probe('repair-detach')
+     elif '--real-app-repair-emergency' in sys.argv:real_app_probe('repair-emergency')
+     elif '--real-app-repair-drain' in sys.argv:real_app_probe('repair-drain')
++    elif '--real-app-controller-expiry' in sys.argv:real_app_probe('controller-expiry')
+     elif '--electron-app-probe' in sys.argv:electron_app_probe()
+     elif '--app-worker' in sys.argv:
+         repo=Path(__file__).resolve().parents[2];sys.path.insert(0,str(repo))
+         import stage4_runtime
+-        stage4_runtime.serve(Path(sys.argv[2]),json.loads(sys.stdin.readline()),inspection_setup=bind_inspection_fixture,repair_setup=bind_repair_fixture)
++        stage4_runtime.serve(Path(sys.argv[2]),json.loads(sys.stdin.readline()),inspection_setup=bind_inspection_fixture,repair_setup=bind_repair_fixture,expiry_setup=bind_expiry_fixture)
+     else:run()
+--- before/tests/lifecycle_stage4/test_stage4.py
++++ current/tests/lifecycle_stage4/test_stage4.py
+@@ -497,6 +497,96 @@
+         'scope':'Actual InspectionJobs singleton/worker + TEST ownership/lifecycle; synthetic IO; injected deadline clock; no App/Core/provider/media',
+         'production_access':False},indent=2));print('EVIDENCE',dest)
+     raise SystemExit(not result.wasSuccessful())
++
++
++def controller_recovery_tests():
++    from types import SimpleNamespace
++    sys.path.insert(0,str(REPO));sys.path.insert(0,str(Path(__file__).parent))
++    from stage4_sessions import Ownership,Denied
++    from stage4_lifecycle import Lifecycle
++    from stage4_runtime import Authority, authentication
++    from fixtures import controller_action
++    records=[]
++    root=REPO/'tests/lifecycle_stage4/evidence'/('STAGE4_TEST-recovery-'+uuid.uuid4().hex);root.mkdir(parents=True)
++    class Journal:
++        def __init__(self):self.rows=[]
++        def write(self,*a,**k):self.rows.append((a,k))
++    def fixture():
++        now=[0.];enroll={'controller':Ownership.ORDINARY|Ownership.MANAGEMENT,'client':Ownership.ORDINARY,'emergency':Ownership.ORDINARY|{'emergency'}}
++        o=Ownership(mode='STAGE4_TEST',epoch='TEST-recovery',clock=lambda:now[0],enrollments=enroll);life=Lifecycle(o,Journal())
++        identity={'mode':'TEST','namespace':'TEST-STAGE4-recovery','startup_epoch':o.epoch,'core_instance_id':'no-Core-fixture'}
++        ctx=SimpleNamespace(owners=o,lifecycle=life,root=root,app=SimpleNamespace(devices=SimpleNamespace(register=lambda *a,**k:None,disconnect=lambda *a,**k:None)))
++        auth=Authority(ctx,identity,enroll);tokens={};calls=[]
++        def call(client,op,args=None,token=None):
++            calls.append(op)
++            return auth.operation(client,{'op':op,'args':args or {},'token':None if op in ('attach','recovery-attach') else token or tokens.get(client)},3)
++        tokens['controller']=call('controller','attach',{'scopes':sorted(enroll['controller'])})['token']
++        return now,o,life,identity,auth,tokens,calls,call,enroll
++    def check(name,ok):
++        records.append({'case':name,'passed':bool(ok)})
++        if not ok:raise AssertionError(name)
++    def denied(fn):
++        try:fn()
++        except (Denied,authentication.Denied):return True
++        return False
++    try:
++        for state in ('SUSPENDED','DRAINING','CANCELLING','RECOVERY_REQUIRED'):
++            now,o,life,ident,auth,tokens,calls,call,enroll=fixture();o.state=state;life.accepted_at=7
++            issued=call('controller','recovery-attach')['token'];s=o._session(issued,o.epoch)
++            check('restricted recovery in '+state,s.recovery and s.scopes=={'attach','lifecycle'} and o.state==state and life.accepted_at==7)
++            check('ordinary recovery denied '+state,denied(lambda:call('client','recovery-attach')))
++            check('ordinary attach remains denied '+state,denied(lambda:call('client','attach',{'scopes':sorted(Ownership.ORDINARY)})))
++        for state in ('RUNNING','FINALIZING'):
++            now,o,life,ident,auth,tokens,calls,call,enroll=fixture();o.state=state
++            check('recovery refused '+state,denied(lambda:call('controller','recovery-attach')))
++        now,o,life,ident,auth,tokens,calls,call,enroll=fixture();old=tokens['controller'];oldfamily=o._session(old,o.epoch).family
++        wid=o.admit(old,o.epoch,'repair');now[0]=901
++        check('expired controller denied',denied(lambda:call('controller','lifecycle-status')))
++        result=controller_action(call,tokens,ident,sorted(enroll['controller']),'REAUTH')
++        check('explicit REAUTH same identity new family',result['identity']==ident and o._session(tokens['controller'],o.epoch).family!=oldfamily)
++        check('old repair authority not inherited',denied(lambda:o.check_owner(tokens['controller'],o.epoch,wid)))
++        check('old repair cancelled before start',o.work[wid].cancel.is_set() and denied(lambda:o.begin(wid)))
++        o.complete(wid,'NEVER_STARTED')
++        call('controller','emergency-stop',{'operation':uuid.uuid4().hex});now[0]=1802
++        result=controller_action(call,tokens,ident,sorted(enroll['controller']),'RECOVER')
++        check('explicit RECOVER restricted',result['result']=='RECOVERY_AUTHENTICATED' and o._session(tokens['controller'],o.epoch).recovery)
++        check('recovery status allowed',controller_action(call,tokens,ident,[], 'STATUS')['state']=='SUSPENDED')
++        for op in ('request','request-text-only','repair','cancel','request-status','shared','renew','voice','voice-status','capture','deep-review','inspection-start','inspection-status','response-provider','last-response-provider','emergency-stop'):
++            check('recovery operation denied '+op,denied(lambda:call('controller',op)))
++        check('recovery separate known shutdown allowed',controller_action(call,tokens,ident,[],'SHUTDOWN')['state']=='DRAINING')
++        check('known work may finalize without replay',life.tick()['state']=='FINALIZING' and len(o.work)==1)
++        now,o,life,ident,auth,tokens,calls,call,enroll=fixture();old=tokens['controller'];w=o.admit(old,o.epoch,'repair');o.begin(w);o.complete(w,'UNKNOWN')
++        o.state='RECOVERY_REQUIRED';life.failure='SHUTDOWN_DEADLINE_OR_UNKNOWN_OUTCOME';life.accepted_at=5;now[0]=901
++        tokens['controller']=call('controller','recovery-attach')['token']
++        check('unknown outcome still blocks shutdown',denied(lambda:call('controller','shutdown',{'operation':uuid.uuid4().hex})) and o.state=='RECOVERY_REQUIRED' and life.accepted_at==5)
++        for state in ('DRAINING','CANCELLING'):
++            o.state=state;before=life.accepted_at
++            check('recovery does not restart deadline '+state,denied(lambda:call('controller','shutdown',{'operation':uuid.uuid4().hex})) and life.accepted_at==before)
++        o.state='SUSPENDED'
++        check('emergency-only enrollment cannot recover',denied(lambda:call('emergency','recovery-attach')))
++        check('recovery rejects supplied scopes',denied(lambda:call('controller','recovery-attach',{'scopes':['request']})))
++        check('recovery requires absent old token',denied(lambda:auth.operation('controller',{'op':'recovery-attach','token':old,'args':{}},3)))
++        check('wrong protocol rejected',denied(lambda:auth.operation('controller',{'op':'recovery-attach','token':None,'args':{}},1)))
++        check('fresh family cannot use old request',denied(lambda:o.check_owner(tokens['controller'],o.epoch,w)))
++        o.revoke_client('controller')
++        check('revoked enrollment cannot recover',denied(lambda:call('controller','recovery-attach')))
++        check('revocation invalidates recovery token',denied(lambda:call('controller','lifecycle-status')))
++        now,o,life,ident,auth,tokens,calls,call,enroll=fixture();o.state='SUSPENDED';tokens['controller']=call('controller','recovery-attach')['token'];now[0]=901
++        check('recovery expiry unchanged',denied(lambda:call('controller','lifecycle-status')))
++        o.state='RUNNING';fresh=call('controller','attach',{'scopes':sorted(enroll['controller'])})['token'];tokens['controller']=fresh
++        prior_calls=len(calls)
++        controller_action(call,tokens,ident,sorted(enroll['controller']),'REAUTH')
++        check('REAUTH performs only one attach not retry',calls[prior_calls:]==['attach'])
++        old=tokens['controller']
++        def fake(*a,**kw):return {'result':'ATTACHED','token':'0'*64,'identity':{**ident,'core_instance_id':'WRONG'},'epoch':ident['startup_epoch']}
++        try:controller_action(fake,tokens,ident,[],'REAUTH');bad=False
++        except ValueError:bad=True
++        check('identity mismatch never replaces token',bad and tokens['controller']==old)
++        check('denied reauth does not alter token',controller_action(lambda *a,**k:{'result':'DENIED'},tokens,ident,[],'REAUTH')=={'result':'DENIED'} and tokens['controller']==old)
++    finally:
++        dest=REPO/'docs/lifecycle-stage4-evidence'/('controller-recovery-'+uuid.uuid4().hex+'.json')
++        dest.write_text(json.dumps({'cases':records,'scope':'No Core/App/Store: actual TEST ownership/lifecycle/dispatcher; injected clock; post-authentication only'},indent=2));print('EVIDENCE',dest)
++    print('controller recovery checks',len(records),'PASS')
+ 
+ 
+ def repair_loop_audit():
+@@ -792,6 +882,7 @@
+ 
+ 
+ if __name__=='__main__':
++    if '--controller-recovery-tests' in sys.argv:controller_recovery_tests();raise SystemExit(0)
+     if '--repair-loop-audit' in sys.argv:repair_loop_audit();raise SystemExit(0)
+     if '--repair-tests' in sys.argv:repair_tests()
+     if '--inspection-tests' in sys.argv:inspection_tests()

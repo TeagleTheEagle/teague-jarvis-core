@@ -1,0 +1,8 @@
+{
+    "status":  "PASS",
+    "core_pid_before":  8956,
+    "core_pid_after":  8956,
+    "origin_unchanged":  true,
+    "core_answers":  true,
+    "processes":  8
+}

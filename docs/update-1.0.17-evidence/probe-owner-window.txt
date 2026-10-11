@@ -1,0 +1,20 @@
+Output of D:\JARVIS-update-1.0.17\probe\probe.cmd as the owner ran it (jonny, File Explorer), pasted by the owner into the chat, 2026-10-07:
+
+user: jonny  computer: THEGRIZZLYBEAR
+elevated: False
+powershell: 5.1.26100.9549  64-bit: True  exe: C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe
+current folder: D:\JARVIS-update-1.0.17\probe
+LOCALAPPDATA (environment): C:\Users\jonny\AppData\Local
+LocalApplicationData (Windows): C:\Users\jonny\AppData\Local
+folder tested: C:\Users\jonny\AppData\Local\JARVIS-package
+Test-Path -LiteralPath: False
+Test-Path -PathType Container: False
+Directory.Exists: False
+Get-Item error: Cannot find path 'C:\Users\jonny\AppData\Local\JARVIS-package' because it does not exist.
+JARVIS* entries in C:\Users\jonny\AppData\Local:
+  JARVIS  created 2026-10-04 19:27:21  Directory
+renamed-aside folder present: False
+install folder current.json present: True
+time: 2026-10-07T08:09:38Z
+
+The same probe run from the Claude Code session (same account, not elevated, sandbox on or off) at 08:09:19Z: Test-Path True, Directory.Exists True, the entries 'JARVIS' and 'JARVIS-package created 2026-10-02 00:01:11'.

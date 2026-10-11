@@ -1,0 +1,10 @@
+from pathlib import Path
+p=Path(__file__).resolve().parent/'candidate/desktop/main.cjs';s=p.read_text(encoding='utf-8')
+s=s.replace("let win,tray,backend,quitting=false,origin='',capture,companion,lastCompanionState", "let companionWanted=false;\nlet win,tray,backend,quitting=false,origin='',capture,companion,lastCompanionState")
+s=s.replace(' function showCompanion(){',' function showCompanion(){\n  companionWanted=true;')
+s=s.replace("companion.on('closed',()=>{companion=null;});","companion.on('closed',()=>{companion=null;companionWanted=false;});")
+s=s.replace("if(companion&&!companion.isDestroyed()){companion.showInactive();if(lastCompanionState)","if(companionWanted&&companion&&!companion.isDestroyed()){companion.showInactive();if(lastCompanionState)")
+s=s.replace("captureSender(event);if(companion&&!companion.isDestroyed())companion.hide();", "captureSender(event);companionWanted=false;if(companion&&!companion.isDestroyed())companion.hide();")
+s=s.replace("else if(action==='hide')companion.hide();", "else if(action==='hide'){companionWanted=false;companion.hide();}")
+s=s.replace('if(restore&&!quitting&&companion&&!companion.isDestroyed())', 'if(restore&&companionWanted&&!quitting&&companion&&!companion.isDestroyed())')
+p.write_text(s,encoding='utf-8')

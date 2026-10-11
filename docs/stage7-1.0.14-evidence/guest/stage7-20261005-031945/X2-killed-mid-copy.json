@@ -1,0 +1,22 @@
+{
+    "status":  "PASS",
+    "installer_pid":  8808,
+    "installer_killed":  true,
+    "seconds_until_kill":  78.9,
+    "kill_threshold_files":  3194,
+    "files_copied_when_killed":  3344,
+    "of_total":  10645,
+    "incoming_folder_left":  true,
+    "new_release_folder_exists":  false,
+    "current":  "1.0.11-60d406fb6398",
+    "verify":  "verified",
+    "verified_release":  "1.0.11-60d406fb6398",
+    "previous_build_processes":  8,
+    "processes_from_other_releases":  [
+
+                                      ],
+    "core_answers":  true,
+    "installed_release":  "1.0.11-60d406fb6398",
+    "gate17_memory":  true,
+    "gate19_memory":  true
+}

@@ -1,0 +1,34 @@
+﻿{
+  "release_id": "1.0.14-e03872680e1d",
+  "commit": "e03872680e1d7a78d200d293fcaf7d2a2fd0d185",
+  "package": "D:\\JARVIS-release-work\\release\\JARVIS-1.0.14-e03872680e1d",
+  "release_verified_before_and_after_copy": true,
+  "test_files_added_to_copy": 73,
+  "runtime": {
+    "python": "release\\python\\python.exe",
+    "node": "bundled electron (ELECTRON_RUN_AS_NODE)",
+    "system_node_used": false,
+    "dev_venv_used": false
+  },
+  "passed": true
+}
+PASS  python unittest                      272.6s  OK (skipped=1)
+PASS  desktop node --test                   95.6s  ℹ duration_ms 88825.3011
+PASS  intelligence node --test               0.1s  ℹ duration_ms 81.7138
+PASS  test_barge_in.cjs                      0.1s  PASS: sustained interruption, pre-roll, silence/noise rejection, disabled playback, ended conversation and stop.
+PASS  test_conversation_voice.cjs            0.1s  Conversation mode: persistent session, single nudge, pause tolerance, resume and exact end phrase passed.
+PASS  test_local_voice_main.cjs              0.1s  Main local voice: continuous audio, playback suppression, PCM and stale-wake checks passed.
+PASS  test_navigation.cjs                    0.1s  Navigation commands and non-navigation exclusions passed.
+PASS  test_proactive_voice.cjs               0.1s  PASS: invited conversation, muted microphone, end phrase latch and explicit restart.
+PASS  test_prompt_speech.cjs                 0.1s  PASS: prompt acknowledgement, explicit read-aloud and clarification handling.
+PASS  test_screen_intent.cjs                 0.1s  PASS: screen session voice intent and unrelated conversation.
+PASS  test_screen_vision.cjs                 1.3s  PASS: unified start, observations, fresh question capture, deduplication, stop, limit and cancelled picker.
+PASS  test_settings_version.cjs              0.1s  PASS: Settings > About shows the installed release, the development revision, or says it is not in this view.
+PASS  test_timer_fast_path.cjs               0.1s  PASS: timer fast path, qualified timing, empty/expired/multiple timers, read failure, cancellation, configured cloud voice.
+PASS  test_voice.cjs                         0.1s  Voice tests passed: wake gate, interruption, silence, timeout, mute, WAV format.
+PASS  test_voice_cancellation.cjs            0.1s  PASS: superseded speech aborts; cancellation is silent; old cleanup preserves current request.
+PASS  test_voice_diagnostics.cjs             0.1s  PASS: live RMS during playback/processing, no monitoring requests, stopped capture and bounded metadata.
+PASS  test_voice_lab.cjs                     0.1s  Voice lab: ordered audio, cancellation and overload checks passed.
+PASS  test_voice_recovery.cjs                0.1s  PASS: selected-input recovery, standby, mute cancellation and bounded retries.
+PASS  test_wake_race.cjs                     0.1s  PASS: stale pause/reset failures ignored; current failures reported; new session preserved.
+PASS  test_wake_startup.cjs                  0.1s  PASS: preparation precedes capture; mute during preparation prevents capture.

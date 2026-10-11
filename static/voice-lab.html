@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>JARVIS · Local voice lab</title><link rel="stylesheet" href="/voice-lab.css"><script defer src="/voice-lab.js"></script></head>
+<body><main><a href="/">← Back to JARVIS</a><p class="eyebrow">JARVIS / LOCAL VOICE PROTOTYPE</p><h1>Let’s hear you clearly.</h1>
+<p>Mute the microphone in your main JARVIS tab first. This lab displays transcripts only. Audio stays on this computer, is held briefly in memory, and is discarded after processing. No cloud fallback or tool execution.</p>
+<section><h2>Microphone</h2><label for="device">Choose your input</label><select id="device"><option value="">System default — enable microphone to see device names</option></select><p id="deviceInfo">Select your SteelSeries microphone or Sonar microphone input, not a gaming or streaming mix.</p>
+<div class="buttons"><button id="start">Enable microphone</button><button id="mute" disabled>Mute</button><button id="ptt" disabled>Hold to talk</button></div>
+<p>Hold the button (or focus it and hold Space) to bypass the wake word. Release to transcribe. Recordings are limited to 30 seconds.</p>
+<div id="indicator" data-state="muted"><span class="orb" aria-hidden="true"></span><strong id="state" role="status">Muted</strong></div>
+<label for="level">Input level</label><meter id="level" min="0" max="1" value="0"></meter><p id="detail" role="status">Microphone has not been opened.</p><p id="engine">Checking local engine…</p></section>
+<section><h2>Wake-word check</h2><p>Say <strong>“Hey Jarvis”</strong>, wait for the bright listening pulse, then speak. This model is trained for “Hey Jarvis”; “Jarvis” alone is not a reliable baseline.</p><label for="sensitivity">Sensitivity</label><select id="sensitivity"><option value="low">Low — fewer false triggers</option><option value="normal" selected>Normal</option><option value="high">High — more sensitive</option></select><p id="metrics">No wake detections yet.</p>
+<div class="buttons"><button id="miss">Mark missed activation</button><button id="false">Mark false activation</button><button id="reset">Reset measurements</button></div><p id="counts">0 detections · 0 marked misses · 0 marked false triggers</p></section>
+<section><h2>Recognised text</h2><p id="transcript" aria-live="polite">Your transcript will appear here. It will not be sent to JARVIS.</p><button id="clear">Clear transcript</button></section>
+<section><h2>Playback isolation check</h2><p>Optionally choose a local audio file to play. Detection and capture pause while it plays, then require you to enable the microphone again. The file is not uploaded. Local speech synthesis comes in a later phase.</p><input id="sample" type="file" accept="audio/*" aria-label="Choose local audio sample"><audio id="playback" controls></audio></section>
+</main></body></html>

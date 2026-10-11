@@ -1,0 +1,15 @@
+{
+    "status":  "PASS",
+    "entry":  {
+                  "present":  true,
+                  "key":  "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{DC2C8033-1BBF-5E1C-99A0-BE0E70DC9937}_is1",
+                  "name":  "JARVIS",
+                  "version":  "1.0.17",
+                  "publisher":  "Teague Industries",
+                  "uninstall":  "\"C:\\Users\\jarvis-s6-guest\\AppData\\Local\\JARVIS-package\\unins000.exe\"",
+                  "location":  "C:\\Users\\jarvis-s6-guest\\AppData\\Local\\JARVIS-package\\"
+              },
+    "expected_name":  "JARVIS",
+    "expected_version":  "1.0.17",
+    "expected_uninstaller":  "C:\\Users\\jarvis-s6-guest\\AppData\\Local\\JARVIS-package\\unins000.exe"
+}

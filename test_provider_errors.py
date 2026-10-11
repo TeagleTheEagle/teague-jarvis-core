@@ -1,0 +1,203 @@
+"""Provider refusals in our own words (fix list item 5): a billing, credit or quota limit is told
+apart from a temporary rate limit, per provider, from documented error codes only. Offline: every
+request is mocked and no key is real."""
+import http.client
+import io
+import json
+import os
+import re
+import threading
+import unittest
+import urllib.error
+from pathlib import Path
+from unittest.mock import patch
+
+import providers
+
+OPENAI = 'https://api.openai.com/v1/chat/completions'
+QWEN = 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions'
+UPSTREAM = 'UPSTREAM-DETAIL-NOT-SHOWN'
+RETRY_TRIGGERS = ('connection failed', 'timed out', 'stream failed')  # providers.py and server.py retry on these
+
+
+def error_body(code=None, kind=None):
+    error = {'message': UPSTREAM}
+    if code is not None:
+        error['code'] = code
+    if kind is not None:
+        error['type'] = kind
+    return json.dumps({'error': error}).encode()
+
+
+def refusal(url, status, body=b'{}', headers=None):
+    return urllib.error.HTTPError(url, status, 'refused', headers or {}, io.BytesIO(body))
+
+
+class ProviderErrorTests(unittest.TestCase):
+    def setUp(self):
+        self.messages = []
+
+    def request_error(self, url, status, body=b'{}', headers=None):
+        with patch('urllib.request.urlopen', side_effect=refusal(url, status, body, headers)) as call, \
+                self.assertRaises(providers.ProviderError) as caught:
+            providers.request(url, {'model': 'm'}, {'Authorization': 'Bearer test-only'})
+        self.assertEqual(call.call_count, 1)
+        self.messages.append(str(caught.exception))
+        self.assertNotIn(UPSTREAM, str(caught.exception))
+        self.assertNotIn('test-only', str(caught.exception))
+        return caught.exception
+
+    def chat_error(self, env, error):
+        with patch.dict(os.environ, env, clear=True), patch('urllib.request.urlopen', side_effect=error) as call, \
+                self.assertRaises(providers.ProviderError) as caught:
+            providers.chat([{'role': 'user', 'content': 'hi'}], [], lambda *args: None, threading.Event())
+        self.assertEqual(call.call_count, 1)  # one request, no automatic retry
+        self.messages.append(str(caught.exception))
+        self.assertNotIn(UPSTREAM, str(caught.exception))
+        return caught.exception
+
+    def test_openai_no_credits_says_so_and_sets_no_pause(self):
+        env = {'JARVIS_PROVIDER': 'openai', 'OPENAI_API_KEY': 'test-only', 'OPENAI_MODEL': 'gpt-4o-mini'}
+        exc = self.chat_error(env, refusal(OPENAI, 429, error_body('insufficient_quota', 'insufficient_quota'), {'retry-after': '20'}))
+        for text in ('OpenAI chat:', 'no API credits', 'waiting will not help', 'HTTP 429, insufficient_quota', 'No keys were rotated'):
+            self.assertIn(text, str(exc))
+        for text in ('Groq', 'Rate limit reached', 'test-only'):
+            self.assertNotIn(text, str(exc))
+        self.assertEqual((exc.limit, exc.service, exc.retry_after), ('billing', 'OpenAI', 0))
+
+    def test_openai_responses_path_no_credits(self):
+        # The owner's OpenAI model may use the Responses API (gpt-6-*); same wording there.
+        env = {'JARVIS_PROVIDER': 'openai', 'OPENAI_API_KEY': 'test-only', 'OPENAI_MODEL': 'gpt-6-test'}
+        for code in ('insufficient_quota', 'credit_balance_exhausted'):
+            with self.subTest(code=code):
+                exc = self.chat_error(env, refusal('https://api.openai.com/v1/responses', 429, error_body(code)))
+                self.assertIn('OpenAI chat:', str(exc))
+                self.assertIn('no API credits', str(exc))
+                self.assertEqual((exc.limit, exc.retry_after), ('billing', 0))
+
+    def test_openai_documented_billing_codes(self):
+        for code, words in (('credit_balance_exhausted', 'no API credits'), ('organization_spend_limit_exceeded', 'spend limit'),
+                            ('project_spend_limit_exceeded', 'spend limit'), ('organization_usage_limit_exceeded', 'usage limit')):
+            with self.subTest(code=code):
+                exc = self.request_error(OPENAI, 429, error_body(code))
+                self.assertIn(words, str(exc))
+                self.assertIn(f'(HTTP 429, {code})', str(exc))
+                self.assertEqual((exc.limit, exc.retry_after), ('billing', 0))
+        exc = self.request_error(OPENAI, 429, error_body('some_new_code', 'insufficient_quota'))  # only the type is known
+        self.assertIn('billing or quota limit', str(exc))
+        self.assertIn('(HTTP 429, type insufficient_quota)', str(exc))
+        self.assertNotIn('some_new_code', str(exc))
+
+    def test_openai_rate_limit_is_temporary_and_keeps_the_30_second_pause(self):
+        env = {'JARVIS_PROVIDER': 'openai', 'OPENAI_API_KEY': 'test-only', 'OPENAI_MODEL': 'gpt-4o-mini'}
+        exc = self.chat_error(env, refusal(OPENAI, 429, error_body('rate_limit_exceeded', 'requests')))
+        self.assertIn('Rate limit reached (temporary)', str(exc))
+        self.assertEqual((exc.limit, exc.retry_after), ('rate', 30))
+        exc = self.chat_error(env, refusal(OPENAI, 429, b'not json'))  # no code: say both, never claim credits
+        self.assertIn('Rate limit or usage quota reached', str(exc))
+        self.assertIn('check the OpenAI plan, usage limits and billing', str(exc))
+        self.assertEqual((exc.limit, exc.retry_after), ('rate', 30))
+
+    def test_qwen_insufficient_quota_is_a_short_throttle_not_credit(self):
+        exc = self.request_error(QWEN, 429, error_body('insufficient_quota'))
+        self.assertIn('Qwen chat: Rate limit reached (temporary)', str(exc))
+        for text in ('credits', 'billing limit'):
+            self.assertNotIn(text, str(exc))
+        self.assertEqual(exc.limit, 'rate')
+        for code in ('Throttling', 'Throttling.RateQuota', 'limit_requests', 'Throttling.AllocationQuota'):
+            with self.subTest(code=code):
+                self.assertEqual(self.request_error(QWEN, 429, error_body(code)).limit, 'rate')
+
+    def test_qwen_billing_codes(self):
+        for code in ('PrepaidBillOverdue', 'PostpaidBillOverdue', 'BudgetLimitExceeded', 'CommodityNotPurchased'):
+            with self.subTest(code=code):
+                exc = self.request_error(QWEN, 429, error_body(code))
+                self.assertIn('Alibaba Cloud', str(exc))
+                self.assertIn('waiting will not help', str(exc))
+                self.assertIn(f'(HTTP 429, {code})', str(exc))
+                self.assertEqual((exc.limit, exc.retry_after), ('billing', 0))
+        exc = self.request_error(QWEN, 400, error_body('Arrearage'))  # unchanged wording
+        self.assertIn('account balance is overdue or empty', str(exc))
+        self.assertEqual(exc.limit, 'billing')
+
+    def test_qwen_model_not_purchased_names_both_causes(self):
+        # The owner's account, 2026-10-05: HTTP 403 AccessDenied.Unpurchased, caused by an unpaid bill.
+        exc = self.request_error(QWEN, 403, error_body('AccessDenied.Unpurchased'))
+        for text in ('Qwen chat: Alibaba Cloud refused access to this model', 'not activated', 'unpaid bill', 'Waiting will not help',
+                     '(HTTP 403, AccessDenied.Unpurchased)'):
+            self.assertIn(text, str(exc))
+        self.assertEqual((exc.limit, exc.retry_after, exc.status, exc.service), ('billing', 0, 403, 'Qwen'))
+        other = self.request_error(QWEN, 403, error_body('AccessDenied'))  # any other refusal keeps the general wording
+        self.assertIn('Access denied', str(other))
+        self.assertIsNone(other.limit)
+        self.assertIn('(HTTP 403)', str(self.request_error(OPENAI, 403, error_body('AccessDenied.Unpurchased'))))  # a Qwen code only
+
+    def test_a_request_that_is_too_large_says_waiting_will_not_help(self):
+        # 2026-10-05: one JARVIS question was larger than a free plan's limit per minute (HTTP 413).
+        for url, name in ((OPENAI, 'OpenAI'), (QWEN, 'Qwen')):
+            exc = self.request_error(url, 413)
+            for text in (name + ' chat: The request is larger than', 'Waiting will not help', '(HTTP 413)'):
+                self.assertIn(text, str(exc))
+            self.assertEqual((exc.limit, exc.retry_after, exc.status), (None, 0, 413))
+            self.assertTrue(providers.backup_worthy(exc))  # the other provider may accept it
+
+    def test_402_names_the_fish_dashboard_only_for_fish(self):
+        exc = self.request_error(OPENAI, 402)
+        self.assertIn('Payment required', str(exc))
+        self.assertNotIn('Fish', str(exc))
+        self.assertEqual(exc.limit, 'billing')
+        exc = self.request_error('https://api.fish.audio/v1/tts', 402)
+        self.assertIn('Fish Audio voice synthesis:', str(exc))
+        self.assertIn('Fish developer dashboard', str(exc))
+
+    def test_broken_bodies_only_lose_the_code(self):
+        oversized = json.dumps({'error': {'code': 'insufficient_quota', 'padding': 'x' * 5000}}).encode()
+        bodies = (b'[]', b'null', b'123', b'"x"', b'{"error":null}', b'{"error":[]}', b'{"error":{"code":429}}',
+                  b'\xff\xfe\x00', b'[' * 4096, oversized, b'{"error":{"code":"insufficient_quota\\n"}}',
+                  b'{"error":{"code":"<script>alert(1)</script>"}}')
+        for body in bodies:
+            with self.subTest(body=body[:40]):
+                for url, status in ((OPENAI, 429), (QWEN, 429), (QWEN, 400)):
+                    exc = self.request_error(url, status, body)
+                    self.assertNotIn('<script>', str(exc))
+                    self.assertNotEqual(exc.limit, 'billing')  # no documented code was readable
+
+    def test_a_cut_off_body_still_gives_our_message(self):
+        class CutOff(io.BytesIO):
+            def read(self, *args):
+                raise http.client.IncompleteRead(b'{"error":')
+        error = urllib.error.HTTPError(OPENAI, 429, 'refused', {}, CutOff())
+        with patch('urllib.request.urlopen', side_effect=error), self.assertRaises(providers.ProviderError) as caught:
+            providers.request(OPENAI, {'model': 'm'})
+        self.assertIn('(HTTP 429)', str(caught.exception))
+
+    def test_tool_services_never_pause_voice(self):
+        # 'search for x' calls SerpApi directly; its 429 (even with a long Retry-After) must not
+        # pause voice commands the way an AI provider's rate limit does.
+        exc = self.request_error('https://serpapi.com/search.json?q=x', 429, b'{}', {'retry-after': '3600'})
+        self.assertEqual((exc.service, exc.retry_after), ('SerpApi', 0))
+        exc = self.request_error('https://html.duckduckgo.com/html/?q=x', 429)
+        self.assertIn('Rate limit reached. Wait before retrying', str(exc))
+        self.assertNotIn('that service', str(exc))
+
+    def test_messages_never_trigger_automatic_retries_and_keep_the_wearable_classification(self):
+        for name in ('test_openai_no_credits_says_so_and_sets_no_pause', 'test_openai_documented_billing_codes',
+                     'test_openai_rate_limit_is_temporary_and_keeps_the_30_second_pause', 'test_qwen_billing_codes',
+                     'test_qwen_insufficient_quota_is_a_short_throttle_not_credit', 'test_402_names_the_fish_dashboard_only_for_fish'):
+            getattr(self, name)()
+        for message in self.messages:
+            with self.subTest(message=message[:70]):
+                self.assertFalse(any(t in message.lower() for t in RETRY_TRIGGERS))
+                if '429' in message:  # two of the patterns wearables/real_core.py classifies with
+                    self.assertEqual(re.search(r'HTTP\s+(\d{3})', message).group(1), '429')
+                    self.assertRegex(message, re.compile(r'quota|rate limit|credits', re.I))
+
+    def test_interface_names_the_provider_not_always_groq(self):
+        app = (Path(__file__).resolve().parent / 'static' / 'app.js').read_text(encoding='utf-8')
+        self.assertNotIn('Groq cooldown', app)
+        self.assertNotIn('Groq is cooling down', app)
+        self.assertIn('event.data.provider', app)
+
+
+if __name__ == '__main__':
+    unittest.main()

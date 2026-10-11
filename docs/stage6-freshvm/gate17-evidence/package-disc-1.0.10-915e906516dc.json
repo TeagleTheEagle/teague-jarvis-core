@@ -1,0 +1,22 @@
+{
+    "schema":  "stage6-gate17-package-disc-v1",
+    "utc":  "2026-10-04T03:45:07.0078464Z",
+    "performed_by":  "THEGRIZZLYBEAR\\jonny",
+    "role":  "Previous",
+    "release_id":  "1.0.10-915e906516dc",
+    "commit":  "915e906516dc31292bbc302e95b166f751e9d6d3",
+    "zip":  "JARVIS-1.0.10-915e906516dc.zip",
+    "zip_bytes":  525619975,
+    "zip_sha256":  "a945b38a3aff733d3228d617812c8ab7f85f0f8b09c66b2aaed5212c2ec771d4",
+    "guest_files":  [
+
+                    ],
+    "iso":  "D:\\JARVIS-release-work\\stage6-media\\JARVIS-PACKAGE-1.0.10-915e906516dc.iso",
+    "iso_sha256":  "d3830e3e5334530d39f6d41a4b11ee5b4e0c256de3be1cc2abcd4d24d786873d",
+    "iso_bytes":  526778368,
+    "payload_files":  3,
+    "payload_manifest_sha256":  "c30d477ef2014dc3573b75ab0730d6af3dc83c89610505ee478426d8ece331a4",
+    "readback":  "every payload file read back from the mounted ISO with its recorded SHA-256",
+    "copy":  "D:\\JARVIS-S6-FRESHVM\\media\\JARVIS-PACKAGE-1.0.10-915e906516dc.iso",
+    "copy_sha256":  "d3830e3e5334530d39f6d41a4b11ee5b4e0c256de3be1cc2abcd4d24d786873d"
+}

@@ -1,0 +1,31 @@
+JARVIS ready at http://127.0.0.1:58075
+JARVIS ready at http://127.0.0.1:62863
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 51669)
+Traceback (most recent call last):
+  File "socketserver.py", line 697, in process_request_thread
+  File "socketserver.py", line 362, in finish_request
+  File "socketserver.py", line 766, in __init__
+  File "http\server.py", line 438, in handle
+  File "http\server.py", line 404, in handle_one_request
+  File "socket.py", line 720, in readinto
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 51671)
+Traceback (most recent call last):
+  File "socketserver.py", line 697, in process_request_thread
+  File "socketserver.py", line 362, in finish_request
+  File "socketserver.py", line 766, in __init__
+  File "http\server.py", line 438, in handle
+  File "http\server.py", line 404, in handle_one_request
+  File "socket.py", line 720, in readinto
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+----------------------------------------
+JARVIS ready at http://127.0.0.1:62923
+JARVIS ready at http://127.0.0.1:52696
+JARVIS ready at http://127.0.0.1:50228
+JARVIS ready at http://127.0.0.1:63812
+JARVIS ready at http://127.0.0.1:49586
+JARVIS ready at http://127.0.0.1:59761
+JARVIS ready at http://127.0.0.1:59745

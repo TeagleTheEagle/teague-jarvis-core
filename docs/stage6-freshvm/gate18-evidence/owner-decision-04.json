@@ -1,0 +1,38 @@
+{
+    "schema":  "stage6-owner-decision-v1",
+    "id":  "gate18-owner-decision-04",
+    "recorded_utc":  "2026-10-04T07:42:51Z",
+    "incident":  "gate18-incident-04 (incident-04-k4-hang-read-only-disc.json)",
+    "question":  "Rerun 2 of Gate 18 in the same VM session: the owner closed the stuck window; copy the disc files to a writable folder (xcopy E:\\ C:\\g18\\) and run the unchanged Invoke-Gate18.ps1 from there with -RestoreHome C:\\g18home; stuck run folder moved aside unchanged",
+    "owner_answer_literal":  "approved",
+    "owner_messages_before":  "closed the window what now (not taken as the decision; Claude asked again)",
+    "source":  "direct human message in the Claude Code chat, 2026-10-04 (local)",
+    "moved":  {
+                  "from":  "D:\\JARVIS-S6-FRESHVM\\evidence\\guest-egress-01\\gate18-20261004-072308",
+                  "to":  "D:\\JARVIS-S6-FRESHVM\\evidence\\guest-egress-01\\incident-04-run2\\gate18-20261004-072308",
+                  "files":  [
+                                {
+                                    "name":  "K0-not-elevated.json",
+                                    "bytes":  113,
+                                    "sha256":  "5dc70e9d50db91c514d5c11bbe8dfa2c48f82d3675277ed439678a67baf3ac0b"
+                                },
+                                {
+                                    "name":  "K1-backup-identity.json",
+                                    "bytes":  453,
+                                    "sha256":  "782366c7177bfc8575c42b236f0b59df0313e705454d7826bce1047a9c805fac"
+                                },
+                                {
+                                    "name":  "K2-starting-point.json",
+                                    "bytes":  797,
+                                    "sha256":  "418055be280d271c9ba7d20db7e8a532b6be8f124d8d3c44eac8e2ceee938895"
+                                },
+                                {
+                                    "name":  "K3-restore-target.json",
+                                    "bytes":  446,
+                                    "sha256":  "11f8d2032419db9834b3d5ce0a2c36088e5382506c7fa5b51a7b38f301cd1a84"
+                                }
+                            ],
+                  "hashes_equal_after_move":  true
+              },
+    "recorded_by":  "Claude Code (Claude Fable 5.1)"
+}

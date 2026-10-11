@@ -1,0 +1,8 @@
+0 starting point                   {"current": "1.0.3-f3f8e4b2c30e", "memory_kept": true}
+  JARVIS 1.0.3 running             {"processes_old": 8, "core_answers": true}
+1 installer killed mid-copy        {"files_copied_when_killed": 3502, "of_total": 10645, "current": "1.0.3-f3f8e4b2c30e"}
+  JARVIS unharmed                  {"processes_old": 8, "core_answers": true, "memory_kept": true, "new_release_folder_exists": false}
+  verify current release           {"result": "verified", "release": "1.0.3-f3f8e4b2c30e", "reason": null}
+2 rerun installer                  {"result": "installed", "release": "1.0.4-5eb1df88bf4a", "previous": "1.0.3-f3f8e4b2c30e", "leftover_incoming": false, "stale_old_processes": 0}
+  launch 1.0.4                     {"processes_new": 8, "core_answers": true, "memory_kept": true}
+  verify 1.0.4 after use           {"result": "verified", "release": "1.0.4-5eb1df88bf4a", "reason": null}

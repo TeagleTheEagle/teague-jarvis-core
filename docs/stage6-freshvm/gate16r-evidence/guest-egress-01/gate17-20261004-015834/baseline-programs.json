@@ -1,0 +1,32 @@
+[
+    {
+        "DisplayName":  "Copilot",
+        "DisplayVersion":  "154.0.4258.53",
+        "Publisher":  "Microsoft Corporation"
+    },
+    {
+        "DisplayName":  "Microsoft Edge",
+        "DisplayVersion":  "154.0.4258.53",
+        "Publisher":  "Microsoft Corporation"
+    },
+    {
+        "DisplayName":  "Microsoft Edge WebView2 Runtime",
+        "DisplayVersion":  "154.0.4258.53",
+        "Publisher":  "Microsoft Corporation"
+    },
+    {
+        "DisplayName":  "Microsoft OneDrive",
+        "DisplayVersion":  "26.168.0830.0006",
+        "Publisher":  "Microsoft Corporation"
+    },
+    {
+        "DisplayName":  "Microsoft Windows Application Compatibility Fix Database",
+        "DisplayVersion":  null,
+        "Publisher":  null
+    },
+    {
+        "DisplayName":  "Oracle VirtualBox Guest Additions 7.2.18",
+        "DisplayVersion":  "7.2.18.175117",
+        "Publisher":  "Oracle and/or its affiliates"
+    }
+]

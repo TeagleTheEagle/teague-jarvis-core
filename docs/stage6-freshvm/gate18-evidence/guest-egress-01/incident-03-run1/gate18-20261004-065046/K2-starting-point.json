@@ -1,0 +1,9 @@
+{
+    "status":  "FAIL",
+    "first_install_verify":  "verified",
+    "first_install_release":  "1.0.11-60d406fb6398",
+    "first_install_processes":  8,
+    "restore_target_exists":  false,
+    "extracted_package":  true,
+    "reason":  "the first install is not verified and stopped, the restore target already exists, or the extracted package is missing"
+}

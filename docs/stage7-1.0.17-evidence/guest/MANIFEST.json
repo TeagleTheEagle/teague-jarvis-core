@@ -1,0 +1,233 @@
+{
+  "schema": "stage6-evidence-manifest-v1",
+  "generated_utc": "2026-10-07T07:07:23Z",
+  "root": "D:\\JARVIS-S6-FRESHVM\\evidence\\guest-egress-01",
+  "folders": [
+    "stage7-1.0.17-0d38218c4e1d"
+  ],
+  "not_listed": "this manifest itself; the sealed P0 folder is never read",
+  "files": 44,
+  "bytes": 15594657,
+  "entries": [
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-051908/E0-not-elevated.json",
+      "bytes": 388,
+      "sha256": "dc35ffb7e929d448c9c69ea53944e4cf6b17cecd60db39a3a85a77f419b87d14"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-051908/I1-package.json",
+      "bytes": 985,
+      "sha256": "dc958c7ceeb2edd255b82e7049a64680964386009ef7423a48f2b7744aaabea8"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-051908/I2-setup-install.json",
+      "bytes": 1521,
+      "sha256": "b1355a2d61f5e4e99e9bbee434df597b7eb5c003bfb8268fbbc472fbbd9c467b"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-051908/I3-installed-apps.json",
+      "bytes": 752,
+      "sha256": "46ff5e75aa29840a2af9a6cd4c55df0fd86516a57b6ada4e0b067c3e52071fd3"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-051908/I4-verify.json",
+      "bytes": 628,
+      "sha256": "1df7352f69b2c54235c6f0c0206fa6e35bcf66e949fd15f60baec290fff0a058"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-051908/I5-launch.json",
+      "bytes": 432,
+      "sha256": "eb1f42f429f09f66a2f0d09612a85f4300f3063dad1f536d0d6ed74a6448820e"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-051908/I6-duplicate-core.json",
+      "bytes": 170,
+      "sha256": "999c1eb011ede43873c99e54bc0408d4a886c7d6b124c0d6a9d20c94483456a5"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-051908/I7-local-stt.json",
+      "bytes": 541,
+      "sha256": "7d4f2cdf26525a302b5c63ccd2fdaef067762789144ff9b88afc5c7e0f70f223"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-051908/I8-restart.json",
+      "bytes": 353,
+      "sha256": "cb90df2c0e40cc5ff2d84404a9ef8abf0d2c6f8cfca6fc59b87481b463981d14"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-051908/setup-install.log",
+      "bytes": 4500475,
+      "sha256": "7143d4689755571fc39a3f43511a85c5d191dd05dc08e626ac7c8fd443ca651d"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-051908/SUMMARY.json",
+      "bytes": 2081,
+      "sha256": "6b29c9c4804af0764fa131bea7c2ee72f075a63ff1148f726e592848f30a053b"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-055622/E0-not-elevated.json",
+      "bytes": 388,
+      "sha256": "dc35ffb7e929d448c9c69ea53944e4cf6b17cecd60db39a3a85a77f419b87d14"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-055622/R1-after-restart.json",
+      "bytes": 251,
+      "sha256": "d0607b24792a2b1f7180d8a7f093cf8f68b1cd425b7633e0927ad6d05b40c480"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-055622/SUMMARY.json",
+      "bytes": 728,
+      "sha256": "8758c5e37aafde8f1b7d4d4e7df5a65529b6948e840bc6078c270ae9a8a46255"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-055753/core-logs/core.log",
+      "bytes": 1342,
+      "sha256": "828f8c5b2019aca3b1f788264c29a627f67ef1e02fb8e2307cff2063ed8cdffa"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-055753/E0-not-elevated.json",
+      "bytes": 388,
+      "sha256": "dc35ffb7e929d448c9c69ea53944e4cf6b17cecd60db39a3a85a77f419b87d14"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-055753/setup-reinstall.log",
+      "bytes": 4500477,
+      "sha256": "d85d30c63c4b93f3d4fab44af8a42ef88441fd80535a0504eb6517dada3e6c92"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-055753/setup-uninstall.log",
+      "bytes": 2055656,
+      "sha256": "ecdf4d8dc32217b74465eb45bf888d73b9c3d6e53a4600e63c48814c5b752a5f"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-055753/SUMMARY.json",
+      "bytes": 1110,
+      "sha256": "a1017b55feab81e4b848285410ae57ea6fd449748b9c8016fab3992d1dc8e97b"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-055753/U1-uninstall.json",
+      "bytes": 957,
+      "sha256": "da5ecefa056c59cfed6fbb429df9e7f14b6ab864cd35aa8f696a4ba5ced84fa4"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-055753/U2-reinstall.json",
+      "bytes": 728,
+      "sha256": "fb5c608c32440c1b316c054bea2a97be0c244e7bdbba954c73cf13738f8481b8"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-055753/U3-final-stop.json",
+      "bytes": 197,
+      "sha256": "0aecd48843c4cef80e02ba15212a585d39fa300ad6ee462d36f21b0530400044"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-060641/core-logs/core.log",
+      "bytes": 1542,
+      "sha256": "1a82f0d39b8cead19656ac87f870e5d4812f816759687c2a74c8a28b22eefebb"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-060641/core-logs/logs/core.log",
+      "bytes": 1622,
+      "sha256": "019b4865ed2c153eda81411085665682044efeef7530d8bec516ffa9600fbabb"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-060641/E0-not-elevated.json",
+      "bytes": 388,
+      "sha256": "dc35ffb7e929d448c9c69ea53944e4cf6b17cecd60db39a3a85a77f419b87d14"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-060641/G1-packages.json",
+      "bytes": 621,
+      "sha256": "85689f096aeef86fa65b5ed288bc5d69372357088ab551aee37c409c4f909293"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-060641/G2-extract-previous.json",
+      "bytes": 191,
+      "sha256": "91b6c9282e1a505fcc186386d80fea4b6f628adf18f44a3920dc209c535b5d56"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-060641/G3-previous-installed.json",
+      "bytes": 907,
+      "sha256": "9f7625be3445813b7a92229c6b0cf6313c9ce06b83f96d0fdfbf577225048517"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-060641/G4-update.json",
+      "bytes": 1447,
+      "sha256": "ae74e2e3095fa0071962b892825eef9368a747a4997369c3759227942992fde8"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-060641/G5-rollback.json",
+      "bytes": 793,
+      "sha256": "11db7ac976264246a53467345490266fe7429019cd6a1577cc3d9aa445d3d868"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-060641/G6-update-again.json",
+      "bytes": 1600,
+      "sha256": "80de0c05caca2cc9f25ad1b1ed2c7508301dd805e975f27e65889a00f55d447f"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-060641/G7-update-through-setup.json",
+      "bytes": 3525,
+      "sha256": "918e2ffa5ee02c41973d9957aa9054eb63bc2bbb5953f9fa461017892fd023dc"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-060641/setup-update.log",
+      "bytes": 4500793,
+      "sha256": "c931f158e9dbea4f693f732661f1b6e652dcbd791da23fb3d947cfc825fb558e"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-060641/SUMMARY.json",
+      "bytes": 1907,
+      "sha256": "cb1bf67abec591cc9c96af0e20f52184238454d02e4f3adc807280279ccbef81"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-064809/core-logs/core.log",
+      "bytes": 1702,
+      "sha256": "aad500419fd17757f5afc14c83b3ff217812469493a67a279004146ef40dfb67"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-064809/E0-not-elevated.json",
+      "bytes": 388,
+      "sha256": "dc35ffb7e929d448c9c69ea53944e4cf6b17cecd60db39a3a85a77f419b87d14"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-064809/SUMMARY.json",
+      "bytes": 1337,
+      "sha256": "dacfbbea92b1deb9c6621d137db875a605b14b3b752a6cc8743355fbdf537e57"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-064809/X0-starting-point.json",
+      "bytes": 342,
+      "sha256": "14145d8fa91058653389a9f687f14baba6fd2230ccf5b7530e941939bcd774f7"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-064809/X1-previous-running.json",
+      "bytes": 944,
+      "sha256": "4836725007aebbfde3bba41ae8c2347f3c5bb6e72d910e3a33a358c56d89bc2c"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-064809/X2-killed-mid-copy.json",
+      "bytes": 677,
+      "sha256": "bd207423d2e9edee4e67ae4c18a8d0c8a489194153c3264ebf193422e8419c72"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-20261007-064809/X3-update-after-interruption.json",
+      "bytes": 1678,
+      "sha256": "fa91a27c9a2c81fdd93c32f9bdf3d512e22283d1bf8c9375f96ec876edc19e03"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-cycle.json",
+      "bytes": 189,
+      "sha256": "9b2aebbaab8ccbd27ace9e6b7adb51146f18785f60ce661be04ada0621d275d6"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-driver-log.jsonl",
+      "bytes": 1283,
+      "sha256": "a9a4fc42544d05d22ebf963a12d4024bed03941d62bb15879a00f70c82e5c5a1"
+    },
+    {
+      "file": "stage7-1.0.17-0d38218c4e1d/stage7-install-boot.json",
+      "bytes": 233,
+      "sha256": "72a5b993ae027f0702053cc276d585387d2ba3efb9eae342dc7155da32b347e8"
+    }
+  ]
+}

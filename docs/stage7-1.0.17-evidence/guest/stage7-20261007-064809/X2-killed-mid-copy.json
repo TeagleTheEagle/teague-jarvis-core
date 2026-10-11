@@ -1,0 +1,22 @@
+{
+    "status":  "PASS",
+    "installer_pid":  3232,
+    "installer_killed":  true,
+    "seconds_until_kill":  127.8,
+    "kill_threshold_files":  3230,
+    "files_copied_when_killed":  4211,
+    "of_total":  10768,
+    "incoming_folder_left":  true,
+    "new_release_folder_exists":  false,
+    "current":  "1.0.16-fccde24e2cc6",
+    "verify":  "verified",
+    "verified_release":  "1.0.16-fccde24e2cc6",
+    "previous_build_processes":  8,
+    "processes_from_other_releases":  [
+
+                                      ],
+    "core_answers":  true,
+    "installed_release":  "1.0.16-fccde24e2cc6",
+    "gate17_memory":  true,
+    "gate19_memory":  true
+}

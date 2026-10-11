@@ -1,0 +1,232 @@
+--- preserved/authority_trace_v3.cpp
++++ successor/authority_trace_v3.cpp
+@@ -35,16 +35,16 @@
+ struct Row{DWORD pid=0,parent=0;ULONGLONG created=0,sequence=0,parentSequence=0,exitFT=0;DWORD exitCode=0;bool exitCodeKnown=false;std::wstring image,handleImage;ULONGLONG handleCreated=0;DWORD imageError=0;LONGLONG imageBegin=0,imageEnd=0;LONGLONG start=0,notified=0,stop=0,stopNotified=0,retained=0,attemptBegin=0,signal=0;HANDLE handle=nullptr;DWORD openError=0,metadataError=0;std::string reason;bool closed=false;unsigned version=0,stopVersion=0;std::vector<std::string> schema,stopSchema;};
+ static std::map<std::pair<DWORD,ULONGLONG>,Row> rows;
+ static bool ParentKnown(DWORD pid,ULONGLONG childTime,ULONGLONG parentSequence){if(pid==rootPid)return childTime>=rootCreated;for(auto& a:rows){auto&r=a.second;if(r.pid==pid&&r.created<=childTime&&(!r.exitFT||childTime<=r.exitFT)&&(!parentSequence||r.sequence==parentSequence))return true;}return false;}
+-static void Acquire(Row& r){r.attemptBegin=Q();r.handle=OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION|SYNCHRONIZE,FALSE,r.pid);DWORD openError=r.handle?0:GetLastError();r.retained=Q();if(!r.handle){r.openError=openError;r.reason="OPEN_PROCESS_FAILED";return;}FILETIME a,b,c,d;if(!GetProcessTimes(r.handle,&a,&b,&c,&d)){r.metadataError=GetLastError();r.reason="KERNEL_IDENTITY_QUERY_FAILED";return;}if(FT(a)!=r.created){r.reason="PID_REUSED_KERNEL_CREATION_MISMATCH";CloseHandle(r.handle);r.handle=nullptr;return;}r.handleCreated=FT(a);r.imageBegin=Q();wchar_t image[32768];DWORD count=32768;if(QueryFullProcessImageNameW(r.handle,0,image,&count))r.handleImage.assign(image,count);else r.imageError=GetLastError();r.imageEnd=Q();r.reason="RETAINED_MATCHING_KERNEL_CREATION";}
++static void Acquire(Row& r){j6d::Span diagnosticProcessImage(j6d::ProcessImage);r.attemptBegin=Q();r.handle=OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION|SYNCHRONIZE,FALSE,r.pid);DWORD openError=r.handle?0:GetLastError();r.retained=Q();if(!r.handle){r.openError=openError;r.reason="OPEN_PROCESS_FAILED";return;}FILETIME a,b,c,d;if(!GetProcessTimes(r.handle,&a,&b,&c,&d)){r.metadataError=GetLastError();r.reason="KERNEL_IDENTITY_QUERY_FAILED";return;}if(FT(a)!=r.created){r.reason="PID_REUSED_KERNEL_CREATION_MISMATCH";CloseHandle(r.handle);r.handle=nullptr;return;}r.handleCreated=FT(a);r.imageBegin=Q();wchar_t image[32768];DWORD count=32768;if(QueryFullProcessImageNameW(r.handle,0,image,&count))r.handleImage.assign(image,count);else r.imageError=GetLastError();r.imageEnd=Q();r.reason="RETAINED_MATCHING_KERNEL_CREATION";}
+ 
+ static std::unique_ptr<DurableSink> lifecycleSink;
+ static unsigned long long lifecycleCaptured=0;
+ static void Capture(const Row&r,bool start){
+- std::ostringstream o;o<<"{\"source\":\"Microsoft-Windows-Kernel-Process\",\"scope\":"<<J(U(session))<<",\"kind\":"<<J(start?"start":"stop")<<",\"pid\":"<<r.pid<<",\"created\":\""<<r.created<<"\",\"sequence\":\""<<r.sequence<<"\",\"parentPid\":"<<r.parent<<",\"parentSequence\":\""<<r.parentSequence<<"\",\"image\":"<<J(U(r.image))<<",\"eventQpc\":"<<(start?r.start:r.stop)<<",\"callbackQpc\":"<<(start?r.notified:r.stopNotified)<<",\"exitFiletime\":\""<<(start?0:r.exitFT)<<"\",\"exitCode\":"<<r.exitCode<<",\"version\":"<<(start?r.version:r.stopVersion)<<"}";
+- if(!j6t::measure(j6t::Admission,[&]{return lifecycleSink->add(o.str());}))++faults;else ++lifecycleCaptured;
++ std::ostringstream o;{j6d::Span diagnosticSerialization(j6d::Serialization);o<<"{\"source\":\"Microsoft-Windows-Kernel-Process\",\"scope\":"<<J(U(session))<<",\"kind\":"<<J(start?"start":"stop")<<",\"pid\":"<<r.pid<<",\"created\":\""<<r.created<<"\",\"sequence\":\""<<r.sequence<<"\",\"parentPid\":"<<r.parent<<",\"parentSequence\":\""<<r.parentSequence<<"\",\"image\":"<<J(U(r.image))<<",\"eventQpc\":"<<(start?r.start:r.stop)<<",\"callbackQpc\":"<<(start?r.notified:r.stopNotified)<<",\"exitFiletime\":\""<<(start?0:r.exitFT)<<"\",\"exitCode\":"<<r.exitCode<<",\"version\":"<<(start?r.version:r.stopVersion)<<"}";
++ }if(!j6t::measure(j6t::Admission,[&]{return lifecycleSink->add(o.str());}))++faults;else ++lifecycleCaptured;
+ }
+ 
+-static void WINAPI Event(EVENT_RECORD* e){j6t::CallbackScope timing;try{
++static void WINAPI Event(EVENT_RECORD* e){j6t::CallbackScope timing;timing.eventQpc=e->EventHeader.TimeStamp.QuadPart;try{
+  if(!IsEqualGUID(e->EventHeader.ProviderId,Provider))return;unsigned id=e->EventHeader.EventDescriptor.Id;if(id!=1&&id!=2)return;
+  bool hasPid=false,hasTime=false;DWORD pid=static_cast<DWORD>(Number(e,L"ProcessID",&hasPid));ULONGLONG created=Number(e,L"CreateTime",&hasTime);
+  j6t::Lock l(guard);
+@@ -68,8 +68,8 @@
+  EVENT_TRACE_LOGFILEW log{};log.LoggerName=const_cast<wchar_t*>(session.c_str());log.ProcessTraceMode=PROCESS_TRACE_MODE_REAL_TIME|PROCESS_TRACE_MODE_EVENT_RECORD|PROCESS_TRACE_MODE_RAW_TIMESTAMP;log.EventRecordCallback=Event;
+  j6t::telemetry.query(sessionHandle,session.c_str(),"afterStartTrace");auto openBegin=j6t::now();TRACEHANDLE consumer=OpenTraceW(&log);ULONG openError=consumer==INVALID_PROCESSTRACE_HANDLE?GetLastError():0;j6t::telemetry.phase("OpenTrace",openBegin,j6t::now(),openError);ULONG enable=openError?openError:j6t::telemetry.call("EnableProviderProcess",[&]{return EnableTraceEx2(sessionHandle,&Provider,EVENT_CONTROL_CODE_ENABLE_PROVIDER,TRACE_LEVEL_INFORMATION,0x10,0,0,nullptr);});
+  if(enable){ControlTraceW(sessionHandle,session.c_str(),p,EVENT_TRACE_CONTROL_STOP);if(!openError)CloseTrace(consumer);Write(L"etw-failure.json","{\"stage\":\"OpenTrace/Enable\",\"code\":"+std::to_string(enable)+"}");CloseHandle(root);return 94;}
+- j6t::telemetry.query(sessionHandle,session.c_str(),"afterEnable");std::atomic<ULONG> consumed{ULONG_MAX};std::thread thread([&]{auto b=j6t::now();j6t::telemetry.phase("ProcessTraceEntry",b,b);consumed=ProcessTrace(&consumer,1,nullptr,nullptr);j6t::telemetry.phase("ProcessTraceReturn",b,j6t::now(),consumed);});
+- LARGE_INTEGER freq;QueryPerformanceFrequency(&freq);bool ready=Write(L"etw-ready.json","{\"pid\":"+std::to_string(GetCurrentProcessId())+",\"rootPid\":"+std::to_string(rootPid)+",\"rootCreated\":\""+std::to_string(rootCreated)+"\",\"session\":"+J(U(session))+",\"frequency\":"+std::to_string(freq.QuadPart)+",\"qpc\":"+std::to_string(Q())+"}");
++ j6d::bind(folder,session,"authority",*p);j6t::telemetry.query(sessionHandle,session.c_str(),"afterEnable");std::atomic<ULONG> consumed{ULONG_MAX};std::thread thread([&]{auto b=j6t::now();j6t::telemetry.phase("ProcessTraceEntry",b,b);consumed=ProcessTrace(&consumer,1,nullptr,nullptr);j6t::telemetry.phase("ProcessTraceReturn",b,j6t::now(),consumed);});
++ j6d::diagnostic.start(sessionHandle,thread.native_handle());LARGE_INTEGER freq;QueryPerformanceFrequency(&freq);bool ready=Write(L"etw-ready.json","{\"pid\":"+std::to_string(GetCurrentProcessId())+",\"rootPid\":"+std::to_string(rootPid)+",\"rootCreated\":\""+std::to_string(rootCreated)+"\",\"session\":"+J(U(session))+",\"frequency\":"+std::to_string(freq.QuadPart)+",\"qpc\":"+std::to_string(Q())+"}");
+  j6t::telemetry.mark("ReadyPublished",ready?0:1);j6t::telemetry.query(sessionHandle,session.c_str(),"ready");LONGLONG begin=Q();bool requested=false;bool receiptPublished=false;bool tailPublished=false;while(ready&&(Q()-begin)/static_cast<double>(freq.QuadPart)<180){j6t::telemetry.poll(sessionHandle,session.c_str(),freq.QuadPart);Sample();if(!receiptPublished){try{
+  if(GetFileAttributesW((folder+L"\\phase-a-v3.json").c_str())!=INVALID_FILE_ATTRIBUTES){
+   ULONG queried=ControlTraceW(sessionHandle,session.c_str(),p,EVENT_TRACE_CONTROL_QUERY);
+@@ -79,9 +79,9 @@
+  }catch(const std::exception&e){++faults;Write(L"terminal-failure-v3.json",std::string("{\"error\":")+J(e.what())+"}");break;}}
+  if(receiptPublished&&!tailPublished){try{tailPublished=terminal_v3::TailReceipt();}catch(const std::exception&e){++faults;Write(L"tail-failure-v3.json",std::string("{\"error\":")+J(e.what())+"}");break;}}
+  if(GetFileAttributesW((folder+L"\\etw-stop").c_str())!=INVALID_FILE_ATTRIBUTES){requested=true;break;}if(consumed!=ULONG_MAX)break;Sleep(10);}
+- j6t::telemetry.mark("StopRequestedOrLoopEnded",requested?0:1);j6t::telemetry.query(sessionHandle,session.c_str(),"beforeFlush");ULONG flush=j6t::telemetry.call("FlushTrace",[&]{return ControlTraceW(sessionHandle,session.c_str(),p,EVENT_TRACE_CONTROL_FLUSH);});Sleep(1100);Sample();j6t::telemetry.query(sessionHandle,session.c_str(),"beforeStop");ULONG stop=j6t::telemetry.call("StopTrace",[&]{return ControlTraceW(sessionHandle,session.c_str(),p,EVENT_TRACE_CONTROL_STOP);});thread.join();CloseTrace(consumer);Sample();CloseHandle(root);
++ j6t::telemetry.mark("StopRequestedOrLoopEnded",requested?0:1);j6t::telemetry.query(sessionHandle,session.c_str(),"beforeFlush");ULONG flush=j6t::telemetry.call("FlushTrace",[&]{return ControlTraceW(sessionHandle,session.c_str(),p,EVENT_TRACE_CONTROL_FLUSH);});Sleep(1100);Sample();j6t::telemetry.query(sessionHandle,session.c_str(),"beforeStop");ULONG stop=j6t::telemetry.call("StopTrace",[&]{return ControlTraceW(sessionHandle,session.c_str(),p,EVENT_TRACE_CONTROL_STOP);});thread.join();j6d::diagnostic.stop();CloseTrace(consumer);Sample();CloseHandle(root);
+  lifecycleSink->finish();if(lifecycleSink->fault())++faults;
+  std::ostringstream out;out<<"{\"requestedStop\":"<<(requested?"true":"false")<<",\"session\":"<<J(U(session))<<",\"flushResult\":"<<flush<<",\"stopResult\":"<<stop<<",\"consumerResult\":"<<consumed<<",\"eventsLost\":"<<p->EventsLost<<",\"realtimeBuffersLost\":"<<p->RealTimeBuffersLost<<",\"buffersLost\":"<<p->LogBuffersLost<<",\"faults\":"<<faults<<",\"discardedUnrelated\":"<<discarded<<",\"rows\":[";bool first=true;
+  for(auto&a:rows){auto&r=a.second;if(!first)out<<",";first=false;bool closed=true;if(r.handle){closed=CloseHandle(r.handle)!=0;r.closed=closed;}out<<"{\"pid\":"<<r.pid<<",\"parentPid\":"<<r.parent<<",\"created\":\""<<r.created<<"\",\"sequence\":\""<<r.sequence<<"\",\"parentSequence\":\""<<r.parentSequence<<"\",\"image\":"<<J(U(r.image))<<",\"handleImage\":"<<J(U(r.handleImage))<<",\"handleCreated\":\""<<r.handleCreated<<"\",\"imageError\":"<<r.imageError<<",\"imageBeginQpc\":"<<r.imageBegin<<",\"imageEndQpc\":"<<r.imageEnd<<",\"startQpc\":"<<r.start<<",\"startCallbackQpc\":"<<r.notified<<",\"handleAttemptBeginQpc\":"<<r.attemptBegin<<",\"handleAttemptQpc\":"<<r.retained<<",\"handleRetained\":"<<(r.handle?"true":"false")<<",\"handleIdentity\":\""<<reinterpret_cast<ULONG_PTR>(r.handle)<<"\",\"reason\":"<<J(r.reason)<<",\"openError\":"<<r.openError<<",\"metadataError\":"<<r.metadataError<<",\"stopQpc\":"<<r.stop<<",\"stopCallbackQpc\":"<<r.stopNotified<<",\"signalObservedQpc\":"<<r.signal<<",\"exitFiletime\":\""<<r.exitFT<<"\",\"exitCode\":"<<r.exitCode<<",\"exitCodeKnown\":"<<(r.exitCodeKnown?"true":"false")<<",\"handleClosed\":"<<(closed?"true":"false")<<",\"startVersion\":"<<r.version<<",\"stopVersion\":"<<r.stopVersion<<",\"startSchema\":"<<List(r.schema)<<",\"stopSchema\":"<<List(r.stopSchema)<<"}";}
+- out<<"]}";if(!Write(L"loss-telemetry.json",j6t::telemetry.json())||j6t::telemetry.errors.load())++faults;bool wrote=Write(L"etw-result.json",out.str());return !wrote||!requested||stop||faults||p->EventsLost||p->RealTimeBuffersLost?95:0;
++ out<<"]}";Write(L"loss-diagnostic-v2.json",j6d::diagnostic.json());if(!Write(L"loss-telemetry.json",j6t::telemetry.json())||j6t::telemetry.errors.load())++faults;bool wrote=Write(L"etw-result.json",out.str());return !wrote||!requested||stop||faults||p->EventsLost||p->RealTimeBuffersLost?95:0;
+ }
+--- preserved/durable_sink.hpp
++++ successor/durable_sink.hpp
+@@ -53,6 +53,7 @@
+  static double seconds(long long start){LARGE_INTEGER f;QueryPerformanceFrequency(&f);return double(q()-start)/f.QuadPart;}
+  void fail(unsigned code){unsigned zero=0;failure.compare_exchange_strong(zero,code);cv.notify_all();}
+  void snapshot(U kind,U id=0,U raw=0){
++  j6d::diagnostic.queueState(inflightItems,queueBytes,pending);j6d::diagnostic.admitted=accepted;
+   if(telemetry.size()>=telemetryCap||(inject==18&&telemetry.size()>=4)){fail(15);return;}
+   telemetry.push_back({U(q()),kind,id,raw,U(input.size()),inflightItems,queueBytes,U(sealed.size()),pending,pendingBytes});
+  }
+@@ -71,7 +72,7 @@
+   s->handle=CreateFileW(path(s->name).c_str(),GENERIC_READ|GENERIC_WRITE,FILE_SHARE_READ,nullptr,CREATE_NEW,FILE_ATTRIBUTE_NORMAL,nullptr);
+   if(s->handle==INVALID_HANDLE_VALUE)throw std::runtime_error("create segment");s->hash=std::make_unique<Hash>();return s;
+  }
+- void transfer(std::unique_ptr<Segment>&s){
++ void transfer(std::unique_ptr<Segment>&s){j6d::Span diagnosticRotation(j6d::Rotation);
+   if(!s)return;auto t=q();fault(3);s->advance(CLOSED);s->expected=s->hash->end();s->hash.reset();fault(4);
+   std::unique_lock<std::mutex> l(gate);auto b=q();if(inject==9&&pending>=pendingLimit)throw std::runtime_error("injected bounded backlog");
+   bool blocked=!failure&&pending>=pendingLimit;
+@@ -85,7 +86,7 @@
+  void writeLoop(){
+   std::unique_ptr<Segment> s;U number=0;
+   try{for(;;){Item item;{std::unique_lock<std::mutex> l(gate);cv.wait(l,[&]{return failure||closing||!input.empty();});if(failure)break;if(input.empty()&&closing)break;item=std::move(input.front());input.pop_front();snapshot(2,item.seq,item.raw.size());U lag=telemetry.back().tick-item.admitted;dequeuedCount++;dequeueLagTicks+=lag;maxDequeueLagTicks=std::max(maxDequeueLagTicks,lag);}
+-    auto serial=q();std::string row="{\"seq\":"+std::to_string(item.seq)+",\"raw\":"+item.raw+"}\n";serializeSeconds+=seconds(serial);
++    auto serial=q();std::string row;{j6d::Span diagnosticSerialization(j6d::Serialization);row="{\"seq\":"+std::to_string(item.seq)+",\"raw\":"+item.raw+"}\n";}serializeSeconds+=seconds(serial);
+     if(row.size()>8192||row.size()>limit)throw std::runtime_error("record bound");
+     if(s&&s->bytes+row.size()>limit)transfer(s);if(!s)s=open(number++);
+     if(s->state!=ACTIVE)throw std::runtime_error("append after transfer");fault(14);fault(1);if(inject==2){writeAll(s->handle,row.substr(0,row.size()/2));throw std::runtime_error("partial write injected");}
+@@ -101,12 +102,12 @@
+     if(inject==19){std::unique_lock<std::mutex>l(gate);cv.wait(l,[&]{return failure.load()!=0;});throw std::runtime_error("controlled wait-interruption fixture");}
+     fault(13);if(!firstFinal)firstFinal=q();
+     if(inject==6||inject==9){for(int i=0;i<150&&!failure;i++)Sleep(1);if(inject==6)throw std::runtime_error("injected flush delay refusal");}
+-    fault(7);auto t=q();s->flushBegin=U(t);if(!j6t::flush(s->handle))throw std::runtime_error("durable flush");s->flushEnd=U(q());auto dt=double(s->flushEnd-s->flushBegin)/clockFrequency;flushSeconds+=dt;maxFlush=std::max(maxFlush,dt);s->advance(DURABLY_COMMITTED);
++    fault(7);auto t=q();s->flushBegin=U(t);if(!j6t::flush(s->handle))throw std::runtime_error("durable flush");s->flushEnd=U(q());auto dt=double(s->flushEnd-s->flushBegin)/clockFrequency;flushSeconds+=dt;maxFlush=std::max(maxFlush,dt);s->advance(DURABLY_COMMITTED);j6d::diagnostic.persisted+=s->count;j6d::diagnostic.persistedBytes+=s->bytes;
+     LARGE_INTEGER zero{};if(!SetFilePointerEx(s->handle,zero,nullptr,FILE_BEGIN))throw std::runtime_error("readback seek");Hash check;U bytes=0,records=0,next=s->first;std::string line;char buf[65536];DWORD n=0;t=q();s->hashBegin=U(t);
+     while(ReadFile(s->handle,buf,sizeof(buf),&n,nullptr)&&n){check.add(buf,n);bytes+=n;for(DWORD i=0;i<n;i++){if(buf[i]=='\n'){std::string start="{\"seq\":"+std::to_string(next)+",\"raw\":";if(line.rfind(start,0)!=0)throw std::runtime_error("readback sequence");records++;next++;line.clear();}else{line+=buf[i];if(line.size()>8192)throw std::runtime_error("readback line bound");}}}
+     s->actual=check.end();fault(8);if(!line.empty()||bytes!=s->bytes||records!=s->count||next!=s->last+1||s->actual!=s->expected)throw std::runtime_error("readback mismatch");s->hashEnd=U(q());hashSeconds+=double(s->hashEnd-s->hashBegin)/clockFrequency;s->advance(HASH_VERIFIED);
+     if(!j6t::close(s->handle))throw std::runtime_error("handle close");s->handle=INVALID_HANDLE_VALUE;lastFinal=q();
+-    {std::lock_guard<std::mutex> l(gate);pending--;pendingBytes-=s->bytes;s->completed=U(q());U id=s->number;done.push_back(std::move(s));snapshot(6,id);cv.notify_all();}
++    {std::lock_guard<std::mutex> l(gate);pending--;pendingBytes-=s->bytes;s->completed=U(q());U id=s->number;done.push_back(std::move(s));++j6d::diagnostic.finalizations;snapshot(6,id);cv.notify_all();}
+    }
+   }catch(...){fail(200+inject);}
+   finalizerExited=true;cv.notify_all();
+--- preserved/startup_trace.cpp
++++ successor/startup_trace.cpp
+@@ -37,7 +37,7 @@
+ struct Row{DWORD pid=0,parent=0;ULONGLONG created=0,sequence=0,parentSequence=0,exitFT=0;DWORD exitCode=0;bool exitCodeKnown=false;std::wstring image;LONGLONG start=0,notified=0,stop=0,stopNotified=0,retained=0,attemptBegin=0,signal=0;HANDLE handle=nullptr;DWORD openError=0,metadataError=0;std::string reason;bool closed=false;unsigned version=0,stopVersion=0;std::vector<std::string> schema,stopSchema;};
+ static std::map<std::pair<DWORD,ULONGLONG>,Row> rows;
+ static bool ParentKnown(DWORD pid,ULONGLONG childTime,ULONGLONG parentSequence){if(pid==rootPid)return childTime>=rootCreated;for(auto& a:rows){auto&r=a.second;if(r.pid==pid&&r.created<=childTime&&(!r.exitFT||childTime<=r.exitFT)&&(!parentSequence||r.sequence==parentSequence))return true;}return false;}
+-static void Acquire(Row& r){r.attemptBegin=Q();r.handle=OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION|SYNCHRONIZE,FALSE,r.pid);DWORD openError=r.handle?0:GetLastError();r.retained=Q();if(!r.handle){r.openError=openError;r.reason="OPEN_PROCESS_FAILED";return;}FILETIME a,b,c,d;if(!GetProcessTimes(r.handle,&a,&b,&c,&d)){r.metadataError=GetLastError();r.reason="KERNEL_IDENTITY_QUERY_FAILED";return;}if(FT(a)!=r.created){r.reason="PID_REUSED_KERNEL_CREATION_MISMATCH";CloseHandle(r.handle);r.handle=nullptr;return;}r.reason="RETAINED_MATCHING_KERNEL_CREATION";}
++static void Acquire(Row& r){j6d::Span diagnosticProcessImage(j6d::ProcessImage);r.attemptBegin=Q();r.handle=OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION|SYNCHRONIZE,FALSE,r.pid);DWORD openError=r.handle?0:GetLastError();r.retained=Q();if(!r.handle){r.openError=openError;r.reason="OPEN_PROCESS_FAILED";return;}FILETIME a,b,c,d;if(!GetProcessTimes(r.handle,&a,&b,&c,&d)){r.metadataError=GetLastError();r.reason="KERNEL_IDENTITY_QUERY_FAILED";return;}if(FT(a)!=r.created){r.reason="PID_REUSED_KERNEL_CREATION_MISMATCH";CloseHandle(r.handle);r.handle=nullptr;return;}r.reason="RETAINED_MATCHING_KERNEL_CREATION";}
+ static void LifecycleEvent(EVENT_RECORD* e){try{
+  if(!IsEqualGUID(e->EventHeader.ProviderId,Provider))return;unsigned id=e->EventHeader.EventDescriptor.Id;if(id!=1&&id!=2)return;
+  bool hasPid=false,hasTime=false;DWORD pid=static_cast<DWORD>(Number(e,L"ProcessID",&hasPid));ULONGLONG created=Number(e,L"CreateTime",&hasTime);
+@@ -57,7 +57,7 @@
+ static std::map<DWORD,std::pair<DWORD,ULONGLONG>> tids;
+ static std::map<ULONGLONG,std::pair<DWORD,ULONGLONG>> irps;
+ static Row* Target(DWORD pid,LONGLONG q){for(auto& a:rows){auto&r=a.second;if(r.pid==pid&&q>=r.start&&(!r.stop||q<=r.stop))return &r;}return nullptr;}
+-static void WINAPI Event(EVENT_RECORD* e){j6t::CallbackScope timing;
++static void WINAPI Event(EVENT_RECORD* e){j6t::CallbackScope timing;timing.eventQpc=e->EventHeader.TimeStamp.QuadPart;
+  LifecycleEvent(e);
+  try {
+   bool proc=IsEqualGUID(e->EventHeader.ProviderId,Provider),file=IsEqualGUID(e->EventHeader.ProviderId,FileProvider),reg=(IsEqualGUID(e->EventHeader.ProviderId,RegProvider)||IsEqualGUID(e->EventHeader.ProviderId,ClassicReg)),sched=IsEqualGUID(e->EventHeader.ProviderId,ThreadProvider);
+@@ -78,7 +78,7 @@
+   if(file&&!irp)irp=Number(e,L"Irp");
+   if(file&&irp&&id!=24)irps[irp]={target->pid,target->created};
+   
+-  std::ostringstream o;o<<"{\"provider\":"<<J(proc?"process":file?"file":reg?(IsEqualGUID(e->EventHeader.ProviderId,ClassicReg)?"registry_classic":"registry"):"scheduler")<<",\"id\":"<<id<<",\"opcode\":"<<op<<",\"version\":"<<unsigned(e->EventHeader.EventDescriptor.Version)<<",\"qpc\":"<<q<<",\"callbackQpc\":"<<Q()<<",\"pid\":"<<target->pid<<",\"created\":\""<<target->created<<"\",\"headerPid\":"<<e->EventHeader.ProcessId<<",\"tid\":"<<tid<<",\"fields\":{";
++  std::ostringstream o;{j6d::Span diagnosticSerialization(j6d::Serialization);o<<"{\"provider\":"<<J(proc?"process":file?"file":reg?(IsEqualGUID(e->EventHeader.ProviderId,ClassicReg)?"registry_classic":"registry"):"scheduler")<<",\"id\":"<<id<<",\"opcode\":"<<op<<",\"version\":"<<unsigned(e->EventHeader.EventDescriptor.Version)<<",\"qpc\":"<<q<<",\"callbackQpc\":"<<Q()<<",\"pid\":"<<target->pid<<",\"created\":\""<<target->created<<"\",\"headerPid\":"<<e->EventHeader.ProcessId<<",\"tid\":"<<tid<<",\"fields\":{";
+   bool first=true;
+   // Explicit metadata allowlist: no command line, environment, registry value or file bytes.
+   const wchar_t* nums[]={L"ProcessID",L"ThreadID",L"StartAddr",L"Win32StartAddr",L"ImageBase",L"ImageSize",L"Irp",L"FileObject",L"FileKey",L"IssuingThreadId",L"IoSize",L"ByteOffset",L"NtStatus",L"Status",L"ElapsedTime",L"InitialTime",L"KeyObject",L"Index",L"NewThreadId",L"OldThreadId",L"TThreadId",L"OldThreadState",L"OldThreadWaitReason",L"OldThreadWaitMode"};
+@@ -86,7 +86,7 @@
+   const wchar_t* texts[]={L"ImageName",L"FileName",L"OpenPath",L"KeyName",L"BaseName",L"RelativeName"};
+   for(auto n:texts){if(std::find(schema.begin(),schema.end(),U(n))==schema.end())continue;auto v=Text(e,n);if(!v.empty()){if(!first)o<<",";first=false;o<<J(U(n))<<":"<<J(U(v));}}
+   if(sched&&op==36&&e->UserDataLength>=8){DWORD ts[2];memcpy(ts,e->UserData,8);if(!first)o<<",";o<<"\"newTid\":"<<ts[0]<<",\"oldTid\":"<<ts[1];}
+-  o<<"},\"schema\":"<<List(Schemas(e))<<"}";if(!j6t::measure(j6t::Admission,[&]{return sink->add(o.str());}))++startupOverflow;if(file&&id==24)irps.erase(irp);
++  o<<"},\"schema\":"<<List(Schemas(e))<<"}";}if(!j6t::measure(j6t::Admission,[&]{return sink->add(o.str());}))++startupOverflow;if(file&&id==24)irps.erase(irp);
+  }catch(...){++faults;}
+ }
+ static void Sample(){j6t::Lock l(guard);for(auto& a:rows){auto&r=a.second;if(r.handle&&!r.signal){DWORD s=WaitForSingleObject(r.handle,0);if(s==WAIT_OBJECT_0){r.signal=Q();FILETIME a,b,c,d;DWORD exit=0;if(GetProcessTimes(r.handle,&a,&b,&c,&d)&&GetExitCodeProcess(r.handle,&exit)){if(FT(a)!=r.created)++faults;if(r.exitFT&&r.exitFT!=FT(b))++faults;if(r.exitCodeKnown&&r.exitCode!=exit)++faults;r.exitFT=FT(b);r.exitCode=exit;r.exitCodeKnown=true;}else{r.metadataError=GetLastError();++faults;}}else if(s!=WAIT_TIMEOUT){++faults;}}}}
+@@ -105,12 +105,12 @@
+  if(!enable)enable=j6t::telemetry.call("EnableProviderFile",[&]{return EnableTraceEx2(sessionHandle,&FileProvider,EVENT_CONTROL_CODE_ENABLE_PROVIDER,TRACE_LEVEL_VERBOSE,0x1f0,0,0,nullptr);});
+  if(!enable)enable=j6t::telemetry.call("EnableProviderRegistry",[&]{return EnableTraceEx2(sessionHandle,&RegProvider,EVENT_CONTROL_CODE_ENABLE_PROVIDER,TRACE_LEVEL_VERBOSE,0x400000000000ac33ULL,0,0,nullptr);});
+  if(enable){ControlTraceW(sessionHandle,session.c_str(),p,EVENT_TRACE_CONTROL_STOP);if(!openError)CloseTrace(consumer);Write(L"etw-failure.json","{\"stage\":\"OpenTrace/Enable\",\"code\":"+std::to_string(enable)+"}");CloseHandle(root);return 94;}
+- j6t::telemetry.query(sessionHandle,session.c_str(),"afterEnable");std::atomic<ULONG> consumed{ULONG_MAX};std::thread thread([&]{auto b=j6t::now();j6t::telemetry.phase("ProcessTraceEntry",b,b);consumed=ProcessTrace(&consumer,1,nullptr,nullptr);j6t::telemetry.phase("ProcessTraceReturn",b,j6t::now(),consumed);});
+- LARGE_INTEGER freq;QueryPerformanceFrequency(&freq);bool ready=Write(L"etw-ready.json","{\"pid\":"+std::to_string(GetCurrentProcessId())+",\"rootPid\":"+std::to_string(rootPid)+",\"rootCreated\":\""+std::to_string(rootCreated)+"\",\"session\":"+J(U(session))+",\"frequency\":"+std::to_string(freq.QuadPart)+",\"qpc\":"+std::to_string(Q())+"}");
++ j6d::bind(folder,session,"detail",*p);j6t::telemetry.query(sessionHandle,session.c_str(),"afterEnable");std::atomic<ULONG> consumed{ULONG_MAX};std::thread thread([&]{auto b=j6t::now();j6t::telemetry.phase("ProcessTraceEntry",b,b);consumed=ProcessTrace(&consumer,1,nullptr,nullptr);j6t::telemetry.phase("ProcessTraceReturn",b,j6t::now(),consumed);});
++ j6d::diagnostic.start(sessionHandle,thread.native_handle());LARGE_INTEGER freq;QueryPerformanceFrequency(&freq);bool ready=Write(L"etw-ready.json","{\"pid\":"+std::to_string(GetCurrentProcessId())+",\"rootPid\":"+std::to_string(rootPid)+",\"rootCreated\":\""+std::to_string(rootCreated)+"\",\"session\":"+J(U(session))+",\"frequency\":"+std::to_string(freq.QuadPart)+",\"qpc\":"+std::to_string(Q())+"}");
+  j6t::telemetry.mark("ReadyPublished",ready?0:1);j6t::telemetry.query(sessionHandle,session.c_str(),"ready");LONGLONG begin=Q();bool requested=false;while(ready&&(Q()-begin)/static_cast<double>(freq.QuadPart)<1200){j6t::telemetry.poll(sessionHandle,session.c_str(),freq.QuadPart);Sample();if(GetFileAttributesW((folder+L"\\etw-stop").c_str())!=INVALID_FILE_ATTRIBUTES){requested=true;break;}if(consumed!=ULONG_MAX)break;Sleep(10);}
+- j6t::telemetry.mark("StopRequestedOrLoopEnded",requested?0:1);j6t::telemetry.query(sessionHandle,session.c_str(),"beforeFlush");ULONG flush=j6t::telemetry.call("FlushTrace",[&]{return ControlTraceW(sessionHandle,session.c_str(),p,EVENT_TRACE_CONTROL_FLUSH);});Sleep(1100);Sample();j6t::telemetry.query(sessionHandle,session.c_str(),"beforeStop");ULONG stop=j6t::telemetry.call("StopTrace",[&]{return ControlTraceW(sessionHandle,session.c_str(),p,EVENT_TRACE_CONTROL_STOP);});thread.join();CloseTrace(consumer);Sample();CloseHandle(root);
++ j6t::telemetry.mark("StopRequestedOrLoopEnded",requested?0:1);j6t::telemetry.query(sessionHandle,session.c_str(),"beforeFlush");ULONG flush=j6t::telemetry.call("FlushTrace",[&]{return ControlTraceW(sessionHandle,session.c_str(),p,EVENT_TRACE_CONTROL_FLUSH);});Sleep(1100);Sample();j6t::telemetry.query(sessionHandle,session.c_str(),"beforeStop");ULONG stop=j6t::telemetry.call("StopTrace",[&]{return ControlTraceW(sessionHandle,session.c_str(),p,EVENT_TRACE_CONTROL_STOP);});thread.join();j6d::diagnostic.stop();CloseTrace(consumer);Sample();CloseHandle(root);
+  auto traceManifest=sink->finish();if(sink->fault()||startupOverflow)++faults;if(!Write(L"startup-events.json",traceManifest))++faults;
+  std::ostringstream out;out<<"{\"requestedStop\":"<<(requested?"true":"false")<<",\"session\":"<<J(U(session))<<",\"flushResult\":"<<flush<<",\"stopResult\":"<<stop<<",\"consumerResult\":"<<consumed<<",\"eventsLost\":"<<p->EventsLost<<",\"realtimeBuffersLost\":"<<p->RealTimeBuffersLost<<",\"buffersLost\":"<<p->LogBuffersLost<<",\"faults\":"<<faults<<",\"discardedUnrelated\":"<<discarded<<",\"rows\":[";bool first=true;
+  for(auto&a:rows){auto&r=a.second;if(!first)out<<",";first=false;bool closed=true;if(r.handle){closed=CloseHandle(r.handle)!=0;r.closed=closed;}out<<"{\"pid\":"<<r.pid<<",\"parentPid\":"<<r.parent<<",\"created\":\""<<r.created<<"\",\"sequence\":\""<<r.sequence<<"\",\"parentSequence\":\""<<r.parentSequence<<"\",\"image\":"<<J(U(r.image))<<",\"startQpc\":"<<r.start<<",\"startCallbackQpc\":"<<r.notified<<",\"handleAttemptBeginQpc\":"<<r.attemptBegin<<",\"handleAttemptQpc\":"<<r.retained<<",\"handleRetained\":"<<(r.handle?"true":"false")<<",\"handleIdentity\":\""<<reinterpret_cast<ULONG_PTR>(r.handle)<<"\",\"reason\":"<<J(r.reason)<<",\"openError\":"<<r.openError<<",\"metadataError\":"<<r.metadataError<<",\"stopQpc\":"<<r.stop<<",\"stopCallbackQpc\":"<<r.stopNotified<<",\"signalObservedQpc\":"<<r.signal<<",\"exitFiletime\":\""<<r.exitFT<<"\",\"exitCode\":"<<r.exitCode<<",\"exitCodeKnown\":"<<(r.exitCodeKnown?"true":"false")<<",\"handleClosed\":"<<(closed?"true":"false")<<",\"startVersion\":"<<r.version<<",\"stopVersion\":"<<r.stopVersion<<",\"startSchema\":"<<List(r.schema)<<",\"stopSchema\":"<<List(r.stopSchema)<<"}";}
+- out<<"]}";if(!Write(L"loss-telemetry.json",j6t::telemetry.json())||j6t::telemetry.errors.load())++faults;bool wrote=Write(L"etw-result.json",out.str());return !wrote||!requested||stop||faults||p->EventsLost||p->RealTimeBuffersLost?95:0;
++ out<<"]}";Write(L"loss-diagnostic-v2.json",j6d::diagnostic.json());if(!Write(L"loss-telemetry.json",j6t::telemetry.json())||j6t::telemetry.errors.load())++faults;bool wrote=Write(L"etw-result.json",out.str());return !wrote||!requested||stop||faults||p->EventsLost||p->RealTimeBuffersLost?95:0;
+ }
+--- preserved/trace_sink.hpp
++++ successor/trace_sink.hpp
+@@ -30,13 +30,13 @@
+   if(BCryptCreateHash(algorithm,&hash,object.data(),ULONG(object.size()),nullptr,0,0)<0){failure=5;return false;}
+   segments.push_back({name,0,0,{}});segmentBuffer.clear();return true;
+  }
+- bool closeSegment(){
++ bool closeSegment(){j6d::Span diagnosticRotation(j6d::Rotation);
+   if(file==INVALID_HANDLE_VALUE)return true;
+   BYTE digest[32];DWORD done=0;auto begin=q();LARGE_INTEGER freq;QueryPerformanceFrequency(&freq);
+   bool ok=inject!=1&&inject!=2&&j6t::write(file,segmentBuffer.data(),DWORD(segmentBuffer.size()),&done,nullptr)&&done==segmentBuffer.size();
+   ok=j6t::flush(file)!=0&&ok;ok=j6t::close(file)!=0&&ok;file=INVALID_HANDLE_VALUE;
+   auto duration=double(q()-begin)/freq.QuadPart;if(duration>maxWriteSeconds)maxWriteSeconds=duration;
+-  if(ok)persisted+=segments.back().records;else if(!failure)failure=inject==2?112:7;
++  if(ok){persisted+=segments.back().records;j6d::diagnostic.persisted+=segments.back().records;j6d::diagnostic.persistedBytes+=segments.back().bytes;++j6d::diagnostic.finalizations;}else if(!failure)failure=inject==2?112:7;
+   ok=BCryptFinishHash(hash,digest,32,0)>=0&&ok;BCryptDestroyHash(hash);hash=nullptr;
+   if(!ok){if(!failure)failure=6;return false;}std::ostringstream h;for(auto b:digest)h<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(b);segments.back().hash=h.str();return true;
+  }
+@@ -44,7 +44,7 @@
+   LARGE_INTEGER freq;QueryPerformanceFrequency(&freq);
+   for(;;){std::string row;{
+     std::unique_lock<std::mutex> guard(lock);wake.wait(guard,[&]{return closing||!queue.empty();});
+-    if(queue.empty()){if(closing)break;continue;}row=std::move(queue.front());queue.pop_front();queued-=row.size();
++    if(queue.empty()){if(closing)break;continue;}row=std::move(queue.front());queue.pop_front();queued-=row.size();j6d::diagnostic.queueState(queue.size(),queued,0);
+    }
+    if(failure)continue;
+    if(file==INVALID_HANDLE_VALUE&&!openSegment())continue;
+@@ -64,7 +64,7 @@
+   row+='\n';std::lock_guard<std::mutex> guard(lock);
+   if(failure||closing)return false;
+   if(row.size()>8192||row.size()>segmentLimit||accepted>=maxRecords||totalBytes+row.size()>maxBytes||queued+row.size()>queueLimit){failure=9;return false;}
+-  ++accepted;totalBytes+=row.size();queued+=row.size();if(queued>peakQueue)peakQueue=queued;queue.push_back(std::move(row));wake.notify_one();return true;
++  ++accepted;totalBytes+=row.size();queued+=row.size();if(queued>peakQueue)peakQueue=queued;queue.push_back(std::move(row));j6d::diagnostic.queueState(queue.size(),queued,0);j6d::diagnostic.admitted=accepted;wake.notify_one();return true;
+  }
+  std::string finish(){
+   {std::lock_guard<std::mutex> guard(lock);closing=true;}wake.notify_one();writer.join();
+--- preserved/trace_telemetry.hpp
++++ successor/trace_telemetry.hpp
+@@ -8,6 +8,7 @@
+ #include <mutex>
+ #include <sstream>
+ #include <algorithm>
++#include "loss_diagnostic_v2.hpp"
+ 
+ // TEST-only, bounded in-memory instrumentation. No callback filesystem I/O.
+ namespace j6t {
+@@ -30,10 +31,10 @@
+  Phase phases[phaseLimit];Snapshot snapshots[snapshotLimit];unsigned snapshotCount=0;
+  long long lastQuery=0; // main/control thread only
+  void phase(const char* name,long long begin,long long end,ULONG status=0){
+-  auto i=phaseCount.fetch_add(1);if(i>=phaseLimit){++errors;return;}phases[i]={name,begin,end,status};
++  j6d::diagnostic.phase(name,begin);auto i=phaseCount.fetch_add(1);if(i>=phaseLimit){++errors;return;}phases[i]={name,begin,end,status};
+  }
+  void mark(const char* name,ULONG status=0){auto t=now();phase(name,t,t,status);}
+- template<class F> auto call(const char* name,F f){auto b=now();auto r=f();phase(name,b,now(),static_cast<ULONG>(r));return r;}
++ template<class F> auto call(const char* name,F f){auto b=now();j6d::diagnostic.phase(name,b);auto r=f();phase(name,b,now(),static_cast<ULONG>(r));return r;}
+  using QueryFn=ULONG (WINAPI *)(TRACEHANDLE,LPCWSTR,PEVENT_TRACE_PROPERTIES,ULONG);
+  void query(TRACEHANDLE handle,const wchar_t* session,const char* phaseName,QueryFn fn=ControlTraceW){
+   if(snapshotCount>=snapshotLimit){++errors;return;}
+@@ -55,16 +56,21 @@
+  }
+ };
+ inline Telemetry telemetry;
+-struct Scope {Metric metric;long long begin;explicit Scope(Metric m):metric(m),begin(now()){} ~Scope(){telemetry.metrics[metric].add(now()-begin);} };
++inline j6d::Op diagnosticOp(Metric m){return m==Metadata?j6d::Metadata:m==Admission?j6d::Admission:m==Write?j6d::Write:m==Flush?j6d::Flush:m==Close?j6d::Close:j6d::Other;}
++struct Scope {
++ Metric metric;long long begin;j6d::Queue before; j6d::U previous;
++ explicit Scope(Metric m):metric(m),begin(now()),before(j6d::diagnostic.spanQueue()),previous(j6d::diagnostic.sampleSequence){}
++ ~Scope(){auto end=now();telemetry.metrics[metric].add(end-begin);j6d::diagnostic.span(diagnosticOp(metric),begin,end,before,previous);}
++};
+ struct CallbackScope {
+- long long begin=now();bool selected=false;
+- CallbackScope(){++telemetry.callbacks;long long empty=0;telemetry.firstCallback.compare_exchange_strong(empty,begin);}
+- ~CallbackScope(){telemetry.metrics[Callback].add(now()-begin);if(selected)++telemetry.selected;else ++telemetry.rejected;}
++ long long begin=now();bool selected=false;long long eventQpc=0;j6d::Queue before=j6d::diagnostic.spanQueue();j6d::U previous=j6d::diagnostic.sampleSequence;
++ CallbackScope(){j6d::diagnostic.enter(begin);++telemetry.callbacks;long long empty=0;telemetry.firstCallback.compare_exchange_strong(empty,begin);}
++ ~CallbackScope(){auto end=now();telemetry.metrics[Callback].add(end-begin);if(selected)++telemetry.selected;else ++telemetry.rejected;j6d::diagnostic.callback(begin,end,selected,eventQpc);j6d::diagnostic.span(j6d::Callback,begin,end,before,previous);}
+ };
+ struct Lock {
+- std::unique_lock<std::mutex> lock;long long held;
+- explicit Lock(std::mutex&m):lock(m,std::defer_lock){auto b=now();lock.lock();held=now();telemetry.metrics[GuardWait].add(held-b);}
+- ~Lock(){telemetry.metrics[GuardHold].add(now()-held);}
++ std::unique_lock<std::mutex> lock;long long held;j6d::Queue before;j6d::U previous;
++ explicit Lock(std::mutex&m):lock(m,std::defer_lock){auto b=now();before=j6d::diagnostic.spanQueue();previous=j6d::diagnostic.sampleSequence;lock.lock();held=now();telemetry.metrics[GuardWait].add(held-b);j6d::diagnostic.span(j6d::GuardWait,b,held,before,previous);}
++ ~Lock(){auto end=now();telemetry.metrics[GuardHold].add(end-held);j6d::diagnostic.span(j6d::GuardHold,held,end,before,previous);}
+ };
+ template<class F> inline auto measure(Metric m,F f){Scope t(m);return f();}
+ inline BOOL write(HANDLE h,LPCVOID b,DWORD n,LPDWORD done,LPOVERLAPPED o){return measure(Write,[&]{return WriteFile(h,b,n,done,o);});}

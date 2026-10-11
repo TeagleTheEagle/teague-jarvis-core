@@ -1,0 +1,39 @@
+{
+  "schema": "stage6-gate16r-step-evaluation-v1",
+  "step": "7: Windows installation inside JARVIS-S6-FRESH (AMENDMENT-v2 section 6(a)-(e), (g); v3 D3, D4; approved prompt step 7)",
+  "utc": "2026-10-04T02:20:00Z",
+  "sequence": [
+    "start 1, 2026-10-02T04:12:06Z (vm/start-20261002-041112.json): LocalhostReachable = 0 confirmed in VBox.log. The 'Press any key to boot from CD or DVD' prompt was missed twice; the owner chose the Windows disc in the firmware Boot Manager (UEFI VBOX CD-ROM VB1). Windows Setup ran from the answer file with no language, edition, disk or account screen.",
+    "install attempt 1 stalled on the post-restart screen 'Installing 42%' from about 04:42Z; the guest stayed alive but showed no progress for over 20 minutes. The owner reset the VM at about 05:07Z. The half-installed disk then booted ahead of the disc on every start (Windows Setup had added a Windows Boot Manager entry to the UEFI variable store) and showed 'The computer restarted unexpectedly'.",
+    "start 2, 05:16:18Z (start-20261002-051608.json, after a power-off): LocalhostReachable = 0 confirmed; the half-installed disk booted again.",
+    "boot-list reset 1, 05:23:34Z (vm/step7-nvram-reset-20261002-052334.json): modifynvram inituefivarstore, enrollmssignatures, enrollorclpk; .nvram 967b4c16... -> 45ab343d...; Secure Boot on.",
+    "start 3, 05:25:12Z (start-20261002-052503.json): the ordinary launcher was used by mistake (boot_from_disc false, 0 keypresses); LocalhostReachable = 0 confirmed; the half-installed disk booted; power-off.",
+    "boot-list reset 2, 05:29:09Z (step7-nvram-reset-20261002-052909.json): .nvram d294f80c... -> 0476e466...; Secure Boot on.",
+    "start 4, 05:29:45Z (start-20261002-052912.json): -BootFromDisc, 84 space-bar keypresses sent from the host with VBoxManage controlvm keyboardputscancode; LocalhostReachable = 0 confirmed; the Windows disc booted. Setup asked 'It looks like you started an upgrade and booted from installation media ... to perform a clean installation instead, click No'; the owner clicked No. Setup then installed from the answer file (disk wiped), ran 'Just a moment', 'Checking for updates' and '100%' during OOBE with NAT internet, restarted, and reached the lock screen at about 06:22Z (16:22 local).",
+    "first sign-in as jarvis-s6-guest ('JARVIS Stage 6 guest', Local Account per Settings); no Microsoft account, sign-in, region or keyboard page was shown; no bypass command was used.",
+    "Windows Update paused by the owner for the longest period offered: until 6 November 2026 (photograph; baseline record windows_update_pause_expiry 2026-11-06T05:27:32Z).",
+    "Guest Additions: media\\VBoxGuestAdditions.iso (sha256 346ea2b9ed47bb954464af83835b14bd8afa5fc1864f34e2561ed923fb74981c) attached on SATA port 2 in place of UNATTEND.iso through the VM window's Devices menu; VBoxWindowsAdditions.exe run with defaults; installer page 'Oracle VirtualBox Guest Additions 7.2.18 Setup', 'VirtualBox Windows Additions 7.2.18 r175117 (amd64)' (photograph); reboot. A second accidental launch of the installer offered to uninstall; it was not accepted and Guest Additions remains installed (baseline programs list: 7.2.18.175117).",
+    "egress mounted manually inside the guest: net use Z: \\\\VBOXSVR\\guest-egress-01, 'The command completed successfully' (2026-10-02, about 07:05Z; photograph). Not auto-mounted.",
+    "tools disc attached on SATA port 2 through the Devices menu: JARVIS-TOOLS.iso, later JARVIS-TOOLS-v2, -v3 and -v4 for the step 8 runs (step8-evaluation.json).",
+    "the VM then stayed running, across a host sleep, until the step 8 runs on 2026-10-04."
+  ],
+  "checks": {
+    "official media, unmodified; answer file on a separate read-only disc (6(a), v3 D3)": "PASS (Windows ISO sha256 bd4307df... and UNATTEND.iso 89f97c7b... as verified at steps 0, 4 and 6; Setup accepted the answer file)",
+    "Windows 11 Home x64 (6(b))": "PASS (baseline: Microsoft Windows 11 Home, 64-bit, EditionID Core, 26H2 build 26300.9457; not activated, recorded)",
+    "local account only, no Microsoft account, supported setup path (6(c))": "PASS (answer-file LocalAccounts; principal source Local; no account screen appeared; OWNER_DECISION_REQUIRED_FRESH_VM_ACCOUNT did not arise)",
+    "Guest Additions 7.2.18 installed before the baseline, version recorded (6(e), v3 D4)": "PASS",
+    "one egress, mounted manually, no automount (6(e))": "PASS (shared folder guest-egress-01 only; autoMount=false in the .vbox; mapped by hand as Z:)",
+    "Windows Update paused (6(g))": "PASS",
+    "every start through the start launcher with LocalhostReachable = 0 proven from VBox.log (owner decision 2026-10-02T04:12Z)": "PASS (four starts, four records, all 0)",
+    "host UAC prompt": "none reported"
+  },
+  "deviations_recorded": [
+    "Two installation attempts: the first stalled and was reset under what became the approved 15-minute hang rule; the second is a clean installation chosen explicitly in Setup's own dialog. No check failed; the reruns are recorded here.",
+    "UEFI variable store re-initialised twice and Secure Boot keys re-enrolled, exactly as at creation, to restore disc-first boot (records above). Secure Boot stayed on.",
+    "The disc prompt was answered from the host by the owner-run start launcher (keyboard scancodes); no setting of the VM was changed through the GUI.",
+    "OOBE fetched setup updates over NAT before Windows Update was paused; the build did not change (26300.9457 at the baseline, equal to the media)."
+  ],
+  "result": "STEP 7: PASS. Windows 11 Home installed from official media by the answer file with a local account; Guest Additions 7.2.18; updates paused; single manual egress.",
+  "next": "step 8 baseline record (step8-evaluation.json), then step 9 snapshot",
+  "recorded_by": "Claude Code (Claude Fable 5.1), owner account"
+}

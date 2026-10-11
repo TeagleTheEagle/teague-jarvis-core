@@ -1,0 +1,35 @@
+{
+    "package":  "D:\\JARVIS-release-work\\pkg-1.0.15",
+    "previous_package":  "D:\\JARVIS-release-work\\pkg-1.0.14",
+    "base":  "D:\\JARVIS-release-work\\stage7-local-1.0.15-run2",
+    "driver":  3,
+    "steps":  [
+                  {
+                      "step":  "first start: Install, then the driver asks for the Windows restart",
+                      "exit":  0,
+                      "must_say":  "The install step PASSED",
+                      "said":  true
+                  },
+                  {
+                      "step":  "second start on the same start of Windows: the restart check must ask for the restart",
+                      "exit":  0,
+                      "must_say":  "Windows has not been restarted since the install step",
+                      "said":  true
+                  },
+                  {
+                      "step":  "third start as after a restart (-BootIdentityFile): AfterRestart, Uninstall, Update, Interrupt",
+                      "exit":  0,
+                      "must_say":  "ALL STAGE 7 STEPS PASSED",
+                      "said":  true
+                  },
+                  {
+                      "step":  "fourth start: nothing left to do",
+                      "exit":  0,
+                      "must_say":  "ALL STAGE 7 STEPS PASSED",
+                      "said":  true
+                  }
+              ],
+    "live_processes_before":  8,
+    "live_processes_after":  8,
+    "sandbox_processes_after":  0
+}

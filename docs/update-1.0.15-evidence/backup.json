@@ -1,0 +1,61 @@
+{
+    "schema":  "jarvis-everyday-update-backup-v1",
+    "utc":  "2026-10-06T02:10:07.8855219Z",
+    "release_used":  "1.0.14-e03872680e1d",
+    "create":  {
+                   "status":  "backup_verified",
+                   "id":  "9c9131dcb5ed41388b37ed01dce06523",
+                   "files":  332,
+                   "bytes":  2999409,
+                   "database_counts":  {
+                                           "items":  7,
+                                           "messages":  1220,
+                                           "reminders":  0,
+                                           "settings":  12,
+                                           "audit":  742,
+                                           "feedback":  8,
+                                           "documents":  7,
+                                           "task_meta":  0,
+                                           "research":  26,
+                                           "workspaces":  2,
+                                           "workspace_links":  3,
+                                           "turn_evidence":  13,
+                                           "inspection_records":  1,
+                                           "inspection_findings":  9,
+                                           "inspection_finding_sources":  9,
+                                           "inspection_finding_events":  9,
+                                           "project_budget_limits":  0,
+                                           "project_budget_reservations":  0
+                                       }
+               },
+    "rehearse":  {
+                     "status":  "restore_rehearsal_passed",
+                     "files":  332,
+                     "database_counts":  {
+                                             "items":  7,
+                                             "messages":  1220,
+                                             "reminders":  0,
+                                             "settings":  12,
+                                             "audit":  742,
+                                             "feedback":  8,
+                                             "documents":  7,
+                                             "task_meta":  0,
+                                             "research":  26,
+                                             "workspaces":  2,
+                                             "workspace_links":  3,
+                                             "turn_evidence":  13,
+                                             "inspection_records":  1,
+                                             "inspection_findings":  9,
+                                             "inspection_finding_sources":  9,
+                                             "inspection_finding_events":  9,
+                                             "project_budget_limits":  0,
+                                             "project_budget_reservations":  0
+                                         }
+                 },
+    "backup":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS\\data-backups\\9c9131dcb5ed41388b37ed01dce06523.zip",
+    "backup_sha256":  "24774c8e3489d30e0e50b0a030dbbfdfdf65d1c31e29ccd572e4716f0573eeb2",
+    "copy":  "D:\\JARVIS-update-1.0.15\\backup\\9c9131dcb5ed41388b37ed01dce06523.zip",
+    "copy_sha256":  "24774c8e3489d30e0e50b0a030dbbfdfdf65d1c31e29ccd572e4716f0573eeb2",
+    "installed_still_verified":  "verified",
+    "database_sha256_after_backup":  "cffac2db1634c684b54de916a8461ddef1f37244ac194bc31d58ec68ea853781"
+}

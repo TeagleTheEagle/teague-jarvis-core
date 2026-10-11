@@ -1,0 +1,20 @@
+{
+  "schema": "stage6-gate16r-step-evaluation-v1",
+  "step": "P4 preservation checkpoint after Gate 18 (AMENDMENT-v2 section 8), compared exactly with P3",
+  "written_utc": "2026-10-04T07:59:57Z",
+  "authorization": "owner's message in the Claude Code chat, 2026-10-04 (local), text: \"run p4\" (owner-statements.jsonl; two earlier messages, \"go ahead\" and \"go-ahead\", were not accepted); run immediately, once, by Claude Code under the owner account, non-elevated, with Invoke-PreservationCheckpoint.ps1 (sha256 0ab71837303263144cd8e1aeaa2f69e8adc326a558314d73653f8482f7ed6f7d, the same file as at P0 to P3) -Checkpoint P4 -Reference gate17\\checkpoints\\p3-20261004-051026 -OwnerAuthorized",
+  "run": "checkpoints/p4-20261004-075914 (2026-10-04T07:59:14Z): CHECKPOINT.json status PASS, findings [] (sha256 4073f84072def088de222b53936ee943472f8ade77fd4ad64a11d4b367dc6bea)",
+  "checks": {
+    "no VirtualBox process before or after the reads (7(f))": "PASS (census-before and census-after both [], byte-identical to P3's; the acceptance VM had been shut down and snapshot GATE18-PASS taken at 07:55:13Z)",
+    "VirtualBox installation frozen (7(g))": "PASS (7.2.18.175117, VBoxManage sha256 ac0e4a475c628fdcf711b3a78f9704d7a2eb568b9d681b826f31429384c6a936, equal to P0 to P3)",
+    "protected VM inventory equal to P3": "PASS (12 files / 59,665,402,098 bytes; protected-vm-inventory.json byte-identical to P3's)",
+    "protected config inventory equal to P3": "PASS (byte-identical)",
+    "control hashes equal to P3": "PASS (.vbox 98a89e62fd19ba49dc316b6e9c902fb6ba18fe4c66ec0ba8bf20deb3a892e93c, .vbox-prev 9d69cc14a480aac13c9c03817aeeb4bc4d068a6fc27a81fc15ff2bc91de2c797, VirtualBox.xml f05da097d96f073a2569488a0fffc1682d7034e69069bab51b4409d88c2bdf0d; control-hashes.json byte-identical to P3's)",
+    "DACLs of both protected roots equal to P3": "PASS (dacl.json byte-identical)",
+    "reads performed": "only the section 8(c) permitted reads, by the checkpoint script; no VirtualBox executed, no disk image hashed, nothing modified"
+  },
+  "result": "P4: PASS. Gate 18 (backup copy, recovery disc, VM start, three guest runs, snapshot GATE18-PASS) changed nothing in the protected original or the VirtualBox installation. With gate18-evaluation.json: BACKUP_RESTORE_RECOVERY_PASS.",
+  "backup_source_preservation": "the backup drive E: was read once by the owner's own command (incident 01) and is unchanged by it (hash before = after); the everyday JARVIS's backup folder received two new files by the owner-approved helper and nothing else was changed there (gate18-evaluation.json, deviations 1 and 2)",
+  "next": "evidence manifests for Gate 18; then Gate 20: requirement table, D9 timing bound, P5 only on the owner's own \"run P5\"",
+  "recorded_by": "Claude Code (Claude Fable 5.1), owner account"
+}

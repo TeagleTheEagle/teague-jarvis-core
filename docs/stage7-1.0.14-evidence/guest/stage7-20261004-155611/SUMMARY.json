@@ -1,0 +1,56 @@
+{
+    "schema":  "jarvis-stage7-run-v1",
+    "overall":  "PASS",
+    "phase":  "Install",
+    "home":  "C:\\Users\\jarvis-s6-guest\\AppData\\Local\\JARVIS",
+    "package":  "E:\\",
+    "started_utc":  "2026-10-04T15:56:11.3644360Z",
+    "finished_utc":  "2026-10-04T16:20:51.7911151Z",
+    "steps":  [
+                  {
+                      "step":  "E0-not-elevated",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T15:56:11.9514129Z"
+                  },
+                  {
+                      "step":  "I1-package",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T15:56:18.2334183Z"
+                  },
+                  {
+                      "step":  "I2-extract",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T16:09:24.6797757Z"
+                  },
+                  {
+                      "step":  "I3-install",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T16:15:24.6717163Z"
+                  },
+                  {
+                      "step":  "I4-verify",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T16:15:48.9471177Z"
+                  },
+                  {
+                      "step":  "I5-launch",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T16:17:31.0708946Z"
+                  },
+                  {
+                      "step":  "I6-duplicate-core",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T16:17:43.9517712Z"
+                  },
+                  {
+                      "step":  "I7-local-stt",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T16:18:36.3492441Z"
+                  },
+                  {
+                      "step":  "I8-restart",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T16:20:51.7862929Z"
+                  }
+              ]
+}

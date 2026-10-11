@@ -1,0 +1,20 @@
+{
+  "schema": "stage6-gate16r-step-evaluation-v1",
+  "step": "2: AMENDMENT-v2 section 7(b) validation account",
+  "utc": "2026-10-02T01:42:00Z",
+  "source": "account/validation-account-check.json, written by Invoke-ValidationAccountCheck.ps1 run by the owner inside the jarvis-s6-val session at 2026-10-02T01:38:33Z (script sha256 85b4871817d7a28b505d3fab86f7f60fc1a35d55de9be9377a65122439dbae7c, step2-folders.json)",
+  "checks": {
+    "standard user, not elevated": "PASS (elevated=false; groups: None, Everyone, BUILTIN\\Users, INTERACTIVE, CONSOLE LOGON, Authenticated Users, This Organization, Local account, LOCAL, NTLM Authentication)",
+    "not a member of Administrators, Backup Operators, Hyper-V Administrators or any privileged group": "PASS",
+    "SeBackupPrivilege, SeRestorePrivilege, SeTakeOwnershipPrivilege, SeDebugPrivilege absent": "PASS (present: SeChangeNotify, SeIncreaseWorkingSet, SeShutdown, SeTimeZone, SeUndock)",
+    "no saved owner or administrator credentials": "PASS with the standing limitation: two entries exist, MicrosoftAccount:target=SSO_POP_Device and WindowsLive:target=virtualapp/didlogical (Windows device sign-on entries); these are the two credential entries kept UNRESOLVED by the owner's 2026-09-30 bounded decision, applied by AMENDMENT-v3 A3",
+    "no automatic elevation": "PASS as far as a non-elevated token shows; the launch-path disposition v3 A4 applies",
+    "fresh profile": "PASS (C:\\Users\\jarvis-s6-val created 2026-09-30T07:29:25Z, at O-1)",
+    "no VirtualBox process under the account": "PASS (empty census)",
+    "password handling": "none: no password was typed into, read by or recorded by any script",
+    "VBOX_USER_HOME": "not set yet; this is a section 7(d) item set in step 4 (user-scoped, that account only). The check is re-run after step 4 so the final account record reads PASS."
+  },
+  "result": "SECTION 7(b): PASS (with A3 applied). The script's own status 'FAIL' is solely the VBOX_USER_HOME note deferred to step 4.",
+  "next": "step 3: section 7(e) isolation (owner: New-IsolationFixtures -Phase Create; validation session: Invoke-IsolationCheck; owner: -Phase Postflight)",
+  "recorded_by": "Claude Code (Claude Fable 5.1), owner account"
+}

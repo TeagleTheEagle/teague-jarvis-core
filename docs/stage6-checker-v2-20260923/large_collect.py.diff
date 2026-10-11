@@ -1,0 +1,11 @@
+--- D:\JARVIS-STAGE6-LIVE\978b5ce769244ec9a580fb0846f9bfdc\code\large_collect.py
++++ D:\JARVIS-STAGE6-LIVE\2d922197cf7d4bb098d8da6e070cbff2\code\large_collect.py
+@@ -8,7 +8,7 @@
+ from journal import ticks,frequency
+ from secondary_sampling import SecondarySampler
+ def main(root):
+- contract=load(root);ledger=Ledger(root);tree=TreeTracker(collector_anchor=True);health=None;worker=None;sampler=None;probes=[];handles=[];launched=[];results=[]
++ contract=load(root);ledger=Ledger(root);tree=TreeTracker(collector_anchor=True,run_root=root);health=None;worker=None;sampler=None;probes=[];handles=[];launched=[];results=[]
+  def secondary(stage,fn):
+   try:return fn()
+   except BaseException:ledger.fail(stage)

@@ -1,0 +1,7 @@
+{
+    "status":  "PASS",
+    "staging":  "D:\\JARVIS-release-work\\gate19-local\\driver-test\\staging-previous",
+    "seconds":  100.5,
+    "files":  10648,
+    "has_installer":  true
+}

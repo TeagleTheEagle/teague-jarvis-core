@@ -1,0 +1,11 @@
+{
+  "schema": "stage6-owner-decision-v1",
+  "id": "gate18-owner-decision-01",
+  "recorded_utc": "2026-10-04T05:50:34Z",
+  "incident": "gate18-incident-01 (incident-01-backup-copy.json)",
+  "question": "Where Gate 18's backup comes from: (A) a real backup made now by the everyday JARVIS's own backup feature, copied by the owner, copy script fixed; (B) the AMENDMENT-v3 D8 alternative, a synthetic backup made inside the VM; (C) another backup the owner names.",
+  "owner_answer_literal": "A",
+  "source": "direct human message in the Claude Code chat, 2026-10-04 (local)",
+  "effect": "Claude researches read-only how the everyday JARVIS makes a backup (reference copies and the repo only; not the original source folder, not the live installation, not E:), fixes the copy script, and gives the owner exact steps to approve before anything runs. Gate 18 stays stopped and the launcher stays suspended until then.",
+  "recorded_by": "Claude Code (Claude Opus 5.5)"
+}

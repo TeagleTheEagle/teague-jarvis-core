@@ -1,0 +1,31 @@
+{
+    "status":  "PASS",
+    "uninstaller_exit":  0,
+    "seconds":  12,
+    "setup_log":  "setup-uninstall.log",
+    "result":  "uninstalled",
+    "output":  null,
+    "program_files_removed":  10768,
+    "kept":  [
+                 "data",
+                 "config",
+                 "profile"
+             ],
+    "installer_seconds":  {
+                              "stop":  1.514,
+                              "remove_program":  2.722
+                          },
+    "leftover_program_files":  0,
+    "processes":  0,
+    "data_kept":  true,
+    "config_kept":  true,
+    "desktop_shortcut_gone":  false,
+    "startup_shortcut_gone":  false,
+    "entry_before":  true,
+    "entry_gone":  true,
+    "package_folder_gone":  true,
+    "current_json_gone":  true,
+    "launcher_script_gone":  true,
+    "shortcuts_word":  "withheld (the home is not this PC\u0027s own install home)",
+    "shortcuts_expected":  "withheld*"
+}

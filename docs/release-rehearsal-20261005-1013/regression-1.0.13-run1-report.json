@@ -1,0 +1,248 @@
+{
+  "release_id": "1.0.13-6d4ff851cca4",
+  "commit": "6d4ff851cca47e748ff83dc7844419700ee4ce2e",
+  "package": "D:\\JARVIS-release-work\\release\\JARVIS-1.0.13-6d4ff851cca4",
+  "release_verified_before_and_after_copy": true,
+  "test_files_added_to_copy": 72,
+  "runtime": {
+    "python": "release\\python\\python.exe",
+    "node": "bundled electron (ELECTRON_RUN_AS_NODE)",
+    "system_node_used": false,
+    "dev_venv_used": false
+  },
+  "passed": false,
+  "suites": [
+    {
+      "suite": "python unittest",
+      "exit_code": 0,
+      "seconds": 273.0,
+      "log": "python_unittest.log",
+      "tail": [
+        ".................................................................................................................................s...................................................................................................................................................................................................................................................",
+        "----------------------------------------------------------------------",
+        "Ran 373 tests in 271.047s",
+        "",
+        "OK (skipped=1)"
+      ]
+    },
+    {
+      "suite": "desktop node --test",
+      "exit_code": 1,
+      "seconds": 108.7,
+      "log": "desktop_node_--test.log",
+      "tail": [
+        "    actual: true,",
+        "    expected: false,",
+        "    operator: 'strictEqual',",
+        "    diff: 'simple'",
+        "  }",
+        "",
+        "test at test\\inspection-job.test.cjs:5:1",
+        "\u2716 one authenticated job captures the actual 13 panels with no external submission (104571.842ms)",
+        "  AssertionError [ERR_ASSERTION]: Local-only capture must not claim visual analysis",
+        "  + actual - expected",
+        "  ",
+        "  + 'running'",
+        "  - 'partial'",
+        "  ",
+        "      at TestContext.<anonymous> (D:\\JARVIS-release-work\\regression-1.0.13\\release\\app\\desktop\\test\\inspection-job.test.cjs:18:10)",
+        "      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)",
+        "      at async Test.run (node:internal/test_runner/test:1404:7)",
+        "      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {",
+        "    generatedMessage: false,",
+        "    code: 'ERR_ASSERTION',",
+        "    actual: 'running',",
+        "    expected: 'partial',",
+        "    operator: 'strictEqual',",
+        "    diff: 'simple'",
+        "  }"
+      ]
+    },
+    {
+      "suite": "intelligence node --test",
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "intelligence_node_--test.log",
+      "tail": [
+        "\u2714 no token for http://127.0.0.1:43210/api/state (0.4968ms)",
+        "\u2714 no token for http://127.0.0.1:4321@untrusted.invalid/collect (0.521ms)",
+        "\u2714 no token for http://localhost:4321/api/state (0.4809ms)",
+        "\u2714 no token for https://127.0.0.1:4321/api/state (0.4721ms)",
+        "\u2714 no token for http://127.0.0.2:4321/api/state (0.4109ms)",
+        "\u2714 no token for https://untrusted.invalid/ (0.4333ms)",
+        "\u2714 no token for file:///fixture.html (0.4776ms)",
+        "\u2714 no token for data:text/html,fixture (0.4583ms)",
+        "\u2714 no token for not a URL (0.4469ms)",
+        "\u2714 cross-origin redirect drops inherited token regardless of header casing (1.2236ms)",
+        "\u2714 trusted requests replace supplied credential variants with one canonical token (0.4071ms)",
+        "\u2714 missing session still opens local prototype without credential hook (0.4264ms)",
+        "\u2714 failed local Core load retains existing local-file fallback (0.4771ms)",
+        "\u2714 explicit Stage4 TEST branch bypasses ordinary client setup (1.0579ms)",
+        "\u2714 application result may contain finite timestamps without changing identity transcript parsing (1.0643ms)",
+        "\u2714 invalid namespace cannot initialize an Electron TEST profile (0.2473ms)",
+        "\u2714 Intelligence external renderer is inert without gated preload (0.956ms)",
+        "\u2139 tests 18",
+        "\u2139 suites 0",
+        "\u2139 pass 18",
+        "\u2139 fail 0",
+        "\u2139 cancelled 0",
+        "\u2139 skipped 0",
+        "\u2139 todo 0",
+        "\u2139 duration_ms 83.9065"
+      ]
+    },
+    {
+      "suite": "test_barge_in.cjs",
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "test_barge_in.cjs.log",
+      "tail": [
+        "PASS: sustained interruption, pre-roll, silence/noise rejection, disabled playback, ended conversation and stop."
+      ]
+    },
+    {
+      "suite": "test_conversation_voice.cjs",
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "test_conversation_voice.cjs.log",
+      "tail": [
+        "Conversation mode: persistent session, single nudge, pause tolerance, resume and exact end phrase passed."
+      ]
+    },
+    {
+      "suite": "test_local_voice_main.cjs",
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "test_local_voice_main.cjs.log",
+      "tail": [
+        "Main local voice: continuous audio, playback suppression, PCM and stale-wake checks passed."
+      ]
+    },
+    {
+      "suite": "test_navigation.cjs",
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "test_navigation.cjs.log",
+      "tail": [
+        "Navigation commands and non-navigation exclusions passed."
+      ]
+    },
+    {
+      "suite": "test_proactive_voice.cjs",
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "test_proactive_voice.cjs.log",
+      "tail": [
+        "PASS: invited conversation, muted microphone, end phrase latch and explicit restart."
+      ]
+    },
+    {
+      "suite": "test_prompt_speech.cjs",
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "test_prompt_speech.cjs.log",
+      "tail": [
+        "PASS: prompt acknowledgement, explicit read-aloud and clarification handling."
+      ]
+    },
+    {
+      "suite": "test_screen_intent.cjs",
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "test_screen_intent.cjs.log",
+      "tail": [
+        "PASS: screen session voice intent and unrelated conversation."
+      ]
+    },
+    {
+      "suite": "test_screen_vision.cjs",
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "test_screen_vision.cjs.log",
+      "tail": [
+        "PASS: unified start, observations, fresh question capture, deduplication, stop, limit and cancelled picker."
+      ]
+    },
+    {
+      "suite": "test_settings_version.cjs",
+      "exit_code": 0,
+      "seconds": 0.0,
+      "log": "test_settings_version.cjs.log",
+      "tail": [
+        "PASS: Settings > About shows the installed release, the development revision, or says it is not in this view."
+      ]
+    },
+    {
+      "suite": "test_timer_fast_path.cjs",
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "test_timer_fast_path.cjs.log",
+      "tail": [
+        "PASS: timer fast path, qualified timing, empty/expired/multiple timers, read failure, cancellation, configured cloud voice."
+      ]
+    },
+    {
+      "suite": "test_voice.cjs",
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "test_voice.cjs.log",
+      "tail": [
+        "Voice tests passed: wake gate, interruption, silence, timeout, mute, WAV format."
+      ]
+    },
+    {
+      "suite": "test_voice_cancellation.cjs",
+      "exit_code": 0,
+      "seconds": 0.0,
+      "log": "test_voice_cancellation.cjs.log",
+      "tail": [
+        "PASS: superseded speech aborts; cancellation is silent; old cleanup preserves current request."
+      ]
+    },
+    {
+      "suite": "test_voice_diagnostics.cjs",
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "test_voice_diagnostics.cjs.log",
+      "tail": [
+        "PASS: live RMS during playback/processing, no monitoring requests, stopped capture and bounded metadata."
+      ]
+    },
+    {
+      "suite": "test_voice_lab.cjs",
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "test_voice_lab.cjs.log",
+      "tail": [
+        "Voice lab: ordered audio, cancellation and overload checks passed."
+      ]
+    },
+    {
+      "suite": "test_voice_recovery.cjs",
+      "exit_code": 0,
+      "seconds": 0.0,
+      "log": "test_voice_recovery.cjs.log",
+      "tail": [
+        "PASS: selected-input recovery, standby, mute cancellation and bounded retries."
+      ]
+    },
+    {
+      "suite": "test_wake_race.cjs",
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "test_wake_race.cjs.log",
+      "tail": [
+        "PASS: stale pause/reset failures ignored; current failures reported; new session preserved."
+      ]
+    },
+    {
+      "suite": "test_wake_startup.cjs",
+      "exit_code": 0,
+      "seconds": 0.1,
+      "log": "test_wake_startup.cjs.log",
+      "tail": [
+        "PASS: preparation precedes capture; mute during preparation prevents capture."
+      ]
+    }
+  ]
+}

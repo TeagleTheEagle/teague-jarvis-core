@@ -1,0 +1,11 @@
+--- frozen/baseline_finalize.py
++++ D:\JARVIS-STAGE6-LIVE\6d305fb9fc7440c5bf485466e9d708df\code\baseline_finalize.py
+@@ -33,7 +33,7 @@
+   with p.open('r+b',buffering=0) as f:os.fsync(f.fileno())
+   files.append(dict(name=p.name,sha256=sha(p),bytes=p.stat().st_size))
+  save(root/'durable-files.json',files);advance(root,'CLEANUP_VERIFIED','FINALIZED')
+- manifest=dict(mode='protected_baseline',captureUtc=__import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat(),limitation='No proof of pre-incident byte identity for artifacts lacking historical hashes',synthetic=contract['synthetic'],scenario=contract['scenario'],source=contract['source'],files=read(root/'hash-pass-2.json')['files'],dualEvidence=result,protectedAccess=not contract['synthetic'])
++ manifest=dict(mode='protected_baseline',captureUtc=__import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat(),limitation='No proof of pre-incident byte identity for artifacts lacking historical hashes',authoritativeApplication=result['authoritative'],identityEnrichment=result['identityEnrichment'],synthetic=contract['synthetic'],scenario=contract['scenario'],source=contract['source'],files=read(root/'hash-pass-2.json')['files'],dualEvidence=result,protectedAccess=not contract['synthetic'])
+  save(root/'baseline-manifest.json',manifest);save(root/'baseline-manifest-hash.json',dict(sha256=sha(root/'baseline-manifest.json')))
+  advance(root,'FINALIZED','MANIFESTED')
+  members=files+[dict(name=n,sha256=sha(root/n),bytes=(root/n).stat().st_size) for n in ('durable-files.json','baseline-manifest.json','baseline-manifest-hash.json')]

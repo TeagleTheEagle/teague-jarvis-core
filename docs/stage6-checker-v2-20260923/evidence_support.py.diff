@@ -1,0 +1,104 @@
+--- D:\JARVIS-STAGE6-LIVE\978b5ce769244ec9a580fb0846f9bfdc\code\evidence_support.py
++++ D:\JARVIS-STAGE6-LIVE\2d922197cf7d4bb098d8da6e070cbff2\code\evidence_support.py
+@@ -78,18 +78,27 @@
+  child creation must lie in its recorded parent's lifetime. No kill rights.
+  Event reconciliation later exposes missed short-lived children.
+  """
+- def __init__(self,collector_anchor=False):
++ def __init__(self,collector_anchor=False,run_root=None):
+   self.anchor=None;self.anchorHandle=None;self.supporting=collector_anchor;self.capacity=8192
+   self.rows={};self.handles={};self.lock=threading.RLock();self.errors=[];self.stop=threading.Event();self.scans=0;self.maxScan=0;self.thread=threading.Thread(target=self.loop,daemon=True);
+-  if collector_anchor:self.initialize_anchor()
++  self.runBinding=None
++  if collector_anchor:
++   self.initialize_anchor()
++   if run_root is not None:
++    try:
++     from tracker_adapter_v2 import binding
++     self.runBinding=binding(run_root,self.anchor['pid'],self.anchor['created'])
++    except BaseException:
++     K.CloseHandle(self.anchorHandle);self.anchorHandle=None;raise
+   try:self.thread.start()
+   except BaseException:
+    if self.anchorHandle:
+     if not K.CloseHandle(self.anchorHandle):raise RuntimeError("Anchor close failure after thread-start failure")
+     self.anchorHandle=None
+    raise
+- def capture_image(self,h,pid,created):
++ def capture_image(self,h,pid,created,acquisition=None):
+   record=dict(source='independent-tree-handle-v1',pid=pid,created=created,handleIdentity=str(h),frequency=frequency(),captureEntryQpc=ticks(),image='',imageError=None)
++  if acquisition is not None:record.update(acquisitionBeginQpc=acquisition[0],acquisitionReturnedQpc=acquisition[1])
+   try:
+    record['handlePid']=int(K.GetProcessId(h));record['handleCreated']=times(h)[0]
+    record['stateBeforeQpc']=ticks();record['stateBefore']=int(K.WaitForSingleObject(h,0))
+@@ -104,11 +113,11 @@
+   except BaseException as exc:record.update(valid=False,errorType=type(exc).__name__)
+   return record
+  def initialize_anchor(self):
+-  h=w.HANDLE();me=K.GetCurrentProcess()
++  h=w.HANDLE();me=K.GetCurrentProcess();acq=ticks()
+   if not K.DuplicateHandle(me,me,me,c.byref(h),0x100000|0x1000,False,0):raise c.WinError(c.get_last_error())
+-  self.anchorHandle=h.value
+-  try:
+-   created=times(h.value)[0];capture=self.capture_image(h.value,os.getpid(),created)
++  acquired=ticks();self.anchorHandle=h.value
++  try:
++   created=times(h.value)[0];capture=self.capture_image(h.value,os.getpid(),created,(acq,acquired))
+    if not capture['valid']:raise RuntimeError('Invalid collector discovery anchor')
+    self.anchor=dict(pid=os.getpid(),created=created,exitFiletime=None,scopeOnly=True,capture=capture,closed=False,exitProof='EXTERNAL_NATIVE_OBSERVER_REQUIRED')
+   except BaseException:
+@@ -122,13 +131,13 @@
+   if self.anchor['closed']:self.anchorHandle=None
+   rows=[dict(pid=r['pid'],created=r['created'],parentPid=r['parentPid'],capture=r.get('imageCapture'),closed=r['closed'],exitFiletime=r['exitFiletime'],exitCode=r['exitCode']) for r in result['rows']]
+   valid=bool(state==258 and self.anchor['closed'] and not self.errors and rows and all(r['capture'] and r['capture']['valid'] and r['closed'] and r['exitFiletime'] for r in rows) and result['allExited'] and result['allHandlesClosed'] and result['threadStopped'])
+-  value=dict(schema='stage6-independent-tree-support-v1',supportingOnly=True,kernelQualification='NOT_PERFORMED',anchor=self.anchor,descendants=rows,capacity=self.capacity,errors=self.errors,valid=valid)
++  value=dict(binding=self.runBinding,schema='stage6-independent-tree-support-v1',supportingOnly=True,kernelQualification='NOT_PERFORMED',anchor=self.anchor,descendants=rows,capacity=self.capacity,errors=self.errors,valid=valid)
+   from workspace import check_path
+   p=check_path(pathlib.Path(root)/'tree-image-support.json')
+   with p.open('x',encoding='utf8') as f:json.dump(value,f,indent=2);f.flush();os.fsync(f.fileno())
+   return valid
+ 
+- def add(self,h,pid,parent,role,args=None):
++ def add(self,h,pid,parent,role,args=None,acquisition=None):
+   if self.supporting and len(self.rows)>=self.capacity:
+    self.stop.set();raise RuntimeError('Supporting identity capacity exceeded')
+   ts=times(h);key=(pid,ts[0])
+@@ -137,17 +146,18 @@
+   self.rows[key]=dict(pid=pid,created=ts[0],parentPid=parent,role=role,image='UNKNOWN',command=args if args else 'UNKNOWN',handleIdentity=str(h),handleRetainedQpc=ticks(),startFiletime=ts[0],signalObservedQpc=None,exitFiletime=None,exitCode=None,closed=False)
+   self.handles[key]=h
+   if self.supporting:
+-   capture=self.capture_image(h,pid,ts[0]);self.rows[key]['imageCapture']=capture;self.rows[key]['image']=capture['image']
++   capture=self.capture_image(h,pid,ts[0],acquisition);self.rows[key]['imageCapture']=capture;self.rows[key]['image']=capture['image']
+    if not capture['valid']:self.errors.append(dict(stage='supporting-image',pid=pid,created=ts[0]));self.stop.set()
+    return
+   try:self.rows[key]['image']=image(h)
+   except BaseException:
+    error=dict(qpc=ticks(),pid=pid,created=ts[0],stage='image-query',error=traceback.format_exc());self.rows[key]['imageError']=error;self.errors.append(error)
+  def register(self,p,role,args=None):
+-  h=w.HANDLE();selfhandle=K.GetCurrentProcess()
++  h=w.HANDLE();selfhandle=K.GetCurrentProcess();acq=ticks()
+   if not K.DuplicateHandle(selfhandle,int(p._handle),selfhandle,c.byref(h),0x100000|0x1000,False,0):raise c.WinError(c.get_last_error())
++  acquired=ticks()
+   with self.lock:
+-   try:self.add(h.value,p.pid,os.getpid(),role,args)
++   try:self.add(h.value,p.pid,os.getpid(),role,args,(acq,acquired))
+    except BaseException:
+     # Close only if add did not transfer ownership into retained handles.
+     if h.value not in self.handles.values():
+@@ -169,14 +179,14 @@
+      parents=[r for r in self.rows.values() if r['pid']==parent]
+      if self.anchor and self.anchor['pid']==parent:parents.append(self.anchor)
+      if not parents:continue
+-     h=K.OpenProcess(0x100000|0x1000,False,pid)
++     acq=ticks();h=K.OpenProcess(0x100000|0x1000,False,pid);acquired=ticks()
+      if not h:continue # Late-event reconciliation will mark missing handles.
+      try:
+       ts=times(h)
+       if (pid,ts[0]) in self.rows:K.CloseHandle(h);continue
+       matches=[r for r in parents if int(r['created'])<=int(ts[0]) and (r['exitFiletime'] is None or int(ts[0])<=int(r['exitFiletime']))]
+       if len(matches)!=1:K.CloseHandle(h);continue
+-      self.add(h,pid,parent,'descendant:'+name);added=True
++      self.add(h,pid,parent,'descendant:'+name,acquisition=(acq,acquired));added=True
+      except BaseException:K.CloseHandle(h);raise
+     if not added:break
+    for key,h in self.handles.items():

@@ -1,0 +1,83 @@
+{
+    "status":  "PASS",
+    "rollback":  "rolled_back",
+    "rolled_back_to":  "1.0.16-fccde24e2cc6",
+    "processes_left_after_rollback":  0,
+    "previous_running":  {
+                             "core_ready":  true,
+                             "seconds_to_ready":  5.8,
+                             "installed_release":  "1.0.16-fccde24e2cc6",
+                             "identity_matches":  true,
+                             "gate17_memory":  true,
+                             "gate19_memory":  true,
+                             "processes":  8,
+                             "processes_from_other_releases":  [
+
+                                                               ]
+                         },
+    "setup":  "JARVIS-Setup-1.0.17-52342b46e48a.exe",
+    "setup_exit":  0,
+    "wall_seconds":  101.5,
+    "switches":  [
+                     "/VERYSILENT",
+                     "/SUPPRESSMSGBOXES",
+                     "/NORESTART",
+                     "/DIR=\"D:\\JARVIS-release-work\\stage7-local-1.0.17\\staging\"",
+                     "/HOME=\"D:\\JARVIS-release-work\\stage7-local-1.0.17\\home\"",
+                     "/NOSHORTCUTS"
+                 ],
+    "setup_log":  "setup-update.log",
+    "result":  "installed",
+    "release":  "1.0.17-52342b46e48a",
+    "previous":  "1.0.16-fccde24e2cc6",
+    "installer_seconds":  {
+                              "verify_package":  9.174,
+                              "verify_installed":  8.423,
+                              "stop":  1.455,
+                              "switch":  0.111
+                          },
+    "output":  null,
+    "processes_left_after_update":  0,
+    "verify":  "verified",
+    "verified_release":  "1.0.17-52342b46e48a",
+    "running":  {
+                    "core_ready":  true,
+                    "seconds_to_ready":  5.4,
+                    "installed_release":  "1.0.17-52342b46e48a",
+                    "identity_matches":  true,
+                    "gate17_memory":  true,
+                    "gate19_memory":  true,
+                    "processes":  8,
+                    "processes_from_other_releases":  [
+
+                                                      ]
+                },
+    "final_stop":  {
+                       "core_stopped_on_request":  true,
+                       "shell_processes_ended":  0,
+                       "processes_now":  0
+                   },
+    "current":  {
+                    "release":  "1.0.17-52342b46e48a",
+                    "previous":  "1.0.16-fccde24e2cc6",
+                    "switched_at":  1791342150.2712371
+                },
+    "releases":  [
+                     "1.0.16-fccde24e2cc6",
+                     "1.0.17-52342b46e48a"
+                 ],
+    "entry":  {
+                  "present":  true,
+                  "key":  "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{7A3F1C52-9E4B-4D16-8C0D-2B5E6F7A9D31}_is1",
+                  "name":  "JARVIS (sandbox)",
+                  "version":  "1.0.17",
+                  "publisher":  "Teague Industries",
+                  "uninstall":  "\"D:\\JARVIS-release-work\\stage7-local-1.0.17\\staging\\unins000.exe\"",
+                  "location":  "D:\\JARVIS-release-work\\stage7-local-1.0.17\\staging\\"
+              },
+    "shortcuts_word":  "withheld (the home is not this PC\u0027s own install home)",
+    "shortcuts_expected":  "withheld*",
+    "expected_entry_name":  "JARVIS (sandbox)",
+    "desktop_shortcut_target":  "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+    "startup_shortcut_target":  "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+}

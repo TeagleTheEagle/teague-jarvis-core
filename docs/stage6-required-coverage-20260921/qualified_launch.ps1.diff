@@ -1,0 +1,47 @@
+--- D:\JARVIS-STAGE6-LIVE\a684e9f6f9ae4826af45c0a04c18d839\code\qualified_launch.ps1
++++ D:\JARVIS-STAGE6-LIVE\cf20ac6a7a2e4cc69d944d7ffdfbc608\code\qualified_launch.ps1
+@@ -9,6 +9,16 @@
+ $tracer=$null;$observer=$null;$worker=$null;$errorText=$null
+ $pwsh='C:\Users\jonny\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\powershell\pwsh.exe'
+ $python='C:\Users\jonny\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe'
++
++Add-Type -TypeDefinition @'
++using System.Runtime.InteropServices;
++using System.Threading.Tasks;
++public static class J6Qualification {
++ [DllImport("D:\\JARVIS-STAGE6-LIVE\\cf20ac6a7a2e4cc69d944d7ffdfbc608\\code\\J6OwnedEntry.dll",CharSet=CharSet.Unicode)] public static extern int RunQualification(string root);
++ public static Task<int> Start(string root) { return Task.Run(() => RunQualification(root)); }
++}
++'@
++
+ try {
+  $tracer=Start-Process -FilePath (Join-Path $PSScriptRoot 'J6AuthorityTrace.exe') -ArgumentList @($root,$PID,$me.StartTime.ToUniversalTime().ToFileTimeUtc().ToString()) -Verb RunAs -WindowStyle Hidden -PassThru
+  Ready $tracer 'etw-ready.json'
+@@ -17,19 +27,22 @@
+  while(!(Test-Path -LiteralPath (Join-Path $root 'allow-app-prompt'))){if($gate.Elapsed.TotalSeconds -gt 120 -or $tracer.HasExited){throw 'Second prompt gate expired'};Start-Sleep -Milliseconds 100}
+  $observer=Start-Process -FilePath $pwsh -ArgumentList @('-NoProfile','-File',(Join-Path $PSScriptRoot 'timed_monitor.ps1'),'-Run',$Run,'-KernelPid',$tracer.Id) -Verb RunAs -WindowStyle Hidden -PassThru
+  Ready $observer 'app-ready.json'
+- $worker=Start-Process -FilePath $python -ArgumentList @('-B',(Join-Path $PSScriptRoot 'qualified_worker.py'),$Run) -WorkingDirectory $PSScriptRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $root 'worker.stdout') -RedirectStandardError (Join-Path $root 'worker.stderr')
+- Save 'process-identities.json' @(@{role='kernel';pid=$tracer.Id;created=$tracer.StartTime.ToUniversalTime().ToFileTimeUtc().ToString()},@{role='application';pid=$observer.Id;created=$observer.StartTime.ToUniversalTime().ToFileTimeUtc().ToString()},@{role='worker';pid=$worker.Id;created=$worker.StartTime.ToUniversalTime().ToFileTimeUtc().ToString()})
++ $worker=[J6Qualification]::Start($root)
++ $born=[Diagnostics.Stopwatch]::StartNew()
++ while(!(Test-Path -LiteralPath (Join-Path $root 'worker-created.json'))){if($worker.IsCompleted -or $born.Elapsed.TotalSeconds -gt 30){throw 'Worker creation evidence missing'};Start-Sleep -Milliseconds 100}
++ $wi=Get-Content -Raw -LiteralPath (Join-Path $root 'worker-created.json')|ConvertFrom-Json
++ Save 'process-identities.json' @(@{role='kernel';pid=$tracer.Id;created=$tracer.StartTime.ToUniversalTime().ToFileTimeUtc().ToString()},@{role='application';pid=$observer.Id;created=$observer.StartTime.ToUniversalTime().ToFileTimeUtc().ToString()},@{role='worker';pid=$wi.pid;created=$wi.created})
+  $wait=[Diagnostics.Stopwatch]::StartNew()
+- while(!(Test-Path -LiteralPath (Join-Path $root 'identity-probes.json'))){if($worker.HasExited -or $observer.HasExited -or $tracer.HasExited -or $wait.Elapsed.TotalSeconds -gt 60){throw 'Identity probe collection failed'};Start-Sleep -Milliseconds 100}
++ while(!(Test-Path -LiteralPath (Join-Path $root 'identity-probes.json'))){if($worker.IsCompleted -or $observer.HasExited -or $tracer.HasExited -or $wait.Elapsed.TotalSeconds -gt 60){throw 'Identity probe collection failed'};Start-Sleep -Milliseconds 100}
+ }catch{$errorText=$_.ToString();Save 'launcher-failure.json' @{error=$errorText}}
+ finally {
+  Save 'app-stop' @{reason='identity experiment complete; no acceptance claim'}
+  $appExited=if($observer){$observer.WaitForExit(60000)}else{$true}
+  Save 'release-handles' @{observerExited=$appExited}
+- $workerExited=if($worker){$worker.WaitForExit(20000)}else{$true}
++ $workerExited=if($worker){$worker.Wait(20000)}else{$true}
+  Save 'etw-stop' @{reason='application and worker closure requested'}
+  $kernelExited=if($tracer){$tracer.WaitForExit(30000)}else{$true}
+- Save 'launcher-result.json' @{error=$errorText;applicationExited=$appExited;workerExited=$workerExited;kernelExited=$kernelExited;applicationExit=$(if($observer -and $appExited){$observer.ExitCode});workerExit=$(if($worker -and $workerExited){$worker.ExitCode});kernelExit=$(if($tracer -and $kernelExited){$tracer.ExitCode})}
++ Save 'launcher-result.json' @{error=$errorText;applicationExited=$appExited;workerExited=$workerExited;kernelExited=$kernelExited;applicationExit=$(if($observer -and $appExited){$observer.ExitCode});workerExit=$(if($worker -and $workerExited){$worker.Result});kernelExit=$(if($tracer -and $kernelExited){$tracer.ExitCode})}
+  if($worker -and $workerExited){$worker.Dispose()};if($observer -and $appExited){$observer.Dispose()};if($tracer -and $kernelExited){$tracer.Dispose()}
+ }
+ if($errorText -or !$appExited -or !$workerExited -or !$kernelExited){throw 'Identity experiment blocked; failure preserved'}

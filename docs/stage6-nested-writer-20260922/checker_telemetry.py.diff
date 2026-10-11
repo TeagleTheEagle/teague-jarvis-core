@@ -1,0 +1,24 @@
+--- D:\JARVIS-STAGE6-LIVE\929ba9ea1c724c46b549d1dff12b517d\code\medium-checker\checker_telemetry.py
++++ D:\JARVIS-STAGE6-LIVE\82fe9772161e41578a7d9d93cdbcbcab\code\medium-checker\checker_telemetry.py
+@@ -7,13 +7,20 @@
+ from pathlib import Path
+ import checker_medium as legacy
+ import telemetry
+-VERSION='stage6-checker-telemetry-v4'
++VERSION='stage6-checker-telemetry-v5'
+ POLICY=dict(schema='stage6-telemetry-policy-v1',telemetrySchema=telemetry.SCHEMA,snapshotCapacity=65536,slowHeartbeatWarnings='NOT CONFIGURED',heartbeatFailureSeconds=10)
+ def compatibility_view(bundle):
++ # Compare the complete raw analyzer duplicate BEFORE removing measurement fields.
++ # Canonical JSON retains numeric/bool distinctions that Python == can erase.
++ qualification=bundle.get('qualification')
++ legacy.need(type(qualification) is dict and type(qualification.get('writer')) is dict and type(bundle.get('writer')) is dict,'NESTED_WRITER_MISSING')
++ legacy.need(json.dumps(qualification['writer'],sort_keys=True,allow_nan=False)==json.dumps(bundle['writer'],sort_keys=True,allow_nan=False),'NESTED_WRITER_CONFLICT')
+  b=copy.deepcopy(bundle)
+  for key in ('manifest','writer'):
+   del b[key]['telemetry']
+   for s in b[key]['segments']:del s['timing']
++ # Equality above proves this is the same record; do not silently replace a conflict.
++ b['qualification']['writer']=copy.deepcopy(b['writer'])
+  return b
+ def rules(bundle,measurements,declaration):
+  result=telemetry.validate(measurements,bundle['manifest'],bundle['writer'])

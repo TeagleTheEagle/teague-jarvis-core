@@ -1,0 +1,42 @@
+{
+    "status":  "PASS",
+    "setup":  "JARVIS-Setup-1.0.17-0d38218c4e1d.exe",
+    "setup_exit":  0,
+    "seconds":  67.3,
+    "switches":  [
+                     "/VERYSILENT",
+                     "/SUPPRESSMSGBOXES",
+                     "/NORESTART",
+                     "/DIR=\"D:\\JARVIS-release-work\\stage7-local-1.0.17-build2\\staging\"",
+                     "/HOME=\"D:\\JARVIS-release-work\\stage7-local-1.0.17-build2\\home\"",
+                     "/NOSHORTCUTS"
+                 ],
+    "setup_log":  "setup-install.log",
+    "result":  {
+                   "status":  "installed",
+                   "release":  "1.0.17-0d38218c4e1d",
+                   "previous":  null,
+                   "home":  "D:\\JARVIS-release-work\\stage7-local-1.0.17-build2\\home",
+                   "seconds":  {
+                                   "verify_package":  7.189,
+                                   "copy":  11.128,
+                                   "verify_copy":  7.117,
+                                   "switch":  0.138
+                               },
+                   "shortcuts":  "withheld (the home is not this PC\u0027s own install home)"
+               },
+    "raw":  null,
+    "installer_seconds":  {
+                              "verify_package":  7.189,
+                              "copy":  11.128,
+                              "verify_copy":  7.117,
+                              "switch":  0.138
+                          },
+    "staging":  "D:\\JARVIS-release-work\\stage7-local-1.0.17-build2\\staging",
+    "package_unpacked_release":  "1.0.17-0d38218c4e1d",
+    "uninstaller_present":  true,
+    "has_installer":  true,
+    "files_in_package":  10776,
+    "shortcuts_word":  "withheld (the home is not this PC\u0027s own install home)",
+    "shortcuts_expected":  "withheld*"
+}

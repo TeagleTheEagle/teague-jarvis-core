@@ -1,0 +1,80 @@
+{
+    "status":  "PASS",
+    "rollback":  "rolled_back",
+    "rolled_back_to":  "1.0.16-fccde24e2cc6",
+    "processes_left_after_rollback":  0,
+    "previous_running":  {
+                             "core_ready":  true,
+                             "seconds_to_ready":  10.2,
+                             "installed_release":  "1.0.16-fccde24e2cc6",
+                             "identity_matches":  true,
+                             "gate17_memory":  true,
+                             "gate19_memory":  true,
+                             "processes":  8,
+                             "processes_from_other_releases":  [
+
+                                                               ]
+                         },
+    "setup":  "JARVIS-Setup-1.0.17-0d38218c4e1d.exe",
+    "setup_exit":  0,
+    "wall_seconds":  353.9,
+    "switches":  [
+                     "/VERYSILENT",
+                     "/SUPPRESSMSGBOXES",
+                     "/NORESTART"
+                 ],
+    "setup_log":  "setup-update.log",
+    "result":  "installed",
+    "release":  "1.0.17-0d38218c4e1d",
+    "previous":  "1.0.16-fccde24e2cc6",
+    "installer_seconds":  {
+                              "verify_package":  57.017,
+                              "verify_installed":  92.297,
+                              "stop":  6.431,
+                              "switch":  0.019
+                          },
+    "output":  null,
+    "processes_left_after_update":  0,
+    "verify":  "verified",
+    "verified_release":  "1.0.17-0d38218c4e1d",
+    "running":  {
+                    "core_ready":  true,
+                    "seconds_to_ready":  6.8,
+                    "installed_release":  "1.0.17-0d38218c4e1d",
+                    "identity_matches":  true,
+                    "gate17_memory":  true,
+                    "gate19_memory":  true,
+                    "processes":  8,
+                    "processes_from_other_releases":  [
+
+                                                      ]
+                },
+    "final_stop":  {
+                       "core_stopped_on_request":  true,
+                       "shell_processes_ended":  0,
+                       "processes_now":  0
+                   },
+    "current":  {
+                    "release":  "1.0.17-0d38218c4e1d",
+                    "previous":  "1.0.16-fccde24e2cc6",
+                    "switched_at":  1791355630.7540586
+                },
+    "releases":  [
+                     "1.0.16-fccde24e2cc6",
+                     "1.0.17-0d38218c4e1d"
+                 ],
+    "entry":  {
+                  "present":  true,
+                  "key":  "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{DC2C8033-1BBF-5E1C-99A0-BE0E70DC9937}_is1",
+                  "name":  "JARVIS",
+                  "version":  "1.0.17",
+                  "publisher":  "Teague Industries",
+                  "uninstall":  "\"C:\\Users\\jarvis-s6-guest\\AppData\\Local\\JARVIS-package\\unins000.exe\"",
+                  "location":  "C:\\Users\\jarvis-s6-guest\\AppData\\Local\\JARVIS-package\\"
+              },
+    "shortcuts_word":  "written",
+    "shortcuts_expected":  "written",
+    "expected_entry_name":  "JARVIS",
+    "desktop_shortcut_target":  "C:\\Users\\jarvis-s6-guest\\AppData\\Local\\JARVIS\\releases\\1.0.17-0d38218c4e1d\\electron\\JARVIS.exe",
+    "startup_shortcut_target":  "C:\\Users\\jarvis-s6-guest\\AppData\\Local\\JARVIS\\releases\\1.0.17-0d38218c4e1d\\electron\\JARVIS.exe"
+}

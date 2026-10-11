@@ -1,0 +1,13 @@
+092a2d64966a4a40543a2b51d857060fc2d08c9f04d99348ccdd2756f598fc0b *New-GuestEgressFolder.ps1
+9f112169c97a63653442c0d01c1cdde8d33b9e44dad0dde384d5775e99c48ce5 *step6a-create-egress.cmd
+86488234c3990ecceef13bdec5afca7da9fe2477dc13c8ce74482ed0db15994e *New-FreshVm.ps1
+4006b666d0bebea62b427f0e19bcdea98b841704bf0da18a629c3a2d5be08889 *step6-create-vm.cmd
+3d0caafda56feb1648c48356088f768a78111354ccdeb599d87e6a20589f44c1 *Disable-FreshVmAudio.ps1
+bb676747de8f813b91af06c4eec561c3202bb3bd5a61b3e68fd3ef9ec0c6e909 *step6b-disable-audio.cmd
+bed82338c2bc9c9907488bfa3147f3d2153cb98716e7ee0acaf2e5b2934bde24 *step7-start-vm.cmd
+71eb7082d3bd66803516bb2b3d1c61e7b7768b49c40da34ac29143c125f3cb89 *Start-FreshVm.ps1  (revision for every VM start: re-applies NAT localhost-reachable off)
+62dbeb6ff5c5b7d31855ad859a4e34bf2e11ddc842b5493d21e50e7fa030f31e *step7-start-vm.cmd  (revision for every VM start: re-applies NAT localhost-reachable off)
+d456da091c335e74c2f057068409cb5fe1a44ef3dcc156d780a83f16868a59a2 *Start-FreshVm.ps1  (step 7 recovery: NVRAM boot-list reset; -BootFromDisc answers the disc prompt from the host)
+5b809a66fff7c84d30fc96a83180c69c255e6c1606fbcc1c6edbc5b79467e94c *Reset-FreshVmNvram.ps1  (step 7 recovery: NVRAM boot-list reset; -BootFromDisc answers the disc prompt from the host)
+2497e6a6f811924b6015dda083b4a896b463bc57ce2ebea310c7e00cc25b4c88 *step7a-reset-boot-list.cmd  (step 7 recovery: NVRAM boot-list reset; -BootFromDisc answers the disc prompt from the host)
+daaf27794fe6a294662e901f5d5ca252ec1759dcd47992e61b1b72d5f5a4fc44 *step7-start-vm-from-disc.cmd  (step 7 recovery: NVRAM boot-list reset; -BootFromDisc answers the disc prompt from the host)

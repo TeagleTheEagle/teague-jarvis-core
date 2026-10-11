@@ -1,0 +1,11 @@
+--- 
++++ 
+@@ -71,7 +71,7 @@
+  DWORD finalWait=WaitForSingleObject(pi.hProcess,0),exitCode=STILL_ACTIVE;auto signal=Q();GetExitCodeProcess(pi.hProcess,&exitCode);GetProcessTimes(pi.hProcess,&created,&exited,&kt,&ut);
+  if(debug&&!done){DebugActiveProcessStop(pi.dwProcessId);fault=true;}
+  if(FT(exited)&&double(FT(exited)-FT(created))/10000000.0>=13.6){deadline=true;if(!hard)hard=signal;}
+- if(observer.joinable())observer.join();if(independent)CloseHandle(independent);CloseHandle(pi.hThread);CloseHandle(pi.hProcess);
++ if(observer.joinable())observer.join();finalWait=WaitForSingleObject(pi.hProcess,0);signal=Q();GetExitCodeProcess(pi.hProcess,&exitCode);GetProcessTimes(pi.hProcess,&created,&exited,&kt,&ut);if(FT(exited)&&double(FT(exited)-FT(created))/10000000.0>=13.6)deadline=true;if(independent)CloseHandle(independent);CloseHandle(pi.hThread);CloseHandle(pi.hProcess);
+  std::ostringstream s;s<<"{\"mode\":"<<J(U(mode))<<",\"pid\":"<<pi.dwProcessId<<",\"tid\":"<<pi.dwThreadId<<",\"frequency\":"<<freq.QuadPart<<",\"launchQpc\":"<<launch<<",\"createBeginQpc\":"<<cb<<",\"createEndQpc\":"<<ce<<",\"handleAcquiredQpc\":"<<acquired<<",\"created\":\""<<FT(created)<<"\",\"exitFiletime\":\""<<FT(exited)<<"\",\"entryQpc\":"<<marker<<",\"entryAddress\":"<<ep<<",\"hardDeadlineQpc\":"<<hard<<",\"deadlineExceeded\":"<<(deadline?"true":"false")<<",\"signalObservedQpc\":"<<signal<<",\"finalWait\":"<<finalWait<<",\"exitCode\":"<<exitCode<<",\"observerBeginQpc\":"<<ob<<",\"observerEndQpc\":"<<oe<<",\"observerResult\":"<<observed<<",\"fault\":"<<(fault?"true":"false")<<",\"error\":"<<error<<",\"debugPauses\":"<<pauses<<",\"debugHandlingTicks\":"<<pauseTicks<<",\"events\":[";
+  for(size_t i=0;i<events.size();i++){if(i)s<<",";s<<events[i];}s<<"]}";
+  bool wrote=Write(root+L"\\probe-"+id+L".json",s.str());return !wrote||fault||deadline||finalWait!=0||exitCode!=0||(debug&&!entry)?97:0;

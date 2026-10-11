@@ -1,0 +1,101 @@
+--- unchanged_reference
++++ BENCHMARK_ONLY_attribution_fixture
+@@ -70,19 +70,88 @@
+  auto q=[&](double x){return samples?latency[size_t((samples-1)*x)]:0;};
+  return {enabled,n,thread,process,added,double(end-begin)/frequency,q(.5),q(.95),q(.99),maximum,pm.PeakWorkingSetSize};
+ }
++static void dispatch_clock(EVENT_RECORD* e,j6m::LifecycleTap& tap){
++ auto arrival=j6m::tick();
++ auto pid=number(e,L"ProcessID");auto created=number(e,L"CreateTime");
++ auto wait=j6m::tick();mapGuard.lock();auto held=j6m::tick();
++ auto parent=number(e,L"ParentProcessID");auto ps=number(e,L"ParentProcessSequenceNumber");
++ // Replay the real unknown-parent branch, with no OpenProcess or selected-output filesystem access.
++ observable=pid^created^parent^ps^U(wait)^U(held);
++ mapGuard.unlock();
++ if(tap.enabled){auto completion=j6m::tick();(void)completion;}
++ // Existing observer bookkeeping has its own completion clock; retained in both modes.
++ observable^=U(j6m::tick());
++}
++static void dispatch_storage(EVENT_RECORD* e,j6m::LifecycleTap& tap){
++ auto arrival=j6m::tick();
++ auto pid=number(e,L"ProcessID");auto created=number(e,L"CreateTime");
++ auto wait=j6m::tick();mapGuard.lock();auto held=j6m::tick();
++ auto parent=number(e,L"ParentProcessID");auto ps=number(e,L"ParentProcessSequenceNumber");
++ // Replay the real unknown-parent branch, with no OpenProcess or selected-output filesystem access.
++ observable=pid^created^parent^ps^U(wait)^U(held);
++ mapGuard.unlock();
++ if(tap.enabled){j6m::Lifecycle v;v.eventQpc=e->EventHeader.TimeStamp.QuadPart;v.arrivalQpc=arrival;v.completionQpc=arrival;v.pid=unsigned(pid);v.created=created;v.parentPid=unsigned(parent);v.parentSequence=ps;v.eventId=1;v.version=4;v.valid=j6m::PID_VALID|j6m::CREATED_VALID|j6m::PARENT_VALID|j6m::PARENT_SEQUENCE_VALID;v.disposition=j6m::Disposition::UNKNOWN_PARENT;tap.append(v);}
++ // Existing observer bookkeeping has its own completion clock; retained in both modes.
++ observable^=U(j6m::tick());
++}
++static void dispatch_bookkeeping(EVENT_RECORD* e,j6m::LifecycleTap& tap){
++ auto arrival=j6m::tick();
++ auto pid=number(e,L"ProcessID");auto created=number(e,L"CreateTime");
++ auto wait=j6m::tick();mapGuard.lock();auto held=j6m::tick();
++ auto parent=number(e,L"ParentProcessID");auto ps=number(e,L"ParentProcessSequenceNumber");
++ // Replay the real unknown-parent branch, with no OpenProcess or selected-output filesystem access.
++ observable=pid^created^parent^ps^U(wait)^U(held);
++ mapGuard.unlock();
++ if(tap.enabled){if(tap.enabled){++tap.attempted;if(tap.count==tap.capacity){++tap.overflow;}else{++tap.count;}}}
++ // Existing observer bookkeeping has its own completion clock; retained in both modes.
++ observable^=U(j6m::tick());
++}
++static Trial attribution_trial(EVENT_RECORD& e,j6m::LifecycleTap& tap,bool enabled,U n,long long frequency,void(*fn)(EVENT_RECORD*,j6m::LifecycleTap&)){
++ tap.enabled=enabled;tap.count=0;tap.attempted=0;tap.overflow=0;std::array<long long,4096> latency{};size_t samples=0;
++ auto alloc=allocations.load();auto pc=cpu(false);auto tc=cpu(true);auto begin=j6m::tick();long long maximum=0;
++ for(U i=0;i<n;++i){
++  if(tap.count==8192){observable^=tap.records[0].localSequence^tap.records[8191].localSequence;tap.count=0;tap.attempted=0;}
++  // Sparse timing sample is identical in both modes; not a live-recorder reset policy.
++  if(i%128==0&&samples<latency.size()){auto b=j6m::tick();fn(&e,tap);auto dt=j6m::tick()-b;latency[samples++]=dt;if(dt>maximum)maximum=dt;}else fn(&e,tap);
++ }
++ auto end=j6m::tick();auto thread=cpu(true)-tc;auto process=cpu(false)-pc;auto added=allocations.load()-alloc;
++ std::sort(latency.begin(),latency.begin()+samples);PROCESS_MEMORY_COUNTERS pm{};GetProcessMemoryInfo(GetCurrentProcess(),&pm,sizeof(pm));
++ auto q=[&](double x){return samples?latency[size_t((samples-1)*x)]:0;};
++ return {enabled,n,thread,process,added,double(end-begin)/frequency,q(.5),q(.95),q(.99),maximum,pm.PeakWorkingSetSize};
++}
++static const char* names[]={"BASELINE_DISABLED","FULL_ENABLED_REFERENCE","CLOCK_ONLY","STORAGE_ONLY","BOOKKEEPING_ONLY"};
++static void(*functions[])(EVENT_RECORD*,j6m::LifecycleTap&)={dispatch,dispatch,dispatch_clock,dispatch_storage,dispatch_bookkeeping};
++static void emit(int block,int position,int mode,const Trial&r,long long freq){
++ std::cout<<"{\"block\":"<<block<<",\"position\":"<<position<<",\"variant\":"<<mode<<",\"name\":\""<<names[mode]<<"\",\"callbacks\":"<<r.count<<",\"dispatcherCpu100ns\":"<<r.threadTicks<<",\"processCpu100ns\":"<<r.processTicks<<",\"wallSeconds\":"<<r.wall<<",\"allocations\":"<<r.allocated<<",\"p50Ticks\":"<<r.p50<<",\"p95Ticks\":"<<r.p95<<",\"p99Ticks\":"<<r.p99<<",\"sampledMaxTicks\":"<<r.maximum<<",\"frequency\":"<<freq<<",\"peakWorkingSetBytes\":"<<r.peakWorkingSet<<"}"<<std::endl;
++}
+ int main(int argc,char**argv){try{
+  if(argc!=2)return 90;std::string mode=argv[1];
+- if(mode=="tests"){auto n=tests();std::cout<<"{\"status\":\"PASS\",\"checks\":"<<n<<",\"lifecycleBytes\":"<<sizeof(j6m::LifecycleTap)<<",\"coordinationBytes\":"<<sizeof(j6m::Coordination)<<",\"liveETW\":false}"<<std::endl;return 0;}
+- if(mode!="benchmark")return 90;
+  EVENT_RECORD e{};std::array<BYTE,1024> payload{};e.EventHeader.Size=sizeof(EVENT_HEADER);e.EventHeader.ProviderId=provider;e.EventHeader.EventDescriptor.Id=1;e.EventHeader.EventDescriptor.Version=4;e.EventHeader.EventDescriptor.Opcode=1;e.EventHeader.EventDescriptor.Level=4;e.EventHeader.EventDescriptor.Keyword=0x10;e.EventHeader.Flags=EVENT_HEADER_FLAG_64_BIT_HEADER;e.UserData=payload.data();e.UserDataLength=USHORT(payload.size());
+- auto tap=std::make_unique<j6m::LifecycleTap>();LARGE_INTEGER freq;QueryPerformanceFrequency(&freq);
+- // Decoding must really succeed. No synthetic sleep/spin to inflate the baseline.
+- for(int i=0;i<100;i++)dispatch(&e,*tap);
+- auto pilot=trial(e,*tap,false,20000,freq.QuadPart);
+- U n=std::max<U>(20000,std::min<U>(1000000,U(std::ceil(30000000.0/double(std::max<U>(pilot.threadTicks,1))*20000))));
+- std::cout<<"{\"kind\":\"protocol\",\"fixture\":\"actual TDH property APIs; unknown-parent lifecycle decode branch\",\"sameBinary\":true,\"pairs\":8,\"iterationsPerTrial\":"<<n<<",\"pilotCpu100ns\":"<<pilot.threadTicks<<",\"screenPercent\":1,\"liveETW\":false}"<<std::endl;
+- for(int pair=0;pair<8;++pair)for(int order=0;order<2;++order){bool on=(pair%2==0)?order==1:order==0;auto r=trial(e,*tap,on,n,freq.QuadPart);
+- std::cout<<"{\"kind\":\"trial\",\"pair\":"<<pair<<",\"enabled\":"<<(on?"true":"false")<<",\"callbacks\":"<<r.count<<",\"dispatcherCpu100ns\":"<<r.threadTicks<<",\"processCpu100ns\":"<<r.processTicks<<",\"wallSeconds\":"<<r.wall<<",\"allocations\":"<<r.allocated<<",\"sampledLatencyTicks\":{\"p50\":"<<r.p50<<",\"p95\":"<<r.p95<<",\"p99\":"<<r.p99<<",\"max\":"<<r.maximum<<"},\"frequency\":"<<freq.QuadPart<<",\"peakWorkingSetBytes\":"<<r.peakWorkingSet<<"}"<<std::endl;
++ auto tap=std::make_unique<j6m::LifecycleTap>();LARGE_INTEGER hz;if(!QueryPerformanceFrequency(&hz))return 96;
++ if(mode=="selftest"){
++  auto checks=tests();
++  for(int m=0;m<5;m++){
++   auto r=attribution_trial(e,*tap,m!=0,100,hz.QuadPart,functions[m]);
++   check(r.count==100,"count",checks);check(tap->overflow==0,"unexpected overflow",checks);
++   check(tap->count==((m==1||m==3||m==4)?100:0),"variant count",checks);
++   check(r.allocated==400,"same decode allocations",checks);
++   if(m==1||m==3){check(tap->records[0].localSequence==1&&tap->records[99].localSequence==100,"sequence",checks);check(tap->records[0].disposition==j6m::Disposition::UNKNOWN_PARENT,"disposition",checks);}
++  }
++  std::cout<<"{\"selftest\":\"PASS\",\"checks\":"<<checks<<",\"liveEligible\":false}"<<std::endl;return 0;
++ }
++ if(mode!="reference"&&mode!="attribution")return 90;
++ int base[5]={0,1,4,2,3};
++ for(int block=0;block<40;block++){
++  int limit=mode=="reference"?2:5;
++  for(int position=0;position<limit;position++){
++   int m;if(mode=="reference")m=(block%2)?1-position:position;
++   else{int row=block%10,rotation=row%5,index=row<5?position:4-position;m=(base[index]+rotation)%5;}
++   // Identical unmeasured 20k warm-up for every trial, no sleeps or inflated callback work.
++   attribution_trial(e,*tap,m!=0,20000,hz.QuadPart,functions[m]);
++   auto r=attribution_trial(e,*tap,m!=0,1000000,hz.QuadPart,functions[m]);
++   if(r.count!=1000000||tap->overflow)throw std::runtime_error("trial integrity");
++   emit(block,position,m,r,hz.QuadPart);
++  }
+  }
+  return 0;
+  }catch(const std::exception&e){std::cerr<<e.what()<<std::endl;return 97;}}

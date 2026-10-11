@@ -1,0 +1,73 @@
+{
+  "schema": "stage6-evidence-manifest-v1",
+  "generated_utc": "2026-10-04T08:10:17Z",
+  "root": "D:\\JARVIS-S6-FRESHVM\\evidence",
+  "folders": [
+    "gate20"
+  ],
+  "not_listed": "this manifest itself; the sealed P0 folder is never read",
+  "files": 12,
+  "bytes": 33781,
+  "entries": [
+    {
+      "file": "gate20/checkpoints/p5-20261004-080906/census-after.json",
+      "bytes": 6,
+      "sha256": "b423bb45501e0fa49d3b77e635f800a29f1fdcf5a58e00c7e04a7ff7833045f2"
+    },
+    {
+      "file": "gate20/checkpoints/p5-20261004-080906/census-before.json",
+      "bytes": 6,
+      "sha256": "b423bb45501e0fa49d3b77e635f800a29f1fdcf5a58e00c7e04a7ff7833045f2"
+    },
+    {
+      "file": "gate20/checkpoints/p5-20261004-080906/CHECKPOINT.json",
+      "bytes": 874,
+      "sha256": "87a812b041f8d4a891dc5b352a4bac01731cef36a8d5d10d74c1836ac66a9961"
+    },
+    {
+      "file": "gate20/checkpoints/p5-20261004-080906/control-hashes.json",
+      "bytes": 264,
+      "sha256": "ecf0933ccfecb18092d24207bf298e86a4ee9914ae7f471b416ef3c1d2687f27"
+    },
+    {
+      "file": "gate20/checkpoints/p5-20261004-080906/dacl.json",
+      "bytes": 627,
+      "sha256": "2eaa7473a71816bb9919a37ef733c8f2cf6886590d2dca4aedeac7b7eaa2524d"
+    },
+    {
+      "file": "gate20/checkpoints/p5-20261004-080906/protected-config-inventory.json",
+      "bytes": 2330,
+      "sha256": "5d1fec69d0e6fd7fc9a0f76dde9de53c2900e4a3d54a8487bbef7f2ee5f152f0"
+    },
+    {
+      "file": "gate20/checkpoints/p5-20261004-080906/protected-vm-inventory.json",
+      "bytes": 1854,
+      "sha256": "e5dac26433fafa28f0fb693e5ac5bff1be399647ad604032c8bcc6a1cb9d415f"
+    },
+    {
+      "file": "gate20/gate20-evaluation.json",
+      "bytes": 6888,
+      "sha256": "8eb3577f2d56e653907c21e9a2392ec93ad78b2e6790aaa5404ad1368304a503"
+    },
+    {
+      "file": "gate20/gate20-owner-decisions.json",
+      "bytes": 3224,
+      "sha256": "3e8d372e904f5572973f6abe00adc6ada1e1acf0eaf32d7a5ed31bc09e896b00"
+    },
+    {
+      "file": "gate20/gate20-requirements-draft.json",
+      "bytes": 14968,
+      "sha256": "50dcd2393b694e969bee885e1e56be4fafac5729f5781050f9f1f0b888bf71e6"
+    },
+    {
+      "file": "gate20/owner-statements.jsonl",
+      "bytes": 343,
+      "sha256": "38bf6747bab894423357ba447800e9f4888774feb23ea327fb1cf93dc8b5de08"
+    },
+    {
+      "file": "gate20/p5-evaluation.json",
+      "bytes": 2397,
+      "sha256": "45d2c8dc1b6dcbb31c469c6221c5e9d8a1dec4c04896d6a296f571ae68a32fee"
+    }
+  ]
+}

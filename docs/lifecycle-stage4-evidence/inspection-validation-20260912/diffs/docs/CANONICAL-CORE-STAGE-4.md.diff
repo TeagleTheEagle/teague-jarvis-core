@@ -1,0 +1,23 @@
+--- before/docs/CANONICAL-CORE-STAGE-4.md
++++ after/docs/CANONICAL-CORE-STAGE-4.md
+@@ -1,4 +1,20 @@
+ # Canonical Core Stage 4 — implementation preflight / scope review
++
++## Latest checkpoint — 2026-09-12 inspection cleanup validation
++
++Approved identity-reverified cleanup of failed TEST Core PID 18372 completed;
++launcher exited naturally and original evidence stayed unchanged. The missing
++synthetic archive project was fixed only in the existing TEST fixture. Automated
++inspection cancellation, detach/reconnect and emergency archive/drain checks now
++pass (43/43, 43/43, 44/44), with independent database verification and normal Core
++exit. Focused tests: 13/13; Stage 1–3 regressions pass with their two existing skips;
++Python 212/212; desktop 29/29; actual Electron 29/29; deadline 36/36.
++
++See [validation report](lifecycle-stage4-evidence/inspection-validation-20260912/REVIEW.md)
++for exact evidence, remaining gates and rollback. This closes the automated
++inspection-worker/archive gate only. Full Stage 4 remains incomplete; production
++activation and Stage 5 remain blocked. No acceptance commit. Older entries and
++the failed run below are retained as historical evidence.
+ 
+ ## Latest checkpoint — 2026-09-12 inspection work cleanup
+ 

@@ -1,0 +1,162 @@
+--- pre-refinement/analyze.py
++++ analyze.py
+@@ -1,7 +1,10 @@
+ """Offline timing and coverage analysis; no health repair, retries or runtime mutation."""
+ import pathlib,json,sys,collections,datetime
+ R=pathlib.Path(__file__).resolve().parent;O=R.parent/'stage6-eventidentity-fix-20260920'
+-def read(p):return json.loads(p.read_text(encoding='utf-8-sig'))
++def read(p):
++ raw=p.read_text(encoding='utf-8-sig')
++ if not raw.strip() and p.name=='runtime-samples.json':return [] # optional sampling disabled in minimal/none cases
++ return json.loads(raw)
+ def put(p,v):
+  with p.open('x',encoding='utf-8') as f:json.dump(v,f,indent=2)
+ def heartbeat(d):return [json.loads(s) for s in (d/'heartbeat.jsonl').read_text().splitlines()]
+--- pre-refinement/collect.py
++++ collect.py
+@@ -3,7 +3,7 @@
+ from journal import Reader,PublisherWatch,ticks
+ R=pathlib.Path(__file__).resolve().parent;run=sys.argv[1];out=R/run
+ config=json.loads((out/'case.json').read_text());mode=config['mode'];duration=config['duration']
+-assert run in ('smoke','a1','a2','a3','b','c','d','e','f','minimal') and duration in (5,150)
++assert run in ('smoke','a1','a2','a3','minimal','persist-d','none','dhash') and duration in (5,150)
+ def save(n,v):
+  with (out/n).open('w',encoding='utf-8') as f:json.dump(v,f,indent=2)
+ def utc():return datetime.datetime.now(datetime.timezone.utc).isoformat()
+@@ -74,6 +74,9 @@
+   if k.WaitForSingleObject(int(p._handle),0)!=0:raise RuntimeError('Probe still active')
+   verified.append(dict(pid=p.pid,times=times(p),exit=p.returncode))
+  save('retained-handle-verification.json',verified)
++ if config.get('eventVolume')=='D':
++  source=pathlib.Path('D:/JARVIS-STAGE6-EVENTDRAIN-20260920')/run/'events.jsonl';data=source.read_bytes();(out/'events.jsonl').write_bytes(data)
++  save('event-copy-verification.json',dict(source=str(source),sha256=hashlib.sha256(data).hexdigest(),copied_sha256=hashlib.sha256((out/'events.jsonl').read_bytes()).hexdigest()))
+  if journal!=out/'heartbeat.jsonl':
+   data=journal.read_bytes();(out/'heartbeat.jsonl').write_bytes(data)
+   save('journal-copy-verification.json',dict(original=str(journal),sha256=hashlib.sha256(data).hexdigest(),copied_sha256=hashlib.sha256((out/'heartbeat.jsonl').read_bytes()).hexdigest()))
+--- pre-refinement/event_queue.cs
++++ event_queue.cs
+@@ -35,7 +35,7 @@
+    queue.PSEventReceived+=Enqueued;
+   }
+  }
+- int CountOwned() {int n=0;for(int i=0;i<queue.Count;i++)if(sources.Contains(queue[i].SourceIdentifier))n++;return n;}
++ int CountOwned() {using(LoopTiming.Span("queue.CountOwned")){int n=0;for(int i=0;i<queue.Count;i++)if(sources.Contains(queue[i].SourceIdentifier))n++;return n;}}
+  void Enqueued(object sender,PSEventArgs ev) {
+   if(!sources.Contains(ev.SourceIdentifier))return;
+   using(LoopTiming.Lock(queue.SyncRoot)) {
+@@ -47,7 +47,7 @@
+  }
+  void Fail(string text) {Failed=true;Failure=text;}
+  void Healthy() {if(Failed)throw new InvalidOperationException(Failure);}
+- int Index(QueueEntry e) {for(int i=0;i<queue.Count;i++)if(Object.ReferenceEquals(queue[i],e.Event))return i;return -1;}
++ int Index(QueueEntry e) {using(LoopTiming.Span("queue.reference.Index")){for(int i=0;i<queue.Count;i++)if(Object.ReferenceEquals(queue[i],e.Event))return i;return -1;}}
+  void Valid(QueueEntry e) {
+   if(e==null || !Object.ReferenceEquals(selected,e) || !entries.TryGetValue(e.Event,out var known) || !Object.ReferenceEquals(known,e))throw new InvalidOperationException("Unowned selection");
+   if(!sources.Contains(e.Event.SourceIdentifier) || Index(e)<0){Fail("Selected exact entry disappeared; competing consumer or corruption");Healthy();}
+@@ -56,8 +56,8 @@
+   using(LoopTiming.Lock(queue.SyncRoot)) {
+    Healthy();if(selected!=null)throw new InvalidOperationException("One consumer/selection only");
+    for(int i=0;i<queue.Count;i++) {
+-    var ev=queue[i];if(!sources.Contains(ev.SourceIdentifier))continue;
+-    if(!entries.TryGetValue(ev,out var e)){Fail("Enqueue identity unavailable");Healthy();}
++    PSEventArgs ev;using(LoopTiming.Span("queue.item.read")){ev=queue[i];}if(!sources.Contains(ev.SourceIdentifier))continue;
++    QueueEntry e;using(LoopTiming.Span("queue.identity.lookup")){if(!entries.TryGetValue(ev,out e)){Fail("Enqueue identity unavailable");Healthy();}}
+     if(e.Removed || e.Persisted){Fail("Invalid queued state");Healthy();}
+     selected=e;selectedCount++;return e;
+    }
+--- pre-refinement/launch.ps1
++++ launch.ps1
+@@ -1,23 +1,22 @@
+-param([ValidateSet('smoke','a1','a2','a3','b','c','d','e','f','minimal')][string]$Run)
++param([ValidateSet('a1','a2','a3','minimal','persist-d','none','dhash')][string]$Run)
+ $ErrorActionPreference='Stop';$root=Join-Path $PSScriptRoot $Run
+ if(Test-Path -LiteralPath $root){throw 'Never overwrite a diagnostic run'}
+ if(@(Get-Process|Where-Object ProcessName -match '^(VBox|VirtualBox)').Count){throw 'VirtualBox must remain closed'}
+-$mode='sustained';$volume='C';$telemetry='full';$duration=150
+-if($Run -eq 'smoke'){$mode='idle';$duration=5}
+-if($Run -in @('b','d')){$volume='D'}
+-if($Run -in @('c','d')){$mode='Dhash'}
+-if($Run -eq 'e'){$mode='cpu'}
+-if($Run -eq 'f'){$mode='disk'}
++$mode='sustained';$volume='C';$eventVolume='C';$telemetry='full';$duration=150
++if($Run -eq 'dhash'){$mode='Dhash'}
+ if($Run -eq 'minimal'){$telemetry='minimal'}
++if($Run -eq 'none'){$telemetry='none'}
++if($Run -eq 'persist-d'){$eventVolume='D'}
+ New-Item -ItemType Directory -Path $root|Out-Null
+-if($volume -eq 'D'){
+- $droot='D:\JARVIS-STAGE6-HEARTBEAT-STALL-20260920\'+$Run
++if($eventVolume -eq 'D'){
++ $droot='D:\JARVIS-STAGE6-EVENTDRAIN-20260920\'+$Run
+  if(Test-Path -LiteralPath $droot){throw 'D journal directory already exists'}
+  New-Item -ItemType Directory -Path $droot|Out-Null
+ }
+-@{run=$Run;mode=$mode;journalVolume=$volume;eventEvidenceVolume='C';controlVolume='C';telemetry=$telemetry;duration=$duration;threshold=10;acceptance=$false}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $root 'case.json')
++@{run=$Run;mode=$mode;journalVolume=$volume;eventVolume=$eventVolume;controlVolume='C';telemetry=$telemetry;duration=$duration;threshold=10;acceptance=$false}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $root 'case.json')
+ $pwsh='C:\Users\jonny\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\powershell\pwsh.exe'
+ $script=Join-Path $PSScriptRoot 'monitor.ps1'
++@(Get-ChildItem -LiteralPath $PSScriptRoot -File|Where-Object Extension -in '.ps1','.py','.cs','.exe'|ForEach-Object {@{path=$_.FullName;sha256=(Get-FileHash -LiteralPath $_.FullName).Hash}})|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $root 'source-hashes.json')
+ $p=Start-Process -FilePath $pwsh -ArgumentList @('-NoProfile','-File',('"'+$script+'"'),'-Run',$Run) -WorkingDirectory $PSScriptRoot -Verb RunAs -WindowStyle Hidden -PassThru
+ @{pid=$p.Id;created=$p.StartTime.ToUniversalTime().ToFileTimeUtc().ToString();executable=$pwsh;sha256=(Get-FileHash -LiteralPath $pwsh).Hash;run=$Run;role='read-only process monitor; sacrificial evidence only'}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $root 'launch.json')
+ $python=Join-Path $PSScriptRoot '..\..\.venv\Scripts\python.exe'
+--- pre-refinement/LoopTiming.cs
++++ LoopTiming.cs
+@@ -17,7 +17,7 @@
+  static readonly ConcurrentQueue<WakeRow> wakes=new ConcurrentQueue<WakeRow>();
+  static int count;public static int Overflow;static volatile bool stop;static Thread observer;
+  public static void Note(string stage){
+-  if(Interlocked.Increment(ref count)>400000){Interlocked.Increment(ref Overflow);return;}
++  if(Interlocked.Increment(ref count)>1000000){Interlocked.Increment(ref Overflow);return;}
+   long q=Stopwatch.GetTimestamp();long a,b,k,u;bool ok=GetThreadTimes(GetCurrentThread(),out a,out b,out k,out u);
+   var row=new TimingRow{stage=stage,qpc=q,nativeThread=GetCurrentThreadId(),cpu100ns=ok?k+u:-1};row.sampleEndQpc=Stopwatch.GetTimestamp();rows.Enqueue(row);
+  }
+--- pre-refinement/monitor.ps1
++++ monitor.ps1
+@@ -4,12 +4,14 @@
+ Add-Type -Path @((Join-Path $PSScriptRoot 'LoopTiming.cs'),(Join-Path $PSScriptRoot 'event_queue.cs'))
+ $config=Get-Content -LiteralPath (Join-Path $root 'case.json') -Raw|ConvertFrom-Json
+ $journalPath=Join-Path $root 'heartbeat.jsonl'
+-if($config.journalVolume -eq 'D'){$journalPath=Join-Path ('D:\JARVIS-STAGE6-HEARTBEAT-STALL-20260920\'+$Run) 'heartbeat.jsonl'}
++if($config.journalVolume -eq 'D'){$journalPath=Join-Path ('D:\JARVIS-STAGE6-EVENTDRAIN-20260920\'+$Run) 'heartbeat.jsonl'}
+ [LoopTiming]::StartObserver()
+ $pipeline=[Collections.Generic.List[object]]::new();$secondary=[Collections.Generic.List[object]]::new()
+ function Stamp($stage,$ev,$n) {
++ [LoopTiming]::Note('stamp.'+$stage+'.begin')
+  if($pipeline.Count -ge 20000){throw 'Pipeline trace capacity reached'}
+  $pipeline.Add(@{stage=$stage;eventId=$ev.EventIdentifier;source=$ev.SourceIdentifier;pid=[int]$n.ProcessID;name=[string]$n.ProcessName;nativeTime=[string]$n.TIME_CREATED;qpc=[Diagnostics.Stopwatch]::GetTimestamp();utc=[DateTime]::UtcNow.ToString('o')})
++ [LoopTiming]::Note('stamp.'+$stage+'.end')
+ }
+ 
+ if(-not(Test-Path -LiteralPath $root)){throw 'Prepared diagnostic directory required'}
+@@ -29,13 +31,15 @@
+  while($true){
+   Mark 'queue.select.begin';$entry=$exact.Select();Mark 'queue.select.end'
+   if($null -eq $entry){break}
+-   $ev=$entry.Event;$id=$ev.SourceIdentifier
+-   Mark 'event.begin';$n=$ev.SourceEventArgs.NewEvent;if($null -eq $n){throw 'Invalid CIM indication'}
++   Mark 'entry.properties.begin';$ev=$entry.Event;$id=$ev.SourceIdentifier;Mark 'entry.properties.end'
++   Mark 'event.begin';Mark 'event.payload.begin';$n=$ev.SourceEventArgs.NewEvent;Mark 'event.payload.end';if($null -eq $n){throw 'Invalid CIM indication'}
+    $kind='stop';if($id -eq $s){$kind='start'};Stamp 'drain' $ev $n
++   Mark 'event.metadata.begin'
+    if([string]$n.ProcessName -match '^(VBox|VirtualBox)'){$script:violations++}
+    $row=@{queueSequence=$entry.QueueSequence;eventIdentifier=$ev.EventIdentifier;kind=$kind;name=[string]$n.ProcessName;pid=[int]$n.ProcessID;nativeTime=[string]$n.TIME_CREATED;receivedQpc=[Diagnostics.Stopwatch]::GetTimestamp();utc=[DateTime]::UtcNow.ToString('o');queuedUtc=$ev.TimeGenerated.ToUniversalTime().ToString('o')}
++   Mark 'event.metadata.end'
+    Stamp 'serialize.begin' $ev $n;Mark 'event.serialize.begin';$serialized=($row|ConvertTo-Json -Compress)+"`n";Mark 'event.serialize.end';Stamp 'serialized' $ev $n
+-   Mark 'event.path.begin';$eventPath=Join-Path $root 'events.jsonl';Mark 'event.path.end'
++   Mark 'event.path.begin';$eventPath=Join-Path $root 'events.jsonl';if($config.eventVolume -eq 'D'){$eventPath=Join-Path ('D:\JARVIS-STAGE6-EVENTDRAIN-20260920\'+$Run) 'events.jsonl'};Mark 'event.path.end'
+    Mark 'event.exists.begin';$exists=Test-Path -LiteralPath $eventPath;Mark 'event.exists.end'
+    if($exists){Mark 'event.stat.begin';$length=(Get-Item -LiteralPath $eventPath).Length;Mark 'event.stat.end';if($length -gt 1044480){throw 'Event capacity reached'}}
+    Mark 'event.append.begin';Stamp 'write.begin' $ev $n
+@@ -55,10 +59,10 @@
+  foreach($pair in @(@($s,'start'),@($t,'stop'))){$sub=Get-EventSubscriber -SourceIdentifier $pair[0];$hookNames+=[EventTap]::AttachSource($sub.SourceObject,$sub.EventName,$pair[1])}
+  # Separate System.Management/COM subscriber, same Windows provider. Not an independent kernel source.
+  [void][Reflection.Assembly]::LoadFrom((Join-Path $PSHOME 'System.Management.dll'))
+- foreach($pair in @(@('Win32_ProcessStartTrace','start'),@('Win32_ProcessStopTrace','stop'))){
++ if($config.telemetry -ne 'none'){foreach($pair in @(@('Win32_ProcessStartTrace','start'),@('Win32_ProcessStopTrace','stop'))){
+   $watcher=[System.Management.ManagementEventWatcher]::new('root\cimv2',("SELECT * FROM "+$pair[0]+" WHERE ProcessName LIKE 'J6Probe%'"))
+   $hookNames+=[EventTap]::AttachSecondary($watcher,$pair[1]);$watcher.Start();$secondary.Add($watcher)
+- }
++ }}
+  Save 'hooks.json' @{hooks=$hookNames;powershell=$PSVersionTable.PSVersion.ToString();observerB='parallel WMI COM subscriber; same native provider';groundTruth='separate retained kernel process handles';callback_tap='attached after original handler; may observe after enqueue'}
+  Mark 'subscription.end';Mark 'enumeration.begin'
+  $initial=@(Get-CimInstance Win32_Process|Where-Object{$_.Name -match '^(VBox|VirtualBox)'});Mark 'enumeration.end' $initial.Count

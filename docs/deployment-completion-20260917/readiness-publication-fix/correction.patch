@@ -1,0 +1,181 @@
+--- before/stage4_runtime.py
++++ after/stage4_runtime.py
+@@ -1086,6 +1086,26 @@
+         finally:lock.close()
+ 
+ 
++def publish_coordinator_readiness(path, payload, name):
++    """Completion is an inherited-pipe signal, not destination-file visibility."""
++    def signal(state, **fields):
++        print('STAGE4_READINESS '+json.dumps(dict(name=name,state=state,**fields)),flush=True)
++    temporary=path.with_name(path.name+'.'+uuid.uuid4().hex+'.tmp')
++    signal('PUBLISHING')
++    try:
++        temporary.write_text(json.dumps(payload),encoding='utf8')
++        os.replace(temporary,path)
++    except BaseException as exc:
++        import traceback
++        signal('FAILED',error={'type':type(exc).__name__,'message':str(exc),
++               'errno':getattr(exc,'errno',None),'winerror':getattr(exc,'winerror',None),
++               'traceback':traceback.format_exc()})
++        raise
++    finally:
++        if temporary.exists():temporary.unlink()
++    signal('COMPLETE')
++
++
+ def serve_test_coordinator(root,configuration,observer=None):
+     authority=TestRestartCoordinator(root,configuration,observer)
+     require(transport.identity(configuration['owner_peer']['pid'])==configuration['owner_peer'],'CONTROLLER_PROCESS_IDENTITY')
+@@ -1093,10 +1113,14 @@
+     deadline=time.monotonic()+120
+     while not authority.closed and time.monotonic()<deadline:
+         pipe=transport.listen(configuration['endpoint'])
++        if first:
++            try:
++                publish_coordinator_readiness(authority.root/('coordinator-'+configuration['name']+'.json'),{'identity':authority.identity,'peer':authority.peer,'endpoint':configuration['endpoint']},configuration['name'])
++            except BaseException:
++                pipe.close()
++                raise
++            first=False
+         try:
+-            if first:
+-                exclusion.write(authority.root/('coordinator-'+configuration['name']+'.json'),{'identity':authority.identity,'peer':authority.peer,'endpoint':configuration['endpoint']})
+-                first=False
+             pipe.io('connect')
+             require(pipe.peer(server=True)==configuration['owner_peer'],'CONTROLLER_PROCESS_BINDING')
+             try:authentication.serve_one(pipe,authority,key,'normal')
+--- before/tests/lifecycle_stage4/fixtures.py
++++ after/tests/lifecycle_stage4/fixtures.py
+@@ -1120,15 +1120,43 @@
+         uuid.UUID(hex=identity['startup_epoch'])
+         r.authentication.negotiate(identity['protocol'],[2,3])
+         return ready
++    def coordinator_publication(self,item):
++        import queue,threading
++        if item.get('publication_state')=='COMPLETE':return
++        if item.get('publication_error'):raise item['publication_error']
++        if 'publication_queue' not in item:
++            item['publication_queue']=queue.Queue();item['publication_state']='NOT_BEGUN'
++            def receive():
++                try:
++                    for _ in range(2):
++                        line=item['process'].stdout.readline()
++                        item['publication_queue'].put(line)
++                        if not line:break
++                except BaseException as exc:item['publication_queue'].put(exc)
++            threading.Thread(target=receive,daemon=True).start()
++        until=item['started']+item.get('publication_timeout',8)
++        while item['publication_state']!='COMPLETE':
++            item['operation']='wait for coordinator publication '+item['publication_state']
++            item['wait_polls']+=1
++            try:line=item['publication_queue'].get(timeout=max(0,until-time.monotonic()))
++            except queue.Empty:raise TimeoutError('Coordinator publication '+item['publication_state']+' deadline') from None
++            if isinstance(line,BaseException):raise line
++            if not line:raise RuntimeError('Coordinator exited before readiness publication: '+item['publication_state'])
++            if not line.startswith('STAGE4_READINESS '):raise ValueError('Invalid publication notification')
++            message=json.loads(line[17:])
++            if message.get('name')!=item['configuration']['name']:raise ValueError('Stale publication notification')
++            state=message.get('state')
++            if state=='FAILED':
++                item['publication_state']='FAILED';item['publication_failure']=message['error']
++                error=RuntimeError('Coordinator publication FAILED: '+json.dumps(message['error']))
++                item['publication_error']=error;raise error
++            if (item['publication_state'],state) not in (('NOT_BEGUN','PUBLISHING'),('PUBLISHING','COMPLETE')):
++                raise ValueError('Invalid publication transition')
++            item['publication_state']=state
++
+     def coordinator_readiness(self,item,wait=False):
+-        path=item['readiness_path'];until=item['started']+8
+-        item['operation']='wait for coordinator readiness publication'
+-        if wait:
+-            while not path.exists():
+-                item['wait_polls']+=1
+-                if item['process'].poll() is not None:raise RuntimeError('Coordinator exited before readiness publication')
+-                if time.monotonic()>until:raise TimeoutError('Coordinator readiness publication deadline')
+-                time.sleep(.02)
++        path=item['readiness_path']
++        self.coordinator_publication(item)
+         # Exactly one strict read. No shared sentinel helper and no read-error retry.
+         item['read_attempts']+=1;item['operation']='read coordinator readiness UTF-8 file'
+         content=path.read_text(encoding='utf8')
+@@ -1189,6 +1217,18 @@
+             time.sleep(.03)
+         with r.exclusion.Lock(root,'core.lock'):
+             self.check('verified TEST exit and lifetime-lock release',True,identity=identity)
++    def cleanup_coordinator_readiness(self,item):
++        # Only after this owned child has exited; never remove another instance.
++        if item['process'].poll() is None:raise RuntimeError('Readiness cleanup requires exited child')
++        path=item['root']/('coordinator-'+item['configuration']['name']+'.json')
++        if path.exists():
++            digest=hashlib.sha256(path.read_bytes()).hexdigest()
++            path.unlink()
++            self.records[-1]['readiness_artifact_cleanup']={'path':str(path),'sha256':digest,'removed':True}
++            self.save()
++        if list(item['root'].glob(path.name+'.*.tmp')):
++            raise RuntimeError('Coordinator temporary publication artifact retained for review')
++
+     def close(self,item):
+         self.coordinator_state(item)
+         proc=item['process'];outcome='NOT_ATTEMPTED_IDENTITY_UNESTABLISHED'
+@@ -1198,6 +1238,7 @@
+                 self.check('coordinator exit recorded',proc.returncode in (0,93),
+                            identity=ready.get('identity') if type(ready) is dict else None,
+                            spawn_peer=item.get('spawn_peer'),exit=proc.returncode,cleanup_result='PROCESS_ALREADY_EXITED')
++                self.cleanup_coordinator_readiness(item)
+                 return
+             item['operation']='verify spawned coordinator for cleanup'
+             self.r.require(item.get('spawn_peer') is not None and self.r.transport.identity(proc.pid)==item['spawn_peer'],'COORDINATOR_CLEANUP_IDENTITY')
+@@ -1216,6 +1257,7 @@
+             proc.wait(5)
+             self.check('coordinator exit recorded',proc.returncode==0,identity=item['ready']['identity'],
+                        spawn_peer=item['spawn_peer'],exit=proc.returncode,cleanup_result='AUTHENTICATED_CLOSE_SUCCEEDED')
++            self.cleanup_coordinator_readiness(item)
+         except BaseException as exc:
+             self.records.append({'case':'coordinator cleanup failed','passed':False,'cleanup_result':outcome,
+                                  **self.coordinator_diagnostic(item,exc,'cleanup')});self.save()
+--- before/tests/deployment_contract/fixtures.py
++++ after/tests/deployment_contract/fixtures.py
+@@ -92,12 +92,9 @@
+         peer=self.r.transport.identity(p.pid)
+         item={'process':p,'configuration':cfg,'root':root,'token':None,'initial_peer':peer};self.coordinators.append(item)
+         p.stdin.write(json.dumps(cfg)+'\n');p.stdin.close()
+-        deadline=time.monotonic()+25;ready=root/('coordinator-'+name+'.json')
+-        while not ready.exists():
+-            if p.poll() is not None:raise RuntimeError('Installed coordinator: '+errpath.read_text())
+-            if time.monotonic()>deadline:raise TimeoutError('Coordinator readiness; preserve process')
+-            time.sleep(.02)
+-        item['ready']=contract.read_json(ready)
++        self.coordinator_state(item)
++        item['publication_timeout']=25
++        item['ready']=self.coordinator_readiness(item,wait=True)
+         self.check('installed coordinator exact live identity',self.r.transport.identity(p.pid)==item['ready']['peer'],identity=item['ready']['identity'])
+         result=self.cc(item,'attach');item['token']=result['token']
+         return item
+--- before/tests/lifecycle_stage4/test_coordinator_readiness.py
++++ after/tests/lifecycle_stage4/test_coordinator_readiness.py
+@@ -35,6 +35,9 @@
+                    'spawn_peer':dict(self.c.peer),'attach_started':False,'started':time.monotonic(),
+                    'readiness_path':self.root/('coordinator-'+cfg['name']+'.json'),'read_attempts':0,'wait_polls':0}
+         self.item['readiness_path'].write_text(json.dumps(self.ready),encoding='utf8')
++        # These model tests begin after a completed publication. Real-process
++        # cases below exercise the inherited-pipe publication protocol.
++        self.item['publication_state']='COMPLETE'
+     def tearDown(self):
+         try:
+             for item in self.real_items:
+@@ -83,10 +86,14 @@
+         self.assertIn('UnicodeDecodeError',d['traceback'])
+     def test_08_publication_timeout_preserved(self):
+         self.item['readiness_path']=self.root/'never-published.json';self.item['started']=time.monotonic()-9
++        import queue
++        self.item['publication_state']='NOT_BEGUN';self.item['publication_queue']=queue.Queue()
+         exc,d=self.diagnostic(lambda:self.c.coordinator_readiness(self.item,wait=True))
+         self.assertIsInstance(exc,TimeoutError);self.assertEqual(d['read_attempts'],0);self.assertEqual(d['wait_polls'],1)
+     def test_09_exit_before_publication(self):
+         self.item['readiness_path']=self.root/'never-published.json';self.proc.returncode=93
++        import queue
++        self.item['publication_state']='NOT_BEGUN';self.item['publication_queue']=queue.Queue();self.item['publication_queue'].put('')
+         exc,_=self.diagnostic(lambda:self.c.coordinator_readiness(self.item,wait=True))
+         self.assertIs(type(exc),RuntimeError);self.assertIn('exited before readiness',str(exc))
+     def test_10_valid_ready_and_authenticated_close(self):

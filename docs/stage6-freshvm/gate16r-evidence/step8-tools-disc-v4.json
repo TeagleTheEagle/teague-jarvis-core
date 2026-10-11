@@ -1,0 +1,30 @@
+{
+    "schema":  "stage6-gate16r-tools-disc-v1",
+    "utc":  "2026-10-04T02:02:14.0919371Z",
+    "performed_by":  "THEGRIZZLYBEAR\\jonny",
+    "version":  4,
+    "reason":  "Step 8 run 3 (gate17-20261004-015834) reported FAIL on the pipe VBoxTrayIPC-jarvis-s6-guest, a VirtualBox Guest Additions pipe named after the VM\u0027s Windows account: a harness false positive. This version removes the account name and the computer name from names before testing for \u0027jarvis\u0027 and records account-named pipes separately.",
+    "guest_script_sha256":  "25588a408933f754a59cfc176f2c00edca090ac6b005204731c0489eecc67d64",
+    "iso":  "D:\\JARVIS-release-work\\stage6-media\\JARVIS-TOOLS-v4.iso",
+    "iso_sha256":  "1a64839bc6b528cf05c18426eca10d8d639ac91ec19c38f9cd4e24e8e39c4cf2",
+    "iso_bytes":  1245184,
+    "payload_files":  7,
+    "readback":  "every payload file read back from the mounted ISO with its recorded SHA-256",
+    "copy":  "D:\\JARVIS-S6-FRESHVM\\media\\JARVIS-TOOLS-v4.iso",
+    "copy_sha256":  "1a64839bc6b528cf05c18426eca10d8d639ac91ec19c38f9cd4e24e8e39c4cf2",
+    "earlier_discs":  [
+                          {
+                              "name":  "JARVIS-TOOLS-v2.iso",
+                              "sha256":  "e4630a54a42b4dc39315bb241ef05b4dbd91e5d98cda2f928bbc0f943da980ca"
+                          },
+                          {
+                              "name":  "JARVIS-TOOLS-v3.iso",
+                              "sha256":  "c2ba306de4f5336d961b48a58a3619a12ee2dc99f053dda9fd5c2af645ae706b"
+                          },
+                          {
+                              "name":  "JARVIS-TOOLS.iso",
+                              "sha256":  "0c0d5de3b93f8338ffb3b8e0ef608cb21a935b61863c56a68ecef0d972fcde4b"
+                          }
+                      ],
+    "next":  "validation session: Devices \u003e Optical Drives \u003e SATA Port 2 \u003e Choose a Disk File \u003e JARVIS-TOOLS-v4.iso; rerun the step 8 command; earlier runs kept"
+}

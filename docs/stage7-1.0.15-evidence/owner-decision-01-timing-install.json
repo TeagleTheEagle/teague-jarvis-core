@@ -1,0 +1,24 @@
+{
+  "schema": "jarvis-owner-decision-v1",
+  "check": "1.0.15-63362929d7ad",
+  "subject": "deviation 'timing-install' in stage7-evaluation.json (timing_bounds.owner_decision_needed; follow_up: owner decision on the timing bound for Stage 7 checks)",
+  "owner_text": "accept the VM time",
+  "first_clock_reading_utc": "2026-10-06T02:47:07Z",
+  "recorded_utc": "2026-10-06T02:48:43Z",
+  "options_offered": [
+    "accept the VM time",
+    "measure the install again",
+    "the bound does not apply to Stage 7"
+  ],
+  "recommendation_given": "accept the VM time, and keep the bound for every later check (Claude, in reply to the owner's 'what do you recommend')",
+  "measurement": {
+    "bound": "Gate 20 owner decision for Stage 6 ('accept all', 2026-10-04): install, update and rollback each within 600 s, stopping JARVIS within 120 s",
+    "first_install_seconds": 675.1,
+    "first_install_parts": "verify package 93.2 s, copy 229.0 s, verify copy 341.0 s, switch 1.0 s",
+    "inside_the_bound": "every update (361.2 s, 262.0 s, 189.6 s), the rollback (104.8 s) and every stop (at most 5.7 s)",
+    "comparisons": "the same installer verified the same 10,669 files in 106.2 s and 91 s later in the same VM pass; the disc extract just before the first install took 704.5 s; 1.0.14's first install in its own check took 352.2 s (verify 129.3 s); on the real PC the same release installed in 28 s in the sandbox (docs/release-rehearsal-20261006-1015/README.md) and in 47 s during the everyday update (docs/update-1.0.15-evidence/update.json)"
+  },
+  "taken_as": "The Gate 20 timing bound applies to Stage 7 checks and stays in force for every later check. The 675.1 s first install of this check is accepted as a limitation of the test VM in this run (a disposition), on the cause recorded in stage7-evaluation.json: disk speed of the test VM, nothing pointing at the program. The install is not measured again. The verdict STAGE_7_COMPLETE did not depend on this answer and is unchanged. For later checks a measurement outside the bound may be accepted as a disposition only when the records of that check show the cause to be the VM; otherwise the measurement is repeated before acceptance.",
+  "records_unchanged": "stage7-evaluation.json and MANIFEST.json are not edited; this record is added beside them and listed in MANIFEST-addendum-1.json",
+  "recorded_by": "Claude Code (Claude Fable 5.1). This record documents the owner's decision; it grants no authority of its own."
+}

@@ -1,0 +1,98 @@
+--- before/tests/lifecycle_stage4/fixtures.py
++++ current/tests/lifecycle_stage4/fixtures.py
+@@ -372,6 +372,34 @@
+     context.owners.clock=clock
+ 
+ 
++def polling_app_worker(root, configuration):
++    """TEST scheduling injection only: actual App + actual Store message commit."""
++    repo=Path(__file__).resolve().parents[2];sys.path.insert(0,str(repo))
++    import stage4_runtime
++    original_construct=stage4_runtime.construct_app
++    h=stage4_runtime.exclusion
++    def construct(context):
++        app=original_construct(context)
++        original_message=app.store.message;used=set()
++        def message(conversation, role, content):
++            for case in ('control','cancel'):
++                if role=='assistant' and case not in used and (root/('polling-'+case+'-arm')).exists():
++                    used.add(case)
++                    h.event(root,'polling_commit_paused',case=case)
++                    until=time.monotonic()+5
++                    while not (root/('polling-'+case+'-release')).exists():
++                        if time.monotonic()>until:raise TimeoutError('TEST commit observation deadline')
++                        time.sleep(.005)
++                    result=original_message(conversation,role,content)
++                    h.event(root,'polling_commit_returned',case=case)
++                    return result
++            return original_message(conversation,role,content)
++        app.store.message=message
++        return app
++    stage4_runtime.construct_app=construct
++    stage4_runtime.serve(root,configuration,inspection_setup=bind_inspection_fixture,repair_setup=bind_repair_fixture,expiry_setup=bind_expiry_fixture)
++
++
+ def real_app_probe(final_case='normal'):
+     import secrets
+     repo=Path(__file__).resolve().parents[2];sys.path.insert(0,str(repo))
+@@ -403,7 +431,8 @@
+         with h.Lock(root,'supervisor.lock'):
+             with h.Lock(root,'core.lock'):pass
+             h.write(root/'intent.json',{'mode':'TEST','operation':uuid.uuid4().hex})
+-            core=subprocess.Popen([sys.executable,'-I',__file__,'--app-worker',str(root)],env=env,
++            worker_mode='--polling-app-worker' if final_case=='event-polling' else '--app-worker'
++            core=subprocess.Popen([sys.executable,'-I',__file__,worker_mode,str(root)],env=env,
+                  stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,close_fds=True,creationflags=0x08000000)
+             core.stdin.write(json.dumps(config)+'\n');core.stdin.close()
+             until=time.monotonic()+15
+@@ -469,6 +498,40 @@
+         record('fresh session cannot inherit previous request authority',call('teague','request-status',{'request_id':original_teague_request}).get('result')=='DENIED')
+         record('controller authority survives ordinary reattachment denial',call('controller','lifecycle-status')['state']=='RUNNING')
+         if final_case=='failure-cleanup':raise RuntimeError('EXPECTED_FAILURE_BEFORE_LIFECYCLE')
++        if final_case=='event-polling':
++            import sqlite3
++            def assistant_rows():
++                with sqlite3.connect((Path(ready['data_root'])/'jarvis.sqlite3').as_uri()+'?mode=ro',uri=True) as db:
++                    return db.execute("SELECT count(*) FROM messages WHERE conversation=? AND role='assistant'",('STAGE4_TEST-conversation',)).fetchone()[0]
++            for case in ('control','cancel'):
++                before=assistant_rows();(root/('polling-'+case+'-arm')).touch()
++                wid=call('teague','request',{'text':'STAGE4_TEST explain event polling'})['request_id']
++                until=time.monotonic()+3
++                while not any(h.read(p).get('case')==case for p in root.glob('*-polling_commit_paused.json')):
++                    if time.monotonic()>until:raise TimeoutError('TEST commit barrier missing')
++                    time.sleep(.005)
++                first=call('teague','request-status',{'request_id':wid})
++                record(case+' owner sees active real worker',not first['done'])
++                record(case+' foreign event read denied',call('intelligence','request-status',{'request_id':wid}).get('result')=='DENIED')
++                record(case+' foreign cancellation denied',call('intelligence','cancel',{'request_id':wid}).get('result')=='DENIED')
++                record(case+' commit has not written while paused',assistant_rows()==before)
++                if case=='cancel':
++                    reply=call('teague','cancel',{'request_id':wid})
++                    record('owner cancellation acknowledged before release',reply['result']=='CANCELLATION_REQUESTED')
++                    record('cancel signal not represented as completed worker',not call('teague','request-status',{'request_id':wid})['done'])
++                (root/('polling-'+case+'-release')).touch()
++                until=time.monotonic()+3
++                while True:
++                    terminal=call('teague','request-status',{'request_id':wid})
++                    if terminal['done']:break
++                    if time.monotonic()>until:raise TimeoutError('Polling terminal result')
++                    time.sleep(.005)
++                repeated=call('teague','request-status',{'request_id':wid})
++                after=assistant_rows()
++                measurements['polling_'+case]={'assistant_rows_before':before,'assistant_rows_after':after,'event_types':[e['event'] for e in terminal['events']],'done':terminal['done'],'terminal_stable':terminal==repeated,'scheduling':'pause before actual Store.message body; no database/event mutation by observer'}
++                record(case+' terminal poll deterministic',terminal==repeated)
++                if case=='control':record('uncancelled control commits one final answer',after==before+1 and any(e['event']=='assistant.completed' for e in terminal['events']))
++                else:record('cancelled request cannot commit late assistant message',after==before)
+         if final_case=='deadline':
+             wid=call('teague','request',{'text':'STAGE4_TEST uncooperative deadline'})['request_id']
+             until=time.monotonic()+5
+@@ -854,7 +917,9 @@
+     elif '--real-app-repair-emergency' in sys.argv:real_app_probe('repair-emergency')
+     elif '--real-app-repair-drain' in sys.argv:real_app_probe('repair-drain')
+     elif '--real-app-controller-expiry' in sys.argv:real_app_probe('controller-expiry')
++    elif '--real-app-event-polling' in sys.argv:real_app_probe('event-polling')
+     elif '--electron-app-probe' in sys.argv:electron_app_probe()
++    elif '--polling-app-worker' in sys.argv:polling_app_worker(Path(sys.argv[2]),json.loads(sys.stdin.readline()))
+     elif '--app-worker' in sys.argv:
+         repo=Path(__file__).resolve().parents[2];sys.path.insert(0,str(repo))
+         import stage4_runtime

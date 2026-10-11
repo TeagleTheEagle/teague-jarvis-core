@@ -1,0 +1,12 @@
+/* Connectors (Settings > Connections): Gmail and Google Calendar as the Core reports them. */
+.connectors-panel { margin-top: 18px; }
+.connectors-panel h3 { margin: 0 0 6px; letter-spacing: .08em; text-transform: uppercase; font-size: 12px; opacity: .85; }
+.connectors-note { font-size: 12px; line-height: 1.5; opacity: .75; margin: 4px 0 8px; }
+.connectors-cards { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.connector-card { border: 1px solid rgba(0, 217, 255, .25); border-radius: 10px; padding: 12px 14px; background: rgba(6, 21, 34, .55); }
+.connector-card.ok { border-color: rgba(57, 245, 181, .55); }
+.connector-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.connector-state { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; opacity: .8; }
+.connector-card.ok .connector-state { color: #39f5b5; }
+.connector-card.off .connector-state { color: #ffc857; }
+.connector-result { font-size: 12px; line-height: 1.5; margin: 8px 0 0; min-height: 1em; white-space: pre-wrap; overflow-wrap: anywhere; }

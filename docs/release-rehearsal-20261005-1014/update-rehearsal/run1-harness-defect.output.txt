@@ -1,0 +1,3 @@
+live JARVIS processes at the start: 0
+===== install 1.0.11 into the sandbox home
+PASS  sandbox: 1.0.11 installed  installed

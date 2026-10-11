@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<provider name="Microsoft-Windows-Kernel-Registry" guid="70eb4f03-c1de-4f73-a051-33d13d5413bd" helpLink="" resourceFileName="%SystemRoot%\system32\Microsoft-Windows-System-Events.dll" messageFileName="%SystemRoot%\system32\Microsoft-Windows-System-Events.dll" message="2466250753" xmlns="http://schemas.microsoft.com/win/2004/08/events">
+  <channels>
+    <channel name="Microsoft-Windows-Kernel-Registry/Analytic" id="16" flags="0" message="">
+    </channel>
+    <channel name="Microsoft-Windows-Kernel-Registry/Performance" id="17" flags="0" message="">
+    </channel>
+  </channels>
+  <levels>
+    <level name="win:Informational" value="4" message="1342177284">
+    </level>
+  </levels>
+  <opcodes>
+    <opcode name="win:Start" value="65536" message="838860801">
+    </opcode>
+    <opcode name="win:Stop" value="131072" message="838860802">
+    </opcode>
+    <opcode name="RegPerfOpHiveMountBaseFileMounted" value="655361" message="">
+    </opcode>
+    <opcode name="RegPerfOpHiveFlushBecameActiveFlusher" value="655363" message="">
+    </opcode>
+    <opcode name="RegPerfOpShutdownRundownComplete" value="655364" message="">
+    </opcode>
+    <opcode name="RegPerfOpSaveFileCopied" value="655367" message="">
+    </opcode>
+    <opcode name="RegPerfOpHiveMountLogEntryApplied" value="720897" message="">
+    </opcode>
+    <opcode name="RegPerfOpHiveFlushGatheredLogData" value="720899" message="">
+    </opcode>
+    <opcode name="RegPerfOpShutdownFlushStart" value="720900" message="">
+    </opcode>
+    <opcode name="RegPerfOpSaveTreeCopied" value="720903" message="">
+    </opcode>
+    <opcode name="RegPerfOpHiveFlushGatheredPrimaryData" value="786435" message="">
+    </opcode>
+    <opcode name="RegPerfOpShutdownFlushStop" value="786436" message="">
+    </opcode>
+    <opcode name="RegPerfOpSaveFileWritten" value="786439" message="">
+    </opcode>
+    <opcode name="RegPerfOpHiveFlushWroteLogFile" value="851971" message="">
+    </opcode>
+    <opcode name="RegPerfOpHiveFlushWrotePrimaryFile" value="917507" message="">
+    </opcode>
+    <opcode name="RegPerfOpHiveFlushBoostedActiveFlusher" value="983043" message="">
+    </opcode>
+    <opcode name="RegPerfOpHiveFlushStartWaitForActive" value="1048579" message="">
+    </opcode>
+    <opcode name="RegPerfOpHiveFlushFinishWaitForActive" value="1114115" message="">
+    </opcode>
+    <opcode name="CreateKey" value="2097152" message="">
+    </opcode>
+    <opcode name="OpenKey" value="2162688" message="">
+    </opcode>
+    <opcode name="DeleteKey" value="2228224" message="">
+    </opcode>
+    <opcode name="QueryKey" value="2293760" message="">
+    </opcode>
+    <opcode name="SetValueKey" value="2359296" message="">
+    </opcode>
+    <opcode name="DeleteValueKey" value="2424832" message="">
+    </opcode>
+    <opcode name="QueryValueKey" value="2490368" message="">
+    </opcode>
+    <opcode name="EnumerateKey" value="2555904" message="">
+    </opcode>
+    <opcode name="EnumerateValueKey" value="2621440" message="">
+    </opcode>
+    <opcode name="QueryMultipleValueKey" value="2686976" message="">
+    </opcode>
+    <opcode name="SetInformationKey" value="2752512" message="">
+    </opcode>
+    <opcode name="FlushKey" value="2818048" message="">
+    </opcode>
+    <opcode name="CloseKey" value="2883584" message="">
+    </opcode>
+    <opcode name="QuerySecurityKey" value="2949120" message="">
+    </opcode>
+    <opcode name="SetSecurityKey" value="3014656" message="">
+    </opcode>
+  </opcodes>
+  <tasks>
+    <task name="RegPerfTaskHiveMount" value="1" eventGUID="00000000-0000-0000-0000-000000000000" message="1929379841">
+    </task>
+    <task name="RegPerfTaskHiveUnload" value="2" eventGUID="00000000-0000-0000-0000-000000000000" message="1929379842">
+    </task>
+    <task name="RegPerfTaskHiveFlush" value="3" eventGUID="00000000-0000-0000-0000-000000000000" message="1929379843">
+    </task>
+    <task name="RegPerfTaskShutdown" value="4" eventGUID="00000000-0000-0000-0000-000000000000" message="1929379844">
+    </task>
+    <task name="RegPerfTaskHiveLoad" value="5" eventGUID="00000000-0000-0000-0000-000000000000" message="1929379845">
+    </task>
+    <task name="RegPerfTaskHiveRestore" value="6" eventGUID="00000000-0000-0000-0000-000000000000" message="1929379846">
+    </task>
+    <task name="RegPerfTaskHiveSave" value="7" eventGUID="00000000-0000-0000-0000-000000000000" message="1929379847">
+    </task>
+  </tasks>
+  <keywords>
+    <keyword name="CloseKey" mask="1" message="">
+    </keyword>
+    <keyword name="QuerySecurityKey" mask="2" message="">
+    </keyword>
+    <keyword name="SetSecurityKey" mask="4" message="">
+    </keyword>
+    <keyword name="EnumerateValueKey" mask="10" message="">
+    </keyword>
+    <keyword name="QueryMultipleValueKey" mask="20" message="">
+    </keyword>
+    <keyword name="SetInformationKey" mask="40" message="">
+    </keyword>
+    <keyword name="FlushKey" mask="80" message="">
+    </keyword>
+    <keyword name="SetValueKey" mask="100" message="">
+    </keyword>
+    <keyword name="DeleteValueKey" mask="200" message="">
+    </keyword>
+    <keyword name="QueryValueKey" mask="400" message="">
+    </keyword>
+    <keyword name="EnumerateKey" mask="800" message="">
+    </keyword>
+    <keyword name="CreateKey" mask="1000" message="">
+    </keyword>
+    <keyword name="OpenKey" mask="2000" message="">
+    </keyword>
+    <keyword name="DeleteKey" mask="4000" message="">
+    </keyword>
+    <keyword name="QueryKey" mask="8000" message="">
+    </keyword>
+  </keywords>
+  <events>
+    <event value="1" version="0" opcode="32" channel="16" level="4" task="0" keywords="0x8000000000001000" message="">
+    </event>
+    <event value="2" version="0" opcode="33" channel="16" level="4" task="0" keywords="0x8000000000002000" message="">
+    </event>
+    <event value="3" version="0" opcode="34" channel="16" level="4" task="0" keywords="0x8000000000004000" message="">
+    </event>
+    <event value="4" version="0" opcode="35" channel="16" level="4" task="0" keywords="0x8000000000008000" message="">
+    </event>
+    <event value="5" version="0" opcode="36" channel="16" level="4" task="0" keywords="0x8000000000000100" message="">
+    </event>
+    <event value="6" version="0" opcode="37" channel="16" level="4" task="0" keywords="0x8000000000000200" message="">
+    </event>
+    <event value="7" version="0" opcode="38" channel="16" level="4" task="0" keywords="0x8000000000000400" message="">
+    </event>
+    <event value="8" version="0" opcode="39" channel="16" level="4" task="0" keywords="0x8000000000000800" message="">
+    </event>
+    <event value="9" version="0" opcode="40" channel="16" level="4" task="0" keywords="0x8000000000000010" message="">
+    </event>
+    <event value="10" version="0" opcode="41" channel="16" level="4" task="0" keywords="0x8000000000000020" message="">
+    </event>
+    <event value="11" version="0" opcode="42" channel="16" level="4" task="0" keywords="0x8000000000000040" message="">
+    </event>
+    <event value="12" version="0" opcode="43" channel="16" level="4" task="0" keywords="0x8000000000000080" message="">
+    </event>
+    <event value="13" version="0" opcode="44" channel="16" level="4" task="0" keywords="0x8000000000000001" message="">
+    </event>
+    <event value="14" version="0" opcode="45" channel="16" level="4" task="0" keywords="0x8000000000000002" message="">
+    </event>
+    <event value="15" version="0" opcode="46" channel="16" level="4" task="0" keywords="0x8000000000000004" message="">
+    </event>
+    <event value="16" version="0" opcode="1" channel="17" level="4" task="1" keywords="0x4000000000000000" message="">
+    </event>
+    <event value="17" version="0" opcode="10" channel="17" level="4" task="1" keywords="0x4000000000000000" message="">
+    </event>
+    <event value="18" version="0" opcode="11" channel="17" level="4" task="1" keywords="0x4000000000000000" message="">
+    </event>
+    <event value="19" version="0" opcode="2" channel="17" level="4" task="1" keywords="0x4000000000000000" message="">
+    </event>
+    <event value="20" version="0" opcode="1" channel="17" level="4" task="2" keywords="0x4000000000000000" message="">
+    </event>
+    <event value="21" version="0" opcode="2" channel="17" level="4" task="2" keywords="0x4000000000000000" message="">
+    </event>
+    <event value="22" version="0" opcode="1" channel="17" level="4" task="3" keywords="0x4000000000000000" message="">
+    </event>
+    <event value="23" version="0" opcode="10" channel="17" level="4" task="3" keywords="0x4000000000000000" message="">
+    </event>
+    <event value="24" version="0" opcode="11" channel="17" level="4" task="3" keywords="0x4000000000000000" message="">
+    </event>
+    <event value="25" version="0" opcode="12" channel="17" level="4" task="3" keywords="0x4000000000000000" message="">
+    </event>
+    <event value="26" version="0" opcode="13" channel="17" level="4" task="3" keywords="0x4000000000000000" message="">
+    </event>
+    <event value="27" version="0" opcode="14" channel="17" level="4" task="3" keywords="0x4000000000000000" message="">
+    </event>
+    <event value="28" version="0" opcode="15" channel="17" level="4" task="3" keywords="0x4000000000000000" message="">
+    </event>
+    <event value="29" version="0" opcode="16" channel="17" level="4" task="3" keywords="0x4000000000000000" message="">
+    </event>
+    <event value="30" version="0" opcode="17" channel="17" level="4" task="3" keywords="0x4000000000000000" message="">
+    </event>
+    <event value="31" version="0" opcode="2" channel="17" level="4" task="3" keywords="0x4000000000000000" message="">
+    </event>
+    <event value="32" version="0" opcode="1" channel="17" level="4" task="4" keywords="0x4000000000000000" message="">
+    </event>
+    <event value="33" version="0" opcode="1" channel="17" level="4" task="4" keywords="0x4000000000000000" message="">
+    </event>
+    <event value="34" version="0" opcode="11" channel="17" level="4" task="4" keywords="0x4000000000000000" message="">
+    </event>
+    <event value="35" version="0" opcode="12" channel="17" level="4" task="4" keywords="0x4000000000000000" message="">
+    </event>
+    <event value="36" version="0" opcode="2" channel="17" level="4" task="4" keywords="0x4000000000000000" message="">
+    </event>
+    <event value="37" version="0" opcode="1" channel="17" level="4" task="5" keywords="0x4000000000000000" message="">
+    </event>
+    <event value="38" version="0" opcode="2" channel="17" level="4" task="5" keywords="0x4000000000000000" message="">
+    </event>
+    <event value="39" version="0" opcode="1" channel="17" level="4" task="6" keywords="0x4000000000000000" message="">
+    </event>
+    <event value="40" version="0" opcode="2" channel="17" level="4" task="6" keywords="0x4000000000000000" message="">
+    </event>
+    <event value="41" version="0" opcode="1" channel="17" level="4" task="7" keywords="0x4000000000000000" message="">
+    </event>
+    <event value="42" version="0" opcode="10" channel="17" level="4" task="7" keywords="0x4000000000000000" message="">
+    </event>
+    <event value="43" version="0" opcode="11" channel="17" level="4" task="7" keywords="0x4000000000000000" message="">
+    </event>
+    <event value="44" version="0" opcode="12" channel="17" level="4" task="7" keywords="0x4000000000000000" message="">
+    </event>
+    <event value="45" version="0" opcode="2" channel="17" level="4" task="7" keywords="0x4000000000000000" message="">
+    </event>
+  </events>
+</provider>

@@ -1,0 +1,383 @@
+{
+  "schema": "stage6-evidence-manifest-v1",
+  "generated_utc": "2026-10-04T08:00:06Z",
+  "root": "D:\\JARVIS-S6-FRESHVM\\evidence",
+  "folders": [
+    "guest-egress-01"
+  ],
+  "not_listed": "this manifest itself; the sealed P0 folder is never read",
+  "files": 74,
+  "bytes": 206615,
+  "entries": [
+    {
+      "file": "guest-egress-01/gate-driver-log.jsonl",
+      "bytes": 893,
+      "sha256": "e2fcf1ce01ec2719c364272074d093923a804e7c5ff142fdff25bfc3c22449cd"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261002-071120/B1-baseline.json",
+      "bytes": 1230,
+      "sha256": "73436fa8f8deca9aa0297825801e3056229684393991384da0d6c6cb4b0bff05"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261002-071120/baseline-programs.json",
+      "bytes": 803,
+      "sha256": "1e48eb90156c88be33b4ec6e476e6546d209170c23183e53056529e215cdc6f1"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261002-071120/baseline-services.json",
+      "bytes": 24982,
+      "sha256": "8e9e4f6c11dba61830d76510c09ca79735e228e6382c9665ca650df0749fd29d"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261002-071120/SUMMARY.json",
+      "bytes": 522,
+      "sha256": "21807e3da2633b088c52349f63deec03b345f98f9ed646c1873d202864164beb"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-014927/B1-baseline.json",
+      "bytes": 1544,
+      "sha256": "26bafa76f3899213f5208559c313efa64d365659ba291295605c15c691a4e915"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-014927/baseline-programs.json",
+      "bytes": 965,
+      "sha256": "dcfc72dba6b6cade449ecf51356eb63e49710625b4d169ef62a140b7c076c2ed"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-014927/baseline-services.json",
+      "bytes": 24982,
+      "sha256": "708212d40a3e17ef9a3f7ef4df44a762ae2a708d8ac9de3325fec469f1f4b7cc"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-014927/SUMMARY.json",
+      "bytes": 522,
+      "sha256": "5c9b500a6e4fa87a49780c83e0068e1f05d82f75a5556f9f0749d08709c013f0"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-015834/B1-baseline.json",
+      "bytes": 2563,
+      "sha256": "e8a0b3055d35fa9e34a1937eb580e045ba41c63870c6582a37f91f5cb9e42d8a"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-015834/baseline-programs.json",
+      "bytes": 965,
+      "sha256": "dcfc72dba6b6cade449ecf51356eb63e49710625b4d169ef62a140b7c076c2ed"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-015834/baseline-services.json",
+      "bytes": 24982,
+      "sha256": "b5369dc14786f024d650d2bfb21431075cebde7159498b09f58b6ae11af6982d"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-015834/SUMMARY.json",
+      "bytes": 522,
+      "sha256": "44160f1b818a39ec6f856c3b771c91982bdb3167f7f286f125c6640ac9e91a2a"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-020257/B1-baseline.json",
+      "bytes": 2800,
+      "sha256": "db191f62ba4ced0d5519f3a295c8ada3b288cc5a302169adf0cedd541a86f54b"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-020257/baseline-programs.json",
+      "bytes": 965,
+      "sha256": "dcfc72dba6b6cade449ecf51356eb63e49710625b4d169ef62a140b7c076c2ed"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-020257/baseline-services.json",
+      "bytes": 24982,
+      "sha256": "8dbcb588043c0f5a6628bf2ea57f5f016187f4f5d653a3c39dd56ddd437b2717"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-020257/SUMMARY.json",
+      "bytes": 522,
+      "sha256": "7fd31346df0a8ce3af51d2995f454c8a8bb7fbad87c4270d589063c64edd38eb"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-022130/B1-baseline.json",
+      "bytes": 2800,
+      "sha256": "e6741b98fe8720b310badeb96f97d084fdb7c8a518a3baa8f1ab6ea0995f8137"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-022130/baseline-programs.json",
+      "bytes": 965,
+      "sha256": "dcfc72dba6b6cade449ecf51356eb63e49710625b4d169ef62a140b7c076c2ed"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-022130/baseline-services.json",
+      "bytes": 24958,
+      "sha256": "50132eb419e79cedbaab208de072052318e5129615b984d8a66ae608e779368b"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-022130/SUMMARY.json",
+      "bytes": 522,
+      "sha256": "7bfd419ae63c3addc55166c2195d9449cffeaa42e8bbfc8452e2c97e30b6409b"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-035322/E0-not-elevated.json",
+      "bytes": 267,
+      "sha256": "6ad244e5fcb3686c8f002ea94d54f69429740aa5f3eeaa8ea67a7cbca829c6e0"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-035322/I1-package.json",
+      "bytes": 454,
+      "sha256": "3b50452f74a7520579fc1e5c5e6e162926357bd9cbee50442dd0a76d8784e0ed"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-035322/I2-extract.json",
+      "bytes": 183,
+      "sha256": "5fee86d1153610e1fd39a2cde5823fbb1dc55a5226961bad9b6d1b7ab74204f6"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-035322/I3-install.json",
+      "bytes": 625,
+      "sha256": "c7afe9ae651bc6c8ba25e8386805b86af137ca53799d03e68e175f8cde61c1ae"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-035322/I4-verify.json",
+      "bytes": 153,
+      "sha256": "ea6aa0fc8108c95bb022ad1370a07e4d849e6e13e11b559c49a446f678855c38"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-035322/I5-launch.json",
+      "bytes": 431,
+      "sha256": "d60c4d5f3438732ee6dcfa75a07f32bb1a8f4cd03be52a6e438cae59d120a38a"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-035322/I6-duplicate-core.json",
+      "bytes": 170,
+      "sha256": "be10fc4ae101b5d7880fda60f0fb39dd28cb8b32ebdb9a6451438cd4335a1756"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-035322/I7-local-stt.json",
+      "bytes": 551,
+      "sha256": "01d51e569dec65e1389849dde0612868dda77a82b94b77b071254c1c96fbe320"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-035322/I8-restart.json",
+      "bytes": 352,
+      "sha256": "e12efaf8545d812f6b0c361580b44f10f933fe08a6c017efca486a45a86aee04"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-035322/SUMMARY.json",
+      "bytes": 2068,
+      "sha256": "330cc1c218420eb7424148b4a9afb3967a99bbde2dc9735e5d7d3cd04225dad8"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-042646/E0-not-elevated.json",
+      "bytes": 267,
+      "sha256": "6ad244e5fcb3686c8f002ea94d54f69429740aa5f3eeaa8ea67a7cbca829c6e0"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-042646/R1-after-restart.json",
+      "bytes": 250,
+      "sha256": "02fa4e866b01d5c2e33a27fd4950177ced2e2cef53f42e35540dd0d3d61c2f81"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-042646/SUMMARY.json",
+      "bytes": 728,
+      "sha256": "b1177eaba6c00ab41f2d9b42f1adc527c3b82a537b409109f3e92f73b5aba09d"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-042650/C1-cleanliness.json",
+      "bytes": 3512,
+      "sha256": "2205c00808d7855b945f0fda559d43ae41c4a51370e120180c21cb4df95ec766"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-042650/cleanliness-programs.json",
+      "bytes": 965,
+      "sha256": "dcfc72dba6b6cade449ecf51356eb63e49710625b4d169ef62a140b7c076c2ed"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-042650/cleanliness-services.json",
+      "bytes": 24958,
+      "sha256": "14e6db4f24301b593b3678f9bc599a04a0fb0c51d5f215e9e5b86f44f1ec759f"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-042650/E0-not-elevated.json",
+      "bytes": 267,
+      "sha256": "6ad244e5fcb3686c8f002ea94d54f69429740aa5f3eeaa8ea67a7cbca829c6e0"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-042650/SUMMARY.json",
+      "bytes": 725,
+      "sha256": "e9fefbabfc4dd8aec70335e3e5e1f94ccddb960f1a7700e01d9b1882eadb0300"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-042734/core-logs/core.log",
+      "bytes": 1342,
+      "sha256": "a52fc8da07f727a1271c02bcc47dc4641913f1537f4ae8924dfe3d5954f937b1"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-042734/E0-not-elevated.json",
+      "bytes": 267,
+      "sha256": "6ad244e5fcb3686c8f002ea94d54f69429740aa5f3eeaa8ea67a7cbca829c6e0"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-042734/SUMMARY.json",
+      "bytes": 1110,
+      "sha256": "e2171178c5a78b85ee79d7cf4195f1832035eb0ff5a909ed771c1a2dffdb3de4"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-042734/U1-uninstall.json",
+      "bytes": 416,
+      "sha256": "f57d4a90d47c2cd6b4f241534ad02078aa77dc20bdc231d6fa4a57d5267dc4e2"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-042734/U2-reinstall.json",
+      "bytes": 184,
+      "sha256": "4a08f02a2bac327a2a51847c04ac64b97b3407be1c491d82688ee29609408b74"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-042734/U3-final-stop.json",
+      "bytes": 197,
+      "sha256": "ba97a79b89549fd0fe103bcd4eeac5e5d081b6021ba87fd258d97de2b3d0a4c1"
+    },
+    {
+      "file": "guest-egress-01/gate17-cycle.json",
+      "bytes": 189,
+      "sha256": "439420144c1fe4578c343964975208e580d551acb42c89e1788c96de737fbbed"
+    },
+    {
+      "file": "guest-egress-01/gate18-20261004-074554/K0-not-elevated.json",
+      "bytes": 113,
+      "sha256": "5dc70e9d50db91c514d5c11bbe8dfa2c48f82d3675277ed439678a67baf3ac0b"
+    },
+    {
+      "file": "guest-egress-01/gate18-20261004-074554/K1-backup-identity.json",
+      "bytes": 453,
+      "sha256": "782366c7177bfc8575c42b236f0b59df0313e705454d7826bce1047a9c805fac"
+    },
+    {
+      "file": "guest-egress-01/gate18-20261004-074554/K2-starting-point.json",
+      "bytes": 797,
+      "sha256": "418055be280d271c9ba7d20db7e8a532b6be8f124d8d3c44eac8e2ceee938895"
+    },
+    {
+      "file": "guest-egress-01/gate18-20261004-074554/K3-restore-target.json",
+      "bytes": 444,
+      "sha256": "d22707c5a3a83baee88e293ce97b35d630b2c720c426a3c279c0dd473ce25ce4"
+    },
+    {
+      "file": "guest-egress-01/gate18-20261004-074554/K4-dry-run.json",
+      "bytes": 1437,
+      "sha256": "578253584f02ae068c7d3a0a5d04a10cd4fd122c21af195f31dea5b3f89bd224"
+    },
+    {
+      "file": "guest-egress-01/gate18-20261004-074554/K5-import.json",
+      "bytes": 1426,
+      "sha256": "f20870f17440e51c21ad1d8dbd7ae16178f6a5ada334b554a9c557d78128e04c"
+    },
+    {
+      "file": "guest-egress-01/gate18-20261004-074554/K6-startup.json",
+      "bytes": 365,
+      "sha256": "ff260ddb78d3a77de8ac56c35ebecf7e01a136ec7e9d87c842535496bc26e9fe"
+    },
+    {
+      "file": "guest-egress-01/gate18-20261004-074554/K7-shutdown.json",
+      "bytes": 197,
+      "sha256": "ba97a79b89549fd0fe103bcd4eeac5e5d081b6021ba87fd258d97de2b3d0a4c1"
+    },
+    {
+      "file": "guest-egress-01/gate18-20261004-074554/K8-separation.json",
+      "bytes": 1528,
+      "sha256": "64ecdc4712caf566fc246fd4d04363e7b0f9905ddcdf366c03b571ab7d94fd86"
+    },
+    {
+      "file": "guest-egress-01/gate18-20261004-074554/K9-backup-unchanged.json",
+      "bytes": 142,
+      "sha256": "e84a133f369264cfeff5db610bc050d87d9cf93118cfd4c714f00692750c367e"
+    },
+    {
+      "file": "guest-egress-01/gate18-20261004-074554/SUMMARY.json",
+      "bytes": 2330,
+      "sha256": "04581834baedd4e15c12ea59ba57e2884bb0678414c6197b85c9d3f06647ca4a"
+    },
+    {
+      "file": "guest-egress-01/gate19-20261004-043210/core-logs/core.log",
+      "bytes": 1542,
+      "sha256": "bf0b7799bcea00eae3cd3d4e7bc2664e603aa65cab6372e36a594600fab1ef8c"
+    },
+    {
+      "file": "guest-egress-01/gate19-20261004-043210/E0-not-elevated.json",
+      "bytes": 267,
+      "sha256": "6ad244e5fcb3686c8f002ea94d54f69429740aa5f3eeaa8ea67a7cbca829c6e0"
+    },
+    {
+      "file": "guest-egress-01/gate19-20261004-043210/G1-packages.json",
+      "bytes": 621,
+      "sha256": "3c7d9724b21418ca4b6328a764864f123685dba73072e02c0fb14a185a07e849"
+    },
+    {
+      "file": "guest-egress-01/gate19-20261004-043210/G2-extract-previous.json",
+      "bytes": 188,
+      "sha256": "f8e1782f70270ab0babe486da044e2a324a1144851ecced9854164b3638ccc65"
+    },
+    {
+      "file": "guest-egress-01/gate19-20261004-043210/G3-previous-installed.json",
+      "bytes": 908,
+      "sha256": "02c3130701e86ad91ad3126d9b46e04c84e9b374bf610de53127eaf5b198ffbe"
+    },
+    {
+      "file": "guest-egress-01/gate19-20261004-043210/G4-update.json",
+      "bytes": 1447,
+      "sha256": "2d4bd0654de238507f13cda04b85da7c75257b233964ca75adfa5714bc640154"
+    },
+    {
+      "file": "guest-egress-01/gate19-20261004-043210/G5-rollback.json",
+      "bytes": 794,
+      "sha256": "7effa7112f53628a02e95d792afbbe573197ed20ac27346be130f259eccd9dea"
+    },
+    {
+      "file": "guest-egress-01/gate19-20261004-043210/G6-update-again.json",
+      "bytes": 1541,
+      "sha256": "92798281b103f9151fdb9e5aca07ef2292420c8f26f3b2a80f835af294f3ca13"
+    },
+    {
+      "file": "guest-egress-01/gate19-20261004-043210/SUMMARY.json",
+      "bytes": 1702,
+      "sha256": "e0b016dcf85486b857622980bda0e947592de88899175e9bb38d4034d41f714e"
+    },
+    {
+      "file": "guest-egress-01/incident-03-run1/gate18-20261004-065046/K0-not-elevated.json",
+      "bytes": 113,
+      "sha256": "5dc70e9d50db91c514d5c11bbe8dfa2c48f82d3675277ed439678a67baf3ac0b"
+    },
+    {
+      "file": "guest-egress-01/incident-03-run1/gate18-20261004-065046/K1-backup-identity.json",
+      "bytes": 453,
+      "sha256": "5e64b4237d79a0d11bd8751d2b8bfd3db6b51884a41d0f0c5434ff0b8499bacf"
+    },
+    {
+      "file": "guest-egress-01/incident-03-run1/gate18-20261004-065046/K2-starting-point.json",
+      "bytes": 367,
+      "sha256": "41c393a1ad480a4b67ecd0a87adacd54815e99ca7d50d6ba9d64154dc416f204"
+    },
+    {
+      "file": "guest-egress-01/incident-03-run1/gate18-20261004-065046/SUMMARY.json",
+      "bytes": 1011,
+      "sha256": "37ac6d9fbdf94625a52776c3638623d5d3dfeb4b960caa06fd67329ac5cbff0c"
+    },
+    {
+      "file": "guest-egress-01/incident-04-run2/gate18-20261004-072308/K0-not-elevated.json",
+      "bytes": 113,
+      "sha256": "5dc70e9d50db91c514d5c11bbe8dfa2c48f82d3675277ed439678a67baf3ac0b"
+    },
+    {
+      "file": "guest-egress-01/incident-04-run2/gate18-20261004-072308/K1-backup-identity.json",
+      "bytes": 453,
+      "sha256": "782366c7177bfc8575c42b236f0b59df0313e705454d7826bce1047a9c805fac"
+    },
+    {
+      "file": "guest-egress-01/incident-04-run2/gate18-20261004-072308/K2-starting-point.json",
+      "bytes": 797,
+      "sha256": "418055be280d271c9ba7d20db7e8a532b6be8f124d8d3c44eac8e2ceee938895"
+    },
+    {
+      "file": "guest-egress-01/incident-04-run2/gate18-20261004-072308/K3-restore-target.json",
+      "bytes": 446,
+      "sha256": "11f8d2032419db9834b3d5ce0a2c36088e5382506c7fa5b51a7b38f301cd1a84"
+    }
+  ]
+}

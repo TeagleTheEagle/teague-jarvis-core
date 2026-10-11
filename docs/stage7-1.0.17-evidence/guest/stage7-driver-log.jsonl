@@ -1,0 +1,7 @@
+{"utc":"2026-10-07T05:49:45.8390739Z","mode":"","package":"E:\\","driver":4,"outcome":"phase passed","phase":"Install","exit_code":0}
+{"utc":"2026-10-07T05:56:17.5571604Z","mode":"","package":"E:\\","driver":4,"outcome":"restart check","restarted":"yes","now":{"boot_id":9,"os_start_record":1158,"uptime_seconds":329,"last_boot_utc":"2026-10-07T05:50:48.5000000Z"},"then":{"schema":"jarvis-stage7-install-boot-v1","utc":"2026-10-07T05:49:49.4401356Z","boot_id":8,"os_start_record":1013,"uptime_seconds":2254,"last_boot_utc":"2026-10-07T05:12:15.5000000Z"},"by":"boot_id"}
+{"utc":"2026-10-07T05:57:50.1455302Z","mode":"","package":"E:\\","driver":4,"outcome":"phase passed","phase":"AfterRestart","exit_code":0}
+{"utc":"2026-10-07T06:06:38.0582440Z","mode":"","package":"E:\\","driver":4,"outcome":"phase passed","phase":"Uninstall","exit_code":0}
+{"utc":"2026-10-07T06:48:06.6717221Z","mode":"","package":"E:\\","driver":4,"outcome":"phase passed","phase":"Update","exit_code":0}
+{"utc":"2026-10-07T07:02:16.9615627Z","mode":"","package":"E:\\","driver":4,"outcome":"phase passed","phase":"Interrupt","exit_code":0}
+{"utc":"2026-10-07T07:02:16.9904774Z","mode":"","package":"E:\\","driver":4,"ran_now":["AfterRestart","Uninstall","Update","Interrupt"],"outcome":"all phases passed"}

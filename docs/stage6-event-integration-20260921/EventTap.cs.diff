@@ -1,0 +1,22 @@
+--- frozen/EventTap.cs
++++ D:\JARVIS-STAGE6-LIVE\6d305fb9fc7440c5bf485466e9d708df\code\EventTap.cs
+@@ -16,11 +16,18 @@
+ public static class EventTap {
+  static readonly ConcurrentQueue<TapRow> rows=new ConcurrentQueue<TapRow>();
+  static readonly List<Tuple<object,EventInfo,Delegate>> hooks=new List<Tuple<object,EventInfo,Delegate>>();
++ static AuthoritativeEvents authority; public static long Truncated; public static string StreamFailure {get{return authority==null?"NOT_INITIALIZED":authority.Failure;}}
++ public static void Initialize(string root){if(authority!=null)throw new InvalidOperationException("Already initialized");authority=new AuthoritativeEvents(root);}
++ public static void Finish(){authority.Finish(rows.Count,Truncated);}
++ public static string Serialize(TapRow r){var b=new System.Text.StringBuilder("{");bool first=true;foreach(var f in typeof(TapRow).GetFields()){if(!first)b.Append(",");first=false;object v=f.GetValue(r);b.Append(AuthoritativeEvents.Quote(f.Name)).Append(":").Append(v is string||v==null?AuthoritativeEvents.Quote((string)v):Convert.ToString(v,System.Globalization.CultureInfo.InvariantCulture));}return b.Append("}").ToString();}
++ public static bool Record(TapRow row){Add(row);return StreamFailure==null;}
++ public static void Persisted(string raw,string receipt){if(!authority.Publish("CIM_PROCESS_NOTIFICATION","persistence","{\"event\":"+raw+",\"receipt\":"+receipt+"}",null))throw new InvalidOperationException(authority.Failure);}
+  static long sequence; public static int Errors,Overflow; public static string StartId,StopId;
+  static object Get(object o,string n) { return o==null?null:o.GetType().GetProperty(n)?.GetValue(o); }
+  static void Add(TapRow r) {
+   r.seq=Interlocked.Increment(ref sequence);r.qpc=Stopwatch.GetTimestamp();r.utc=DateTime.UtcNow.ToString("o");r.thread=Environment.CurrentManagedThreadId;
+-  if(r.seq>20000) { Interlocked.Increment(ref Overflow);return; } rows.Enqueue(r);
++  if(authority==null||!authority.Publish("CIM_PROCESS_NOTIFICATION",r.stage,Serialize(r),r.nativeTime)){Interlocked.Increment(ref Errors);return;}
++  if(r.seq>20000) { Interlocked.Increment(ref Truncated);return; } rows.Enqueue(r);
+  }
+  public static void Capture(object a,string kind,string stage,object collection) {
+   using(LoopTiming.Span("callback."+stage)){

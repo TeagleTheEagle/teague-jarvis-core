@@ -1,0 +1,49 @@
+--- original/cleanup_checker.py
++++ candidate/cleanup_checker.py
+@@ -2,6 +2,7 @@
+ Reads frozen evidence; never fabricates lifecycle events or edits primary failures.
+ """
+ import pathlib,json,collections,sys
++from lineage import associate,parent_valid
+ HANDLE='HANDLE_CONFIRMED_EXIT'
+ KERNEL='KERNEL_CONFIRMED_POST_EXIT_HANDLE_ACQUISITION'
+ INSUFFICIENT='INSUFFICIENT_EVIDENCE'
+@@ -48,13 +49,11 @@
+   if new==scope:break
+   scope=new
+  tracked=[x for x in rows if x['sequence'] in scope];pids={x['pid'] for x in tracked};byseq={x['sequence']:x for x in rows};bykey={(x['pid'],x['created']):x for x in rows}
+- # Derive the app tree independently as well; an ETW omission must not hide a child.
+- appscope={producer['collectorPid']}
+- while True:
+-  new=appscope|{x['pid'] for x in events if x['kind']=='start' and x['parentPid'] in appscope}
+-  if new==appscope:break
+-  appscope=new
+- if appscope!=pids:fail('APPLICATION_KERNEL_TREE_DISAGREEMENT')
++ # Bind independent application records to time-qualified identities, never PID-only ancestry.
++ association=associate(rows,events,scope)
++ if association['unknown']:fail('UNKNOWN_APPLICATION_LINEAGE')
++ for x in tracked:
++  if x['sequence']!=roots[0]['sequence'] and not parent_valid(x,byseq.get(x['parentSequence'],dict(pid=-1,sequence='',created='0',exitFiletime='0',startQpc=0,stopQpc=0))):fail('UNKNOWN_PARENT_IDENTITY')
+  for x in producer['launched']:
+   if (x['pid'],x['created']) not in bykey or x['pid'] not in pids:fail('MISSING_EXPLICIT_LAUNCH')
+  for marker in d['internal']:
+@@ -75,8 +74,8 @@
+  result=[]
+  for x in tracked:
+   why=[];key=(x['pid'],x['created']);ks=[a for a in rows if a['pid']==x['pid']];hs=[a for a in handles if (a['pid'],a['created'])==key]
+-  starts=[a for a in events if a['pid']==x['pid'] and a['kind']=='start'];stops=[a for a in events if a['pid']==x['pid'] and a['kind']=='stop']
+-  if len(ks)!=1:why.append('PID_REUSE_AMBIGUITY')
++  starts=[a for a in association['bound'].get(x['sequence'],[]) if a['kind']=='start'];stops=[a for a in association['bound'].get(x['sequence'],[]) if a['kind']=='stop']
++  if len([a for a in ks if a['created']==x['created']])!=1:why.append('CREATION_IDENTITY_AMBIGUITY')
+   if not x['startQpc'] or not x['stopQpc'] or x['stopQpc']<=x['startQpc'] or int(x['created'])<=0 or int(x['exitFiletime'])<int(x['created']) or not x['exitCodeKnown']:why.append('KERNEL_LIFECYCLE_MISSING_OR_CONFLICTING')
+   if len(starts)!=1 or len(stops)!=1:why.append('APPLICATION_START_STOP_INCOMPLETE')
+   else:
+@@ -102,7 +101,7 @@
+   if why or errors:classification=INSUFFICIENT
+   result.append(dict(pid=x['pid'],created=x['created'],sequence=x['sequence'],parentPid=x['parentPid'],image=x['image'],classification=classification,errors=why,appStartCount=len(starts),appStopCount=len(stops)))
+  counts=collections.Counter(x['classification'] for x in result)
+- return dict(status='PASS' if not errors and not counts[INSUFFICIENT] else 'FAIL',total=len(result),handleConfirmed=counts[HANDLE],kernelPostExit=counts[KERNEL],insufficient=counts[INSUFFICIENT],appStarts=sum(x['appStartCount'] for x in result),appStops=sum(x['appStopCount'] for x in result),kernelCreates=sum(bool(x['startQpc']) for x in tracked),kernelExits=sum(bool(x['stopQpc']) for x in tracked),errors=errors,identities=result,primaryFailure=producer.get('primary_failure'),producerStatus=producer['status'],acceptance=False,outsideKernel=[dict(pid=x['pid'],created=x['created'],image=x['image']) for x in rows if x['sequence'] not in scope],outsideAppEvents=[x for x in events if x['pid'] not in pids],externalEventIdentifierCollisions=len(events)-len({x['eventIdentifier'] for x in events}),queueIdentityCollisions=len(events)-len({x['queueSequence'] for x in events}))
++ return dict(status='PASS' if not errors and not counts[INSUFFICIENT] else 'FAIL',total=len(result),handleConfirmed=counts[HANDLE],kernelPostExit=counts[KERNEL],insufficient=counts[INSUFFICIENT],appStarts=sum(x['appStartCount'] for x in result),appStops=sum(x['appStopCount'] for x in result),kernelCreates=sum(bool(x['startQpc']) for x in tracked),kernelExits=sum(bool(x['stopQpc']) for x in tracked),errors=errors,identities=result,lineageUnknown=association['unknown'],lineageExcluded=association['outside'],primaryFailure=producer.get('primary_failure'),producerStatus=producer['status'],acceptance=False,outsideKernel=[dict(pid=x['pid'],created=x['created'],image=x['image']) for x in rows if x['sequence'] not in scope],outsideAppEvents=[x for x in events if x['pid'] not in pids],externalEventIdentifierCollisions=len(events)-len({x['eventIdentifier'] for x in events}),queueIdentityCollisions=len(events)-len({x['queueSequence'] for x in events}))
+ def evaluate(root):
+  try:return check(load(root))
+  except (OSError,ValueError,KeyError,TypeError,IndexError) as ex:return dict(status='FAIL',errors=['MISSING_OR_INVALID_EVIDENCE: '+str(ex)],identities=[],acceptance=False)

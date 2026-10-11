@@ -1,0 +1,168 @@
+{
+  "schema": "stage6-evidence-manifest-v1",
+  "generated_utc": "2026-10-04T08:00:06Z",
+  "root": "D:\\JARVIS-S6-FRESHVM\\evidence",
+  "folders": [
+    "gate18"
+  ],
+  "not_listed": "this manifest itself; the sealed P0 folder is never read",
+  "files": 31,
+  "bytes": 46415397,
+  "entries": [
+    {
+      "file": "gate18/backup-copy-run1-incident01.json",
+      "bytes": 44658947,
+      "sha256": "709c3ccea6813a5c5aacca595b3d1bfe595f0c4a8c0ff1f96dd2b7f8a24afb7e"
+    },
+    {
+      "file": "gate18/backup-copy.json",
+      "bytes": 6684,
+      "sha256": "ac76acca3f8bce116b792e1b279a12ab510a0c0d204f10b43c85280087a00f4f"
+    },
+    {
+      "file": "gate18/backup-evaluation.json",
+      "bytes": 2158,
+      "sha256": "c5999e4d254d72655dc77c0609387a835e08772e68cf7369aff82d619ee8f839"
+    },
+    {
+      "file": "gate18/checkpoints/p4-20261004-075914/census-after.json",
+      "bytes": 6,
+      "sha256": "b423bb45501e0fa49d3b77e635f800a29f1fdcf5a58e00c7e04a7ff7833045f2"
+    },
+    {
+      "file": "gate18/checkpoints/p4-20261004-075914/census-before.json",
+      "bytes": 6,
+      "sha256": "b423bb45501e0fa49d3b77e635f800a29f1fdcf5a58e00c7e04a7ff7833045f2"
+    },
+    {
+      "file": "gate18/checkpoints/p4-20261004-075914/CHECKPOINT.json",
+      "bytes": 874,
+      "sha256": "4073f84072def088de222b53936ee943472f8ade77fd4ad64a11d4b367dc6bea"
+    },
+    {
+      "file": "gate18/checkpoints/p4-20261004-075914/control-hashes.json",
+      "bytes": 264,
+      "sha256": "ecf0933ccfecb18092d24207bf298e86a4ee9914ae7f471b416ef3c1d2687f27"
+    },
+    {
+      "file": "gate18/checkpoints/p4-20261004-075914/dacl.json",
+      "bytes": 627,
+      "sha256": "2eaa7473a71816bb9919a37ef733c8f2cf6886590d2dca4aedeac7b7eaa2524d"
+    },
+    {
+      "file": "gate18/checkpoints/p4-20261004-075914/protected-config-inventory.json",
+      "bytes": 2330,
+      "sha256": "5d1fec69d0e6fd7fc9a0f76dde9de53c2900e4a3d54a8487bbef7f2ee5f152f0"
+    },
+    {
+      "file": "gate18/checkpoints/p4-20261004-075914/protected-vm-inventory.json",
+      "bytes": 1854,
+      "sha256": "e5dac26433fafa28f0fb693e5ac5bff1be399647ad604032c8bcc6a1cb9d415f"
+    },
+    {
+      "file": "gate18/gate18-evaluation.json",
+      "bytes": 8393,
+      "sha256": "5a140cdf9e7edb65cc8299a2083590eed6a7473ed6997d9c98da2992a8f91f79"
+    },
+    {
+      "file": "gate18/gate18-pass-photo-20261004-0752.jpg",
+      "bytes": 1642434,
+      "sha256": "6588153887da40a167da18f69ab9b5dfca0516a69cbe6f1c786d602debff9395"
+    },
+    {
+      "file": "gate18/incident-01-addendum-1.json",
+      "bytes": 2849,
+      "sha256": "3e9d92f80d12db7b698a48b0cf4d63164f0399558772a1872e93944e394a4e86"
+    },
+    {
+      "file": "gate18/incident-01-backup-copy.json",
+      "bytes": 2862,
+      "sha256": "9e5bad7100bc08c3f3bb4ddb32a3548644219ee08112c9c106afee7fb7db190a"
+    },
+    {
+      "file": "gate18/incident-02-everyday-jarvis-cannot-start.json",
+      "bytes": 3173,
+      "sha256": "f5be3c7b41ffadf0ac6f3c180a7ac0fa9ca5c41aacb4b6ddbbe8183f3bac223a"
+    },
+    {
+      "file": "gate18/incident-03-k2-jarvis-running.json",
+      "bytes": 2125,
+      "sha256": "b5ea702a9d071056caa088a83de123c95cdb1e82dfe5e5430f03d5ce4e5c6485"
+    },
+    {
+      "file": "gate18/incident-04-k4-hang-read-only-disc.json",
+      "bytes": 3295,
+      "sha256": "abc546b322d8ce53024f8e5e90d333ab93431396e391cec5cd825fe0429410fa"
+    },
+    {
+      "file": "gate18/MANIFEST-guest-egress-01.json",
+      "bytes": 14571,
+      "sha256": "c42af0f152ddfb509fc8d664980fd9f2d6e40625589e4b193a15d3df81fa3716"
+    },
+    {
+      "file": "gate18/old-backup-made.json",
+      "bytes": 4082,
+      "sha256": "e47cf02b3bebe6d75dbd09868b80cddd7b9bb560854a9e1791a5fcc1d2128190"
+    },
+    {
+      "file": "gate18/owner-decision-01.json",
+      "bytes": 967,
+      "sha256": "f9efc856618bd67eb6ab02055d21f51ec712de05ab7da2ac476362110b8b083c"
+    },
+    {
+      "file": "gate18/owner-decision-02.json",
+      "bytes": 1045,
+      "sha256": "1a6d4998cd09e068f2b2600fb25400aa432300c609bfbd36b32efa9eebeb2414"
+    },
+    {
+      "file": "gate18/owner-decision-03.json",
+      "bytes": 2168,
+      "sha256": "6ed66c48648c4efe322f2198a8140f362751efaa002ee41f92d71fa54c37d95f"
+    },
+    {
+      "file": "gate18/owner-decision-04.json",
+      "bytes": 2401,
+      "sha256": "902c4776aaf43298398e10f3cc099747ec1c0d407350aa29c276528a0d731d94"
+    },
+    {
+      "file": "gate18/owner-statements.jsonl",
+      "bytes": 392,
+      "sha256": "2547938176f46f11cd7ec79e1f72e1604a9cb4db6ba5db66f6b26f29155bff9e"
+    },
+    {
+      "file": "gate18/p4-evaluation.json",
+      "bytes": 2818,
+      "sha256": "67e2557eafa1f41d9905f679ba395df2a2ddbd685856b70ebb0083efc5b089cd"
+    },
+    {
+      "file": "gate18/prep-tools-hashes.txt",
+      "bytes": 1237,
+      "sha256": "452d74214cfff57ea874e4c78c1bf7b855a2d74e57edf5a9fdb035ec2abd662a"
+    },
+    {
+      "file": "gate18/recovery-disc.json",
+      "bytes": 1421,
+      "sha256": "8eba0809b9de5f20d06e4d3e499cfce2f24f835361f4457f37bba9c2b9bd177d"
+    },
+    {
+      "file": "gate18/vm/gate18-disc-20261004-064727.json",
+      "bytes": 2135,
+      "sha256": "4954c73eaaa949e6b247a976d95606bc14d225adebd84dfdf5261a1dcf7adbf9"
+    },
+    {
+      "file": "gate18/vm/JARVIS-S6-FRESH.vbox.GATE18-PASS-copy",
+      "bytes": 37287,
+      "sha256": "342781d1a28e55fb0bca04fe953301d72daf3ec0888823d85b95e918c6688d21"
+    },
+    {
+      "file": "gate18/vm/snapshot-GATE18-PASS-20261004-075514.json",
+      "bytes": 4623,
+      "sha256": "0bfa11a2864f691bbcc0d8e62cd61918a7a4e4d0e70fae0e966c77a056b1cd02"
+    },
+    {
+      "file": "gate18/vm/start-20261004-064727.json",
+      "bytes": 1369,
+      "sha256": "1836cfe8762f89be2e4c5e2f32c3c427a3fd49f8d09219cff08df78664049648"
+    }
+  ]
+}

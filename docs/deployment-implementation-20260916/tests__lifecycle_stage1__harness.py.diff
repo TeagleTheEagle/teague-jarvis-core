@@ -1,0 +1,26 @@
+--- before/tests/lifecycle_stage1/harness.py
++++ current/tests/lifecycle_stage1/harness.py
+@@ -29,10 +29,22 @@
+ k.GetExitCodeProcess.argtypes = [w.HANDLE,c.POINTER(w.DWORD)]
+ 
+ BASE = Path(__file__).absolute().parent / 'evidence'
++_deployment_binding = None
++
++def bind_deployment_root(binding):
++    """Trusted TEST bootstrap only; leaves OS lock/IPC semantics unchanged."""
++    from deployment_test.contract import Binding
++    global _deployment_binding
++    if type(binding) is not Binding or _deployment_binding is not None:
++        raise ValueError('Explicit single deployment binding required')
++    binding.check_root(binding.state)
++    _deployment_binding = binding
+ 
+ def validate(root):
+     root = Path(os.path.abspath(root))
+-    if not root.is_relative_to(BASE) or root == BASE:
++    if _deployment_binding is not None:
++        _deployment_binding.check_root(root)
++    elif not root.is_relative_to(BASE) or root == BASE:
+         raise ValueError('TEST namespace required')
+     for p in [root, *root.parents]:
+         attrs = k.GetFileAttributesW(str(p))

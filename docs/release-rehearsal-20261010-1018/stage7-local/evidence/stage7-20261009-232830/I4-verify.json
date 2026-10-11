@@ -1,0 +1,12 @@
+{
+    "status":  "PASS",
+    "verify":  "verified",
+    "desktop_shortcut":  true,
+    "startup_shortcut":  true,
+    "shortcuts_expected":  false,
+    "program":  "D:\\JARVIS-release-work\\stage7-local-1.0.18\\home\\releases\\1.0.18-4afd891c38f4\\electron\\JARVIS.exe",
+    "program_present":  true,
+    "desktop_shortcut_target":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS\\releases\\1.0.17-0d38218c4e1d\\electron\\JARVIS.exe",
+    "startup_shortcut_target":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS\\releases\\1.0.17-0d38218c4e1d\\electron\\JARVIS.exe",
+    "launcher_script_present":  false
+}

@@ -1,0 +1,17 @@
+{
+    "status":  "PASS",
+    "seconds":  68.2,
+    "result":  {
+                   "status":  "installed",
+                   "release":  "1.0.11-60d406fb6398",
+                   "previous":  null,
+                   "home":  "D:\\JARVIS-release-work\\gate17-local\\home",
+                   "seconds":  {
+                                   "verify_package":  14.808,
+                                   "copy":  10.705,
+                                   "verify_copy":  30.225,
+                                   "switch":  9.282
+                               }
+               },
+    "raw":  null
+}

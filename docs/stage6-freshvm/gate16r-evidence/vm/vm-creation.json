@@ -1,0 +1,14 @@
+{
+    "schema":  "stage6-fresh-vm-creation-v1",
+    "utc":  "2026-10-02T03:41:44.4346435Z",
+    "account":  "jarvis-s6-val",
+    "vm_name":  "JARVIS-S6-FRESH",
+    "vm_uuid":  "4ef16bdd-2a1b-46af-83db-ee69c2f868bb",
+    "vbox_file":  "D:\\\\JARVIS-S6-FRESHVM\\\\machines\\\\JARVIS-S6-FRESH\\\\JARVIS-S6-FRESH.vbox",
+    "vbox_sha256":  "67b62f9e576abcb92ba855ae040e5f53118ea52af99321537b38f338ae96e492",
+    "registered_in":  "D:\\JARVIS-S6-FRESHVM\\vbox-home\\VirtualBox.xml",
+    "registry_mentions_vm":  false,
+    "windows_iso_sha256":  "bd4307df32bc8af33b39ccecb1174aeb345386630f89a2b86c7a4e36b55ea650",
+    "unattend_iso_sha256":  "89f97c7b162d68b93b123517b1f823bf8ff9cce76f5e88d2cfbb303c7bc17c00",
+    "virtualbox_version":  "7.2.18r175117"
+}

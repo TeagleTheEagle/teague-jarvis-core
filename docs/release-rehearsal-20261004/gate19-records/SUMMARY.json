@@ -1,0 +1,46 @@
+{
+    "schema":  "jarvis-gate17-run-v1",
+    "overall":  "PASS",
+    "phase":  "Update",
+    "home":  "D:\\JARVIS-release-work\\gate19-local\\driver-test\\home",
+    "package":  "D:\\JARVIS-release-work\\pkg-1.0.11",
+    "started_utc":  "2026-10-04T03:31:09.4971957Z",
+    "finished_utc":  "2026-10-04T03:35:39.9536629Z",
+    "steps":  [
+                  {
+                      "step":  "E0-not-elevated",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T03:31:09.5806510Z"
+                  },
+                  {
+                      "step":  "G1-packages",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T03:31:12.3505191Z"
+                  },
+                  {
+                      "step":  "G2-extract-previous",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T03:32:53.2955114Z"
+                  },
+                  {
+                      "step":  "G3-previous-installed",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T03:33:40.7348922Z"
+                  },
+                  {
+                      "step":  "G4-update",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T03:34:36.9016278Z"
+                  },
+                  {
+                      "step":  "G5-rollback",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T03:34:59.4364299Z"
+                  },
+                  {
+                      "step":  "G6-update-again",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T03:35:39.9516537Z"
+                  }
+              ]
+}

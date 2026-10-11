@@ -1,0 +1,167 @@
+--- dry_collect.py
++++ baseline_collect.py
+@@ -1,7 +1,7 @@
+ """Real producer adapter for the unchanged dual-evidence cleanup contract."""
+ import os,sys,time,traceback
+ from workspace import CODE,run_dir,activate_temp
+-from dry_contract import load,save,advance,state
++from baseline_contract import load,save,advance,state
+ from dry_health import Health
+ from evidence_support import TreeTracker,Managed,Ledger
+ from probe_timing import Probe,K,process_times
+@@ -16,8 +16,8 @@
+    import json
+    f.write(json.dumps(v)+'\n');f.flush()
+  try:
+-  health=Health(root);advance(root,'OBSERVERS_READY','WORKLOAD_RUNNING');deadline=ticks()/frequency()+90
+-  worker=Managed([sys._base_executable,'-B',str(CODE/'dry_hash_worker.py'),root.name],root,'hash-worker',tree);launched.append(worker.identity)
++  health=Health(root);advance(root,'OBSERVERS_READY','WORKLOAD_RUNNING');deadline=ticks()/frequency()+contract['thresholds']['campaign']
++  worker=Managed([sys._base_executable,'-B',str(CODE/'baseline_hash_worker.py'),root.name],root,'hash-worker',tree);launched.append(worker.identity)
+   while worker.p.poll() is None or len(probes)<2:
+    health.check()
+    if ticks()/frequency()+13.6>=deadline:raise RuntimeError('Fixed campaign admission deadline')
+@@ -55,7 +55,7 @@
+   secondary('probe-timings',lambda:save(root/'probe-timings.json',[x.row for x in probes]))
+   secondary('probe-handles',lambda:save(root/'retained-handle-verification.json',handles))
+   if not ledger.primary:secondary('workload-closure',lambda:advance(root,'METADATA_VERIFIED','WORKLOAD_CLOSED'))
+-  save(root/'stress-result.json',dict(ledger.result(),scenario=contract['scenario'],producer='dry_collect.py',collectorPid=os.getpid(),launched=launched,results=results))
++  save(root/'stress-result.json',dict(ledger.result(),scenario=contract['scenario'],producer='baseline_collect.py',collectorPid=os.getpid(),launched=launched,results=results))
+  return 1 if ledger.primary else 0
+ if __name__=='__main__':
+  root=run_dir(sys.argv[1]);activate_temp(root);sys.exit(main(root))
+--- dry_finalize.py
++++ baseline_finalize.py
+@@ -1,7 +1,7 @@
+ """Post-observer acceptance, immutable evidence archive, never rewrites failures."""
+ import pathlib,json,os,zipfile,sys
+ from workspace import run_dir,activate_temp
+-from dry_contract import load,read,save,sha,state,advance,inventory
++from baseline_contract import load,read,save,sha,state,advance,inventory
+ from cleanup_checker import evaluate
+ from probe_policy import validate_lifecycle
+ from evidence_support import Ledger
+@@ -33,7 +33,7 @@
+   with p.open('r+b',buffering=0) as f:os.fsync(f.fileno())
+   files.append(dict(name=p.name,sha256=sha(p),bytes=p.stat().st_size))
+  save(root/'durable-files.json',files);advance(root,'CLEANUP_VERIFIED','FINALIZED')
+- manifest=dict(synthetic=True,scenario=contract['scenario'],source=contract['source'],files=read(root/'hash-pass-2.json')['files'],dualEvidence=result,protectedAccess=False)
++ manifest=dict(mode='protected_baseline',captureUtc=__import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat(),limitation='No proof of pre-incident byte identity for artifacts lacking historical hashes',synthetic=contract['synthetic'],scenario=contract['scenario'],source=contract['source'],files=read(root/'hash-pass-2.json')['files'],dualEvidence=result,protectedAccess=not contract['synthetic'])
+  save(root/'baseline-manifest.json',manifest);save(root/'baseline-manifest-hash.json',dict(sha256=sha(root/'baseline-manifest.json')))
+  advance(root,'FINALIZED','MANIFESTED')
+  members=files+[dict(name=n,sha256=sha(root/n),bytes=(root/n).stat().st_size) for n in ('durable-files.json','baseline-manifest.json','baseline-manifest-hash.json')]
+@@ -52,7 +52,7 @@
+  if inventory(pathlib.Path(contract['source']))!=contract['inventory']:raise RuntimeError('Post-archive source metadata changed')
+  save(root/'archive-verification.json',dict(status='HASH_VERIFIED',members=len(members)+1,sha256=sha(root/'evidence.zip'),manifestSHA256=sha(root/'baseline-manifest.json'),sourceMetadataPreserved=True))
+  advance(root,'ARCHIVED','VERIFIED')
+- save(root/'integration-result.json',dict(status='MINIATURE_INTEGRATION_PASS' if contract['scenario']=='miniature' else 'DRY_RUN_1_PASS',dryRunExecuted=contract['scenario']=='dry1',identities=result['total'],handleConfirmed=result['handleConfirmed'],postExit=result['kernelPostExit'],unexplained=result['insufficient'],protectedAccess=False))
++ save(root/'integration-result.json',dict(status='SYNTHETIC_PROTECTED_MODE_PASS',dryRunExecuted=contract['scenario']=='dry1',identities=result['total'],handleConfirmed=result['handleConfirmed'],postExit=result['kernelPostExit'],unexplained=result['insufficient'],protectedAccess=not contract['synthetic']))
+  return read(root/'integration-result.json')
+ if __name__=='__main__':
+  root=run_dir(sys.argv[1]);activate_temp(root)
+--- dry_launch.ps1
++++ baseline_launch.ps1
+@@ -1,11 +1,11 @@
+-param([ValidateSet('miniature','dry1')][string]$Scenario='miniature')
++param([Parameter(Mandatory=$true)][string]$Source)
+ $ErrorActionPreference='Stop';. (Join-Path $PSScriptRoot 'workspace.ps1');Assert-LiveCode;Set-Location -LiteralPath $PSScriptRoot
+-if(@(Get-Process|Where-Object ProcessName -match '^(VBox|VirtualBox|J6KernelTrace|J6Probe)').Count){throw 'Relevant process still active; preflight blocked'}
++if(@(Get-Process|Where-Object ProcessName -match '^(VBox|VirtualBox|J6KernelTrace|J6BaselineTrace|J6Probe)').Count){throw 'Relevant process still active; preflight blocked'}
+ $py='C:\Users\jonny\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe'
+ $pwsh='C:\Users\jonny\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\powershell\pwsh.exe'
+-$frozen=Get-Content -LiteralPath (Join-Path $PSScriptRoot 'integration-source.json') -Raw|ConvertFrom-Json
++$frozen=Get-Content -LiteralPath (Join-Path $PSScriptRoot 'baseline-source.json') -Raw|ConvertFrom-Json
+ foreach($x in $frozen){if((Get-FileHash -LiteralPath (Join-Path $PSScriptRoot $x.name)).Hash -ne $x.sha256){throw ('Source drift: '+$x.name)}}
+-$root=& $py -B (Join-Path $PSScriptRoot 'dry_contract.py') prepare $Scenario
++$root=& $py -B (Join-Path $PSScriptRoot 'baseline_contract.py') prepare $Source
+ if($LASTEXITCODE -ne 0){throw 'Preflight contract/source failed before observers'}
+ $Run=Split-Path $root -Leaf;Set-LiveTemp $root
+ $me=Get-Process -Id $PID;$identity=@{pid=$PID;creationFiletime=$me.StartTime.ToUniversalTime().ToFileTimeUtc().ToString();image=$me.Path;run=$root}
+@@ -16,14 +16,14 @@
+  & $py -B (Join-Path $PSScriptRoot 'volume_map.py') $root
+  if($LASTEXITCODE -ne 0){throw 'Volume map failed'}
+  $frozen|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $root 'source-hashes.json')
+- $etw=Start-Process -FilePath (Join-Path $PSScriptRoot 'J6KernelTrace.exe') -ArgumentList @($root,$PID,$identity.creationFiletime) -Verb RunAs -WindowStyle Hidden -PassThru
++ $etw=Start-Process -FilePath (Join-Path $PSScriptRoot 'J6BaselineTrace.exe') -ArgumentList @($root,$PID,$identity.creationFiletime) -Verb RunAs -WindowStyle Hidden -PassThru
+  Ready $etw 'etw-ready.json'
+- $app=Start-Process -FilePath $pwsh -ArgumentList @('-NoProfile','-File',(Join-Path $PSScriptRoot 'app_monitor.ps1'),'-Run',$Run) -Verb RunAs -WindowStyle Hidden -PassThru
++ $app=Start-Process -FilePath $pwsh -ArgumentList @('-NoProfile','-File',(Join-Path $PSScriptRoot 'baseline_monitor.ps1'),'-Run',$Run,'-KernelPid',$etw.Id) -Verb RunAs -WindowStyle Hidden -PassThru
+  Ready $app 'app-ready.json';Ready $app 'app-health.json'
+- @{etw=@{pid=$etw.Id;created=$etw.StartTime.ToUniversalTime().ToFileTimeUtc().ToString();image=(Join-Path $PSScriptRoot 'J6KernelTrace.exe')};app=@{pid=$app.Id;created=$app.StartTime.ToUniversalTime().ToFileTimeUtc().ToString();image=$pwsh}}|ConvertTo-Json -Depth 5|Set-Content -LiteralPath (Join-Path $root 'observer-identities.json')
+- & $py -B (Join-Path $PSScriptRoot 'dry_contract.py') ready $Run
++ @{etw=@{pid=$etw.Id;created=$etw.StartTime.ToUniversalTime().ToFileTimeUtc().ToString();image=(Join-Path $PSScriptRoot 'J6BaselineTrace.exe')};app=@{pid=$app.Id;created=$app.StartTime.ToUniversalTime().ToFileTimeUtc().ToString();image=$pwsh}}|ConvertTo-Json -Depth 5|Set-Content -LiteralPath (Join-Path $root 'observer-identities.json')
++ & $py -B (Join-Path $PSScriptRoot 'baseline_contract.py') ready $Run
+  if($LASTEXITCODE -ne 0){throw 'Ready transition failed'}
+- & $py -B (Join-Path $PSScriptRoot 'dry_collect.py') $Run 1> (Join-Path $root 'work.stdout') 2> (Join-Path $root 'work.stderr')
++ & $py -B (Join-Path $PSScriptRoot 'baseline_collect.py') $Run 1> (Join-Path $root 'work.stdout') 2> (Join-Path $root 'work.stderr')
+  $workExit=$LASTEXITCODE
+ }catch{$_.ToString()|Set-Content -LiteralPath (Join-Path $root 'launcher-error.txt')}
+ finally {
+@@ -34,7 +34,7 @@
+  Write-Output $root
+ }
+ if(!$appExited -or !$etwExited -or $workExit -ne 0){throw 'Primary/observer failure preserved; no acceptance finalization'}
+-& $py -B (Join-Path $PSScriptRoot 'dry_contract.py') closed $Run
++& $py -B (Join-Path $PSScriptRoot 'baseline_contract.py') closed $Run
+ if($LASTEXITCODE -ne 0){throw 'Lifecycle closure transition failed'}
+-& $py -B (Join-Path $PSScriptRoot 'dry_finalize.py') $Run
++& $py -B (Join-Path $PSScriptRoot 'baseline_finalize.py') $Run
+ if($LASTEXITCODE -ne 0){throw 'Finalization failed; evidence preserved'}
+--- app_monitor.ps1
++++ baseline_monitor.ps1
+@@ -1,10 +1,10 @@
+-param([string]$Run)
++param([string]$Run,[int]$KernelPid)
+ $ErrorActionPreference='Stop';. (Join-Path $PSScriptRoot 'workspace.ps1');$root=Get-LiveRun $Run;Set-LiveTemp $root
+ Add-Type -Path @((Join-Path $PSScriptRoot 'LoopTiming.cs'),(Join-Path $PSScriptRoot 'event_queue.cs'))
+ Add-Type -Path (Join-Path $PSScriptRoot 'EventTap.cs')
+ $s='J6DualStart-'+[guid]::NewGuid().ToString('N');$t='J6DualStop-'+[guid]::NewGuid().ToString('N');$ids=@($s,$t)
+ $exact=[ExactEventQueue]::new($ExecutionContext.Events.ReceivedEvents,[string[]]$ids)
+-$receipts=[Collections.Generic.List[object]]::new();$heartbeats=[Collections.Generic.List[object]]::new();$lastEvent=[Diagnostics.Stopwatch]::GetTimestamp();$frequency=[Diagnostics.Stopwatch]::Frequency
++$resources=[Collections.Generic.List[object]]::new();$receipts=[Collections.Generic.List[object]]::new();$heartbeats=[Collections.Generic.List[object]]::new();$lastEvent=[Diagnostics.Stopwatch]::GetTimestamp();$frequency=[Diagnostics.Stopwatch]::Frequency
+ $clock=[Diagnostics.Stopwatch]::StartNew();$closingAt=$null;$success=$false;$unsubscribed=$false;$errorRecord=$null;$lastHeartbeat=$lastEvent
+ function Save($n,$v){[IO.File]::WriteAllText((Join-Path $root $n),($v|ConvertTo-Json -Depth 12))}
+ function Drain {
+@@ -27,13 +27,14 @@
+  foreach($pair in @(@($s,'start'),@($t,'stop'))){$sub=Get-EventSubscriber -SourceIdentifier $pair[0];[void][EventTap]::AttachSource($sub.SourceObject,$sub.EventName,$pair[1])}
+  $me=Get-Process -Id $PID
+  Save 'app-ready.json' @{pid=$PID;created=$me.StartTime.ToUniversalTime().ToFileTimeUtc().ToString();image=$me.Path;frequency=$frequency;qpc=[Diagnostics.Stopwatch]::GetTimestamp();source='independent CIM subscriptions; not generated from ETW consumer'}
+- while($clock.Elapsed.TotalSeconds -lt 180) {
++ while($clock.Elapsed.TotalSeconds -lt 1200) {
+   if($exact.Failed -or [EventTap]::Errors -or [EventTap]::Overflow){throw 'Application event collector failed'}
+   if(@(Get-EventSubscriber|Where-Object SourceIdentifier -in $ids).Count -ne 2){throw 'Subscription lost'}
+   Drain
+   $now=[Diagnostics.Stopwatch]::GetTimestamp();$interval=($now-$lastHeartbeat)/$frequency
+   if($interval -ge 10){throw 'Heartbeat reached fixed 10-second limit'}
+   $heartbeats.Add(@{qpc=$now;interval=$interval});$lastHeartbeat=$now
++  $rp=[Diagnostics.Process]::GetCurrentProcess();$rp.Refresh();$kp=[Diagnostics.Process]::GetProcessById($KernelPid);$kp.Refresh();$resources.Add(@{seconds=$clock.Elapsed.TotalSeconds;privateBytes=$rp.PrivateMemorySize64;workingSet=$rp.WorkingSet64;handles=$rp.HandleCount;queueDepth=$exact.Stats().remaining;events=$exact.Stats().persisted;threads=$rp.Threads.Count;kernelPrivateBytes=$kp.PrivateMemorySize64;kernelHandles=$kp.HandleCount;eventBytes=([IO.FileInfo]::new((Join-Path $root 'app-events.jsonl'))).Length});$rp.Dispose();$kp.Dispose()
+   Save 'app-health.json' @{qpc=$now;frequency=$frequency;pid=$PID;healthy=$true}
+   if(Test-Path -LiteralPath (Join-Path $root 'app-stop')) {
+    if($null -eq $closingAt){$closingAt=$now}
+@@ -42,7 +43,7 @@
+   }
+   Wait-Event -Timeout 1|Out-Null
+  }
+- if($clock.Elapsed.TotalSeconds -ge 180){throw 'Application monitor bound exceeded'}
++ if($clock.Elapsed.TotalSeconds -ge 1200){throw 'Application monitor bound exceeded'}
+  foreach($id in $ids){Unregister-Event -SourceIdentifier $id -ErrorAction Stop};$unsubscribed=$true
+  Drain;$exact.Reconcile()
+  $f=[IO.FileStream]::new((Join-Path $root 'app-events.jsonl'),[IO.FileMode]::Open,[IO.FileAccess]::ReadWrite,[IO.FileShare]::Read)
+@@ -52,6 +53,7 @@
+ finally {
+  if(!$unsubscribed){foreach($id in $ids){Unregister-Event -SourceIdentifier $id -ErrorAction SilentlyContinue}}
+  [EventTap]::Detach()
++ Save 'monitor-resources.json' @($resources.ToArray())
+  Save 'app-receipts.json' @($receipts.ToArray());Save 'app-tap.json' @([EventTap]::Snapshot());Save 'app-heartbeats.json' @($heartbeats.ToArray())
+  Save 'app-result.json' @{success=$success;error=$errorRecord;queue=$exact.Stats();tapErrors=[EventTap]::Errors;tapOverflow=[EventTap]::Overflow;source='CIM_PROCESS_NOTIFICATION';durableFinalization=$success;unsubscribed=$unsubscribed}
+  $exact.Dispose()
+--- kernel_trace.cpp
++++ baseline_kernel_trace.cpp
+@@ -57,7 +57,7 @@
+  if(enable){ControlTraceW(sessionHandle,session.c_str(),p,EVENT_TRACE_CONTROL_STOP);if(!openError)CloseTrace(consumer);Write(L"etw-failure.json","{\"stage\":\"OpenTrace/Enable\",\"code\":"+std::to_string(enable)+"}");CloseHandle(root);return 94;}
+  std::atomic<ULONG> consumed{ULONG_MAX};std::thread thread([&]{consumed=ProcessTrace(&consumer,1,nullptr,nullptr);});
+  LARGE_INTEGER freq;QueryPerformanceFrequency(&freq);bool ready=Write(L"etw-ready.json","{\"pid\":"+std::to_string(GetCurrentProcessId())+",\"rootPid\":"+std::to_string(rootPid)+",\"rootCreated\":\""+std::to_string(rootCreated)+"\",\"session\":"+J(U(session))+",\"frequency\":"+std::to_string(freq.QuadPart)+",\"qpc\":"+std::to_string(Q())+"}");
+- LONGLONG begin=Q();bool requested=false;while(ready&&(Q()-begin)/static_cast<double>(freq.QuadPart)<180){Sample();if(GetFileAttributesW((folder+L"\\etw-stop").c_str())!=INVALID_FILE_ATTRIBUTES){requested=true;break;}if(consumed!=ULONG_MAX)break;Sleep(10);}
++ LONGLONG begin=Q();bool requested=false;while(ready&&(Q()-begin)/static_cast<double>(freq.QuadPart)<1200){Sample();if(GetFileAttributesW((folder+L"\\etw-stop").c_str())!=INVALID_FILE_ATTRIBUTES){requested=true;break;}if(consumed!=ULONG_MAX)break;Sleep(10);}
+  ULONG flush=ControlTraceW(sessionHandle,session.c_str(),p,EVENT_TRACE_CONTROL_FLUSH);Sleep(1100);Sample();ULONG stop=ControlTraceW(sessionHandle,session.c_str(),p,EVENT_TRACE_CONTROL_STOP);thread.join();CloseTrace(consumer);Sample();CloseHandle(root);
+  std::ostringstream out;out<<"{\"requestedStop\":"<<(requested?"true":"false")<<",\"session\":"<<J(U(session))<<",\"flushResult\":"<<flush<<",\"stopResult\":"<<stop<<",\"consumerResult\":"<<consumed<<",\"eventsLost\":"<<p->EventsLost<<",\"realtimeBuffersLost\":"<<p->RealTimeBuffersLost<<",\"buffersLost\":"<<p->LogBuffersLost<<",\"faults\":"<<faults<<",\"discardedUnrelated\":"<<discarded<<",\"rows\":[";bool first=true;
+  for(auto&a:rows){auto&r=a.second;if(!first)out<<",";first=false;bool closed=true;if(r.handle){closed=CloseHandle(r.handle)!=0;r.closed=closed;}out<<"{\"pid\":"<<r.pid<<",\"parentPid\":"<<r.parent<<",\"created\":\""<<r.created<<"\",\"sequence\":\""<<r.sequence<<"\",\"parentSequence\":\""<<r.parentSequence<<"\",\"image\":"<<J(U(r.image))<<",\"startQpc\":"<<r.start<<",\"startCallbackQpc\":"<<r.notified<<",\"handleAttemptBeginQpc\":"<<r.attemptBegin<<",\"handleAttemptQpc\":"<<r.retained<<",\"handleRetained\":"<<(r.handle?"true":"false")<<",\"handleIdentity\":\""<<reinterpret_cast<ULONG_PTR>(r.handle)<<"\",\"reason\":"<<J(r.reason)<<",\"openError\":"<<r.openError<<",\"metadataError\":"<<r.metadataError<<",\"stopQpc\":"<<r.stop<<",\"stopCallbackQpc\":"<<r.stopNotified<<",\"signalObservedQpc\":"<<r.signal<<",\"exitFiletime\":\""<<r.exitFT<<"\",\"exitCode\":"<<r.exitCode<<",\"exitCodeKnown\":"<<(r.exitCodeKnown?"true":"false")<<",\"handleClosed\":"<<(closed?"true":"false")<<",\"startVersion\":"<<r.version<<",\"stopVersion\":"<<r.stopVersion<<",\"startSchema\":"<<List(r.schema)<<",\"stopSchema\":"<<List(r.stopSchema)<<"}";}

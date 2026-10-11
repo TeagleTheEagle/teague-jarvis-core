@@ -1,0 +1,58 @@
+--- frozen/durable_sink.hpp
++++ candidate/durable_sink.hpp
+@@ -1,3 +1,4 @@
++#include "trace_telemetry.hpp"
+ #pragma once
+ #ifndef NOMINMAX
+ #define NOMINMAX
+@@ -34,7 +35,7 @@
+   U enqueued=0,dequeued=0,completed=0,flushBegin=0,flushEnd=0,hashBegin=0,hashEnd=0,waitBegin=0,waitEnd=0;
+   std::vector<int> states{ACTIVE};std::unique_ptr<Hash> hash;
+   void advance(State next){if(int(next)!=int(state)+1)throw std::runtime_error("state skip");state=next;states.push_back(next);}
+-  ~Segment(){if(handle!=INVALID_HANDLE_VALUE)CloseHandle(handle);}
++  ~Segment(){if(handle!=INVALID_HANDLE_VALUE)j6t::close(handle);}
+  };
+  struct Item{U seq;std::string raw;U admitted;};
+  struct Snapshot{U tick,kind,id,rawBytes,input,inflight,bytes,sealed,pending,pendingBytes;};
+@@ -63,7 +64,7 @@
+   bool first=true;for(const auto&x:telemetry){if(!first)o<<",";first=false;o<<"["<<x.tick<<","<<x.kind<<","<<x.id<<","<<x.rawBytes<<","<<x.input<<","<<x.inflight<<","<<x.bytes<<","<<x.sealed<<","<<x.pending<<","<<x.pendingBytes<<"]";}return o.str()+"]}";
+  }
+  void fault(int id){if(inject==id)throw std::runtime_error("injected "+std::to_string(id));}
+- static void writeAll(HANDLE f,const std::string&s){DWORD n=0;if(!WriteFile(f,s.data(),DWORD(s.size()),&n,nullptr)||n!=s.size())throw std::runtime_error("write/partial write");}
++ static void writeAll(HANDLE f,const std::string&s){DWORD n=0;if(!j6t::write(f,s.data(),DWORD(s.size()),&n,nullptr)||n!=s.size())throw std::runtime_error("write/partial write");}
+  std::wstring path(const std::string&n){return root+L"\\"+std::wstring(n.begin(),n.end());}
+  std::unique_ptr<Segment> open(U number){
+   if(number>=16384)throw std::runtime_error("segment bound");auto s=std::make_unique<Segment>();s->number=number;s->name=prefix+"-"+std::to_string(number)+".jsonl";
+@@ -100,18 +101,18 @@
+     if(inject==19){std::unique_lock<std::mutex>l(gate);cv.wait(l,[&]{return failure.load()!=0;});throw std::runtime_error("controlled wait-interruption fixture");}
+     fault(13);if(!firstFinal)firstFinal=q();
+     if(inject==6||inject==9){for(int i=0;i<150&&!failure;i++)Sleep(1);if(inject==6)throw std::runtime_error("injected flush delay refusal");}
+-    fault(7);auto t=q();s->flushBegin=U(t);if(!FlushFileBuffers(s->handle))throw std::runtime_error("durable flush");s->flushEnd=U(q());auto dt=double(s->flushEnd-s->flushBegin)/clockFrequency;flushSeconds+=dt;maxFlush=std::max(maxFlush,dt);s->advance(DURABLY_COMMITTED);
++    fault(7);auto t=q();s->flushBegin=U(t);if(!j6t::flush(s->handle))throw std::runtime_error("durable flush");s->flushEnd=U(q());auto dt=double(s->flushEnd-s->flushBegin)/clockFrequency;flushSeconds+=dt;maxFlush=std::max(maxFlush,dt);s->advance(DURABLY_COMMITTED);
+     LARGE_INTEGER zero{};if(!SetFilePointerEx(s->handle,zero,nullptr,FILE_BEGIN))throw std::runtime_error("readback seek");Hash check;U bytes=0,records=0,next=s->first;std::string line;char buf[65536];DWORD n=0;t=q();s->hashBegin=U(t);
+     while(ReadFile(s->handle,buf,sizeof(buf),&n,nullptr)&&n){check.add(buf,n);bytes+=n;for(DWORD i=0;i<n;i++){if(buf[i]=='\n'){std::string start="{\"seq\":"+std::to_string(next)+",\"raw\":";if(line.rfind(start,0)!=0)throw std::runtime_error("readback sequence");records++;next++;line.clear();}else{line+=buf[i];if(line.size()>8192)throw std::runtime_error("readback line bound");}}}
+     s->actual=check.end();fault(8);if(!line.empty()||bytes!=s->bytes||records!=s->count||next!=s->last+1||s->actual!=s->expected)throw std::runtime_error("readback mismatch");s->hashEnd=U(q());hashSeconds+=double(s->hashEnd-s->hashBegin)/clockFrequency;s->advance(HASH_VERIFIED);
+-    if(!CloseHandle(s->handle))throw std::runtime_error("handle close");s->handle=INVALID_HANDLE_VALUE;lastFinal=q();
++    if(!j6t::close(s->handle))throw std::runtime_error("handle close");s->handle=INVALID_HANDLE_VALUE;lastFinal=q();
+     {std::lock_guard<std::mutex> l(gate);pending--;pendingBytes-=s->bytes;s->completed=U(q());U id=s->number;done.push_back(std::move(s));snapshot(6,id);cv.notify_all();}
+    }
+   }catch(...){fail(200+inject);}
+   finalizerExited=true;cv.notify_all();
+  }
+  std::string metadata(){std::ostringstream o;o<<"[";bool first=true;for(auto&s:done){if(!first)o<<",";first=false;o<<"{\"number\":"<<s->number<<",\"name\":\""<<s->name<<"\",\"first\":"<<s->first<<",\"last\":"<<s->last<<",\"records\":"<<s->count<<",\"bytes\":"<<s->bytes<<",\"sha256\":\""<<s->actual<<"\",\"states\":[";for(size_t i=0;i<s->states.size();i++){if(i)o<<",";o<<s->states[i];}o<<"],\"timing\":{\"enqueued\":"<<s->enqueued<<",\"dequeued\":"<<s->dequeued<<",\"completed\":"<<s->completed<<",\"flushBegin\":"<<s->flushBegin<<",\"flushEnd\":"<<s->flushEnd<<",\"hashBegin\":"<<s->hashBegin<<",\"hashEnd\":"<<s->hashEnd<<",\"waitBegin\":"<<s->waitBegin<<",\"waitEnd\":"<<s->waitEnd<<"}}";}return o.str()+"]";}
+- void durableFile(const std::string&name,const std::string&data){HANDLE h=CreateFileW(path(name).c_str(),GENERIC_READ|GENERIC_WRITE,FILE_SHARE_READ,nullptr,CREATE_NEW,FILE_ATTRIBUTE_NORMAL,nullptr);if(h==INVALID_HANDLE_VALUE)throw std::runtime_error("manifest create");try{writeAll(h,data);if(!FlushFileBuffers(h))throw std::runtime_error("manifest flush");LARGE_INTEGER z{};if(!SetFilePointerEx(h,z,nullptr,FILE_BEGIN))throw std::runtime_error("manifest seek");std::string got(data.size(),'\0');DWORD n=0;if(!ReadFile(h,got.data(),DWORD(got.size()),&n,nullptr)||n!=got.size()||got!=data)throw std::runtime_error("manifest readback");}catch(...){CloseHandle(h);throw;}if(!CloseHandle(h))throw std::runtime_error("manifest close");}
++ void durableFile(const std::string&name,const std::string&data){HANDLE h=CreateFileW(path(name).c_str(),GENERIC_READ|GENERIC_WRITE,FILE_SHARE_READ,nullptr,CREATE_NEW,FILE_ATTRIBUTE_NORMAL,nullptr);if(h==INVALID_HANDLE_VALUE)throw std::runtime_error("manifest create");try{writeAll(h,data);if(!j6t::flush(h))throw std::runtime_error("manifest flush");LARGE_INTEGER z{};if(!SetFilePointerEx(h,z,nullptr,FILE_BEGIN))throw std::runtime_error("manifest seek");std::string got(data.size(),'\0');DWORD n=0;if(!ReadFile(h,got.data(),DWORD(got.size()),&n,nullptr)||n!=got.size()||got!=data)throw std::runtime_error("manifest readback");}catch(...){j6t::close(h);throw;}if(!j6t::close(h))throw std::runtime_error("manifest close");}
+ public:
+  DurableSink(std::wstring r,std::string p="durable",U segment=65536,int faultCode=0):root(r),prefix(p),limit(segment),inject(faultCode){
+   if(root.rfind(L"D:\\JARVIS-STAGE6-LIVE\\",0)!=0||root.find(L"..")!=std::wstring::npos||!std::filesystem::is_directory(root)||p.empty()||p.find_first_not_of("abcdefghijklmnopqrstuvwxyz-")!=std::string::npos||segment<8192||segment>8388608)throw std::runtime_error("bounded D workspace required");
+@@ -134,8 +135,8 @@
+    if(next!=accepted+1)throw std::runtime_error("total sequence");
+    // Verify persisted paths independently, after original-handle flush/readback.
+    if(inject==10&&!done.empty())DeleteFileW(path(done[0]->name).c_str());
+-   if(inject==11&&!done.empty()){HANDLE f=CreateFileW(path(done[0]->name).c_str(),GENERIC_WRITE,0,nullptr,OPEN_EXISTING,0,nullptr);if(f!=INVALID_HANDLE_VALUE){writeAll(f,"!");CloseHandle(f);}}
+-   for(auto&s:done){HANDLE f=CreateFileW(path(s->name).c_str(),GENERIC_READ,FILE_SHARE_READ,nullptr,OPEN_EXISTING,0,nullptr);if(f==INVALID_HANDLE_VALUE)throw std::runtime_error("missing segment");Hash h;char b[65536];DWORD n=0;U size=0;while(ReadFile(f,b,sizeof(b),&n,nullptr)&&n){h.add(b,n);size+=n;}CloseHandle(f);if(size!=s->bytes||h.end()!=s->actual)throw std::runtime_error("corrupt persisted segment");}
++   if(inject==11&&!done.empty()){HANDLE f=CreateFileW(path(done[0]->name).c_str(),GENERIC_WRITE,0,nullptr,OPEN_EXISTING,0,nullptr);if(f!=INVALID_HANDLE_VALUE){writeAll(f,"!");j6t::close(f);}}
++   for(auto&s:done){HANDLE f=CreateFileW(path(s->name).c_str(),GENERIC_READ,FILE_SHARE_READ,nullptr,OPEN_EXISTING,0,nullptr);if(f==INVALID_HANDLE_VALUE)throw std::runtime_error("missing segment");Hash h;char b[65536];DWORD n=0;U size=0;while(ReadFile(f,b,sizeof(b),&n,nullptr)&&n){h.add(b,n);size+=n;}j6t::close(f);if(size!=s->bytes||h.end()!=s->actual)throw std::runtime_error("corrupt persisted segment");}
+    fault(12);fault(16);auto ts=telemetryJson();durableFile(prefix+"-telemetry.json",ts);Hash th;th.add(ts.data(),ts.size());auto telemetryHash=th.end();
+    fault(17);telemetryRef="{\"schema\":\"stage6-writer-telemetry-v1\",\"name\":\""+prefix+"-telemetry.json\",\"sha256\":\""+telemetryHash+"\"}";
+    std::string manifest="{\"format\":\"durable-segments-v1\",\"accepted\":"+std::to_string(accepted)+",\"bytes\":"+std::to_string(bytes)+",\"telemetry\":"+telemetryRef+",\"segments\":"+metadata()+"}";

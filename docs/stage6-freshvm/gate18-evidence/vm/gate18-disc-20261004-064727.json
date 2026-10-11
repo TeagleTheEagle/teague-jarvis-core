@@ -1,0 +1,35 @@
+{
+    "schema":  "stage6-gate18-disc-attached-v1",
+    "utc":  "2026-10-04T06:47:27.2431955Z",
+    "account":  "jarvis-s6-val",
+    "vm_name":  "JARVIS-S6-FRESH",
+    "vm_uuid":  "4ef16bdd-2a1b-46af-83db-ee69c2f868bb",
+    "current_snapshot":  "GATE17-19-PASS",
+    "recovery_disc":  {
+                          "iso":  "D:\\JARVIS-S6-FRESHVM\\media\\JARVIS-RECOVERY.iso",
+                          "sha256":  "1189ac0196d7e33bbfda89fe4a901b517979935b64a68a25fd8a2e32ac39781d",
+                          "sata_port":  2
+                      },
+    "storage_lines":  [
+                          "\"SATA-0-0\"=\"D:\\\\JARVIS-S6-FRESHVM\\\\machines\\\\JARVIS-S6-FRESH\\\\Snapshots/{7e72e0b9-bb74-47ce-bdc2-c478462709e7}.vdi\"",
+                          "\"SATA-ImageUUID-0-0\"=\"7e72e0b9-bb74-47ce-bdc2-c478462709e7\"",
+                          "\"SATA-hot-pluggable-0-0\"=\"off\"",
+                          "\"SATA-nonrotational-0-0\"=\"off\"",
+                          "\"SATA-discard-0-0\"=\"off\"",
+                          "\"SATA-1-0\"=\"D:\\\\JARVIS-S6-FRESHVM\\\\media\\\\JARVIS-PACKAGE-1.0.10-915e906516dc.iso\"",
+                          "\"SATA-ImageUUID-1-0\"=\"10a6729c-c5d6-43d9-a877-bc91e01ed636\"",
+                          "\"SATA-tempeject-1-0\"=\"off\"",
+                          "\"SATA-IsEjected-1-0\"=\"off\"",
+                          "\"SATA-hot-pluggable-1-0\"=\"off\"",
+                          "\"SATA-nonrotational-1-0\"=\"off\"",
+                          "\"SATA-discard-1-0\"=\"off\"",
+                          "\"SATA-2-0\"=\"D:\\\\JARVIS-S6-FRESHVM\\\\media\\\\JARVIS-RECOVERY.iso\"",
+                          "\"SATA-ImageUUID-2-0\"=\"54d7a70d-f048-412b-8675-1f887ec42845\"",
+                          "\"SATA-tempeject-2-0\"=\"off\"",
+                          "\"SATA-IsEjected-2-0\"=\"off\"",
+                          "\"SATA-hot-pluggable-2-0\"=\"off\"",
+                          "\"SATA-nonrotational-2-0\"=\"off\"",
+                          "\"SATA-discard-2-0\"=\"off\"",
+                          "\"SATA-3-0\"=\"none\""
+                      ]
+}

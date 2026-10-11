@@ -1,0 +1,49 @@
+--- accepted/deployment_test/native.py
++++ candidate/deployment_test/native.py
+@@ -42,7 +42,10 @@
+             if name.lower() in packaged:continue
+             need(name.lower() not in ('msvcp140.dll','vcruntime140.dll','vcruntime140_1.dll'),'UNBUNDLED_CRT')
+             need(name.lower().startswith(('api-ms-win-','ext-ms-win-')) or (system/name).is_file(),'UNDECLARED_NATIVE_IMPORT:'+name)
+-            platform[name]=dict(source='Windows System32 / API-set contract',classification='required OS prerequisite',
++            platform[name]=dict(filename=name,source=str(system/name) if (system/name).is_file() else 'Windows API-set contract',
++                purpose='Operating system native API',version=version(system/name) if (system/name).is_file() else None,
++                observed_host_sha256=digest(system/name) if (system/name).is_file() else None,
++                hash_policy='OS-managed prerequisite; observed host hash is evidence, not a portable release pin',classification='required OS prerequisite',
+                 loading_components=sorted({x['path'] for x in entries if name in x['imports']}))
+     exclusive_json(release/'native-manifest.json',dict(version=1,architecture='x64',crt_version=CRT_VERSION,entries=entries,
+         windows_dependencies=platform,optional_excluded=['physical audio capture','ML/voice models','third-party Python packages'],
+@@ -58,7 +61,7 @@
+         need(file.is_relative_to(release) and digest(file)==entry['sha256'] and version(file)==entry['version'],'NATIVE_IDENTITY_OR_VERSION')
+         with file.open('rb') as stream:need(stream.read(2)==b'MZ','NATIVE_PE_REQUIRED')
+         if file.name.lower() in CRT:need(entry['version']==CRT_VERSION,'NATIVE_CRT_VERSION')
+-    for component in ('python','electron','node'):
++    for component in ('python','electron','node','native'):
+         for name in CRT:need((release/component/name).is_file(),'APP_LOCAL_CRT_REQUIRED')
+     return manifest
+ 
+@@ -79,14 +82,20 @@
+         for module in mods[:needed.value//c.sizeof(w.HMODULE)]:
+             path=c.create_unicode_buffer(32768)
+             need(psapi.GetModuleFileNameExW(handle,module,path,len(path)),'MODULE_PATH')
+-            paths.append(Path(path.value))
++            raw=path.value
++            # Windows may return the same local path in extended-length syntax.
++            # Normalize only a drive-qualified \\?\ prefix, never UNC/device paths.
++            normalized=raw[4:] if re.match(r'^\\\\\?\\[A-Za-z]:\\',raw) else raw
++            paths.append((Path(normalized),raw))
+         need(pt.identity(pid)==expected_peer,'MODULE_PROCESS_CHANGED')
+         native=verify_native(release);by_name={e['filename'].lower() for e in native['entries']}
+-        records=[]
+-        for path in paths:
++        records=[];external=[]
++        for path,raw in paths:
+             package_name=path.name.lower() in by_name
+-            if package_name:need(path.is_relative_to(release),'EXTERNAL_PACKAGED_NATIVE:'+str(path))
+-            records.append(dict(path=str(path),sha256=digest(path) if package_name else None,packaged_component=package_name))
++            if package_name and not path.is_relative_to(release):external.append(str(path))
++            elif not package_name:need(path.is_relative_to(Path(os.environ['SystemRoot'])),'UNDECLARED_LOADED_NATIVE:'+str(path))
++            records.append(dict(path=str(path),windows_reported_path=raw,sha256=digest(path) if package_name else None,packaged_component=package_name))
++        need(not external,'EXTERNAL_PACKAGED_NATIVE:'+str(dict(external=external,all_loaded=records)))
+         return dict(identity=expected_peer,modules=records,packaged_modules_external=0)
+     finally:kernel.CloseHandle(handle)
+ 

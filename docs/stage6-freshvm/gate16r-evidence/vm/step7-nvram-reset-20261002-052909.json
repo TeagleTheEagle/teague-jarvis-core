@@ -1,0 +1,20 @@
+{
+    "schema":  "stage6-fresh-vm-nvram-reset-v1",
+    "utc":  "2026-10-02T05:29:09.2198255Z",
+    "account":  "jarvis-s6-val",
+    "vm_name":  "JARVIS-S6-FRESH",
+    "vm_uuid":  "4ef16bdd-2a1b-46af-83db-ee69c2f868bb",
+    "reason":  "the first Windows Setup attempt (started 2026-10-02T04:12Z, stalled at 42%, reset by the owner) left a Windows Boot Manager entry in the UEFI variable store ahead of the disc; every later start booted the half-installed disk; the variable store is re-initialised and the Secure Boot keys re-enrolled as at creation",
+    "commands":  [
+                     "modifynvram inituefivarstore",
+                     "modifynvram enrollmssignatures",
+                     "modifynvram enrollorclpk"
+                 ],
+    "nvram_file":  "D:\\JARVIS-S6-FRESHVM\\machines\\JARVIS-S6-FRESH\\JARVIS-S6-FRESH.nvram",
+    "nvram_sha256_before":  "d294f80c8ee7b7a9003020435fe8fa1bc52d99d50ce1fad154f0f36167aba3f5",
+    "nvram_sha256_after":  "0476e46606013bc3a6a6b6c392431511a5b17331c5e0a084f17df399c1dc74cd",
+    "SecureBoot":  "on",
+    "firmware":  "EFI",
+    "vm_state":  "poweroff",
+    "next":  "step7-start-vm-from-disc.cmd (answers the disc prompt from the host); Setup wipes the disk and installs from scratch"
+}

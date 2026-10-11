@@ -1,0 +1,22 @@
+{
+  "schema": "stage6-incident-v1",
+  "id": "gate18-incident-02",
+  "recorded_utc": "2026-10-04T06:10:59Z",
+  "gate": "Gate 18, step 2a of the changed steps (owner decision A: backup from the everyday JARVIS's Settings screen)",
+  "what_happened": "The everyday JARVIS does not open. The 'JARVIS Desktop' shortcut shows nothing (it runs PowerShell minimised without -ExecutionPolicy Bypass; this PC has no execution policy set). The 'JARVIS INDUSTRIES' shortcut (with Bypass) started the desktop shell (electron.exe from ...\\outputs\\jarvis\\desktop, 16:58:58 local) but no Python backend; the shell held a hidden window titled 'Error' and no tray icon. The owner closed the stuck shell with a command Claude gave and ran the everyday JARVIS's Python with --version; it printed: No Python at 'C:\\Users\\jonny\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe'.",
+  "cause": "The everyday JARVIS's .venv is based on Codex's bundled Python runtime. C:\\Users\\jonny\\.cache\\codex-runtimes no longer exists (C:\\Users\\jonny\\.cache holds only 'huggingface'); it is not among the items moved to D:\\C-drive-overflow on 2026-10-01 (README-what-was-moved.txt). When or why it disappeared is not known to Claude (likely a Codex update or removal).",
+  "how_found": "Claude read only the shortcut targets, the process list, window titles of the stuck process, the move README, the repo baseline copy e6fc40b and C:\\Users\\jonny\\.cache; it did not read or run anything in the everyday JARVIS folder; the owner ran the two commands.",
+  "effect": "The everyday JARVIS cannot start at present (outside Stage 6 scope; reported to the owner). Its Settings backup button cannot be used for Gate 18.",
+  "rehearsal_of_alternative": {
+    "what": "the everyday JARVIS's own backup code (recovery.py create + rehearse, the code behind the Settings buttons) run with the FINAL package's Python 3.12.10, on the repo baseline copy e6fc40b with a made-up database created by the old store.py, in D:\\JARVIS-release-work\\gate18-oldbackup-rehearsal",
+    "results": [
+      "recovery.py create: backup_verified (format 1, 216 files, old schema with 10 tables); rehearse: restore_rehearsal_passed",
+      "Copy-BackupForGate18-v2.ps1 on it: DONE",
+      "tools/guest/Invoke-Gate18.ps1 (sha256 cf0fe657...) on that old-format backup, sandbox standing in for the VM (FINAL installed and stopped at gate19-local\\home, package at gate19-local\\staging): K0-K9 all PASS (docs/release-rehearsal-20261004/gate18-oldformat.output.txt)",
+      "helper tools/host/New-OldJarvisBackup.ps1 end to end (create, rehearse, record, copy): PASS; refusals PASS (repeat run, missing folder)"
+    ],
+    "limits": "the repo baseline may differ from the live everyday JARVIS (later local updates); the made-up database is tiny; the real database is what Gate 18 tests"
+  },
+  "owner_decision_required": "approve making Gate 18's backup with the everyday JARVIS's own backup code run by command (New-OldJarvisBackup.ps1, by the owner) instead of the Settings button. Repairing the everyday JARVIS is a separate owner decision.",
+  "recorded_by": "Claude Code (Claude Opus 5.5)"
+}

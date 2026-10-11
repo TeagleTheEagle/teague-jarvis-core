@@ -1,0 +1,10 @@
+{
+    "status":  "PASS",
+    "release_under_acceptance":  "1.0.16-fccde24e2cc6",
+    "previous_release":  "1.0.15-63362929d7ad",
+    "extracted_package":  "1.0.16-fccde24e2cc6",
+    "extracted_previous":  "1.0.15-63362929d7ad",
+    "release_files":  10675,
+    "installed_before":  "1.0.16-fccde24e2cc6",
+    "processes_before":  0
+}

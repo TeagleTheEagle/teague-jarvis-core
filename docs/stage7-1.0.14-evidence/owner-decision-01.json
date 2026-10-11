@@ -1,0 +1,9 @@
+{
+  "schema": "jarvis-owner-decision-v1",
+  "check": "1.0.14-e03872680e1d",
+  "incident": "incident-01-z-drive.json",
+  "owner_text": "A",
+  "recorded_utc": "2026-10-04T15:49:00Z",
+  "taken_as": "Continue this Stage 7 check unchanged, with Z: connected by hand in the VM (a normal Command Prompt, not as administrator: net use Z: \\\\VBOXSVR\\guest-egress-01 /persistent:no) before each start of stage7 that follows a sign-in: now, and again after the Windows restart. The disc, the scripts and every check stay as approved; this manual step is the recorded deviation.",
+  "recorded_by": "Claude Code (Claude Opus 5.5). This record documents the owner's decision; it grants no authority of its own."
+}

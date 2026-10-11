@@ -1,0 +1,122 @@
+--- before/collect.py
++++ candidate/collect.py
+@@ -1,9 +1,10 @@
+ """Bounded diagnostic collection; health failures remain latched, never accepted."""
+ import ctypes as c,ctypes.wintypes as w,datetime,json,pathlib,subprocess,sys,time,traceback,hashlib
+ from journal import Reader,PublisherWatch,ticks
+-R=pathlib.Path(__file__).resolve().parent;run=sys.argv[1];out=R/run
++from workspace import CODE as R,run_dir,activate_temp
++run=sys.argv[1];out=run_dir(run);activate_temp(out)
+ config=json.loads((out/'case.json').read_text());mode=config['mode'];duration=config['duration']
+-assert run in ('smoke','a1','a2','a3','minimal','persist-d','none','dhash') and duration in (5,150)
++assert mode in ('idle','disk','sustained','cpu','Dhash','dry') and 0<duration<=160
+ def save(n,v):
+  with (out/n).open('w',encoding='utf-8') as f:json.dump(v,f,indent=2)
+ def utc():return datetime.datetime.now(datetime.timezone.utc).isoformat()
+@@ -13,7 +14,7 @@
+  if time.monotonic()>deadline:raise RuntimeError('Monitor readiness failed')
+  time.sleep(.1)
+ identity=json.loads((out/'ready.json').read_text(encoding='utf-8-sig'));watch=PublisherWatch(identity)
+-journal=out/'heartbeat.jsonl' if config['journalVolume']=='C' else pathlib.Path('D:/JARVIS-STAGE6-HEARTBEAT-STALL-20260920')/run/'heartbeat.jsonl'
++journal=out/'heartbeat.jsonl';assert all(config[k]=='D' for k in ('journalVolume','eventVolume','controlVolume'))
+ reader=Reader(journal,identity,liveness=watch.check);k=watch.k;k.GetExitCodeProcess.argtypes=[w.HANDLE,c.POINTER(w.DWORD)]
+ def times(p):
+  v=[w.FILETIME() for _ in range(4)]
+@@ -22,10 +23,10 @@
+ pwsh=r'C:\Users\jonny\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\powershell\pwsh.exe'
+ resource=None
+ if config['telemetry']=='full':resource=subprocess.Popen([pwsh,'-NoProfile','-File',str(R/'resources.ps1'),'-Run',run],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,creationflags=0x08000000)
+-samples=[];probes=[];handles=[];child=None;status='DIAGNOSTIC_COLLECTION_COMPLETED';error=None;phase={'mode':mode,'start_qpc':ticks(),'start_utc':utc(),'duration_requested':duration}
++samples=[];probes=[];handles=[];child=None;status='LIVE_MONITOR_HEALTHY';error=None;phase={'mode':mode,'start_qpc':ticks(),'start_utc':utc(),'duration_requested':duration}
+ try:
+  if mode!='idle':
+-  child=subprocess.Popen([sys._base_executable,'-B',str(R/'workload.py'),run,mode,str(duration)],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,creationflags=0x08000000)
++  child=subprocess.Popen(([sys._base_executable,'-B',str(R/'dry_worker.py'),run] if mode=='dry' else [sys._base_executable,'-B',str(R/'workload.py'),run,mode,str(duration)]),stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,creationflags=0x08000000)
+   phase['worker_identity']={'pid':child.pid,'created':times(child)[0]}
+  save('phases.json',[phase]);began=time.monotonic();last=-1
+  while (child is not None and child.poll() is None) or (mode=='idle' and time.monotonic()-began<duration):
+@@ -74,12 +75,6 @@
+   if k.WaitForSingleObject(int(p._handle),0)!=0:raise RuntimeError('Probe still active')
+   verified.append(dict(pid=p.pid,times=times(p),exit=p.returncode))
+  save('retained-handle-verification.json',verified)
+- if config.get('eventVolume')=='D':
+-  source=pathlib.Path('D:/JARVIS-STAGE6-EVENTDRAIN-20260920')/run/'events.jsonl';data=source.read_bytes();(out/'events.jsonl').write_bytes(data)
+-  save('event-copy-verification.json',dict(source=str(source),sha256=hashlib.sha256(data).hexdigest(),copied_sha256=hashlib.sha256((out/'events.jsonl').read_bytes()).hexdigest()))
+- if journal!=out/'heartbeat.jsonl':
+-  data=journal.read_bytes();(out/'heartbeat.jsonl').write_bytes(data)
+-  save('journal-copy-verification.json',dict(original=str(journal),sha256=hashlib.sha256(data).hexdigest(),copied_sha256=hashlib.sha256((out/'heartbeat.jsonl').read_bytes()).hexdigest()))
+  if code.value:raise RuntimeError('Monitor error requires review before next diagnostic run')
+ finally:watch.close()
+ print(json.dumps(dict(run=run,status=status,probes=len(probes),acceptance=False)),flush=True)
+--- before/finalize.py
++++ candidate/finalize.py
+@@ -22,7 +22,8 @@
+  if any(g>=10 for g in gaps):raise RuntimeError('Heartbeat interval exceeded acceptance bound')
+  return rows
+ def finalize(root,sync=sync_file,copy=shutil.copyfile):
+- root=pathlib.Path(root).resolve()
++ from workspace import check_path
++ root=check_path(pathlib.Path(root))
+  if root.parent!=R.resolve():raise RuntimeError('Synthetic run root required')
+  if (root/'EVIDENCE-DURABLY-FINALIZED.json').exists() or (root/'archive').exists():raise RuntimeError('Do not overwrite finalization evidence')
+  for n in ('collector-failure.json','monitor-failure.json','resource-failure.txt','queue-failure.json'):
+--- before/monitor.ps1
++++ candidate/monitor.ps1
+@@ -1,10 +1,10 @@
+ param([ValidatePattern('^[a-z0-9-]+$')][string]$Run)
+-$ErrorActionPreference='Stop';$root=Join-Path $PSScriptRoot $Run
++$ErrorActionPreference='Stop';. (Join-Path $PSScriptRoot 'workspace.ps1');$root=Get-LiveRun $Run;Set-LiveTemp $root
+ Add-Type -Path (Join-Path $PSScriptRoot 'EventTap.cs')
+ Add-Type -Path @((Join-Path $PSScriptRoot 'LoopTiming.cs'),(Join-Path $PSScriptRoot 'event_queue.cs'))
+ $config=Get-Content -LiteralPath (Join-Path $root 'case.json') -Raw|ConvertFrom-Json
+ $journalPath=Join-Path $root 'heartbeat.jsonl'
+-if($config.journalVolume -eq 'D'){$journalPath=Join-Path ('D:\JARVIS-STAGE6-EVENTDRAIN-20260920\'+$Run) 'heartbeat.jsonl'}
++if($config.journalVolume -ne 'D' -or $config.eventVolume -ne 'D' -or $config.controlVolume -ne 'D'){throw 'D-only live workspace required'}
+ [LoopTiming]::StartObserver()
+ $pipeline=[Collections.Generic.List[object]]::new();$secondary=[Collections.Generic.List[object]]::new()
+ function Stamp($stage,$ev,$n) {
+@@ -39,7 +39,7 @@
+    $row=@{queueSequence=$entry.QueueSequence;eventIdentifier=$ev.EventIdentifier;kind=$kind;name=[string]$n.ProcessName;pid=[int]$n.ProcessID;nativeTime=[string]$n.TIME_CREATED;receivedQpc=[Diagnostics.Stopwatch]::GetTimestamp();utc=[DateTime]::UtcNow.ToString('o');queuedUtc=$ev.TimeGenerated.ToUniversalTime().ToString('o')}
+    Mark 'event.metadata.end'
+    Stamp 'serialize.begin' $ev $n;Mark 'event.serialize.begin';$serialized=($row|ConvertTo-Json -Compress)+"`n";Mark 'event.serialize.end';Stamp 'serialized' $ev $n
+-   Mark 'event.path.begin';$eventPath=Join-Path $root 'events.jsonl';if($config.eventVolume -eq 'D'){$eventPath=Join-Path ('D:\JARVIS-STAGE6-EVENTDRAIN-20260920\'+$Run) 'events.jsonl'};Mark 'event.path.end'
++   Mark 'event.path.begin';$eventPath=Join-Path $root 'events.jsonl';Mark 'event.path.end'
+    Mark 'event.exists.begin';$exists=Test-Path -LiteralPath $eventPath;Mark 'event.exists.end'
+    if($exists){Mark 'event.stat.begin';$length=(Get-Item -LiteralPath $eventPath).Length;Mark 'event.stat.end';if($length -gt 1044480){throw 'Event capacity reached'}}
+    Mark 'event.append.begin';Stamp 'write.begin' $ev $n
+--- before/queue_crash_fixture.ps1
++++ candidate/queue_crash_fixture.ps1
+@@ -1,7 +1,7 @@
+ param([string]$OutputDirectory)
+ $ErrorActionPreference='Stop'
+ if(-not $OutputDirectory.StartsWith($PSScriptRoot+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)){throw 'Synthetic child directory only'}
+-Add-Type -Path (Join-Path $PSScriptRoot 'event_queue.cs')
++Add-Type -Path @((Join-Path $PSScriptRoot 'LoopTiming.cs'),(Join-Path $PSScriptRoot 'event_queue.cs'))
+ $s='SyntheticCrash-'+[guid]::NewGuid();$x=[ExactEventQueue]::new($ExecutionContext.Events.ReceivedEvents,[string[]]@($s))
+ 1..8|ForEach-Object {New-Event -SourceIdentifier $s|Out-Null}
+ $selected=$x.Select()
+--- before/resources.ps1
++++ candidate/resources.ps1
+@@ -1,5 +1,5 @@
+ param([string]$Run)
+-$ErrorActionPreference='Stop';$root=Join-Path $PSScriptRoot $Run;$begin=[DateTime]::UtcNow;$rows=[Collections.Generic.List[object]]::new()
++$ErrorActionPreference='Stop';. (Join-Path $PSScriptRoot 'workspace.ps1');$root=Get-LiveRun $Run;Set-LiveTemp $root;$begin=[DateTime]::UtcNow;$rows=[Collections.Generic.List[object]]::new()
+ try{
+  while(-not(Test-Path -LiteralPath (Join-Path $root 'collector-finished.json')) -and ([DateTime]::UtcNow-$begin).TotalSeconds -lt 590){
+   $q=[Diagnostics.Stopwatch]::GetTimestamp()
+--- before/workload.py
++++ candidate/workload.py
+@@ -1,10 +1,10 @@
+ """Bounded synthetic workload; all allowed paths are fixed below."""
+ import sys,pathlib,time,hashlib,ctypes as c,ctypes.wintypes as w,json,os
+-R=pathlib.Path(__file__).parent
++from workspace import CODE as R,run_dir,activate_temp
+ run,mode,duration=sys.argv[1],sys.argv[2],float(sys.argv[3])
+ assert run.replace('-','').isalnum() and 0<duration<=160
+-out=R/run;assert out.is_dir()
+-source=R.parent/'stage6-heartbeat-journal-20260918'/'sacrificial'/'large.bin'
++out=run_dir(run);activate_temp(out)
++source=pathlib.Path('C:\\Users\\jonny\\Documents\\Codex\\2026-09-07\\cr\\outputs\\jarvis\\docs\\stage6-heartbeat-journal-20260918\\sacrificial\\large.bin')
+ if mode=='Dhash':source=pathlib.Path('D:/JARVIS-STAGE6-SACRIFICIAL-TIMING-20260918/large.bin')
+ assert mode in ('low','moderate','full','sustained','cpu','disk','Dhash')
+ start=time.perf_counter();reads=[];bytecount=0;iterations=0;handle=None;buf=None;k=None

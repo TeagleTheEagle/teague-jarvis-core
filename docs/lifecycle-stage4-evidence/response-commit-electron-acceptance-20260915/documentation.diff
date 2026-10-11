@@ -1,0 +1,128 @@
+--- a/docs/CANONICAL-CORE-STAGE-4.md
++++ b/docs/CANONICAL-CORE-STAGE-4.md
+@@ -1,4 +1,27 @@
+ # Canonical Core Stage 4 — implementation preflight / scope review
++
++## Approved host-context Electron acceptance — 2026-09-15
++
++The user-approved [host-context procedure](STAGE4-ELECTRON-HOST-ACCEPTANCE.md)
++was used for one rerun of the unchanged actual Electron probe. **29/29 checks
++passed**; both authenticated TEST interfaces were visibly captured and inspected,
++all five client launches and the TEST Core exited 0, and 19 frozen source /
++executable hashes remained unchanged. The response-commit correction's actual
++Electron regression dependency is **CLOSED** for this source.
++
++The restricted-context Electron 44.2.0 GPU failure remains a separate disclosed
++execution-environment limitation. Its observed status is consistent with
++STATUS_DLL_NOT_FOUND; the exact DLL and underlying cause remain unconfirmed.
++No runtime, GPU flag, security, authentication or transaction change was made.
++
++Overall response-commit acceptance remains **PARTIAL**: the prior final-source
++fresh-process fallback provenance/restart, dedicated deep-review integration /
++restart and standalone JS/Python syntax checks were stopped and are not replaced
++by Electron lifecycle evidence. Only the Electron probe was authorized and rerun
++at this checkpoint. See [reconciliation and evidence](lifecycle-stage4-evidence/response-commit-electron-acceptance-20260915/REVIEW.md).
++No other Stage 4 gate was advanced. Production remains unchanged and blocked;
++no acceptance commit or Stage 5. Historical checkpoints below retain their
++original results and are superseded only where this entry explicitly says so.
+ 
+ ## Shared response-commit correction — 2026-09-15
+ 
+--- a/docs/STAGE4-REMAINING-REQUIREMENTS-20260915.md
++++ b/docs/STAGE4-REMAINING-REQUIREMENTS-20260915.md
+@@ -1,4 +1,30 @@
+ # REMAINING REQUIREMENTS TO DECLARE STAGE 4 COMPLETE
++
++
++## Latest superseding reconciliation — approved host-context Electron acceptance
++
++2026-09-15. The actual Electron dependency is **CLOSED** against the frozen
++response-commit source: one approved host-context rerun passed **29/29** checks,
++both screenshots were visually inspected, all five clients and the TEST Core
++exited normally, and all 19 sampled source/executable hashes stayed unchanged.
++See [acceptance evidence and source binding](lifecycle-stage4-evidence/response-commit-electron-acceptance-20260915/REVIEW.md)
++and the [approved procedure](STAGE4-ELECTRON-HOST-ACCEPTANCE.md).
++
++Gate 1 remains **PARTIAL**, solely because the recorded final-source fallback
++provenance/restart, dedicated deep-review integration/restart, and standalone
++JS/Python syntax checks remain unexecuted. The Electron startup environment is
++no longer an open response-commit validation blocker. This Electron-only approval
++did not authorize running those other checks, and no requirement was waived.
++
++Preserve the restricted-context Electron 44.2.0 GPU failure as a disclosed
++execution-environment limitation: observed STATUS_DLL_NOT_FOUND-compatible
++status, exact DLL/root cause unconfirmed, same frozen source passing in host
++context. Do not reclassify it as a JARVIS transaction/runtime defect. No runtime
++code, GPU flags, security controls or production state changed in this checkpoint.
++Approvals/uploads remain DEFERRED, not PASS. Other gates are unchanged; Stage 4
++remains paused for review, with no acceptance commit, production activation or
++Stage 5. Earlier dated/checkpoint statements below describe their historical
++state; the updated gate-1 row and this section control the present status.
+ 
+ 2026-09-15. **REVIEW ONLY â€” Stage 4 remains paused.** This reconciliation records the user's acceptance of the controller reauthentication/lifecycle-only recovery requirement as validated against the final reviewed source. It does not accept Stage 4 as a whole or authorize further work.
+ 
+@@ -64,7 +90,7 @@
+ 
+ | Gate | Status | Exact remaining proof / why existing evidence does not close it | Closure evidence and authorization |
+ |---|---|---|---|
+-| **1. Event-polling ownership/cancellation/late-write gate** | **PARTIAL** | Shared transaction correction implemented. Targeted races and two authenticated probes pass; cancelled rows remain 3 → 3, and message/provenance consistency is independently checked. The actual Electron regression subsequently failed before attachment; remaining final-source restart/syntax steps stopped. | See [correction evidence and acceptance stop](lifecycle-stage4-evidence/response-commit-correction-20260915/REVIEW.md). Review the preserved GPU/Electron startup failure and complete the pending final-source validation before closing the gate. Original late-write failure remains retained. |
++| **1. Event-polling ownership/cancellation/late-write gate** | **PARTIAL** | Shared transaction invariant passes the retained 918 trials / 14,244 assertions and two 43-check authenticated probes with independent SQLite confirmation. Actual Electron is now CLOSED: the approved host-context rerun passed 29/29 against unchanged source. Only the previously pending final-source fallback provenance/restart, dedicated deep-review integration/restart, and standalone JS/Python syntax checks remain. | [Latest reconciliation](lifecycle-stage4-evidence/response-commit-electron-acceptance-20260915/REVIEW.md) removes the Electron blocker without waiving the remaining checks. No other tests ran in this Electron-only checkpoint. Preserve the original late-write failure and the separately disclosed restricted-context GPU limitation. |
+ | Authenticated TEST approvals | **DEFERRED** | **WORKFLOW NOT PRESENT IN CURRENT STAGE 4 PRODUCT SURFACE** — explicit subsequent user decision. | Excluded from Stage 4, not PASS. No routes/actions were added. |
+ | Authenticated TEST uploads | **DEFERRED** | **REQUIRES SEPARATE AUTHORITY / PERSISTENCE REVIEW** — explicit subsequent user decision. | Excluded from Stage 4, not PASS. Legacy extraction/indexing remains unexposed. |
+ | **2. Full real-Core stop/start, crash/restart and repeated race matrix** | **PARTIAL** | Original cases 20â€“28, 32â€“33 and 43 plus design I require more than same-Core reattachment. X/E prove survival/reattachment; Stage 1/2 prove their harness semantics. They do not prove the entire composed real App/Store/clients restart matrix. Explicit authorized start after a stop latch, new epoch/same data, old grant rejection, clients reauthenticating across epochs, and interrupted intent/journal/accounting reconciliation remain without complete integrated evidence. | At least four rounds of eight startup contenders and three rounds each of coordinator-loss/adoption and Core-crash scenarios, per design I; lock before Store/until exit, no replacement in recovery, new epoch/same canonical TEST state, no replay/refund or restored presence. Preserve every failure. No opportunistic latch deletion or unapproved termination; any missing start-policy implementation must be reviewed within scope. |
+--- /dev/null
++++ b/docs/STAGE4-ELECTRON-HOST-ACCEPTANCE.md
+@@ -0,0 +1,53 @@
++# Approved host-context procedure for actual Stage 4 Electron acceptance
++
++Approved by the user on 2026-09-15. This is an acceptance execution procedure, not an Electron runtime correction or a general exception to TEST isolation.
++
++## Scope and invocation
++
++Use this context only when the approved acceptance step genuinely needs the actual Electron desktop. Keep non-desktop tests in their existing appropriate context. Do not run a production shortcut or launcher.
++
++Working directory:
++
++```text
++C:\Users\jonny\Documents\Codex\2026-09-07\cr\outputs\jarvis
++```
++
++Run the existing unchanged probe:
++
++```powershell
++.venv\Scripts\python.exe -B tests/lifecycle_stage4/fixtures.py --electron-app-probe
++```
++
++When invoked through Codex's command tool, select the reviewed host context (`sandbox_permissions: require_escalated`) for this exact isolated desktop probe. This setting selects the command execution context; it does not authorize changing Windows settings, elevating Electron's privileges, or disabling Chromium's renderer sandbox. The recorded successful host token was Medium integrity, with Administrators membership deny-only.
++
++Before launch, compare the frozen response-commit and client/executable hashes with their reviewed manifests. Record the invocation, working directory, context, selected nonsecret environment, start/end time and exit result. Stop on a hash mismatch or an unexpected failure. Do not retry automatically or introduce flags.
++
++The existing probe provisions a fresh `TEST-STAGE4-*` namespace with synthetic TEST state, starts one disposable isolated TEST Core, and attaches both real Electron TEST clients to it. Its TEST credentials remain in the existing private process boundary. Do not collect or archive credentials, private bootstrap configuration, production data, or Electron profiles.
++
++## Required retained checks
++
++- Authenticated peer/Core identity and independent TEST client profiles.
++- Both actual renderers attached to the same TEST Core and shared TEST conversation state.
++- Renderer privilege/network/legacy bridge denials and foreign request-control denial.
++- Actual request completion; close/reopen and renderer-crash isolation; no old request replay.
++- Both screenshot/visibility results, followed by visual inspection of the captured files. Do not replace this with Node-only or browser-only evidence.
++- Separately authorized TEST shutdown, normal client/Core exits, and lifetime-lock release after Core exit.
++- Existing cooperative cleanup only. A retained or uncertain TEST process requires the applicable reviewed cleanup procedure; never terminate by PID alone or kill unrelated processes.
++
++Physical voice/capture remains unavailable in this fixture. The two standard screenshots show authenticated interfaces before the request is submitted; request completion is a separate actual-form check. This probe alone does not establish all response-commit persistence/race/restart requirements.
++
++## Disclosed execution-environment limitation
++
++Electron **44.2.0** repeatedly failed in the restricted Codex command context. Six GPU subprocess exits with code **-1073741515 / 0xC0000135** preceded `GPU process isn't usable`. The installed Windows SDK identifies that status as **STATUS_DLL_NOT_FOUND**. The exact missing or inaccessible DLL and its underlying cause remain **unconfirmed**.
++
++The same frozen source, executable, launch construction, working directory and selected environment passed 29 actual Electron checks in the reviewed host context. Preserve the restricted failures as execution-environment findings; do not erase them or relabel them as JARVIS response-commit runtime failures.
++
++No new `--disable-gpu` or other Chromium switches are authorized by this procedure. The client's pre-existing acceleration settings, renderer sandbox, authentication, ownership, lifecycle and TEST isolation stay unchanged. No DLL replacement, driver installation, cache deletion, ACL change or Windows security change is authorized.
++
++Evidence: [diagnosis report](lifecycle-stage4-evidence/electron-gpu-diagnosis-20260915/REVIEW.md), [context comparison](lifecycle-stage4-evidence/electron-gpu-diagnosis-20260915/context-comparison.json), and [preserved run comparison](lifecycle-stage4-evidence/electron-gpu-diagnosis-20260915/result-comparison.json).
++
++## Rollback and review boundary
++
++There is no runtime patch or data migration to roll back. The procedure can be withdrawn through review by reverting this document and its acceptance references. Preserve all evidence and profiles; do not roll back databases or modify source to conceal a failing context.
++
++Production remains unchanged and blocked. This procedure does not declare Stage 4 complete, create its acceptance commit, or authorize Stage 5.

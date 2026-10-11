@@ -1,0 +1,20 @@
+{
+  "schema": "jarvis-everyday-update-restart-check-v1",
+  "release": "1.0.14-e03872680e1d",
+  "recorded_utc": "2026-10-05T04:05:25Z",
+  "observed_by": "Claude Code, read-only (process list, file times, the Startup shortcut and the StartupApproved registry value were read; nothing was started, stopped or changed)",
+  "facts": {
+    "pc_last_boot_local": "2026-10-05 14:56:09",
+    "sign_in_local": "2026-10-05 14:56:38 (first Explorer process of the jonny session)",
+    "jarvis_first_process_local": "2026-10-05 15:03:08 (electron.exe, release 1.0.14-e03872680e1d, command line with --login-launch: started by the Startup shortcut)",
+    "jarvis_processes": 8,
+    "core_log_written_local": "2026-10-05 15:04:05",
+    "startup_shortcut": "%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\JARVIS.lnk -> powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File %LOCALAPPDATA%\\JARVIS\\JARVIS.ps1 -LoginLaunch",
+    "startup_approved": "no StartupApproved entry for JARVIS.lnk (enabled by default)",
+    "other_startup_items": "about ten (OneDrive, Ollama, Edge, Chrome, SteelSeries GG, Logitech, Microsoft Lists, Security Health, Realtek audio)"
+  },
+  "owner_text": "jarvis launched did you do that>",
+  "result": "PASS: JARVIS started by itself after the PC restart, about 6.5 minutes after sign-in. The delay is Windows' own scheduling of Startup-folder apps after sign-in, not JARVIS. First confirmation on this PC (the VM confirmed it at Gate 17 and both Stage 7 checks).",
+  "possible_follow_up": "a faster start at sign-in would need a different start mechanism (a Run registry value or a scheduled task at logon), which is a registry/system change and the owner's decision",
+  "recorded_by": "Claude Code (Claude Opus 5.5)"
+}

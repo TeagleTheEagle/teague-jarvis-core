@@ -1,0 +1,15 @@
+{
+    "status":  "PASS",
+    "launched_via":  "JARVIS.ps1",
+    "core_ready":  true,
+    "seconds_to_ready":  13,
+    "installed_release":  "1.0.11-60d406fb6398",
+    "source_revision":  "d6dfac6c1711497b",
+    "identity_matches_package":  true,
+    "memory_saved":  true,
+    "database_in_home":  true,
+    "processes":  8,
+    "process_images_outside_install":  [
+
+                                       ]
+}

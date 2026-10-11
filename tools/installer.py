@@ -1,0 +1,487 @@
+"""JARVIS per-user installer (docs/RELEASE-DESIGN.md). No administrator rights.
+
+Shipped beside the release and run with the PACKAGE's bundled Python (release\\python\\python.exe
+next to this file), never an installed release's Python: stopping JARVIS ends every program in
+the installed releases, so install, rollback and uninstall refuse to run from there.
+    install.cmd                                   install or update to this release
+    python installer.py rollback                  switch back to the previous release
+    python installer.py uninstall                 remove the program; data and keys are kept
+    python installer.py uninstall --remove-data CONFIRM-DELETE-MY-JARVIS-DATA
+    python installer.py verify | status
+
+Layout under --home (default %LOCALAPPDATA%\\JARVIS):
+    current.json  releases\\<id>\\  data\\  config\\  profile\\  (JARVIS.ps1 only while a release before 1.0.17 is current)
+The Desktop and Startup shortcuts point straight at the current release's electron\\JARVIS.exe (1.0.17 and later;
+docs/OWN-APP-PLAN.md 3.3), rewritten on install, update and rollback; an older release is started through JARVIS.ps1.
+Program files are verified file-by-file against the release manifest before use, staged
+beside the live release and switched in one atomic step, so an interrupted install or
+update leaves the previous release current. Data, config and profile folders are never
+modified by install, update, rollback or uninstall (unless data removal is confirmed).
+"""
+import argparse
+import hashlib
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+import urllib.request
+from pathlib import Path
+
+CONFIRM_DATA_REMOVAL = 'CONFIRM-DELETE-MY-JARVIS-DATA'
+SHORTCUT = 'JARVIS.lnk'
+PROGRAM = Path('electron') / 'JARVIS.exe'   # the release's own program file (1.0.17 and later)
+LEGACY_SHORTCUT = 'JARVIS Desktop.lnk'  # created by the pre-release Install-JARVIS-Shortcuts.ps1
+
+LAUNCHER = r'''param([switch]$LoginLaunch)
+# JARVIS launcher (written by installer.py). Starts the current release's desktop app,
+# which joins the shared background Core or starts it.
+$ErrorActionPreference = 'Stop'
+$jarvisHome = $PSScriptRoot
+$current = Get-Content -LiteralPath (Join-Path $jarvisHome 'current.json') -Raw | ConvertFrom-Json
+$release = Join-Path (Join-Path $jarvisHome 'releases') $current.release
+$env:JARVIS_DATA_DIR = Join-Path $jarvisHome 'data'
+$env:JARVIS_CONFIG_DIR = Join-Path $jarvisHome 'config'
+$env:JARVIS_MODELS_DIR = Join-Path $release 'models'
+$env:JARVIS_PYTHON = Join-Path $release 'python\python.exe'
+Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
+$arguments = @('"' + (Join-Path $release 'app\desktop') + '"', ('"--user-data-dir=' + (Join-Path $jarvisHome 'profile') + '"'))
+if ($LoginLaunch) { $arguments += '--login-launch' }
+Start-Process -FilePath (Join-Path $release 'electron\electron.exe') -ArgumentList $arguments -WorkingDirectory (Join-Path $release 'app\desktop')
+'''
+
+
+class InstallError(Exception):
+    pass
+
+
+def require(condition, message):
+    if not condition:
+        raise InstallError(message)
+
+
+class Laps:
+    """Measured phases for the update-timing evidence (Gate 19, Stage 7); a phase can be added to."""
+    def __init__(self):
+        self.seconds, self.clock = {}, time.perf_counter()
+
+    def __call__(self, phase):
+        now = time.perf_counter()
+        self.seconds[phase] = round(self.seconds.get(phase, 0) + now - self.clock, 3)
+        self.clock = now
+
+
+def running_from_installation(home):
+    """The Python running this installer, if it belongs to one of this home's installed releases."""
+    roots = {os.path.normcase(f(Path(home) / 'releases')) + os.sep for f in (os.path.abspath, os.path.realpath)}
+    for exe in (sys.executable, getattr(sys, '_base_executable', None)):
+        if exe and any(os.path.normcase(f(exe)).startswith(root) for f in (os.path.abspath, os.path.realpath) for root in roots):
+            return exe
+    return None
+
+
+def refuse_if_run_from_installation(home, action):
+    """Stopping JARVIS ends every program from its releases folder, this installer included, and
+    Windows cannot remove a running program: maintenance must use the package's own Python."""
+    exe = running_from_installation(home)
+    require(not exe, f"This installer is running with the installed JARVIS's own Python ({exe}), so it would stop "
+                     f"itself. Nothing was changed. Run it with the package's Python instead: "
+                     f'"<package>\\release\\python\\python.exe" "<package>\\installer.py" {action} '
+                     f'(extract the JARVIS package zip again if it is gone).')
+
+
+def file_sha256(path):
+    h = hashlib.sha256()
+    with Path(path).open('rb') as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b''):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def ps_quote(text):
+    """A PowerShell single-quoted literal. PowerShell also takes the typographic quotes ‘ ’ ‚ ‛ as single quotes
+    (a folder named D’Arcy), so each of them is doubled like the plain one."""
+    return "'" + re.sub("(['‘’‚‛])", r'\1\1', str(text)) + "'"
+
+
+def default_home():
+    return Path(os.environ['LOCALAPPDATA']) / 'JARVIS'
+
+
+def own_home(home):
+    """Is this home this PC's own install home (default_home)? Only that home has real Desktop and Startup
+    shortcuts to write or remove: a rehearsal, a sandbox or a test home never touches them, whatever the switches
+    say (2026-10-07, docs/OWN-APP-1.0.17.md section 6). False when %LOCALAPPDATA% is not set."""
+    try:
+        return Path(home).resolve() == default_home().resolve()
+    except (KeyError, OSError, ValueError):
+        return False  # no %LOCALAPPDATA%, or a path that cannot be resolved: never "own"
+
+
+def shortcuts_for(home, shortcuts):
+    """The shortcuts switch of install, rollback and uninstall: None means "for this PC's own install home only"."""
+    return own_home(home) if shortcuts is None else bool(shortcuts)
+
+
+def read_manifest(release):
+    manifest = json.loads((Path(release) / 'manifest.json').read_text(encoding='utf-8'))
+    require(manifest.get('product') == 'JARVIS' and manifest.get('format') == 1, 'Not a JARVIS release manifest.')
+    for entry in manifest['files']:
+        parts = Path(entry['path']).parts
+        require(entry['path'] != 'manifest.json' and not Path(entry['path']).is_absolute()
+                and '..' not in parts and ':' not in entry['path'], 'Unsafe path in release manifest.')
+    return manifest
+
+
+def verify_release(release, manifest=None):
+    """Every manifest file present with the exact hash and size; nothing else."""
+    release = Path(release)
+    manifest = manifest or read_manifest(release)
+    expected = {e['path']: e for e in manifest['files']}
+    for path, entry in expected.items():
+        file = release / path
+        require(file.is_file() and file.stat().st_size == entry['bytes'] and file_sha256(file) == entry['sha256'],
+                f'Release file missing or changed: {path}')
+    extra = [p.relative_to(release).as_posix() for p in release.rglob('*')
+             if p.is_file() and p.name != 'manifest.json' and p.relative_to(release).as_posix() not in expected]
+    require(not extra, f'Unexpected files in release: {extra[:3]}')
+    return manifest
+
+
+def read_current(home):
+    try:
+        return json.loads((Path(home) / 'current.json').read_text(encoding='utf-8'))
+    except FileNotFoundError:
+        return None
+
+
+def atomic_write(path, text):
+    """Write via a flushed side file and one rename, so a crash or power cut leaves the old or the new file."""
+    path = Path(path)
+    pending = path.with_name(path.name + '.pending')
+    with pending.open('w', encoding='utf-8', newline='') as f:
+        f.write(text)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(pending, path)
+
+
+def write_current(home, release_id, previous):
+    atomic_write(Path(home) / 'current.json',
+                 json.dumps({'release': release_id, 'previous': previous, 'switched_at': time.time()}))
+
+
+def ask_core_to_stop(link_file):
+    """Ask the shared Core to shut down. Returns False when nothing listens at its address: the
+    connection file was then left by a Core that crashed or was ended, and never disappears."""
+    try:
+        link = json.loads(Path(link_file).read_text(encoding='utf-8'))
+        headers = {'X-Jarvis-Desktop': link['token']}
+        local = urllib.request.build_opener(urllib.request.ProxyHandler({}))  # 127.0.0.1: never through a proxy
+        with local.open(urllib.request.Request(link['origin'] + '/', headers=headers), timeout=5) as page:
+            cookie = (page.headers.get('Set-Cookie') or '').split(';')[0]
+        request = urllib.request.Request(link['origin'] + '/api/shutdown', data=b'{}', method='POST',
+                                         headers={**headers, 'Cookie': cookie, 'Content-Type': 'application/json'})
+        local.open(request, timeout=10).close()
+    except (OSError, ValueError, KeyError) as exc:
+        # No file, a busy Core that timed out, or one already stopping: wait for the file as before.
+        return not isinstance(getattr(exc, 'reason', exc), ConnectionRefusedError)
+    return True
+
+
+def end_processes_script(releases, own_pid):
+    """PowerShell that ends every process whose executable lives inside `releases` (never `own_pid`), waits
+    until they have really exited (ending a process is asynchronous, and a program file is locked until
+    then), looks again (a closing app can still start a helper process), and prints how many remain.
+    - Any error stops the script with a nonzero exit code: a failed process search must never read as
+      'remaining=0', and a missing folder name must never match every program on the PC.
+    - Paths are also compared in their full long form (a program started through an 8.3 short name), and
+      against the folder with links resolved.
+    - Each process is held open before it is ended, then found again in a fresh search: while it is held its
+      number cannot be given to an unrelated program, so only JARVIS's own programs are ended."""
+    roots = sorted({os.path.abspath(releases) + os.sep, os.path.realpath(releases) + os.sep})
+    return ("$ErrorActionPreference='Stop';$own=" + str(int(own_pid)) + ";"
+            "function Full($p) { try { [IO.Path]::GetFullPath($p) } catch { $p } };"
+            "$roots=@(@(" + ','.join(ps_quote(r) for r in roots) + ") | ForEach-Object { Full $_ });"
+            "if (@($roots | Where-Object { -not $_ -or $_.Length -lt 4 -or -not $_.EndsWith('\\') }).Count) { exit 3 };"
+            "function Inside($path) { if (-not $path) { return $false }; foreach ($s in @($path, (Full $path))) {"
+            " foreach ($r in $roots) { if ($s.StartsWith($r, [StringComparison]::OrdinalIgnoreCase)) { return $true } } }; return $false };"
+            "function Mine { @(Get-CimInstance Win32_Process | Where-Object { $_.ProcessId -ne $own -and (Inside $_.ExecutablePath) }) };"
+            "for ($round = 0; $round -lt 5; $round++) { $found = Mine; if (-not $found) { break };"
+            "$held = @{}; foreach ($c in $found) { try { $p = [Diagnostics.Process]::GetProcessById([int]$c.ProcessId);"
+            " $null = $p.Handle; $held[[int]$c.ProcessId] = $p } catch { } };"
+            "foreach ($c in Mine) { $p = $held[[int]$c.ProcessId]; if ($p) { try { $p.Kill() } catch { } } };"
+            "if ($held.Count) { Wait-Process -Id @($held.Keys) -Timeout 10 -ErrorAction SilentlyContinue };"
+            "foreach ($p in $held.Values) { $p.Dispose() } };"
+            "Write-Output ('remaining=' + @(Mine).Count)")
+
+
+def stop_running_jarvis(home, timeout=30):
+    """Ask the shared Core to shut down, then end any leftover JARVIS processes from this home
+    (never this installer's own process). Refuses if one is still running afterwards, or if that could
+    not be checked, so nothing is switched or deleted while a program file is in use."""
+    home = Path(home)
+    link_file = home / 'data' / 'core-connection.json'
+    if ask_core_to_stop(link_file):
+        deadline = time.monotonic() + timeout  # not the wall clock: a VM's clock can jump
+        while time.monotonic() < deadline and link_file.exists():
+            time.sleep(0.5)
+    if os.name == 'nt' and (home / 'releases').is_dir():
+        unchecked = ('Windows could not check whether JARVIS is still running from this installation. Nothing was '
+                     'changed. Quit JARVIS completely (its icon near the clock), then run this again.')
+        try:
+            done = subprocess.run(['powershell', '-NoProfile', '-Command', end_processes_script(home / 'releases', os.getpid())],
+                                  capture_output=True, text=True, errors='replace', timeout=180)
+        except (subprocess.SubprocessError, OSError):
+            raise InstallError(unchecked) from None
+        remaining = [line.strip() for line in (done.stdout or '').splitlines() if line.startswith('remaining=')]
+        require(done.returncode == 0 and remaining, unchecked)
+        require(remaining[-1] == 'remaining=0',
+                'JARVIS is still running from this installation and could not be stopped. Nothing was changed. '
+                'Quit JARVIS completely (its icon near the clock), then run this again.')
+
+
+def program_file(home, release_id):
+    """The release's own program file, or None for a release before 1.0.17 (started through JARVIS.ps1)."""
+    program = Path(home) / 'releases' / release_id / PROGRAM
+    return program if program.is_file() else None
+
+
+def ensure_launcher(home, release_id):
+    """JARVIS.ps1 is written only for a release that has no JARVIS.exe, and removed when the current release has
+    one (decision D6: one way to start him; its text would start an electron.exe that 1.0.17 does not ship). A
+    rollback to an older release writes it again."""
+    launcher = Path(home) / 'JARVIS.ps1'
+    if program_file(home, release_id):
+        launcher.unlink(missing_ok=True)
+    else:
+        atomic_write(launcher, LAUNCHER)
+
+
+def shortcut_script(home, release_id):
+    """PowerShell that writes the Desktop and Startup shortcuts: straight at the release's JARVIS.exe with its icon
+    (the Startup one with --login-launch), or at the PowerShell launcher for an older release."""
+    program = program_file(home, release_id)
+    if program:
+        return ("$s=New-Object -ComObject WScript.Shell;"
+                "foreach($pair in @(@([Environment]::GetFolderPath('Desktop'),''),@([Environment]::GetFolderPath('Startup'),'--login-launch'))){"
+                "$l=$s.CreateShortcut((Join-Path $pair[0] '" + SHORTCUT + "'));"
+                "$l.TargetPath=" + ps_quote(program) + ";$l.Arguments=$pair[1];$l.IconLocation=" + ps_quote(str(program) + ',0') + ";"
+                "$l.WindowStyle=1;$l.WorkingDirectory=" + ps_quote(program.parent.parent / 'app' / 'desktop') + ";$l.Description='JARVIS';$l.Save()}")
+    return ("$s=New-Object -ComObject WScript.Shell;"
+            "foreach($pair in @(@([Environment]::GetFolderPath('Desktop'),''),@([Environment]::GetFolderPath('Startup'),' -LoginLaunch'))){"
+            "$l=$s.CreateShortcut((Join-Path $pair[0] '" + SHORTCUT + "'));"
+            "$l.TargetPath=(Get-Command powershell.exe).Source;"
+            "$l.Arguments='-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File \"'+" + ps_quote(Path(home) / 'JARVIS.ps1') + "+'\"'+$pair[1];"
+            "$l.WindowStyle=7;$l.WorkingDirectory=" + ps_quote(home) + ";$l.Description='JARVIS';$l.Save()}")
+
+
+def write_shortcuts(home, release_id):
+    subprocess.run(['powershell', '-NoProfile', '-Command', shortcut_script(home, release_id)], check=True, capture_output=True, timeout=60)
+
+
+def remove_shortcuts(name=SHORTCUT):
+    script = ("foreach($d in @([Environment]::GetFolderPath('Desktop'),[Environment]::GetFolderPath('Startup'))){"
+              "Remove-Item -LiteralPath (Join-Path $d " + ps_quote(name) + ") -ErrorAction SilentlyContinue}")
+    subprocess.run(['powershell', '-NoProfile', '-Command', script], capture_output=True, timeout=60)
+
+
+def install(package, home, shortcuts=None, stop=stop_running_jarvis, replace_legacy_shortcuts=False):
+    package, home = Path(package), Path(home)
+    shortcuts = shortcuts_for(home, shortcuts)
+    refuse_if_run_from_installation(home, 'install --package "<package>"')
+    source = package / 'release'
+    lap = Laps()
+    manifest = verify_release(source)  # refuse a damaged or tampered package before touching anything
+    lap('verify_package')
+    release_id = manifest['release_id']
+    releases = home / 'releases'
+    for folder in (releases, home / 'data', home / 'config', home / 'profile'):
+        folder.mkdir(parents=True, exist_ok=True)
+    for leftover in [*releases.glob('.incoming-*'), *releases.glob('.damaged-*')]:  # an earlier interrupted install
+        shutil.rmtree(leftover, ignore_errors=True)
+    target = releases / release_id
+    current = read_current(home)
+    if target.exists():
+        try:
+            verify_release(target, manifest)
+            lap('verify_installed')  # already installed (update again, reinstall): checked, not copied
+        except InstallError:  # damaged: replace it from the package instead of refusing forever
+            lap('verify_installed')
+            if current and current['release'] == release_id:
+                stop(home)  # repairing the running release: its files must be free to move
+                lap('stop')
+            damaged = releases / f'.damaged-{release_id}-{int(time.time())}'
+            try:
+                os.replace(target, damaged)
+            except OSError:  # e.g. a program JARVIS opened still has that release's folder as its working folder
+                raise InstallError(f'The installed release {release_id} is still in use and cannot be replaced. Nothing '
+                                   'was changed. Quit JARVIS and any program it opened, then run this again.') from None
+            shutil.rmtree(damaged, ignore_errors=True)
+    if not target.exists():
+        incoming = releases / ('.incoming-' + release_id)
+        shutil.copytree(source, incoming)
+        lap('copy')
+        verify_release(incoming, manifest)
+        lap('verify_copy')
+        os.replace(incoming, target)
+    personality = home / 'config' / 'personality.txt'
+    if not personality.exists():
+        shutil.copyfile(target / 'app' / 'personality.txt', personality)
+    previous = current['release'] if current and current['release'] != release_id else (current or {}).get('previous')
+    if current and current['release'] != release_id:
+        stop(home)
+        lap('stop')
+    ensure_launcher(home, release_id)
+    write_current(home, release_id, previous)
+    lap('switch')
+    if shortcuts:
+        write_shortcuts(home, release_id)
+        if replace_legacy_shortcuts:  # owner switch-over: the old JARVIS no longer starts at login
+            remove_shortcuts(LEGACY_SHORTCUT)
+    return {'status': 'installed', 'release': release_id, 'previous': previous, 'home': str(home), 'seconds': lap.seconds}
+
+
+def rollback(home, stop=stop_running_jarvis, shortcuts=None):
+    home = Path(home)
+    shortcuts = shortcuts_for(home, shortcuts)
+    refuse_if_run_from_installation(home, 'rollback')
+    lap = Laps()
+    current = read_current(home)
+    require(current and current.get('previous'), 'No previous release to roll back to.')
+    target = home / 'releases' / current['previous']
+    verify_release(target)
+    lap('verify_target')
+    stop(home)
+    lap('stop')
+    ensure_launcher(home, current['previous'])
+    write_current(home, current['previous'], current['release'])
+    lap('switch')
+    if shortcuts:  # the shortcuts follow the program (1.0.17): the previous release's JARVIS.exe, or JARVIS.ps1
+        write_shortcuts(home, current['previous'])
+        lap('shortcuts')
+    return {'status': 'rolled_back', 'release': current['previous'], 'previous': current['release'], 'seconds': lap.seconds}
+
+
+def remove_program_file(path, wait=10):
+    """Delete one program file. Windows keeps a file locked for a moment after its process has ended,
+    so a refusal is retried briefly before the uninstall stops with a plain message."""
+    deadline = time.monotonic() + wait
+    while True:
+        try:
+            Path(path).unlink(missing_ok=True)
+            return
+        except PermissionError:
+            if time.monotonic() >= deadline:
+                raise InstallError(f'A program file is still in use: {path}. JARVIS is no longer installed; quit any '
+                                   'JARVIS window still open, then run the uninstall again to finish removing it.') from None
+            time.sleep(0.2)
+
+
+def uninstall(home, remove_data=None, shortcuts=None, stop=stop_running_jarvis):
+    home = Path(home)
+    shortcuts = shortcuts_for(home, shortcuts)
+    refuse_if_run_from_installation(home, 'uninstall')
+    require(remove_data in (None, CONFIRM_DATA_REMOVAL), f'To delete data too, pass --remove-data {CONFIRM_DATA_REMOVAL}')
+    lap = Laps()
+    stop(home)
+    lap('stop')
+    if shortcuts:
+        remove_shortcuts()
+        lap('shortcuts')
+    # The launcher goes first: if a program file then cannot be removed, JARVIS is left not installed
+    # (nothing points at a half-removed release) and running uninstall again finishes the job.
+    for name in ('current.json', 'JARVIS.ps1'):
+        (home / name).unlink(missing_ok=True)
+    removed = 0
+    releases = home / 'releases'
+    if releases.is_dir():
+        for release in releases.iterdir():
+            if release.name.startswith(('.incoming-', '.damaged-')):
+                shutil.rmtree(release, ignore_errors=True)
+                continue
+            try:
+                manifest = read_manifest(release)
+            except (OSError, ValueError, InstallError):
+                continue  # not ours: leave it
+            for entry in manifest['files']:  # only files this installer placed
+                remove_program_file(release / entry['path'])
+                removed += 1
+            (release / 'manifest.json').unlink(missing_ok=True)
+            for folder in sorted((p for p in release.rglob('*') if p.is_dir()), key=lambda p: len(p.parts), reverse=True):
+                try:
+                    folder.rmdir()
+                except OSError:
+                    pass
+            try:
+                release.rmdir()
+            except OSError:
+                pass
+        try:
+            releases.rmdir()
+        except OSError:
+            pass
+    lap('remove_program')
+    kept = [name for name in ('data', 'config', 'profile') if (home / name).exists()]
+    if remove_data == CONFIRM_DATA_REMOVAL:
+        for name in kept:
+            shutil.rmtree(home / name)
+        kept = []
+    return {'status': 'uninstalled', 'program_files_removed': removed, 'kept': kept, 'seconds': lap.seconds}
+
+
+def status(home):
+    home = Path(home)
+    current = read_current(home)
+    releases = sorted(p.name for p in (home / 'releases').iterdir() if p.is_dir()) if (home / 'releases').is_dir() else []
+    return {'home': str(home), 'current': current, 'releases': releases}
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('action', choices=['install', 'rollback', 'uninstall', 'verify', 'status'])
+    parser.add_argument('--package', help='Release folder containing release\\ (install)')
+    parser.add_argument('--home', help='Install location (default %%LOCALAPPDATA%%\\JARVIS). The real Desktop and Startup shortcuts '
+                                       'are written or removed for that default home only; any other home never touches them')
+    parser.add_argument('--no-shortcuts', action='store_true', help='Write or remove no shortcuts (for the default home; another home never does)')
+    parser.add_argument('--replace-legacy-shortcuts', action='store_true',
+                        help='Switch-over only: also remove the old "JARVIS Desktop" shortcuts')
+    parser.add_argument('--remove-data')
+    args = parser.parse_args(argv)
+    home = Path(args.home) if args.home else default_home()
+    # The real Desktop and Startup shortcuts belong to this PC's own install home only (own_home): a home given
+    # with --home that is not that home (a rehearsal, a sandbox, a test) never writes or removes them, whatever
+    # the other switches say. On 2026-10-07 a sandbox Setup rehearsal whose /NOSHORTCUTS never reached this script
+    # wrote and then removed the owner's real shortcuts (docs/OWN-APP-1.0.17.md section 6).
+    mine = own_home(home)
+    shortcuts = not args.no_shortcuts and mine
+    evidence = 'written' if shortcuts else 'skipped (--no-shortcuts)' if mine else 'withheld (the home is not this PC\'s own install home)'
+    try:
+        if args.action == 'install':
+            result = install(args.package or Path(__file__).resolve().parent, home, shortcuts=shortcuts,
+                             replace_legacy_shortcuts=args.replace_legacy_shortcuts)
+            result['shortcuts'] = evidence
+        elif args.action == 'rollback':
+            result = rollback(home, shortcuts=shortcuts)
+            result['shortcuts'] = evidence
+        elif args.action == 'uninstall':
+            result = uninstall(home, args.remove_data, shortcuts=shortcuts)
+            result['shortcuts'] = evidence.replace('written', 'removed')
+        elif args.action == 'verify':
+            current = read_current(home)
+            require(current, 'JARVIS is not installed here.')
+            verify_release(home / 'releases' / current['release'])
+            result = {'status': 'verified', 'release': current['release']}
+        else:
+            result = status(home)
+    except InstallError as exc:
+        print(json.dumps({'status': 'refused', 'reason': str(exc)}, indent=2))
+        return 2
+    print(json.dumps(result, indent=2))
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

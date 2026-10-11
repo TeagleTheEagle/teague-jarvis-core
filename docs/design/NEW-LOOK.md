@@ -1,0 +1,135 @@
+# New look for the whole interface (release 1.0.15)
+
+Owner request, 2026-10-05, with four pictures: "both and use this as a guide I want the whole interface to have
+this new design and be more organised" ("both" = apply the ten review findings and build the new look). Earlier
+the same day: "I want it to have this look". The owner's rule from the first dashboard still applies: **"Same
+look, real data only."**
+
+The four pictures (saved here, the guide for this work):
+
+| File | What it shows |
+|---|---|
+| `new-look-20261005-4-dashboard-v2.webp` | The dashboard: header with one row of sections, greeting card, recent activity, performance rings, the core over an Earth horizon, suggestion chips, ask bar, map, missions, schedule, quick tools |
+| `new-look-20261005-1-teague-brand-scene.webp` | Teague Industries brand scene: chrome T above the Earth's horizon |
+| `new-look-20261005-2-jarvis-logo.webp` | JARVIS logo: chrome T in a ring with blue arcs |
+| `new-look-20261005-3-one-core-globe.webp` | "One core · many capabilities" globe |
+
+## What was built
+
+Three layers, all presentation; no control or handler was removed.
+
+1. **Shell, every section** (`static/horizon.js`, `static/horizon.css`, loaded last):
+   - Logo: `static/assets/branding/teague/jarvis-mark.svg` (the T in a ring, drawn after picture 2).
+   - Header in one row: JARVIS / AI COMMAND CENTER, the sections, command search (opens the existing Ctrl K palette),
+     connection, clock.
+   - **Organised navigation:** eight everyday sections (Dashboard, Chat, Tasks, Projects, Memory, Files, Web, Maps),
+     the rest under **More** (System status, Activity log, Diagrams, Release history, Applications), Settings last.
+     These are the existing buttons, moved and relabelled; voice navigation ("open projects") is unchanged. In a
+     narrow window sections that do not fit move under More and come back when there is room.
+   - Strip under the header: "ONE CORE // MANY CAPABILITIES // LOCAL AND PRIVATE" and the running version
+     (installed release, or the development revision) from `/api/state`.
+   - Background for every section: stars and the Earth's horizon with city lights, drawn on a canvas once per window
+     size. It is a drawing, not data, and does not move.
+   - One colour system (deep navy, blue glow, teal for "ready", amber for "check"), rounded panels, the same
+     buttons and inputs in every section.
+2. **Dashboard** (`static/command-dashboard.js`, `.css`, second layout). Every panel and its source:
+
+| Picture | Dashboard | Source |
+|---|---|---|
+| Greeting, date, time, weather, quote | Greeting, date, time, the owner's location label if one is set, the quote, and a world map with the real day and night sides. **No weather** (no source) | PC clock and time zone; location label from the clock setting |
+| Recent activity (scan, sync, mail, news) | The five newest entries of the activity log | this session's events and the Core's audit trail (`/api/state` logs) |
+| System performance: CPU, memory, storage, network | CPU, memory, storage rings; fourth ring = systems configured (n of 6). **No network ring** (not measured). Below: Core uptime, last reply, AI model | `/api/metrics`, `/api/state` |
+| Core with Online / Listening / Processing / Analysing | The existing core canvas; Online, Listening, Thinking, Speaking light up from the real assistant state | assistant state |
+| "Systems nominal" list | Core, AI, Memory, Voice, Search, Devices: green only when set up, amber when it needs a look; heading says "ALL CONFIGURED" or "n TO CHECK", never "nominal" | `/api/state` capabilities, settings, devices |
+| "Good morning. I'm JARVIS. At your service." + waveform | Same greeting (with the preferred name); the waveform is the live microphone and is flat when the microphone is off | assistant state, microphone |
+| Suggestion chips | Four requests that are sent to JARVIS as typed, plus "Analyse my screen" (opens the existing screen check) | existing `send()` and screen vision |
+| Ask bar | Sends the question through the existing `send()` and opens Chat so the reply is seen; the left button turns the microphone on or off (same as F4) | existing controls |
+| Global situation (world map, regions, missions, alerts) | Regions, missions and alerts are **left out** (no source); the map itself moved to the Today card as a day-and-night map. In its place: Core overview = a network picture of the devices (this PC, phone, glasses) and counts of memories, documents, notes, conversations | device registry, `/api/state` |
+| Mission overview | Projects with progress counted from linked tasks that exist | `/api/workspaces`, tasks |
+| Today's schedule | Reminders and tasks due today | `/api/state` |
+| Quick tools | New note, Analyse, Timer, Search, Settings: each presses the existing control | existing controls |
+| Footer: Teague Industries, Secure / Private / Trusted | Teague Industries · A brighter tomorrow; Local / Private / Always with you; a dot that is green only while the Core is connected | fixed text, connection |
+
+3. **Other sections** keep their content and controls and take the shell and the colour system.
+
+## Graphics pass (owner, after the first pictures: "looks great ... maybe make this more graphical")
+
+Added the same evening; every graphic is either a drawing that says so or is driven by a real value.
+
+| Graphic | What drives it |
+|---|---|
+| Rings around the core: tick ring, dashed ring, two orbits with moving points, a soft glow | Decoration, but the speed follows the real assistant state (faster while thinking, a pulse while listening or speaking, stopped and dimmed when the Core is not connected) |
+| Six arcs in the ring | The six system rows: teal = set up, amber = needs a look, dark = unknown |
+| World map in the Today card (`static/world-map.js`) | Dotted land (a coarse hand-typed drawing, tested for land and sea in `test_world_map.cjs`); the lit and dark sides and the sun marker are computed from the PC clock; the green marker is the city the PC's time zone is named after (a Windows setting, not a measured position); the caption says so |
+| Network picture in Core overview | The device registry: this PC, phone, glasses, each line solid and moving when online, dotted when not paired, dashed amber when simulated |
+| Graph under the performance rings | Processor and memory readings from `/api/metrics` taken while the page is open (up to three minutes); cleared when the readings stop |
+| Day line in Today's schedule | The clock (the glowing point) and everything due today (diamonds; dimmed once past) |
+| Line through Recent activity | Decoration |
+
+The side lists (Online / Listening / Thinking / Speaking, and Systems) sit on their own plates so the rings can pass
+behind them at any window size. Lists show whole rows only: as many as the panel has room for.
+
+## The ten review findings (of 39901c5 and 5d0c96d) and where each was fixed
+
+1. Stale data as ready when the Core is unreachable: the dashboard has three states (connecting, connected, lost);
+   when lost, every Core value reads "unknown" or "-", and the first paint says CONNECTING.
+2. "READY" overstated: the Voice row checks the chosen voice against what is configured (amber "NOT SET UP"
+   otherwise), the ring is labelled CONFIGURED, the heading says ALL CONFIGURED or n TO CHECK.
+3. Simulated wearable shown as "Offline": simulated is checked first ("Simulated only").
+4. Waveform compared two different clocks: it now compares `Date.now()` with the `Date.now()` stamp, and is flat
+   whenever the microphone is off.
+5. "Last reply" counted failed runs: the Core records `completed` with each timing (`server.py`), and
+   `system_metrics.snapshot` uses completed runs only (test extended).
+6. Inspection renderer lacked the dashboard files and metrics: `inspection_runtime.STATIC` now holds every file the
+   page loads, `/api/metrics` answers "omitted", and `test_inspection_browser.py` keeps the list in step with
+   `index.html`.
+7. `pro.css` clipped the tiles at 1150 px or less: the second layout has no tile bar; the header sets its own height.
+8. Live region re-announced every 1.5 s: only the mode line is a live region and it is rewritten only on change.
+9. Conversations capped at 100: shown as "100+". Deleted linked tasks no longer count towards project progress.
+10. Push-to-talk showed wake-word text: the voice line distinguishes hold-to-talk, listening, waiting for the wake
+    word and microphone off. The dashboard padding now carries `!important` (teague.css sets `padding:0!important`).
+
+## Chat formatting and voice names (same evening)
+
+- `static/markdown-view.js`: replies show bold text, numbered lists, headings and code instead of the raw marks the
+  AI model types (the owner's screenshots showed `**...**`). The paragraph `app.js` writes to stays the source;
+  the formatted copy is built from elements and text only (reply text is never parsed as HTML; links are shown as
+  text). `test_markdown_view.cjs`.
+- "Open dashboard", "open the activity log", "show me release history" work by voice (`app.js` and
+  `static/navigation.js`), and the command search (Ctrl K) lists the sections under the names in the header.
+
+## Independent review of 5f2ed59 (one reviewer): no high finding; what was done
+
+What may be claimed on screen now lives in one tested place, `static/dashboard-model.js`
+(`test_dashboard_model.cjs`): the connection state (connecting, online, checking, lost, inspection snapshot), the
+six system rows, the heading and ring, the device places and the voice line.
+
+| # | Finding | Done |
+|---|---|---|
+| 1 | Ask bar and chips dropped the question while JARVIS was busy | The text is kept, nothing is sent, a message says so |
+| 2 | Escape on the More menu also ran the global "stop JARVIS" | Escape closes the menu and goes no further |
+| 3 | Keyboard focus lost on every change of section; header jumped 10 px | One shell padding everywhere; only a section whose place changes is moved |
+| 4 | "Unknown rather than stale" had holes | `app.js` records whether and when the Core last answered; the dashboard's readings are a heartbeat; nothing heard for 25 s reads CHECKING and unknown; an inspection picture reads SNAPSHOT and invents nothing; coming back to the window asks the Core at once; the version and the strip follow the same state; the first processor reading after a pause is not shown |
+| 5 | Voice row wrong for OpenAI speech with Qwen thinking; Search always green | The Core reports `openai_voice`; search without a key is "best effort" (blue, not counted as configured); the heading reads "n OF 6 CONFIGURED" |
+| 6 | Rows cut off at the default window size | Lists show whole rows only and the link says how many more there are |
+| 7 | State by colour only; lists rebuilt every round | Row text stays for screen readers and stays visible where something needs a look; the four lights are a picture, the mode line is the text; a list is rebuilt only when its content changes |
+| 8 | Focus ring gone on tick boxes, radio buttons and sliders | The browser's ring is kept for them |
+| 9 | Tests could pass with two fixes broken | "Last reply" requires the Core's `completed` mark and a Core-level test runs one completed and one failed request; the page's files are requested one by one from the real server; the inspection list is checked for files that scripts load; the inspection answers are a tested function |
+| 10 | Desktop app: header no longer moved the window; eight sections did not fit at 1280 | The empty part of the section row is a drag area; tighter spacing with the title-bar padding. **Arithmetic and CSS only: not yet run in the desktop app** |
+| 11 | Forced styles hid states | Release history stays bare; a file dragged over the drop area lights it; the chat box keeps its thinking and listening colours |
+| 12 | Section fitting measured at the wrong times | Also measured when the right side grows; the menu is closed first |
+| 13 | Voice line and microphone button lagged or said the wake word when it was paused | The line follows the detector's real state; a change of mode shows at once |
+| 14 | Smaller items | The location label is a button that opens the existing setting; the command search knows the header's names; "Projects could not be read" instead of loading for ever; one request at a time; the waveform loop stops when the dashboard is not shown; 0% reads NOT STARTED; dead rules removed; the logo's title has its id |
+
+Left as they are, with the reason:
+- The header clock is hidden below 1500 px wide (the row is full; Windows shows a clock and the Today card has one).
+- Notices ("toasts") still appear over Quick tools for a few seconds.
+- Other sections keep their last values when the Core is lost; the strip under the header now says so in amber.
+- `command-background.png` is still named in older files and is not in the repository (nothing requests it now).
+
+## Not done / owner may change
+
+- Weather, world map, mail and news counts: no real source, so not shown. A weather source or a calendar would be a
+  new connection (owner decision).
+- Navigation grouping and the new section names (Chat, Tasks, Activity log, Release history) are Claude's choice.
+- The earlier `command-background.png` scene and the first dashboard layout are replaced by this one.

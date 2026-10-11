@@ -1,0 +1,19 @@
+{
+  "schema": "jarvis-everyday-update-restart-check-v1",
+  "step": 5,
+  "utc": "2026-10-07T08:46:04Z",
+  "owner_message": "step 5 done",
+  "result": "PASS",
+  "read_by_claude": "read-only, from this PC after the restart: Win32_OperatingSystem.LastBootUpTime, the first explorer.exe start (the owner's sign-in), the JARVIS processes under %LOCALAPPDATA%\\JARVIS\\releases with their start times and command lines, the Startup folder shortcut and its target",
+  "boot_local": "2026-10-07 19:38:59",
+  "sign_in_local": "2026-10-07 19:39:39",
+  "jarvis_first_process_local": "2026-10-07 19:43:13",
+  "minutes_after_sign_in": 3.6,
+  "started_by_login_launch": true,
+  "processes": 8,
+  "processes_release": "all 8 from releases\\1.0.17-0d38218c4e1d (JARVIS.exe x 7: the main process with --login-launch at 19:43:13, then gpu-process, utility x 3, renderer x 2; python.exe x 1 at 19:43:14; started 19:43:13 to 19:43:20)",
+  "startup_shortcut_present": true,
+  "startup_shortcut_target": "C:\\Users\\jonny\\AppData\\Local\\JARVIS\\releases\\1.0.17-0d38218c4e1d\\electron\\JARVIS.exe",
+  "note": "the first start of JARVIS as its own program (JARVIS.exe from the Startup shortcut, no PowerShell launcher): 3.6 minutes after sign-in, against 5.4 (1.0.15) and 5.7 (1.0.16) minutes for the PowerShell shortcut; Windows delays Startup-folder programs, not JARVIS",
+  "recorded_by": "Claude Code (Claude Fable 5.1)"
+}

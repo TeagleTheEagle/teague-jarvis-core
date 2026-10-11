@@ -1,0 +1,9 @@
+{
+    "iso":  "UNATTEND.iso",
+    "bytes":  1179648,
+    "sha256":  "89f97c7b162d68b93b123517b1f823bf8ff9cce76f5e88d2cfbb303c7bc17c00",
+    "label":  "UNATTEND",
+    "payload_files":  1,
+    "payload_manifest_sha256":  "0a8ff4ddaecef80b5a7b1aaec5b4f3655dee4be151ae1a0f7ef5c359f2c680f0",
+    "readback":  "every payload file read back from the mounted ISO with its recorded SHA-256"
+}

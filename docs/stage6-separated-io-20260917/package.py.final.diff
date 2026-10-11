@@ -1,0 +1,11 @@
+--- before/deployment_test/package.py
++++ final/deployment_test/package.py
+@@ -23,7 +23,7 @@
+     *['static/'+name+'.css' for name in ('style','gallery','pro','teague')],
+     'static/assets/branding/teague/teague-mark.svg','static/assets/branding/teague/command-background.png',
+     'tests/lifecycle_stage1/harness.py','tests/lifecycle_stage2/bootstrap.py','tests/lifecycle_stage2/pipe_transport.py',
+-    *['deployment_test/'+name+'.py' for name in ('contract','enrollment','bootstrap','package','native','upgrade')]]
++    *['deployment_test/'+name+'.py' for name in ('contract','enrollment','bootstrap','package','native','upgrade','update_io')]]
+ 
+ ELECTRON_ENTRY = ''''use strict';
+ // Fixed packaged TEST client entry. Never loads the legacy backend branches.

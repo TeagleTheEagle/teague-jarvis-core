@@ -1,0 +1,24 @@
+{
+  "schema": "stage6-gate16r-step-evaluation-v1",
+  "step": "3: AMENDMENT-v2 section 7(e) ACL boundary (synthetic fixtures)",
+  "utc": "2026-10-02T01:58:00Z",
+  "sources": {
+    "fixtures": "isolation/owner-preflight.json (owner account, New-IsolationFixtures.ps1 -Phase Create, 2026-10-02T01:43Z)",
+    "run1": "isolation/validation-results.jsonl + validation-summary.json (jarvis-s6-val, 2026-10-02T01:46:41Z): 37 cases, 32 denied/succeeded as expected, 5 rename rows classified 'error' by the harness (FileNotFoundException from .NET's existence pre-check); see run1-classification-note.json",
+    "run2": "isolation/validation-results-20261002-015310.jsonl + validation-summary-20261002-015310.json (jarvis-s6-val, corrected script sha256 2020ef574cf75deb8f40871a4aea54a8aa3aa3892dd6941b00055d84ae0d14bb): 37 cases, 0 failed",
+    "postflight": "isolation/owner-postflight.json (owner account, 2026-10-02T01:53:59Z, after run 2; compares against the original preflight and therefore covers both runs): PASS, no findings. The postflight after run 1 was also observed PASS by the owner (photographed) but its file was overwritten by the second postflight; the surviving record is the stronger one."
+  },
+  "cases": {
+    "enumerate, read, open-for-write, create, delete, rename, permission change, ownership change on the restricted fixture": "denied, no mutation",
+    "the same through the hard link, the junction, the extended (\\\\?\\) path and a dot-dot path": "denied, no mutation",
+    "delete from a writable parent": "denied",
+    "positive scratch control (write, read, delete)": "succeeded, so the denials are not a blanket failure",
+    "expected-denial enumeration of C:\\Users\\jonny\\VirtualBox VMs\\JARVIS-CLEAN-WIN11 and C:\\Users\\jonny\\.VirtualBox as jarvis-s6-val": "denied (UnauthorizedAccessException); nothing read",
+    "short-name (8.3) alias": "NOT_APPLICABLE_WITH_EVIDENCE: no 8.3 name on the fixture (dir /x), NtfsDisable8dot3NameCreation=2 (per-volume), fsutil query needs elevation and was not run elevated (AMENDMENT-v3 A2)",
+    "broker (VBoxSDS/VBoxSVC) case": "APPROVED_DISPOSITION with stated limitation (AMENDMENT-v3 A1); not tested"
+  },
+  "fixture_integrity": "preflight and postflight: sentinel hashes d67c656e0175... unchanged, DACLs and owners unchanged, restricted contents unchanged, no *.renamed or new.bin created",
+  "result": "SECTION 7(e): PASS (with A1 and A2 applied). Documented harness re-run (run 2) after a classification defect; run 1's files kept.",
+  "next": "step 4: section 7(c)/(d) storage folders and VBOX_USER_HOME (owner), then P1",
+  "recorded_by": "Claude Code (Claude Fable 5.1), owner account"
+}

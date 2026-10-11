@@ -1,0 +1,50 @@
+{
+  "schema": "jarvis-owner-decision-record-v1",
+  "subject": "Owner approval of the update of the everyday JARVIS from 1.0.16 to 1.0.17 (the first update made by the release's own Setup)",
+  "issued_utc": "2026-10-07T07:58:40Z",
+  "issued_utc_basis": "first clock reading by Claude in the turn that received the message (2026-10-07 18:58 local)",
+  "recorded_utc": "2026-10-07T08:00:21Z",
+  "owner_messages": [
+    { "text": "I approve the update of my everyday JARVIS to 1.0.17", "taken_as": "approval of docs/UPDATE-EVERYDAY-1.0.17.md as presented (the plan's own wording), with its seven acceptances and the three things the owner checks (no key-file change needed; space on C:; the leftover JARVIS-package folder renamed aside)" }
+  ],
+  "approved_plan": {
+    "path": "C:\\Users\\jonny\\JARVIS-claude-workspace\\repo\\docs\\UPDATE-EVERYDAY-1.0.17.md",
+    "sha256": "f74fff6f2adff377a19c5b9dbad19367905573002adb5618f58705f254b3e57f",
+    "repo_commit": "08cbb7b",
+    "note": "the hash is of the plan as committed in 08cbb7b (status READY FOR THE OWNER'S APPROVAL); a later commit adds the approval to the plan's status line and changes nothing else in it"
+  },
+  "builds": {
+    "final": "1.0.17-0d38218c4e1d",
+    "final_zip": "D:\\JARVIS-release-work\\pkg-1.0.17\\JARVIS-1.0.17-0d38218c4e1d.zip",
+    "final_zip_sha256": "210b46235638e92bbef1634b853c53ae6838ed58e997543cab87ffa844bb01d9",
+    "final_setup": "D:\\JARVIS-release-work\\pkg-1.0.17\\JARVIS-Setup-1.0.17-0d38218c4e1d.exe",
+    "final_setup_sha256": "b7bb04d36180c99251e61a0458e77af5eb4a50aafea5812ff14525bdd63eeb7e",
+    "final_setup_record": "D:\\JARVIS-release-work\\pkg-1.0.17\\JARVIS-Setup-1.0.17-0d38218c4e1d.setup.json (app_id {DC2C8033-1BBF-5E1C-99A0-BE0E70DC9937} for the real JARVIS)",
+    "previous": "1.0.16-fccde24e2cc6"
+  },
+  "preconditions_met": {
+    "stage7_check": "STAGE_7_COMPLETE for 1.0.17-0d38218c4e1d (D:\\JARVIS-stage7\\1.0.17-0d38218c4e1d\\evidence\\stage7-evaluation.json, 29 of 29 checks with the version 4 driver, evaluated 2026-10-07T07:07:09Z; the first install's 601.5 s on the installer's own laps against the 600 s Gate 20 bound dispositioned as a VM limitation under the owner's rule of 2026-10-06, said in the plan)",
+    "sandbox_rehearsal": "26 of 26 PASS on this launcher (run 3, docs/release-rehearsal-20261007-1017/update-rehearsal-3/rehearsal-summary.json, 2026-10-07 18:49-18:54 local; the Setup silently in 98.7 s wall, the installer inside it verify package 12.7 s, copy 11.6 s, verify copy 27.6 s, stop 1.8 s, switch 0.1 s; the database byte-for-byte unchanged; the rollback verified; the owner's real shortcuts and real Settings > Apps entry untouched; the live JARVIS not running and never addressed)",
+    "independent_review": "one reviewer agent, 2026-10-07 18:30-18:45: 1 high, 3 medium, 8 low, all applied before the rehearsal above (the plan's section 'Independent review')"
+  },
+  "tool_hashes": {
+    "tools/host/update-1.0.17/Invoke-EverydayUpdate.ps1": "66c8cce6e4b16e302a0201aff690158d43684eba8315d1b2a6b7e542bd84365b",
+    "tools/host/update-1.0.17/update-step.cmd": "9c469bd44002e59066f5b8e7e2b077173826780840b37e7f4151e99be86d3388"
+  },
+  "tool_hashes_basis": "the launcher version 2: the 1.0.16 launcher (sha256 1abb0be5…, as the 1.0.16 approval recorded it) with step 3 changed to the release's own Setup run silently with the owner's defaults, step 1 with the Setup's hash and the rename of a leftover JARVIS-package folder, the entry, shortcut-target, launcher-script and database checks, and the review findings of 2026-10-07; update-step.cmd identical to 1.0.14's, 1.0.15's and 1.0.16's",
+  "places": {
+    "launcher_folder": "D:\\JARVIS-update-1.0.17\\tools",
+    "records": "D:\\JARVIS-update-1.0.17\\evidence",
+    "package_unpacked_to": "D:\\JARVIS-update-1.0.17\\package",
+    "backup_copy": "D:\\JARVIS-update-1.0.17\\backup",
+    "setup_package_folder": "%LOCALAPPDATA%\\JARVIS-package (the Setup's own; the leftover of 2026-10-02 renamed to %LOCALAPPDATA%\\JARVIS-package-before-1.0.17-0d38218c4e1d at step 1, nothing deleted)",
+    "install_home": "%LOCALAPPDATA%\\JARVIS (the owner's everyday JARVIS, 1.0.16-fccde24e2cc6)",
+    "repo_copy": "C:\\Users\\jonny\\JARVIS-claude-workspace\\repo\\docs\\update-1.0.17-evidence"
+  },
+  "effect": {
+    "authorized": "the owner runs D:\\JARVIS-update-1.0.17\\tools\\update-step.cmd in the jonny account, once per step (check, backup, update through the Setup), with JARVIS quit; the Setup writes the Desktop and Startup shortcuts at the new JARVIS.exe, removes JARVIS.ps1 and registers JARVIS 1.0.17 in Settings > Apps; Claude places the launcher with update-authorized.json and checks each record before the next step; the owner then starts JARVIS and checks it, and restarts the PC once",
+    "not_authorized": "Claude running the launcher, the Setup or any installer, recovery or switch-over command against %LOCALAPPDATA%\\JARVIS; reading config\\.env or the contents of the backup; the rollback (only on the owner's separate word, recorded as rollback-approved.json); removing the 1.0.11, 1.0.14, 1.0.15 or 1.0.16 release folders, the renamed leftover folder or any backup",
+    "stop_rules": "a failed step stops and says what state the installation is in, nothing repeated without the owner's decision; a UAC prompt is a STOP"
+  },
+  "recorded_by": "Claude Code (Claude Fable 5.1). This record documents the owner's act; it grants no authority of its own."
+}

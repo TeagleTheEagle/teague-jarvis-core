@@ -1,0 +1,162 @@
+--- before/tests/lifecycle_stage4/test_stage4.py
++++ after/tests/lifecycle_stage4/test_stage4.py
+@@ -348,7 +348,159 @@
+     raise SystemExit(not result.wasSuccessful())
+ 
+ 
++def inspection_tests():
++    """Actual singleton job + real tracked threads, with synthetic panel/archive IO."""
++    import threading, unittest
++    from unittest.mock import patch
++    sys.path.insert(0,str(REPO))
++    from inspection_jobs import JOBS
++    from stage4_runtime import Context
++    from stage4_sessions import Ownership, Denied
++    from stage4_lifecycle import Lifecycle
++    from interface_inspection import PANELS
++
++    class MemoryJournal:
++        def __init__(self):self.rows=[];self.before_running=None
++        def write(self, operation, phase, **kw):
++            if phase=='RUNNING' and self.before_running:self.before_running()
++            self.rows.append((operation,phase,kw))
++
++    class Tests(unittest.TestCase):
++        def setUp(self):
++            self.now=0.;self.release=threading.Event();self.panel=threading.Event();self.archiving=threading.Event()
++            self.block_panel=False;self.block_archive=False;self.fail_archive=False;self.calls=[];self.archives=[]
++            self.o=Ownership(mode='STAGE4_TEST',epoch='TEST-inspection',clock=lambda:self.now,
++                enrollments={'a':Ownership.ORDINARY,'b':Ownership.ORDINARY,'owner':Ownership.ORDINARY|Ownership.MANAGEMENT})
++            self.a=self.o.attach_verified('a',Ownership.ORDINARY,3);self.b=self.o.attach_verified('b',Ownership.ORDINARY,3)
++            self.owner=self.o.attach_verified('owner',Ownership.ORDINARY|Ownership.MANAGEMENT,3)
++            self.j=MemoryJournal();self.life=Lifecycle(self.o,self.j)
++            self.ctx=Context.__new__(Context)
++            self.ctx.owners=self.o;self.ctx.lifecycle=self.life;self.ctx.epoch=self.o.epoch;self.ctx.inspection_jobs={}
++            self.ctx.inspection_runner=self.runner;self.ctx.inspection_finish=self.archive
++            JOBS.jobs.clear()  # This no-App unit-test process owns its singleton.
++            self.addCleanup(self.clean)
++        def clean(self):
++            self.release.set()
++            for w in self.o.work.values():w.cancel.set()
++            for t in self.life.workers.values():
++                if t.ident:t.join(3)
++                self.assertFalse(t.is_alive())
++            JOBS.jobs.clear()
++        def runner(self, request, cancel):
++            self.calls.append(request['panel']);self.panel.set()
++            if self.block_panel:cancel.wait(3)
++            return {'requested_panel':request['panel'],'stages':{'analysis_completed':'completed'},'analysis':'Synthetic TEST finding'}
++        def archive(self, job):
++            self.archiving.set()
++            if self.block_archive:self.release.wait(3)
++            if self.fail_archive:raise OSError('TEST partial archive failure')
++            self.archives.append(job)
++            return {'status':'archived','inspection_id':job['id']}
++        def start(self):return self.ctx.start_inspection(self.a,{'panel':'all'})['request_id']
++        def wait(self):
++            for t in self.life.workers.values():t.join(3);self.assertFalse(t.is_alive())
++        def stop(self, action='shutdown'):
++            op=uuid.uuid4().hex;cap=self.o.management_capability(self.owner,self.o.epoch,action,op)
++            return self.life.request(self.owner,self.o.epoch,cap,action,op)
++        def test_01_success_actual_job_no_nested_timer(self):
++            with patch('inspection_jobs.threading.Timer',side_effect=AssertionError('Untracked TEST timer')):
++                wid=self.start();self.wait()
++            result=self.ctx.inspection_status(self.a,wid)
++            self.assertTrue(result['done']);self.assertEqual(result['job']['status'],'completed')
++            self.assertEqual(self.calls,list(PANELS));self.assertEqual(len(self.archives),1)
++            self.assertEqual(self.o.work[wid].outcome,'SUCCEEDED')
++            self.assertFalse(any(k.startswith('_') for k in result['job']))
++        def test_02_foreign_status_and_cancel_denied(self):
++            self.block_panel=True;wid=self.start();self.assertTrue(self.panel.wait(1))
++            with self.assertRaises(Denied):self.ctx.inspection_status(self.b,wid)
++            with self.assertRaises(Denied):self.o.cancel_request(self.b,self.o.epoch,wid)
++            self.assertFalse(self.o.work[wid].cancel.is_set())
++            self.o.cancel_request(self.a,self.o.epoch,wid);self.wait()
++        def test_03_cancel_waits_for_archive(self):
++            self.block_panel=True;self.block_archive=True;wid=self.start();self.assertTrue(self.panel.wait(1))
++            self.o.cancel_request(self.a,self.o.epoch,wid);self.assertTrue(self.archiving.wait(1))
++            status=self.ctx.inspection_status(self.a,wid)
++            self.assertFalse(status['done']);self.assertEqual(status['job']['phase'],'archiving')
++            self.stop();self.assertEqual(self.life.tick()['state'],'DRAINING')
++            self.release.set();self.wait();self.assertEqual(self.life.tick()['state'],'FINALIZING')
++            self.assertEqual(len(self.calls),1);self.assertEqual(self.archives[0]['status'],'cancelled')
++        def test_04_detach_and_reattach_no_inherited_authority(self):
++            self.block_panel=True;wid=self.start();self.assertTrue(self.panel.wait(1))
++            self.o.detach(self.a,self.o.epoch);self.a=self.o.attach_verified('a',Ownership.ORDINARY,3)
++            self.wait()
++            with self.assertRaises(Denied):self.ctx.inspection_status(self.a,wid)
++            self.assertEqual(len(self.calls),1);self.assertEqual(len(self.archives),1)
++        def test_05_archive_failure_is_unknown_not_success(self):
++            self.fail_archive=True;wid=self.start();self.wait()
++            self.assertEqual(self.o.work[wid].outcome,'UNKNOWN')
++            self.assertEqual(self.ctx.inspection_status(self.a,wid)['job']['archive']['status'],'failed')
++            self.stop();self.now=30;self.assertEqual(self.life.tick()['state'],'RECOVERY_REQUIRED')
++            self.assertFalse(self.life.status()['budget_refunds_performed'])
++        def test_06_archive_liveness_survives_deadline(self):
++            self.block_archive=True;wid=self.start();self.assertTrue(self.archiving.wait(1))
++            self.stop();self.now=30;self.assertEqual(self.life.tick()['state'],'RECOVERY_REQUIRED')
++            self.assertFalse(self.o.work[wid].done.is_set())
++            self.release.set();self.wait();self.assertEqual(self.life.tick()['state'],'RECOVERY_REQUIRED')
++        def test_07_expiry_cannot_remove_active_archive(self):
++            self.block_archive=True;wid=self.start();self.assertTrue(self.archiving.wait(1))
++            key=self.ctx.inspection_jobs[wid];JOBS.jobs[key]['expires']=0
++            JOBS._expire(key);self.assertEqual(self.ctx.inspection_status(self.a,wid)['job']['phase'],'archiving')
++            self.release.set();self.wait();JOBS.jobs[key]['expires']=0
++            with self.assertRaises(ValueError):JOBS.get(key)
++        def test_08_no_inspection_after_shutdown(self):
++            self.stop()
++            with self.assertRaises(Denied):self.start()
++            self.assertFalse(JOBS.jobs);self.assertFalse(self.calls)
++        def test_09_cancel_before_begin_creates_no_job(self):
++            entered=threading.Event()
++            self.j.before_running=lambda:(entered.set(),self.release.wait(3))
++            wid=self.start();self.assertTrue(entered.wait(1));self.o.cancel_request(self.a,self.o.epoch,wid)
++            self.release.set();self.wait()
++            self.assertEqual(self.o.work[wid].outcome,'NEVER_STARTED');self.assertFalse(JOBS.jobs);self.assertFalse(self.archives)
++        def test_10_drain_prevents_next_panel_and_summary(self):
++            calls=[];summaries=[]
++            def panel(request,cancel):
++                calls.append(request['panel']);self.stop()
++                return {'requested_panel':request['panel'],'stages':{'analysis_completed':'completed'}}
++            # Same optional job hook with real lifecycle step checks, including summary admission.
++            gate=threading.Event();mapping={}
++            def work(cancel):
++                gate.wait(1)
++                JOBS.run_registered({'panel':'all'},panel,lambda *a:summaries.append(1),on_finish=self.archive,
++                    cancel=cancel,before_step=lambda:self.o.next_step(mapping['id']),registered=lambda key:None)
++                return 'FAILED'
++            mapping['id']=self.life.dispatch(self.a,self.o.epoch,'inspection',work);gate.set();self.wait()
++            self.assertEqual(len(calls),1);self.assertFalse(summaries);self.assertEqual(len(self.archives),1)
++        def test_11_emergency_cancels_without_shutdown(self):
++            self.block_panel=True;wid=self.start();self.assertTrue(self.panel.wait(1))
++            self.stop('emergency-stop');self.wait()
++            self.assertEqual(self.life.tick()['state'],'SUSPENDED');self.assertTrue(self.o.work[wid].done.is_set())
++            self.assertEqual(self.archives[0]['status'],'cancelled')
++        def test_12_concurrent_jobs_use_existing_singleton(self):
++            self.block_panel=True;wid=self.start();self.assertTrue(self.panel.wait(1))
++            other=self.ctx.start_inspection(self.b,{'panel':'all'})['request_id']
++            self.life.workers[other].join(2);self.assertEqual(self.o.work[other].outcome,'FAILED')
++            self.assertEqual(len(JOBS.jobs),1);self.o.cancel_request(self.a,self.o.epoch,wid);self.wait()
++        def test_13_legacy_start_still_background_and_timer(self):
++            timer_started=threading.Event()
++            with patch('inspection_jobs.threading.Timer') as timer:
++                timer.return_value.start.side_effect=timer_started.set
++                result=JOBS.start({'panel':PANELS[0]},self.runner,on_finish=self.archive)
++                self.assertTrue(timer_started.wait(2));self.assertEqual(JOBS.get(result['job_id'])['status'],'completed')
++                self.assertEqual(timer.call_args.args[0],301)
++            self.assertFalse(self.life.workers)
++
++    result=unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromTestCase(Tests))
++    dest=REPO/'docs/lifecycle-stage4-evidence'/('inspection-workers-'+uuid.uuid4().hex+'.json')
++    dest.write_text(json.dumps({'tests':result.testsRun,'failures':len(result.failures),'errors':len(result.errors),
++        'details':[s for _,s in result.failures+result.errors],
++        'scope':'Actual InspectionJobs singleton/worker + TEST ownership/lifecycle; synthetic IO; injected deadline clock; no App/Core/provider/media',
++        'production_access':False},indent=2));print('EVIDENCE',dest)
++    raise SystemExit(not result.wasSuccessful())
++
++
+ if __name__=='__main__':
++    if '--inspection-tests' in sys.argv:inspection_tests()
+     if '--ownership-tests' in sys.argv:ownership_tests()
+     if len(sys.argv)>1 and sys.argv[1]=='--worker':worker(Path(sys.argv[2]),sys.argv[3],sys.argv[4],sys.argv[5]=='1')
+     else:run()

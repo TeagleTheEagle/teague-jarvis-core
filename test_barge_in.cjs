@@ -1,0 +1,24 @@
+const assert=require('node:assert/strict');
+const Voice=require('./static/voice.js');
+let wakes=0,playing=true;
+const v=new Voice({wake:()=>{wakes++;playing=false;},status:()=>{},canInterrupt:()=>playing,error:e=>{throw e;}});
+v.active=true;v.session=true;v.pause();
+const quiet=new Int16Array(5120),speech=new Int16Array(5120).fill(2000);
+for(let i=0;i<20;i++)v.frame(quiet,0);
+assert.equal(wakes,0);
+v.frame(speech,0);v.frame(quiet,0);assert.equal(wakes,0,'brief noise must not interrupt');
+v.frame(speech,0);v.frame(speech,0);
+assert.equal(wakes,1);assert.equal(v.armed,true);assert.equal(v.suspended,false);assert.ok(v.frames.includes(speech),'preserve the start of the interruption');
+v.resume();assert.equal(v.armed,true);
+v.endConversation();v.pause();playing=true;
+for(let i=0;i<5;i++)v.frame(speech,0);assert.equal(wakes,1,'farewell must not restart conversation');
+v.session=true;playing=false;for(let i=0;i<5;i++)v.frame(speech,0);assert.equal(wakes,1,'disabled or stopped playback must not interrupt');
+v.stop();v.frame(speech,0);assert.equal(wakes,1);
+console.log('PASS: sustained interruption, pre-roll, silence/noise rejection, disabled playback, ended conversation and stop.');
+
+const soft=new Voice({wake:()=>{},status:()=>{},canInterrupt:()=>true});
+soft.active=true;soft.session=true;soft.pause();
+const headsetSpeech=new Int16Array(5120).fill(500);
+soft.frame(headsetSpeech,0);soft.frame(headsetSpeech,0);
+assert.equal(soft.armed,true,'quiet headset speech previously below .035 now interrupts');
+soft.stop();

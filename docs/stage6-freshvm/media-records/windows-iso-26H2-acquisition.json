@@ -1,0 +1,17 @@
+{
+  "schema": "stage6-media-acquisition-v1",
+  "file": "Windows11_Client_x64_en-us_26300_9457.iso",
+  "edition_selected": "Windows 11 (multi-edition ISO for x64 devices), English (United States), version 26H2",
+  "source_page": "https://www.microsoft.com/en-au/software-download/windows11",
+  "download_host": "software.download.prss.microsoft.com (signed, time-limited link from the page; signature omitted here)",
+  "download_path": "/dbazure/Windows11_Client_x64_en-us_26300_9457.iso",
+  "owner_permission": "explicit, in chat: \"yes, download it\" (2026-10-02 local)",
+  "started_utc": "2026-10-01T14:15:34Z",
+  "finished_utc": "2026-10-01T14:27:52Z",
+  "curl_exit": 0,
+  "bytes": 9047330816,
+  "sha256": "bd4307df32bc8af33b39ccecb1174aeb345386630f89a2b86c7a4e36b55ea650",
+  "microsoft_published_english_64bit_sha256": "bd4307df32bc8af33b39ccecb1174aeb345386630f89a2b86c7a4e36b55ea650",
+  "match": true,
+  "saved_to": "D:/JARVIS-release-work/stage6-media/"
+}

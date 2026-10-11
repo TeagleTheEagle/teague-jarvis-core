@@ -1,0 +1,36 @@
+{
+  "schema": "stage6-owner-execution-prompt-approval-v1",
+  "subject": "Gate 16R execution prompt (AMENDMENT-v2 section 3(c): an owner-approved execution prompt is one of the two things Gate 16R execution requires; the other is the RESUME_STAGE6_FRESH_VM token)",
+  "recorded_utc": "2026-10-02T01:09:45Z",
+  "text": {
+    "path": "C:\\Users\\jonny\\JARVIS-claude-workspace\\governance\\STAGE6-GATE16R-EXECUTION-PROMPT.md",
+    "sha256": "922302aa74b0a3c5a406f7906e4b965e49721a2a8536b5b4b27d3116dcf114b9",
+    "note": "The approved draft with only its two status lines changed to record the approval."
+  },
+  "source_draft": {
+    "path": "repo\\docs\\stage6-freshvm\\GATE16R-EXECUTION-PROMPT.md",
+    "commit": "29c9874",
+    "sha256": "36f22b2c22d20757750a4790b8db90d15d1fe023c6a9429816576062d1bd4c0b"
+  },
+  "owner_approval": {
+    "source": "Direct human message in the Claude Code chat, 2026-10-02 (local), after the prompt was presented as the single open item",
+    "text": "approved",
+    "preceding_context": "Claude: \"Approve the Gate 16R execution prompt ... Reply 'I approve the Gate 16R prompt' (or name any step to change).\" The owner replied \"approved\" without naming any change.",
+    "scope": "The prompt as frozen above: steps 0-12, roles, stop rules, and the 'Not authorised' section."
+  },
+  "effect": {
+    "execution_prompt_status": "APPROVED",
+    "token_status": "RESUME_STAGE6_FRESH_VM NOT ISSUED; never requested, inferred or pre-staged. Gate 16R execution (steps 1-12) begins only when the owner issues it.",
+    "preparation_completed_under_the_approved_step_0": [
+      "0.3 media: official Windows 11 26H2 ISO downloaded with explicit owner permission and SHA-256-verified against Microsoft's published value (step0/windows-iso-26H2-acquisition.json)",
+      "0.4 discs: UNATTEND.iso and JARVIS-TOOLS.iso built with recorded hashes and read-back (step0/*.sha256.json, payload manifests)",
+      "0.5 scripts: committed in repo tools/host and tools/guest (commits 505569b, 29c9874)",
+      "0.6 evidence folder: D:\\JARVIS-S6-FRESHVM\\evidence\\gate16r-20261002\\ created with the step-0 records; nothing else under D:\\JARVIS-S6-FRESHVM touched"
+    ],
+    "preparation_not_completed": "0.1/0.2 freeze and D: capacity check: the command was declined once in chat; it runs at execution time under the token instead of being retried",
+    "gate_pointer": "OWNER STOP #1R (unchanged)",
+    "experiment5": "UNCONSUMED, budget frozen at 4/5 (unchanged)",
+    "rc_obligations": ["protected-original preservation mandatory", "backup/restore-source preservation mandatory"]
+  },
+  "recorded_by": "Claude Code (Claude Fable 5.1) under the owner's standing authority to prepare Stage 6 plans and evidence tooling. This record documents the owner's decision; it grants no authority of its own and issues no token."
+}

@@ -1,0 +1,26 @@
+{
+    "status":  "PASS",
+    "uninstall":  "uninstalled",
+    "install":  "installed",
+    "release":  "1.0.16-fccde24e2cc6",
+    "installer_seconds":  {
+                              "verify_package":  149.537,
+                              "copy":  25.746,
+                              "verify_copy":  74.719,
+                              "switch":  0.053
+                          },
+    "output":  null,
+    "running":  {
+                    "core_ready":  true,
+                    "seconds_to_ready":  9.8,
+                    "installed_release":  "1.0.16-fccde24e2cc6",
+                    "identity_matches":  true,
+                    "gate17_memory":  true,
+                    "gate19_memory":  true,
+                    "processes":  8,
+                    "processes_from_other_releases":  [
+
+                                                      ]
+                },
+    "new_release_present":  false
+}

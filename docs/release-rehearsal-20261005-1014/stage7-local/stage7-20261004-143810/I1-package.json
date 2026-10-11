@@ -1,0 +1,10 @@
+{
+    "status":  "PASS",
+    "release_id":  "1.0.14-e03872680e1d",
+    "commit":  "e03872680e1d7a78d200d293fcaf7d2a2fd0d185",
+    "zip":  "JARVIS-1.0.14-e03872680e1d.zip",
+    "zip_bytes":  525633503,
+    "zip_sha256":  "ceb7d9e1922cebbf650753c4028473c5962c558ed70ec9f4be20f9fdc740d8d3",
+    "zip_matches_record":  true,
+    "hash_seconds":  0.6
+}

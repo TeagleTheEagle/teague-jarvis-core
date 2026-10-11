@@ -1,0 +1,53 @@
+--- before/desktop/test/stage4-client.test.cjs
++++ after/desktop/test/stage4-client.test.cjs
+@@ -76,6 +76,50 @@
+   const f=queueFixture();f.queue.send=()=>{throw Error('worker gone');};
+   assert.equal((await f.result('request')).error,'BRIDGE_FAILED');assert.equal(f.timers.size,0);
+  });
++
++ function mediaFixture(){
++  let now=0,waiters=[];const calls=[],events=[];
++  const media=new client.MediaWatchdog((op,args)=>{calls.push({op,args});return op==='media'?new Promise((resolve,reject)=>waiters.push({resolve,reject})):Promise.resolve({result:'LEASE_RELEASED'});},{epoch:'TEST-epoch',clock:()=>now,onStart:p=>events.push(['start',p]),onStop:(p,r)=>events.push(['stop',p,r])});
++  const grant=(id='a'.repeat(32),ms=10000)=>({id,epoch:'TEST-epoch',valid_for_ms:ms});
++  return {media,calls,events,waiters,grant,advance:t=>{now=t;media.tick();}};
++ }
++ test('media watchdog expiry stops locally without transport and rejects stale callbacks',async()=>{
++  const f=mediaFixture(),start=f.media.start('capture');f.waiters.shift().resolve(f.grant());await start;
++  assert.equal(f.media.guard('capture',1,()=>{}),true);
++  f.advance(3000);assert.equal(f.calls.length,2);f.advance(10000);
++  assert.equal(f.media.snapshot().active.length,0);assert.equal(f.media.guard('capture',1,()=>assert.fail()),false);
++  f.waiters.shift().resolve(f.grant());await new Promise(setImmediate);
++  assert.equal(f.media.snapshot().active.length,0);assert.equal(f.calls.filter(x=>x.op==='media'&&x.args.lease_id===null).length,1);
++ });
++ test('late grant after local stop never starts modeled capture',async()=>{
++  const f=mediaFixture(),pending=f.media.start('capture');await f.media.stop('capture');
++  f.waiters.shift().resolve(f.grant());await assert.rejects(pending,/MEDIA_STALE/);
++  assert.equal(f.events.filter(e=>e[0]==='start').length,0);assert.deepEqual(f.media.snapshot().pending,[]);
++ });
++ test('media deadline includes network latency and enforces returned epoch/validity',async()=>{
++  for(const grant of [{id:'a'.repeat(32),epoch:'wrong',valid_for_ms:10000},{id:'a'.repeat(32),epoch:'TEST-epoch',valid_for_ms:20000}]){
++   const f=mediaFixture(),start=f.media.start('capture');f.waiters.shift().resolve(grant);await assert.rejects(start,/MEDIA_GRANT/);
++  }
++  const f=mediaFixture(),start=f.media.start('capture');f.advance(10000);f.waiters.shift().resolve(f.grant());await assert.rejects(start,/MEDIA_STALE/);
++ });
++ test('renewal denied stops owned media and no reacquisition follows',async()=>{
++  const f=mediaFixture(),start=f.media.start('capture');f.waiters.shift().resolve(f.grant());await start;
++  f.advance(3000);f.waiters.shift().reject(Error('CORE_DENIED'));await new Promise(setImmediate);
++  f.advance(11000);assert.equal(f.media.snapshot().active.length,0);assert.equal(f.calls.filter(x=>x.op==='media').length,2);
++ });
++ test('capture/playback stop and request cancellation are separate; another adapter is unaffected',async()=>{
++  const a=mediaFixture(),b=mediaFixture();
++  let p=a.media.start('capture');a.waiters.shift().resolve(a.grant());await p;
++  p=a.media.start('playback','request');a.waiters.shift().resolve(a.grant('b'.repeat(32)));await p;
++  p=b.media.start('capture');b.waiters.shift().resolve(b.grant('c'.repeat(32)));await p;
++  await a.media.stop('capture');assert.deepEqual(a.media.snapshot().active.map(x=>x.purpose),['playback']);assert.equal(b.media.snapshot().active.length,1);
++  assert.equal(a.calls.some(x=>x.op==='cancel'),false);await a.media.stop('playback');assert.equal(b.media.snapshot().active.length,1);
++ });
++ test('fresh adapter has no grants; transport loss cannot revive old callbacks',async()=>{
++  const f=mediaFixture(),start=f.media.start('capture');f.waiters.shift().resolve(f.grant());await start;
++  f.media.stopAll('TRANSPORT_LOST');assert.equal(f.media.guard('capture',1,()=>assert.fail()),false);
++  assert.deepEqual(mediaFixture().media.snapshot().active,[]);
++ });
+  test('preserves exact Windows creation-time integer',()=>{const raw='{"created":134335772813688018}';assert.equal(client.canonical(client.parse(Buffer.from(raw))),raw);});
+  test('unsafe Number rejected',()=>assert.throws(()=>client.canonical({created:134335772813688018}),/UNSAFE_NUMBER/));
+  test('canonical protocol bytes sorted with Python-compatible ASCII escapes',()=>assert.equal(client.canonical({z:'é',a:2}),'{"a":2,"z":"\\u00e9"}'));

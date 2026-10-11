@@ -1,0 +1,24 @@
+const assert=require('node:assert/strict');
+const Voice=require('./static/voice.js');
+(async()=>{
+ let wake=false,commands=0,interruptions=0,status='',resolve;
+ const v=new Voice({detect:async()=>({detected:wake}),status:s=>status=s,wake:()=>interruptions++,error:e=>{throw e},command:async blob=>{commands++;const a=await blob.arrayBuffer();assert.equal(blob.type,'application/octet-stream');assert.equal(a.byteLength % (5120*2),0);assert.ok(new Int16Array(a).includes(2000));}});
+ v.active=true;v.client='test';
+ const silence=new Int16Array(5120),speech=new Int16Array(5120).fill(2000);
+ for(let i=0;i<40;i++)await v.frame(speech,0);
+ assert.equal(commands,0,'Speech without wake must never reach transcription');
+ wake=true;await v.frame(speech,0);wake=false;
+ assert.equal(interruptions,1);
+ await v.frame(speech,0);for(let i=0;i<4;i++)await v.frame(silence,0);
+ assert.equal(commands,1,'Wake plus utterance should submit once');
+ for(let i=0;i<30;i++)await v.frame(silence,0);
+ assert.equal(commands,1,'Silence must never submit');
+ await new Promise(setImmediate);v.endConversation();v.arm();for(let i=0;i<24;i++)await v.frame(silence,0);
+ assert.equal(commands,1,'An empty armed window expires without transcription');
+ v.endConversation();v.cb.detect=()=>new Promise(r=>resolve=r);
+ const pending=v.frame(silence,0);v.stop();resolve({detected:true});await pending;
+ assert.equal(v.armed,false,'Mute invalidates in-flight wake responses');
+ assert.equal(interruptions,2,'Only the initial wake and explicit arm may interrupt; mute discards the pending wake');
+ const wav=await Voice.wav([speech]).arrayBuffer();assert.equal(new DataView(wav).getUint32(24,true),16000);
+ console.log('Voice tests passed: wake gate, interruption, silence, timeout, mute, WAV format.');
+})().catch(e=>{console.error(e);process.exitCode=1});

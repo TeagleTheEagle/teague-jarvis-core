@@ -1,0 +1,554 @@
+--- before/budgeted_repair.py
++++ current/budgeted_repair.py
+@@ -22,7 +22,12 @@
+         return self.service.dispatch(op, body)
+ 
+ 
+-async def run(store, core, project, task, operation, confirmation, cancel=None, checker=check_candidate):
++async def run(store, core, project, task, operation, confirmation, cancel=None, checker=check_candidate,
++              *, before_step=None, test_workflow=None):
++    # Optional trusted TEST host hooks. Default workflow/accounting is unchanged.
++    # Callbacks cannot be supplied through a renderer/model request.
++    if test_workflow is not None and before_step is None:
++        raise ValueError('Synthetic workflow requires a lifecycle admission hook.')
+     stop = cancel if cancel is not None else threading.Event()
+     receipt = budgets.change(store, dict(action='budget_reserve', project=project,
+                                         task=task, operation=operation, resources=ALLOCATION))
+@@ -41,6 +46,7 @@
+ 
+     def charge(resource):
+         nonlocal revision
++        if before_step is not None: before_step()
+         if stop.is_set(): raise InterruptedError()
+         with lock:
+             next_usage={**usage,resource:usage[resource]+1}
+@@ -69,7 +75,7 @@
+             raise
+ 
+     try:
+-        report=await repair_workflow.run(MeteredCore(),stop,metered_check)
++        report=await (test_workflow or repair_workflow.run)(MeteredCore(),stop,metered_check)
+     except BaseException:
+         # Abrupt/outer cancellation cannot claim verified completion or refund.
+         stop.set()
+@@ -89,8 +95,11 @@
+     return report
+ 
+ 
+-def dispatch(app, service, body):
++def dispatch(app, service, body, *, stage4_token=None):
+     """Called only AFTER the existing desktop HTTP authentication checks."""
++    if getattr(app,'stage4',None) is not None:
++        # TEST requests cannot fall through to the actual sandbox/service path.
++        return app.stage4.repair_dispatch(stage4_token,body)
+     if type(body) is not dict: raise ValueError('Expected object.')
+     action=body.get('action')
+     operation=body.get('operation')
+--- before/stage4_runtime.py
++++ current/stage4_runtime.py
+@@ -90,6 +90,10 @@
+         self.inspection_jobs = {}
+         self.inspection_runner = None
+         self.inspection_finish = None  # Trusted synthetic fixture only; no capture/provider.
++        self.repair_fixture = None  # Trusted synthetic outcomes; never a real repair.
++        self.repair_requests = {}
++        self.repair_results = {}
++        self.repair_admission = threading.Lock()
+         from stage4_response_history import History
+         self.response_history = History(self.data/'jarvis.sqlite3')
+         self.text_router = None
+@@ -271,6 +275,84 @@
+             key = self.inspection_jobs.get(wid)
+             done = self.owners.work[wid].done.is_set()
+         return {'request_id':wid, 'done':done, 'job':JOBS.get(key) if key else None}
++
++    def repair_dispatch(self, token, body):
++        """Owner-bound fixed TEST fixture using the existing reservation runner."""
++        import asyncio
++        import budgeted_repair
++        require(type(body) is dict, 'REQUEST')
++        with self.owners.lock:
++            self.owners._session(token, self.epoch, 'request')
++        require(self.repair_fixture is not None, 'TEST_REPAIR_UNAVAILABLE')
++        action = body.get('action')
++        if action in ('status','cancel'):
++            authentication.fields(body, ('action','request_id'))
++            wid = self.owners.check_owner(token, self.epoch, body['request_id'])
++            require(self.owners.work[wid].kind == 'repair', 'WORK_KIND')
++            if action == 'cancel':
++                self.owners.cancel_request(token, self.epoch, wid)
++            with self.owners.lock:
++                return {'request_id':wid, 'done':self.owners.work[wid].done.is_set(),
++                        'outcome':self.owners.work[wid].outcome,
++                        'cancel_requested':self.owners.work[wid].cancel.is_set(),
++                        'result':self.repair_results.get(wid), 'deployed':False}
++        require(action == 'run', 'OPERATION_DENIED')
++        authentication.fields(body, ('action','operation','project','task','confirmation'))
++        operation = body['operation']
++        require(type(operation) is str and len(operation)==32 and all(c in '0123456789abcdef' for c in operation), 'OPERATION')
++        require(type(body['confirmation']) is str and len(body['confirmation']) <= 100, 'CONFIRMATION')
++        confirmation = body['confirmation']
++        fixture = self.repair_fixture
++        require(body['project']==fixture['project'] and body['task']==fixture['task'], 'TEST_FIXTURE_ONLY')
++        # Never hold the ownership/admission mutex during SQLite or journal IO.
++        # Concurrent callers get BUSY rather than wait behind a stalled publisher.
++        require(self.repair_admission.acquire(blocking=False), 'BUSY')
++        try:
++            with self.owners.lock:
++                self.owners._session(token, self.epoch, 'request')
++                require(self.owners.state == 'RUNNING', 'ADMISSION_CLOSED')
++                prior = self.repair_requests.get(operation)
++                if prior:
++                    self.owners.check_owner(token, self.epoch, prior['request_id'])
++                    require(prior['confirmation']==body['confirmation'], 'IDEMPOTENCY_CONFLICT')
++                    return {'request_id':prior['request_id'], 'duplicate':True, 'deployed':False}
++                require(not any(w.kind=='repair' and (not w.done.is_set() or self.lifecycle.workers[w.id].is_alive())
++                                for w in self.owners.work.values()), 'BUSY')
++            with self.app.store.connect() as db:
++                # A historical reservation is not restored execution authority.
++                # No ownership inference from a known operation ID after restart.
++                require(db.execute('SELECT 1 FROM project_budget_reservations WHERE project=? AND operation=?',
++                    (fixture['project'],operation)).fetchone() is None, 'REPLAY_NOT_AUTHORIZED')
++                available = budgeted_repair.budgets.snapshot(db,fixture['project'])
++                require(available['configured'] and all(available['remaining'][k] >= v
++                        for k,v in budgeted_repair.ALLOCATION.items()), 'RESOURCE_LIMIT')
++            ready = threading.Event(); mapping = {}
++            def work(cancel):
++                if not ready.wait(2):return 'UNKNOWN'
++                wid = mapping['work']
++                def checkpoint():
++                    try:self.owners.next_step(wid)
++                    except Denied:
++                        cancel.set()
++                        raise InterruptedError('TEST repair admission closed') from None
++                try:
++                    result = asyncio.run(budgeted_repair.run(self.app.store,fixture['responder'],fixture['project'],fixture['task'],
++                        operation,confirmation,cancel,fixture['checker'],before_step=checkpoint,test_workflow=fixture['workflow']))
++                except Exception as exc:
++                    with self.owners.lock:
++                        self.repair_results[wid]={'status':'UNKNOWN','error_type':type(exc).__name__,'deployed':False,'simulated':True}
++                    return 'UNKNOWN'
++                with self.owners.lock:
++                    self.repair_results[wid]={**result,'simulated':True,'actual_repair_executed':False}
++                if result.get('budget_state') == 'recovery_required':return 'UNKNOWN'
++                return 'SUCCEEDED' if result['status']=='READY_FOR_REVIEW' else 'FAILED'
++            wid = self.lifecycle.dispatch(token,self.epoch,'repair',work,budget_ref=fixture['project']+':'+operation)
++            mapping['work'] = wid
++            self.repair_requests[operation]={'request_id':wid,'confirmation':confirmation}
++            ready.set()
++            return {'request_id':wid,'duplicate':False,'deployed':False,'simulated':True,'actual_repair_executed':False}
++        finally:
++            self.repair_admission.release()
+ 
+ 
+ def construct_app(context):
+@@ -388,6 +470,10 @@
+         if op == 'inspection-status':
+             authentication.fields(args, ('request_id',))
+             return self.context.inspection_status(token, args['request_id'])
++        if op == 'repair':
++            authentication.fields(args, ('request',))
++            import budgeted_repair
++            return budgeted_repair.dispatch(self.context.app,None,args['request'],stage4_token=token)
+         if op == 'deep-review':
+             authentication.fields(args, ('review',))
+             from stage4_deep_review import admit
+@@ -465,7 +551,7 @@
+         raise Denied('OPERATION_DENIED')
+ 
+ 
+-def serve(root, configuration, *, inspection_setup=None):
++def serve(root, configuration, *, inspection_setup=None, repair_setup=None):
+     """Explicit isolated child entry; caller coordinates startup under supervisor.lock.
+ 
+     No stdin lifetime ownership and no restart loop. Credentials arrive only from
+@@ -493,6 +579,9 @@
+         if configuration.get('inspection_fixture') is True:
+             require(inspection_setup is not None, 'TRUSTED_INSPECTION_FIXTURE_REQUIRED')
+             inspection_setup(context)
++        if configuration.get('repair_fixture') is True:
++            require(repair_setup is not None, 'TRUSTED_REPAIR_FIXTURE_REQUIRED')
++            repair_setup(context)
+         metadata={**exclusion.process_identity(os.getpid()),'namespace':root.name,'mode':'TEST','epoch':context.epoch}
+         exclusion.write(root/'core.json',metadata)
+         identity={**transport.identity(os.getpid()),'mode':'TEST','namespace':root.name,
+--- before/docs/CANONICAL-CORE-STAGE-4.md
++++ current/docs/CANONICAL-CORE-STAGE-4.md
+@@ -679,3 +679,15 @@
+ See STAGE4-IPC-GUARD-VALIDATION.md for cleanup, exact guard, preserved failures,
+ final automated test results and rollback. Approved correction validation PASS;
+ overall Stage4 acceptance remains incomplete and production blocked. No commit.
++
++## TEST repair-worker cleanup/accounting checkpoint — 2026-09-12
++
++See [repair cleanup review](lifecycle-stage4-evidence/repair-cleanup-20260912/REVIEW.md).
++Focused synthetic worker tests 20/20 and existing budget regressions 19/19 pass.
++Real authenticated TEST App integration is blocked before its first synthetic
++resource attempt. A no-Core diagnostic confirms Windows asyncio loop creation
++conflicts with the existing TEST network-denial policy. The original worker
++traceback was not captured; its UNKNOWN journal and zero reservation rows remain
++preserved. Separately approved identity-verified cleanup of TEST Core 16580 is
++complete; its launcher exited naturally. No production runtime/data changes or activation.
++A bounded TEST loop-host proposal requires review; no acceptance commit or Stage5.
+--- before/tests/lifecycle_stage4/fixtures.py
++++ current/tests/lifecycle_stage4/fixtures.py
+@@ -296,6 +296,58 @@
+     context.inspection_finish = finish
+ 
+ 
++async def synthetic_repair_workflow(responder, cancel, checker):
++    """Exercise metering/cancellation callbacks only; no patch or sandbox execution."""
++    import asyncio
++    report={'status':'RUNNING','deployed':False,'synthetic_outcome_only':True,'actual_repair_executed':False}
++    try:
++        for label in ('SYNTHETIC_BASELINE','SYNTHETIC_CANDIDATE'):
++            if cancel.is_set():raise InterruptedError()
++            result=await asyncio.to_thread(checker,label,cancel)
++            if not result.get('cleanup'):
++                report['status']='FAILED';return report
++            if label=='SYNTHETIC_BASELINE':
++                if cancel.is_set():raise InterruptedError()
++                await responder.respond('STAGE4_TEST synthetic resource attempt',cancel=cancel)
++        if cancel.is_set():raise InterruptedError()
++        report['status']='READY_FOR_REVIEW'
++    except InterruptedError:report['status']='CANCELLED'
++    except Exception:report['status']='FAILED'
++    return report
++
++
++def provision_repair_fixture(context, responder, checker, workflow=synthetic_repair_workflow):
++    import workspaces, budgeted_repair
++    store=context.app.store
++    project=workspaces.change(store,{'action':'create','name':'STAGE4_TEST repair accounting'})['id']
++    task=store.task_put('STAGE4_TEST synthetic cleanup outcome')['id']
++    workspaces.change(store,{'action':'link','project':project,'kind':'task','ref':task})
++    workspaces.change(store,{'action':'budget_configure','project':project,'limits':budgeted_repair.ALLOCATION})
++    context.repair_fixture={'project':project,'task':task,'responder':responder,'checker':checker,'workflow':workflow}
++    return project,task
++
++
++def bind_repair_fixture(context):
++    """Trusted TEST parent setup; no provider, child process or real repair runner."""
++    from types import SimpleNamespace
++    h=sys.modules[context.__class__.__module__].exclusion
++    async def respond(prompt, *, cancel):
++        h.event(context.root,'repair_attempt_started')
++        if not cancel.wait(5):raise TimeoutError('TEST cancellation not received')
++        h.event(context.root,'repair_cleanup_started')
++        until=time.monotonic()+5
++        while not (context.root/'repair-release').exists():
++            if time.monotonic()>=until:raise TimeoutError('TEST cleanup release not received')
++            time.sleep(.01)
++        h.event(context.root,'repair_cleanup_finished')
++        return 'STAGE4_TEST synthetic completed attempt; no AI response or patch'
++    def checker(label,cancel):
++        h.event(context.root,'repair_check_attempt',fixture=label)
++        return {'cleanup':True,'simulated':True}
++    project,task=provision_repair_fixture(context,SimpleNamespace(respond=respond),checker)
++    h.event(context.root,'repair_fixture_ready',project=project,task=task)
++
++
+ def real_app_probe(final_case='normal'):
+     import secrets
+     repo=Path(__file__).resolve().parents[2];sys.path.insert(0,str(repo))
+@@ -312,6 +364,8 @@
+     config={'data_id':data_id,'server_key':key.hex(),'endpoint':name,'enrollments':enrolled}
+     if final_case.startswith('inspection-'):
+         config['inspection_fixture'] = True
++    if final_case.startswith('repair-'):
++        config['repair_fixture'] = True
+     env={k.upper():v for k,v in os.environ.items() if k.upper() in ('SYSTEMROOT','WINDIR','TEMP','TMP')}
+     report=[];tokens={};ready=None;core=None;measurements={}
+     def record(case,ok):
+@@ -424,7 +478,50 @@
+             state=call('controller','emergency-stop',{'operation':uuid.uuid4().hex})
+             record('owner emergency suspends but does not shut down Core',state['state']=='SUSPENDED' and core.poll() is None)
+             record('suspended Core refuses new work',call('teague','request',{'text':'what time is it'}).get('result')=='DENIED')
+-        if final_case.startswith('inspection-'):
++        if final_case.startswith('repair-'):
++            import sqlite3, budgeted_repair
++            fixture=h.read(next(root.glob('*-repair_fixture_ready.json')))
++            operation=uuid.uuid4().hex
++            body={'action':'run','operation':operation,'project':fixture['project'],'task':fixture['task'],'confirmation':budgeted_repair.CONFIRMATION}
++            def row():
++                with sqlite3.connect((Path(ready['data_root'])/'jarvis.sqlite3').as_uri()+'?mode=ro',uri=True) as db:
++                    db.row_factory=sqlite3.Row
++                    return dict(db.execute('SELECT * FROM project_budget_reservations WHERE project=? AND operation=?',(fixture['project'],operation)).fetchone())
++            started=call('teague','repair',{'request':body});repair=started['request_id']
++            record('repair is explicitly synthetic and not deployed',started['simulated'] and not started['actual_repair_executed'] and not started['deployed'])
++            until=time.monotonic()+3
++            while not list(root.glob('*-repair_attempt_started.json')):
++                if time.monotonic()>until:raise TimeoutError('Synthetic repair resource started')
++                time.sleep(.01)
++            record('resource attempts charged before completion',row()['state']=='started' and row()['used_core']==1 and row()['used_container']==1)
++            record('same owner duplicate returns same request',call('teague','repair',{'request':body})['request_id']==repair)
++            record('foreign repair result denied',call('intelligence','repair',{'request':{'action':'status','request_id':repair}}).get('result')=='DENIED')
++            record('foreign repair cancellation denied',call('intelligence','repair',{'request':{'action':'cancel','request_id':repair}}).get('result')=='DENIED')
++            record('foreign operation ID does not grant authority',call('intelligence','repair',{'request':body}).get('result')=='DENIED')
++            if final_case=='repair-detach':
++                call('teague','detach')
++                tokens['teague']=call('teague','attach',{'scopes':enrolled['teague']['scopes']})['token']
++                record('reattachment does not inherit repair ownership',call('teague','repair',{'request':{'action':'status','request_id':repair}}).get('result')=='DENIED')
++            elif final_case=='repair-emergency':
++                call('controller','emergency-stop',{'operation':uuid.uuid4().hex})
++                record('emergency cancels repair without Core exit',core.poll() is None)
++            else:
++                call('teague','repair',{'request':{'action':'cancel','request_id':repair}})
++            until=time.monotonic()+3
++            while not list(root.glob('*-repair_cleanup_started.json')):
++                if time.monotonic()>until:raise TimeoutError('Repair cleanup started')
++                time.sleep(.01)
++            record('cancellation did not settle or refund active repair',row()['state']=='started' and row()['used_core']==1 and row()['used_container']==1)
++            record('cleanup remains registered active work',call('controller','lifecycle-status')['active_work']==1)
++            call('controller','shutdown',{'operation':uuid.uuid4().hex})
++            record('repair admission closed during drain',call('intelligence','repair',{'request':{**body,'operation':uuid.uuid4().hex}}).get('result')=='DENIED')
++            held=False
++            try:
++                with h.Lock(root,'core.lock'):pass
++            except h.Busy:held=True
++            record('repair cleanup retains lifetime ownership',held and core.poll() is None)
++            (root/'repair-release').touch()
++        elif final_case.startswith('inspection-'):
+             record('synthetic archive prerequisite verified before request',len(list(root.glob('*-inspection_fixture_ready.json')))==1)
+             started=call('teague','inspection-start',{'request':{'panel':'all'}})
+             inspection=started['request_id']
+@@ -471,6 +568,12 @@
+         for journal in root.glob('STAGE4_TEST-journal-*'):
+             rows.extend(runtime.Journal(journal,{'mode':'STAGE4_TEST','data_id':data_id}).inspect())
+         record('graceful drain journal contains only terminal records',bool(rows))
++        if final_case.startswith('repair-'):
++            result=row()
++            record('known cleanup settles only observed partial usage',result['state']=='settled' and result['outcome']=='failed' and result['used_core']==1 and result['used_container']==1)
++            record('terminal journal keeps exact budget reference',any(r['operation']==repair and r['phase']=='FAILED' and r['budget_ref']==fixture['project']+':'+operation for r in rows))
++            record('no next check or duplicate resource attempt',len(list(root.glob('*-repair_attempt_started.json')))==1 and len(list(root.glob('*-repair_check_attempt.json')))==1)
++            record('cleanup completed before exit',len(list(root.glob('*-repair_cleanup_finished.json')))==1)
+         if final_case.startswith('inspection-'):
+             archived=h.read(next(root.glob('*-inspection_archive_finished.json')))
+             # Use the actual advertised isolated Store root, not source data.
+@@ -683,9 +786,12 @@
+     elif '--real-app-inspection-cleanup' in sys.argv:real_app_probe('inspection-cleanup')
+     elif '--real-app-inspection-detach' in sys.argv:real_app_probe('inspection-detach')
+     elif '--real-app-inspection-emergency' in sys.argv:real_app_probe('inspection-emergency')
++    elif '--real-app-repair-cleanup' in sys.argv:real_app_probe('repair-cleanup')
++    elif '--real-app-repair-detach' in sys.argv:real_app_probe('repair-detach')
++    elif '--real-app-repair-emergency' in sys.argv:real_app_probe('repair-emergency')
+     elif '--electron-app-probe' in sys.argv:electron_app_probe()
+     elif '--app-worker' in sys.argv:
+         repo=Path(__file__).resolve().parents[2];sys.path.insert(0,str(repo))
+         import stage4_runtime
+-        stage4_runtime.serve(Path(sys.argv[2]),json.loads(sys.stdin.readline()),inspection_setup=bind_inspection_fixture)
++        stage4_runtime.serve(Path(sys.argv[2]),json.loads(sys.stdin.readline()),inspection_setup=bind_inspection_fixture,repair_setup=bind_repair_fixture)
+     else:run()
+--- before/tests/lifecycle_stage4/test_stage4.py
++++ current/tests/lifecycle_stage4/test_stage4.py
+@@ -499,7 +499,210 @@
+     raise SystemExit(not result.wasSuccessful())
+ 
+ 
++def repair_tests():
++    import concurrent.futures
++    import threading
++    import unittest
++    from unittest.mock import patch
++    from types import SimpleNamespace
++    sys.path.insert(0,str(REPO));sys.path.insert(0,str(Path(__file__).parent))
++    import budgeted_repair, project_budgets as budgets, workspaces
++    from store import Store
++    from stage4_sessions import Ownership, Denied
++    from stage4_lifecycle import Lifecycle, Journal
++    from stage4_runtime import Context
++    from fixtures import provision_repair_fixture
++    runroot=REPO/'tests/lifecycle_stage4/evidence'/('STAGE4_TEST-repair-'+uuid.uuid4().hex)
++    runroot.mkdir(parents=True);records=[]
++
++    class Tests(unittest.TestCase):
++        def setUp(self):
++            self.root=runroot/self._testMethodName;self.root.mkdir()
++            self.now=0.;self.release=threading.Event();self.entered=threading.Event();self.cleaning=threading.Event()
++            self.block=False;self.fail=False;self.bad_cleanup=False;self.calls=[]
++            self.o=Ownership(mode='STAGE4_TEST',epoch='TEST-repair',clock=lambda:self.now,
++                enrollments={'a':Ownership.ORDINARY,'b':Ownership.ORDINARY,'owner':Ownership.ORDINARY|Ownership.MANAGEMENT})
++            self.a=self.o.attach_verified('a',Ownership.ORDINARY,3);self.b=self.o.attach_verified('b',Ownership.ORDINARY,3)
++            self.owner=self.o.attach_verified('owner',Ownership.ORDINARY|Ownership.MANAGEMENT,3)
++            identity={'mode':'STAGE4_TEST','case':self._testMethodName}
++            jr=self.root/'STAGE4_TEST-journal';jr.mkdir();(jr/'STAGE4_TEST.json').write_text(json.dumps(identity,sort_keys=True))
++            self.j=Journal(jr,identity);self.life=Lifecycle(self.o,self.j)
++            self.ctx=Context.__new__(Context);self.ctx.owners=self.o;self.ctx.lifecycle=self.life;self.ctx.epoch=self.o.epoch
++            self.ctx.repair_fixture=None;self.ctx.repair_requests={};self.ctx.repair_results={};self.ctx.repair_admission=threading.Lock()
++            self.s=Store(self.root/'data');self.ctx.app=SimpleNamespace(store=self.s,stage4=self.ctx)
++            workspaces.setup(self.s)
++            self.project,self.task=provision_repair_fixture(self.ctx,SimpleNamespace(respond=self.respond),self.checker)
++            self.body={'action':'run','operation':uuid.uuid4().hex,'project':self.project,'task':self.task,'confirmation':budgeted_repair.CONFIRMATION}
++            self.addCleanup(self.clean)
++            for target in ('budgeted_repair.repair_workflow.run','budgeted_repair.check_candidate','budgeted_repair.ExistingServiceCore'):
++                p=patch(target,side_effect=AssertionError('Real repair path forbidden'));p.start();self.addCleanup(p.stop)
++        async def respond(self,*args,**kwargs):
++            self.calls.append('core');self.entered.set()
++            if self.block:
++                if not kwargs['cancel'].wait(3):raise TimeoutError('TEST cancel absent')
++                self.cleaning.set()
++                if not self.release.wait(3):raise TimeoutError('TEST cleanup absent')
++            if self.fail:raise OSError('TEST uncertain synthetic consumption')
++            return 'Synthetic completed attempt'
++        def checker(self,label,cancel):
++            self.calls.append(label);return {'cleanup':not self.bad_cleanup,'simulated':True}
++        def clean(self):
++            self.release.set()
++            for w in self.o.work.values():w.cancel.set()
++            self.join()
++            with self.s.connect() as db:rows=[dict(r) for r in db.execute('SELECT * FROM project_budget_reservations')]
++            records.append({'case':self._testMethodName,'root':str(self.root),'calls':self.calls,'reservations':rows,
++                'work':[{'id':w.id,'phase':w.phase,'outcome':w.outcome,'done':w.done.is_set()} for w in self.o.work.values()],
++                'state':self.o.state,'failure':self.life.failure})
++        def join(self):
++            for t in list(self.life.workers.values()):
++                if t.ident:t.join(4)
++                self.assertFalse(t.is_alive())
++        def start(self,token=None,body=None):
++            return budgeted_repair.dispatch(self.ctx.app,None,body or self.body,stage4_token=token or self.a)['request_id']
++        def status(self,w,action='status',token=None):
++            return self.ctx.repair_dispatch(token or self.a,{'action':action,'request_id':w})
++        def row(self):
++            with self.s.connect() as db:
++                row=db.execute('SELECT * FROM project_budget_reservations WHERE operation=?',(self.body['operation'],)).fetchone()
++                return dict(row) if row else None
++        def stop(self,action='shutdown'):
++            op=uuid.uuid4().hex;cap=self.o.management_capability(self.owner,self.o.epoch,action,op)
++            return self.life.request(self.owner,self.o.epoch,cap,action,op)
++        def test_01_success_settles_actual_units(self):
++            w=self.start();self.join();r=self.row()
++            self.assertEqual((r['state'],r['used_core'],r['used_container']),('settled',1,2))
++            self.assertEqual(self.o.work[w].outcome,'SUCCEEDED');self.assertFalse(self.status(w)['result']['actual_repair_executed'])
++            self.assertEqual(self.j.inspect()[0]['budget_ref'],self.project+':'+self.body['operation'])
++        def test_02_duplicate_never_executes_twice(self):
++            w=self.start();self.join();self.assertEqual(self.start(),w)
++            self.assertEqual(self.calls.count('core'),1);self.assertEqual(len(self.life.workers),1)
++        def test_03_foreign_owner_denied(self):
++            w=self.start();self.join()
++            for action in ('status','cancel'):
++                with self.assertRaises(Denied):self.status(w,action,self.b)
++            with self.assertRaises(Denied):self.start(self.b)
++        def test_04_confirmation_is_not_budget_permission(self):
++            self.body['confirmation']='';w=self.start();self.join()
++            self.assertEqual(self.row()['state'],'released');self.assertEqual(self.calls,[])
++            self.assertEqual(self.status(w)['result']['status'],'NOT_AUTHORIZED')
++            with self.assertRaisesRegex(Denied,'IDEMPOTENCY_CONFLICT'):
++                self.start(body={**self.body,'confirmation':budgeted_repair.CONFIRMATION})
++        def test_05_cancel_retains_hold_until_cleanup(self):
++            self.block=True;w=self.start();self.assertTrue(self.entered.wait(2));self.status(w,'cancel')
++            self.assertTrue(self.cleaning.wait(2));self.assertFalse(self.status(w)['done'])
++            self.assertEqual(self.row()['state'],'started');self.assertEqual(self.row()['used_core'],1)
++            self.release.set();self.join()
++            self.assertEqual((self.row()['state'],self.row()['used_container']),('settled',1))
++            self.assertEqual(self.o.work[w].outcome,'FAILED');self.assertNotIn('SYNTHETIC_CANDIDATE',self.calls)
++        def test_06_detach_cancels_without_inheriting(self):
++            self.block=True;w=self.start();self.assertTrue(self.entered.wait(2));self.o.detach(self.a,self.o.epoch)
++            new=self.o.attach_verified('a',Ownership.ORDINARY,3)
++            with self.assertRaises(Denied):self.status(w,token=new)
++            with self.assertRaises(Denied):self.start(new)
++            self.assertTrue(self.cleaning.wait(2));self.assertEqual(self.row()['state'],'started')
++            self.release.set();self.join();self.assertEqual(self.row()['state'],'settled')
++        def test_07_unknown_provider_attempt_is_not_refunded(self):
++            self.fail=True;w=self.start();self.join();self.assertEqual(self.o.work[w].outcome,'UNKNOWN')
++            r=self.row();self.assertEqual(r['state'],'recovery_required');self.assertEqual(r['used_core'],1)
++            with self.s.connect() as db:self.assertEqual(budgets.snapshot(db,self.project)['remaining'],{'core_requests':0,'container_checks':0})
++            self.stop();self.now=31;self.life.tick();self.assertEqual(self.o.state,'RECOVERY_REQUIRED')
++            with self.assertRaises(Denied):self.j.inspect()
++        def test_08_unknown_checker_cleanup_retains_full_hold(self):
++            self.bad_cleanup=True;w=self.start();self.join()
++            self.assertEqual(self.row()['state'],'recovery_required');self.assertEqual(self.row()['used_container'],1)
++            self.assertEqual(self.o.work[w].outcome,'UNKNOWN');self.assertNotIn('core',self.calls)
++        def test_09_deadline_does_not_detach_live_cleanup(self):
++            self.block=True;w=self.start();self.assertTrue(self.entered.wait(2));self.stop()
++            self.now=11;self.life.tick();self.assertTrue(self.cleaning.wait(2));self.now=31;self.life.tick()
++            self.assertEqual(self.o.state,'RECOVERY_REQUIRED');self.assertTrue(self.life.workers[w].is_alive())
++            self.assertEqual(self.row()['state'],'started');self.release.set();self.join()
++            self.assertEqual(self.row()['state'],'settled');self.assertEqual(self.o.state,'RECOVERY_REQUIRED')
++        def test_10_cancel_before_begin_has_no_reservation(self):
++            entered=threading.Event();go=threading.Event();original=self.j.write
++            def write(operation,phase,**kw):
++                if phase=='RUNNING':entered.set();go.wait(3)
++                return original(operation,phase,**kw)
++            with patch.object(self.j,'write',write):
++                w=self.start();self.assertTrue(entered.wait(2));self.status(w,'cancel');go.set();self.join()
++            self.assertEqual(self.o.work[w].outcome,'NEVER_STARTED');self.assertIsNone(self.row());self.assertEqual(self.calls,[])
++        def test_11_drain_closes_admission_before_reservation(self):
++            self.stop()
++            with self.assertRaisesRegex(Denied,'ADMISSION_CLOSED'):self.start()
++            self.assertIsNone(self.row());self.assertEqual(self.calls,[])
++        def test_12_settlement_is_inside_registered_worker(self):
++            settling=threading.Event();original=budgets.lifecycle
++            def lifecycle(*args,**kwargs):
++                if args[3]=='settle':settling.set();self.release.wait(3)
++                return original(*args,**kwargs)
++            with patch.object(budgets,'lifecycle',lifecycle):
++                w=self.start();self.assertTrue(settling.wait(2));self.stop();self.life.tick()
++                self.assertFalse(self.o.work[w].done.is_set());self.assertEqual(self.row()['state'],'started')
++                self.assertEqual(self.o.state,'DRAINING');self.release.set();self.join()
++            self.assertEqual(self.row()['state'],'settled');self.life.tick();self.assertEqual(self.o.state,'FINALIZING')
++        def test_13_over_budget_rejected_without_worker(self):
++            self.start();self.join()
++            with self.assertRaisesRegex(Denied,'RESOURCE_LIMIT'):self.start(body={**self.body,'operation':uuid.uuid4().hex})
++            self.assertEqual(len(self.life.workers),1)
++        def test_14_restart_reservation_is_not_authority(self):
++            self.fail=True;self.start();self.join();self.ctx.repair_requests.clear()
++            new=self.o.attach_verified('a',Ownership.ORDINARY,3)
++            with self.assertRaisesRegex(Denied,'REPLAY_NOT_AUTHORIZED'):self.start(new)
++            script="import sqlite3,json,sys; d=sqlite3.connect('file:'+sys.argv[1]+'?mode=ro',uri=True); d.row_factory=sqlite3.Row; print(json.dumps([dict(r) for r in d.execute('SELECT state,used_core,used_container FROM project_budget_reservations')]))"
++            result=subprocess.run([sys.executable,'-I','-B','-c',script,str(self.s.path)],capture_output=True,text=True,check=True)
++            self.assertEqual(json.loads(result.stdout)[0],{'state':'recovery_required','used_core':1,'used_container':1})
++        def test_15_expired_started_reservation_is_not_released(self):
++            self.fail=True;self.start();self.join();r=self.row()
++            with self.s.connect() as db:db.execute('UPDATE project_budget_reservations SET expires=0')
++            with self.assertRaises(ValueError):budgets.lifecycle(self.s,self.project,self.body['operation'],'release',r['revision'])
++            with self.s.connect() as db:
++                snap=budgets.snapshot(db,self.project);self.assertIn(self.body['operation'],snap['recovery_required'])
++                self.assertEqual(snap['remaining']['core_requests'],0)
++        def test_16_corrupt_reservation_fails_closed(self):
++            self.start();self.join()
++            with self.s.connect() as db:db.execute("UPDATE project_budget_reservations SET state='CORRUPT_TEST'")
++            with self.assertRaisesRegex(ValueError,'Corrupted'):self.start(body={**self.body,'operation':uuid.uuid4().hex})
++            self.assertEqual(len(self.life.workers),1)
++        def test_17_concurrent_duplicate_admission(self):
++            barrier=threading.Barrier(8)
++            def attempt(_):
++                barrier.wait()
++                try:return self.start()
++                except Denied as e:self.assertEqual(str(e),'BUSY');return None
++            with concurrent.futures.ThreadPoolExecutor(8) as pool:values=list(pool.map(attempt,range(8)))
++            self.join();self.assertEqual(len(set(v for v in values if v)),1)
++            self.assertEqual(self.calls.count('core'),1);self.assertEqual(len(self.life.workers),1)
++        def test_18_disabled_or_unauthenticated_cannot_fall_through(self):
++            with self.assertRaises(Denied):budgeted_repair.dispatch(self.ctx.app,None,self.body)
++            self.ctx.repair_fixture=None
++            with self.assertRaisesRegex(Denied,'TEST_REPAIR_UNAVAILABLE'):self.start()
++            self.assertIsNone(self.row());self.assertFalse(self.life.workers)
++        def test_19_emergency_is_separate_from_shutdown(self):
++            self.block=True;w=self.start();self.assertTrue(self.entered.wait(2));self.stop('emergency-stop')
++            self.assertTrue(self.cleaning.wait(2));self.assertEqual(self.o.state,'SUSPENDED')
++            self.assertFalse(self.o.work[w].done.is_set());self.release.set();self.join()
++            self.assertEqual(self.row()['state'],'settled');self.assertEqual(self.o.state,'SUSPENDED')
++        def test_20_late_journal_failure_does_not_refund(self):
++            original=self.j.write
++            def write(operation,phase,**kw):
++                if phase=='SUCCEEDED':raise OSError('TEST injected final journal failure')
++                return original(operation,phase,**kw)
++            with patch.object(self.j,'write',write):self.start();self.join()
++            self.assertEqual(self.o.state,'RECOVERY_REQUIRED');self.assertEqual(self.row()['state'],'settled')
++            self.assertEqual(self.row()['used_core'],1)
++            with self.assertRaises(Denied):self.j.inspect()
++
++    result=unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromTestCase(Tests))
++    dest=REPO/'docs/lifecycle-stage4-evidence'/('repair-workers-'+uuid.uuid4().hex+'.json')
++    dest.write_text(json.dumps({'tests':result.testsRun,'failures':len(result.failures),'errors':len(result.errors),
++        'details':[s for _,s in result.failures+result.errors],'cases':records,
++        'scope':'Actual reservation runner/Store + TEST ownership/lifecycle/journal; synthetic outcomes; injected deadline clock; no App/Core/provider/Podman/media',
++        'production_access':False},indent=2));print('EVIDENCE',dest)
++    raise SystemExit(not result.wasSuccessful())
++
++
+ if __name__=='__main__':
++    if '--repair-tests' in sys.argv:repair_tests()
+     if '--inspection-tests' in sys.argv:inspection_tests()
+     if '--ownership-tests' in sys.argv:ownership_tests()
+     if len(sys.argv)>1 and sys.argv[1]=='--worker':worker(Path(sys.argv[2]),sys.argv[3],sys.argv[4],sys.argv[5]=='1')

@@ -1,0 +1,13 @@
+{
+  "schema": "j6.timestamp-reuse.preservation.v1",
+  "report": "C:\\Users\\jonny\\Documents\\Codex\\2026-09-07\\cr\\outputs\\jarvis\\docs\\stage6-timestamp-reuse-v1-20260924",
+  "candidate": "D:\\JARVIS-STAGE6-LIVE\\timestamp-reuse-v1-20260924\\code",
+  "reference": "D:\\JARVIS-STAGE6-LIVE\\timestamp-reuse-v1-20260924\\reference",
+  "historicalPolicy": "before.json all entries immutable",
+  "scope": "offline TEST only",
+  "protectedRoots": [],
+  "productionAccess": false,
+  "frozenChecker": "unchanged",
+  "include": "all regular report/candidate/reference artifacts; assembly alternate streams have hash-verified ordinary copies",
+  "secrets": "none"
+}

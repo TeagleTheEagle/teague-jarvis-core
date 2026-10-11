@@ -1,0 +1,59 @@
+--- before/stage4_runtime.py
++++ current/stage4_runtime.py
+@@ -27,7 +27,17 @@
+ import pipe_transport as transport
+ 
+ _context = None
++_deployment_binding = None
+ TEST_DB_ID = 0x544934
++
++def configure_deployment(binding):
++    """Explicit packaged TEST entry only; no production root or discovery."""
++    from deployment_test.contract import Binding
++    global _deployment_binding
++    require(type(binding) is Binding and _deployment_binding is None and _context is None, 'DEPLOYMENT_BINDING')
++    require(REPO == binding.app and Path(sys._base_executable).resolve() == binding.release/'python/python.exe', 'INSTALLED_RUNTIME_REQUIRED')
++    exclusion.bind_deployment_root(binding)
++    _deployment_binding = binding
+ 
+ 
+ def validate_root(root):
+@@ -739,6 +749,9 @@
+         identity={**transport.identity(os.getpid()),'mode':'TEST','namespace':root.name,
+                   'installation_id':'STAGE4_TEST','data_id':context.data_id,'core_instance_id':context.epoch,
+                   'startup_epoch':context.epoch,'runtime_build':'STAGE4_TEST-incomplete','protocol':[2,3]}
++        if _deployment_binding is not None:
++            identity['installation_id'] = _deployment_binding.record['installation_id']
++            identity['runtime_build'] = _deployment_binding.record['package_hash']
+         if start_observer:start_observer('identity', identity)
+         authority=Authority(context,identity,enrollments)
+         stopping=threading.Event()
+@@ -752,6 +765,9 @@
+                         exclusion.write(root/'response.json',{'identity':metadata,'challenge':challenge})
+                         answered=challenge
+                     context.lifecycle.tick()
++                    if _deployment_binding is not None:
++                        from deployment_test.enrollment import refresh_revocations
++                        refresh_revocations(_deployment_binding, authority)
+                     with context.owners.lock:
+                         families={s.family for s in context.owners.sessions.values()}
+                     for device in app.devices.snapshot():
+@@ -777,6 +793,9 @@
+                             'source_env_loaded':False,'live_providers':False})
+                         ready=True
+                     pipe.io('connect');pipe.deadline=time.monotonic()+5
++                    if _deployment_binding is not None:
++                        from deployment_test.enrollment import refresh_revocations
++                        refresh_revocations(_deployment_binding, authority)
+                     authentication.serve_one(pipe,authority,key,'normal')
+                 except (Denied, authentication.Denied, OSError, ValueError, TypeError, KeyError):
+                     try:pipe.send({'result':'DENIED'})
+@@ -818,6 +837,8 @@
+ def test_child_command(role,root):
+     require(role in ('--restart-app-worker','--restart-coordinator-worker'),'TEST_CHILD_ROLE')
+     validate_root(root)
++    if _deployment_binding is not None:
++        return _deployment_binding.python_command('--core' if role == '--restart-app-worker' else '--coordinator')
+     # Windows venv python.exe is a redirector with a different PID. Launch the
+     # known native interpreter directly, retaining only the fixed venv imports.
+     script="import runpy,sys;sys.path.insert(0,"+repr(str(REPO/'.venv/Lib/site-packages'))+");sys.argv=sys.argv[1:];runpy.run_path(sys.argv[0],run_name='__main__')"

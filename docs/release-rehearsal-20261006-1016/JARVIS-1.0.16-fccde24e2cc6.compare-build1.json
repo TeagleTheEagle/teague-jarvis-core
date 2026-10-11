@@ -1,0 +1,19 @@
+{
+  "old": "1.0.16-4e54fc946bc3",
+  "new": "1.0.16-fccde24e2cc6",
+  "files_old": 10675,
+  "files_new": 10675,
+  "changed": 4012,
+  "added": 0,
+  "removed": 0,
+  "app_source_changed": [
+    "app/providers.py",
+    "app/release-notes.json"
+  ],
+  "app_source_added": [],
+  "app_source_removed": [],
+  "bytecode_changed": 3981,
+  "launchers_and_records_changed": 29,
+  "pinned_inputs_changed": [],
+  "pinned_inputs_identical": true
+}

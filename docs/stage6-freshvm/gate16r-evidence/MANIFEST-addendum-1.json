@@ -1,0 +1,14 @@
+{
+    "schema":  "stage6-evidence-manifest-addendum-v1",
+    "written_utc":  "2026-10-04T03:23:26Z",
+    "manifest":  "MANIFEST.json",
+    "manifest_sha256":  "38d487a6bdda2e8e0f89bd8c3b9ebf23eacec466c9967b595b64659ad501fd60",
+    "note":  "Files added to gate16r-20261002 after MANIFEST.json was written. MANIFEST.json itself is unchanged and still describes the 116 files it lists.",
+    "entries":  [
+                    {
+                        "file":  "gate16r-20261002/timestamp-correction-20261004.json",
+                        "bytes":  3911,
+                        "sha256":  "8b25b6758d45a940995dee385d932670288f34690477ee0654705e2272f89d57"
+                    }
+                ]
+}

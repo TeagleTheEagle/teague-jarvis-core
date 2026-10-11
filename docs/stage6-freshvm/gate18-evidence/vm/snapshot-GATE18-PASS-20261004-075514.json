@@ -1,0 +1,85 @@
+{
+    "schema":  "stage6-fresh-vm-snapshot-v1",
+    "utc":  "2026-10-04T07:55:13.9973929Z",
+    "account":  "jarvis-s6-val",
+    "vm_name":  "JARVIS-S6-FRESH",
+    "vm_uuid":  "4ef16bdd-2a1b-46af-83db-ee69c2f868bb",
+    "snapshot_name":  "GATE18-PASS",
+    "snapshot_uuid":  "5dcbb9f0-0d6c-4311-8b57-7ba329290edf",
+    "description":  "Gate 18 passed inside the VM: the owner\u0027s backup restored into a second install; the VM now holds personal data; taken after a clean shutdown, before P4",
+    "current_snapshot_name":  "GATE18-PASS",
+    "current_snapshot_uuid":  "5dcbb9f0-0d6c-4311-8b57-7ba329290edf",
+    "before":  {
+                   "vbox_sha256":  "c6b87b3bb796e68c163aa2401a2c538fec3f20d205505db0b1abe65796f3ea2e",
+                   "nvram_sha256":  "a5aeb39e9c662ccd92d5a1e1122220a9833298cc535a0a4f9915a5fef3fe2056",
+                   "snapshots":  [
+                                     "FRESH-CLEAN-BASELINE",
+                                     "FRESH-PREREQ",
+                                     "GATE17-19-PASS"
+                                 ]
+               },
+    "vbox_file":  "D:\\JARVIS-S6-FRESHVM\\machines\\JARVIS-S6-FRESH\\JARVIS-S6-FRESH.vbox",
+    "vbox_sha256_after":  "342781d1a28e55fb0bca04fe953301d72daf3ec0888823d85b95e918c6688d21",
+    "nvram_sha256_after":  "a5aeb39e9c662ccd92d5a1e1122220a9833298cc535a0a4f9915a5fef3fe2056",
+    "all_snapshots":  [
+                          {
+                              "name":  "FRESH-CLEAN-BASELINE",
+                              "uuid":  "0da943df-12e5-4eac-93bf-727c03dd5d94"
+                          },
+                          {
+                              "name":  "FRESH-PREREQ",
+                              "uuid":  "9f1d7bec-e410-4ed0-bc2f-4966125329ad"
+                          },
+                          {
+                              "name":  "GATE17-19-PASS",
+                              "uuid":  "3023e9a7-0f60-42ed-bac0-8b7f0ff06368"
+                          },
+                          {
+                              "name":  "GATE18-PASS",
+                              "uuid":  "5dcbb9f0-0d6c-4311-8b57-7ba329290edf"
+                          }
+                      ],
+    "snapshots_folder":  [
+                             {
+                                 "name":  "2026-10-04T02-40-17-827151100Z.nvram",
+                                 "bytes":  547328,
+                                 "last_write_utc":  "2026-10-04T02:26:33.6341554Z"
+                             },
+                             {
+                                 "name":  "2026-10-04T03-04-55-784457300Z.nvram",
+                                 "bytes":  547328,
+                                 "last_write_utc":  "2026-10-04T02:26:33.6341554Z"
+                             },
+                             {
+                                 "name":  "2026-10-04T05-05-41-042534400Z.nvram",
+                                 "bytes":  547328,
+                                 "last_write_utc":  "2026-10-04T05:05:21.7020491Z"
+                             },
+                             {
+                                 "name":  "2026-10-04T07-55-13-845107700Z.nvram",
+                                 "bytes":  547328,
+                                 "last_write_utc":  "2026-10-04T07:53:52.1409159Z"
+                             },
+                             {
+                                 "name":  "{0d8d6176-2b81-4fc8-90d9-e2007869cc58}.vdi",
+                                 "bytes":  2097152,
+                                 "last_write_utc":  "2026-10-04T02:40:17.8271511Z"
+                             },
+                             {
+                                 "name":  "{7e72e0b9-bb74-47ce-bdc2-c478462709e7}.vdi",
+                                 "bytes":  13759414272,
+                                 "last_write_utc":  "2026-10-04T07:53:52.1290164Z"
+                             },
+                             {
+                                 "name":  "{979ac965-1d18-4965-bc20-64bc957b4346}.vdi",
+                                 "bytes":  8969519104,
+                                 "last_write_utc":  "2026-10-04T05:05:21.6880885Z"
+                             },
+                             {
+                                 "name":  "{c512e2fa-eaa3-454d-bec5-43df16a4fed6}.vdi",
+                                 "bytes":  2097152,
+                                 "last_write_utc":  "2026-10-04T07:55:13.8439444Z"
+                             }
+                         ],
+    "vm_state":  "poweroff"
+}

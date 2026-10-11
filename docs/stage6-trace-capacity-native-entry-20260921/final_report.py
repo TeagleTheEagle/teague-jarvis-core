@@ -1,0 +1,70 @@
+import pathlib,json,hashlib,collections,statistics,difflib,datetime
+R=pathlib.Path(__file__).parent;read=lambda p:json.loads(p.read_text(encoding='utf-8-sig'));sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+spec=[('', 'protected-46ff564a172944e1a2e389416f06ff36'),('batched-candidate','protected-5d26ae153ea2490da7ca1ec16d97c124'),('medium-candidate','protected-00a17b2c499c4966a5113c30924b367a')]
+runs=[];hashes=[];changes=[]
+for directory,name in spec:
+ base=R/directory;plan=read(base/'plan.json');C=pathlib.Path(plan['code']);root=C/name;r=lambda n:read(root/n)
+ for x in read(base/'candidate-hashes.json'):
+  actual=sha(C/x['name']);assert actual==x['sha256'];hashes.append(dict(path=str(C/x['name']),sha256=actual))
+ previous=pathlib.Path(plan.get('priorCandidate',plan.get('prior','')))
+ for x in read(base/'candidate-hashes.json'):
+  before=sha(previous/x['name']) if previous.is_dir() and (previous/x['name']).is_file() else None
+  if before!=x['sha256']:changes.append(dict(path=str(C/x['name']),before=before,after=x['sha256']))
+ for x in plan['files']:
+  p=pathlib.Path(plan['source'])/x['name'];s=p.stat();assert sha(p)==x['sha256'] and s.st_size==x['bytes'] and s.st_mtime_ns==x['mtime_ns']
+ k=r('etw-result.json');st=r('startup-events.json');timing=r('native-trace-verification.json') if (root/'native-trace-verification.json').exists() else None
+ cleanup=r('integrated-cleanup.json') if (root/'integrated-cleanup.json').exists() else None
+ marks=[]
+ if timing:marks=[x['PEtoPythonMs'] for x in timing['timings'] if x['PEtoPythonMs'] is not None]
+ events=0;lo=None;hi=None;provider=collections.Counter();bins=collections.Counter();f=r('etw-ready.json')['frequency']
+ for seg in st['segments']:
+  p=root/seg['name'];assert sha(p)==seg['sha256'];n=0
+  with p.open() as stream:
+   for line in stream:
+    e=json.loads(line);q=e['qpc'];lo=q if lo is None else min(lo,q);hi=q if hi is None else max(hi,q);provider[e['provider']]+=1;bins[int(q/f)]+=1;n+=1
+  assert n==seg['records'];events+=n
+ assert events==st['persisted']
+ runs.append(dict(kind=directory or 'preserved-per-record-writer-failure',path=str(root),records=events,bytes=st['bytes'],segments=len(st['segments']),traceFault=st['fault'],queuePeakBytes=st['peakQueueBytes'],maximumWriteSeconds=st['maximumWriteSeconds'],traceSeconds=(hi-lo)/f,averageRate=events/((hi-lo)/f),peakOneSecond=max(bins.values()),providers=dict(provider),kernelLost=k['eventsLost'],kernelFaults=k['faults'],heartbeatMax=max(x['interval'] for x in r('app-heartbeats.json')),nativeEntries=timing['nativeEntries'] if timing else len(list(root.glob('native-[0-9]*-[0-9]*.json'))),nativePythonCount=len(marks),nativePythonMs=dict(min=min(marks),median=statistics.median(marks),max=max(marks)) if marks else None,cleanupStatus=cleanup['status'] if cleanup else 'NOT_ACCEPTED_KERNEL_LOSS',kernelCreates=cleanup.get('kernelCreates') if cleanup else None,kernelExits=cleanup.get('kernelExits') if cleanup else None,applicationStarts=cleanup.get('appStarts') if cleanup else None,applicationStops=cleanup.get('appStops') if cleanup else None,unknownApplicationEvents=len(cleanup.get('lineageUnknown',[])) if cleanup else None,cleanupErrors=cleanup['errors'] if cleanup else [],hashPassesMatch=r('hash-pass-1.json')['files']==r('hash-pass-2.json')['files'],manifestExists=(root/'baseline-manifest.json').exists(),archive=r('archive-verification.json') if (root/'archive-verification.json').exists() else None))
+prior=read(R.parent/'stage6-narrow-startup-integration-20260921/plan.json')
+for x in prior['sourceChecks']:assert sha(pathlib.Path(x['path']))==x['sha256']
+host=read(R/'final-host-cleanup.json');assert not host['matchingLive'] and not host['unknown'] and not host['liveDiagnosticsOrVirtualBox'] and not host['traceSessions'] and host['traceExit']==0
+(R/'final-analysis.json').write_text(json.dumps(dict(status='TRACE_INTEGRATION_STILL_DEFECTIVE',runs=runs,currentHashesVerified=len(hashes),priorHashesVerified=len(prior['sourceChecks']),hostCleanup='ZERO_MATCHING_IDENTITIES_AND_TRACES',blocker='MEDIUM_RUN_UNKNOWN_APPLICATION_LINEAGE',largeRunEligible=False,protectedAccess=False,productionChanges=False,historicalCauses='UNCONFIRMED'),indent=2))
+(R/'final-source-hashes.json').write_text(json.dumps(hashes,indent=2));(R/'changed-artifacts.json').write_text(json.dumps(changes,indent=2))
+a,b,c=runs;model=read(R/'capacity-model.json')
+lines=['# Stage 6 trace capacity and native PE-entry integration','',
+'Final status: TRACE_INTEGRATION_STILL_DEFECTIVE. The medium run demonstrated segmented capacity and native entry, but failed the unchanged independent application-event/cleanup acceptance gate. Large synthetic run is NOT eligible.','',
+'## Mandatory findings','',
+f"1. Preserved small-run trace duration: {model['seconds']:.7f} seconds, 155,105 records, 51,007,431 serialized bytes.",
+f"2. Average {model['recordsPerSecond']:.3f} records/s; peak relative one-second bucket {model['peakOneSecond']:,}. Per-process counts and providers are recorded in capacity-model.json. Zero exact duplicate records found.",
+'3. Categories: process/image/thread 1,032; scheduling 20,358; classic registry 16,296; manifest registry 10,303; filesystem 107,116. Independent PowerShell observer PID 1896 contributed 122,809 records. Lifecycle/image/thread evidence is required; filesystem/registry/scheduling are requested diagnostic evidence. No category was silently removed to reduce volume.',
+f"4. Model: {model['expectedRecords']:,} records / {model['expectedBytes']:,} bytes at the measured average over 788 seconds. Peak sustained for all 1,200 seconds: 98,265,600 records; 2x planning margin: 196,531,200 records / 123,814,656,000 bytes at the observed maximum 630-byte compact record. Prior 59.7 GB calibration (read as existing evidence only): 227,368,082 bytes/s; conservative two-pass duration 524.835 seconds. Small-fixture throughput is not used to claim large-file performance.",
+'5. Design: asynchronous single writer; 64 MiB bounded producer queue, at most 8 MiB additional writer segment buffer; immutable sequential 8 MiB JSONL segments, at most 16,384 segments; finite 128 GiB total bytes, 196,531,200 records, 8 KiB maximum record. SHA-256 and exact record/byte totals per segment. No queue lock held during file I/O. Flush/close occurs at segment boundaries. All categories retained.',
+'6. Margin is an empirical planning envelope, not a universal Windows worst-case guarantee. Record/storage/queue/individual-record bounds each fail closed. The unchanged 0.3-second producer pacing bounds admission below 3,600 probes over the 1,080-second campaign; sampler interval bounds roughly 109 queries. OS helper count remains observed, not assumed unlimited. Existing 8,192 kernel-identity bound is unchanged.',
+'7. Focused sink assertions: 24/24 initially and 24/24 after segment batching. Near capacity, exact capacity, overflow, writer failure, simulated disk full, segment-creation failure, storage bound and segment hash tampering were exercised. No failed trace was accepted. Seven negative identity/entry tests passed; actual small evidence passed positive reinspection.',
+f"8. Storage: small batched run {b['records']:,} records / {b['segments']} segments / {b['bytes']:,} bytes. Medium {c['records']:,} records / {c['segments']} segments / {c['bytes']:,} bytes. Medium queue peak {c['queuePeakBytes']:,} bytes; longest measured segment write+flush+close {c['maximumWriteSeconds']:.6f} seconds. Every medium segment hash/count verified despite overall run failure.",
+'9. Native source: validated entry_observer.cpp from D:\\JARVIS-STAGE6-LIVE\\68b6e62890e742b4bedb13cbb0f49e92\\code. ReadProcessMemory of the own-child x64 PE header establishes AddressOfEntryPoint; initial-thread DR0/DR7 execution breakpoint observes that address; original debug registers restored; no image bytes patched. QPC timestamps. PE entry is not the first Windows instruction and is not CRT main().',
+'10. Integration: J6OwnedEntry.dll keeps the debugger on the child-creating thread. The non-elevated PowerShell launcher directly creates the actual collector; its parent identity stays unchanged. Python adapter delegates the unchanged Popen/Win32 calls on dedicated creating threads, returns actual handles/PIDs and retains the sampler suspended-before-Job-assignment boundary. Original arguments, inheritance/stdio flags, waits and safety deadlines remain authoritative. No attach-to-arbitrary-process operation or elevated generic command service was introduced.',
+'11. Python entry/work/exit markers remain supplemental, never substitutes for PE entry. OS-created conhost helpers retain kernel process/thread/image and independent application evidence; they are not directly-created native PE-debug targets. J6Probe.exe has no Python interpreter, so native-to-Python is explicitly N/A for it.',
+f"12. Small native-to-Python timings: {b['nativePythonMs']}. Medium ({c['nativePythonCount']} Python processes): {c['nativePythonMs']}. Per-process creation/API/PE/Python timing distributions are preserved in native-trace-verification.json. Private interpreter initialization stages are not inferred.",
+'13. Native correlation uses PID + kernel creation FILETIME + ETW process sequence lineage. Modified creation identity, wrong PID, duplicate/missing native record, missing/late PE marker and missing Python marker reject. Independent application STOP-event association remains unresolved in the medium run; it was not replaced with kernel/native evidence.',
+f"14. Small integration: PASS. Both hash maps match, metadata unchanged, {b['nativeEntries']} native entries, cleanup PASS, unchanged finalizer PASS, verified inner archive {b['archive']['members']} members.",
+f"15. Medium-duration integration: FAIL at finalization. Both hashes match and {c['nativeEntries']} native entries passed; {c['kernelCreates']} kernel creates/exits recorded. Cleanup error: {c['cleanupErrors']}; {c['applicationStarts']} application STARTs assigned, {c['applicationStops']} STOPs assigned, {c['unknownApplicationEvents']} application events remain UNKNOWN. No successful medium baseline manifest was created.",
+f"16. Maximum heartbeat: small {b['heartbeatMax']:.7f}s; medium {c['heartbeatMax']:.7f}s, below unchanged 10 seconds.",
+f"17. Trace loss: preserved first small run {a['kernelLost']:,} ETW events lost (FAIL); batched small 0; medium 0. The first run had fully persisted accepted sink records but incomplete ETW lifecycle evidence. Segment batching is supported by passing later runs, but the exact ETW-loss cause is NOT established by this comparison alone.",
+'18. Operational cleanup: 878 recorded identity entries checked by exact process creation time; zero matching live identities, zero unknown host checks, zero matching diagnostics/VirtualBox processes, zero trace sessions. Retained tree handles/debug threads closed. Medium evidence acceptance remains FAIL despite zero currently-live processes.',
+'19. All sources, tests, capacity calculations, native evidence, failed runs and this report are archived separately; final archive member count and SHA-256 receipt: archive-verification.json. Failure evidence was not erased or relabeled.',
+'20. Protected VM/configuration: not accessed. No VirtualBox command or launch occurred. The 59.7 GB dataset was not read or hashed.',
+'21. Production JARVIS: unchanged. No credentials, provider calls, production files or runtime logic involved.',
+'22. Large-run eligibility: NO. Do not execute full synthetic validation, protected hashing or VM operations.',
+'23. Final status: TRACE_INTEGRATION_STILL_DEFECTIVE.','',
+'## Remaining failure and next review','',
+'The unchanged lineage.py deliberately does not reinterpret delayed CIM TIME_CREATED as kernel exit time. Reused same-image conhost PIDs leave multiple older/newer process-sequence candidates for later STOP notifications. It therefore returns NO_UNIQUE_TIME_IMAGE_PARENT_BOUND_IDENTITY / UNKNOWN_APPLICATION_LINEAGE. This explains the checker rejection, but does not establish that CIM events were lost, duplicated or causally delayed by the new tracing. Some unknown events also involve a possible reused parent PID. Do not assign these events using PID alone, presumed order, or synthetic STOP records.',
+'Next action: read-only diagnosis of these preserved ambiguous associations and determine whether additional independent identity evidence is available. Any change to the frozen lineage/cleanup acceptance contract requires review; this pass does not weaken it. Medium validation and large eligibility cannot be claimed while this gate fails.','',
+'## Corrections and preservation','',
+'First new sink wrote once per record and failed the first small run on ETW loss. A fresh candidate batches entire bounded segments; original failed candidate and run preserved. A separate checker-only filename collision on reinspection was corrected by selecting raw native-<PID>-<creation>.json files rather than its own verification summary; pre-fix source/hashes and error recorded. No process deadline, heartbeat threshold, queue identity rule, frozen collector hashing function or lineage matcher changed.',
+'Three candidate sets (116 artifacts each) hash-verified after execution; 389 prior frozen artifact hashes reverified. Exact changed paths and before/after hashes: changed-artifacts.json; final-source-hashes.json. Build commands and intermediate corrections are retained. Rollback: do not select these new TEST candidates; select the prior frozen candidate, keeping all new evidence. No protected, production or runtime rollback is needed.','',
+'Windows debugger thread requirement and handle semantics: https://learn.microsoft.com/en-us/windows/win32/api/debugapi/nf-debugapi-waitfordebugevent .','',
+'Historical probe/sampler/storage causes remain UNCONFIRMED. HISTORICAL STAGE 1 CAUSE: UNCONFIRMED.','',
+'TRACE_INTEGRATION_STILL_DEFECTIVE']
+(R/'REPORT.md').write_text('\n'.join(lines)+'\n',encoding='utf-8')
+print(json.dumps(dict(status='TRACE_INTEGRATION_STILL_DEFECTIVE',medium=runs[-1],hashes=len(hashes),prior=389),indent=2))

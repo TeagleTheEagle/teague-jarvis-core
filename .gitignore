@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.env
+projects.json
+models/
+data/
+reports/
+settings.json
+veronica.log
+VERONICA.exe

@@ -1,0 +1,25 @@
+--- D:\JARVIS-STAGE6-LIVE\3316657ba1864413a0c95ea1dc7bf6ff\code\trace_sink.hpp
++++ D:\JARVIS-STAGE6-LIVE\f40cb16a8a384236b05179bc8f2aea6b\code\trace_sink.hpp
+@@ -1,3 +1,4 @@
++#include "trace_telemetry.hpp"
+ #pragma once
+ #include <windows.h>
+ #include <bcrypt.h>
+@@ -32,8 +33,8 @@
+  bool closeSegment(){
+   if(file==INVALID_HANDLE_VALUE)return true;
+   BYTE digest[32];DWORD done=0;auto begin=q();LARGE_INTEGER freq;QueryPerformanceFrequency(&freq);
+-  bool ok=inject!=1&&inject!=2&&WriteFile(file,segmentBuffer.data(),DWORD(segmentBuffer.size()),&done,nullptr)&&done==segmentBuffer.size();
+-  ok=FlushFileBuffers(file)!=0&&ok;ok=CloseHandle(file)!=0&&ok;file=INVALID_HANDLE_VALUE;
++  bool ok=inject!=1&&inject!=2&&j6t::write(file,segmentBuffer.data(),DWORD(segmentBuffer.size()),&done,nullptr)&&done==segmentBuffer.size();
++  ok=j6t::flush(file)!=0&&ok;ok=j6t::close(file)!=0&&ok;file=INVALID_HANDLE_VALUE;
+   auto duration=double(q()-begin)/freq.QuadPart;if(duration>maxWriteSeconds)maxWriteSeconds=duration;
+   if(ok)persisted+=segments.back().records;else if(!failure)failure=inject==2?112:7;
+   ok=BCryptFinishHash(hash,digest,32,0)>=0&&ok;BCryptDestroyHash(hash);hash=nullptr;
+@@ -73,5 +74,5 @@
+   BCryptCloseAlgorithmProvider(algorithm,0);algorithm=nullptr;return s.str();
+  }
+  unsigned fault()const{return failure.load();}
+- ~TraceSink(){if(writer.joinable()){{std::lock_guard<std::mutex> guard(lock);closing=true;}wake.notify_one();writer.join();}if(hash)BCryptDestroyHash(hash);if(file!=INVALID_HANDLE_VALUE)CloseHandle(file);if(algorithm)BCryptCloseAlgorithmProvider(algorithm,0);}
++ ~TraceSink(){if(writer.joinable()){{std::lock_guard<std::mutex> guard(lock);closing=true;}wake.notify_one();writer.join();}if(hash)BCryptDestroyHash(hash);if(file!=INVALID_HANDLE_VALUE)j6t::close(file);if(algorithm)BCryptCloseAlgorithmProvider(algorithm,0);}
+ };

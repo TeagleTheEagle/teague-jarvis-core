@@ -1,0 +1,16 @@
+{
+  "inheritsParent": true,
+  "perRunOverrides": [
+    "TEMP",
+    "TMP"
+  ],
+  "overridesVolume": "D",
+  "recordedNonsecretValues": {
+    "SystemRoot": "C:\\WINDOWS",
+    "ComSpec": "C:\\WINDOWS\\system32\\cmd.exe",
+    "PROCESSOR_ARCHITECTURE": "AMD64"
+  },
+  "otherValues": "NOT RECORDED; may contain credentials",
+  "dllSearch": "normal Windows loader; no PATH/security change in probe launcher",
+  "workingDirectory": "D:\\JARVIS-STAGE6-LIVE\\90e9469000dd4530a86b98fad67d7089\\code"
+}

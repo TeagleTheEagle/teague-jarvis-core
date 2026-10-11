@@ -1,0 +1,396 @@
+--- before/stage4_runtime.py
++++ after/stage4_runtime.py
+@@ -87,6 +87,9 @@
+         self.audio_results = {}
+         self.voice_requests = {}
+         self.voice_leases = {}
++        from stage4_response_history import History
++        self.response_history = History(self.data/'jarvis.sqlite3')
++        self.text_router = None
+         self.epoch = uuid.uuid4().hex
+         self.owners = Ownership(mode='STAGE4_TEST', epoch=self.epoch, enrollments=enrollments)
+         ident = {'mode':'STAGE4_TEST','data_id':data_id}
+@@ -128,6 +131,7 @@
+ 
+     def check_tool(self, name, run):
+         require(run is not None and getattr(run,'stage4_work',None) in self.owners.work, 'OWNER_REQUIRED')
++        require(getattr(run,'request_mode','normal') != 'text-only', 'TEXT_ONLY_NO_TOOLS')
+         self.owners.next_step(run.stage4_work)
+         if name not in ('time_now','list_items','read_conversation','search_conversations'):
+             raise ValueError('STAGE4_TEST tool is outside the isolated allowlist.')
+@@ -136,6 +140,22 @@
+         require(type(text) is str and 0 < len(text) <= 12000, 'TEXT')
+         import server
+         run = server.Run('STAGE4_TEST-conversation')
++        with self.owners.lock:
++            owner = self.owners._session(token,self.epoch,'request')
++        original_emit = run.emit
++        def emit(event, data):
++            if event == 'assistant.completed':
++                with self.owners.lock:
++                    self.owners.next_step(run.stage4_work)
++                    rid,_ = self.response_history.reserve(owner.client,owner.family,run.id,text,'normal')
++                    provenance = {'actual_final_provider':'TEST deterministic provider' if run.measurements else 'Core deterministic',
++                        'actual_final_model':'stage4-fixture' if run.measurements else None,
++                        'configured_model':'stage4-fixture' if run.measurements else None,
++                        'attempts':[{'provider':'TEST deterministic provider','requested_model':'stage4-fixture'}] if run.measurements else [],
++                        'fallback':False,'fallback_reason':None,'simulated':True}
++                    self.response_history.finish(owner.client,rid,'COMPLETED',data['text'],provenance)
++            original_emit(event,data)
++        run.emit = emit
+         ready = threading.Event()
+         def work(cancel):
+             # Worker may begin before dispatch returns; wait for immutable mapping.
+@@ -152,6 +172,59 @@
+         self.app.runs[run.id] = run
+         ready.set()
+         return {'request_id':wid}
++
++    def start_text_request(self, token, text, operation):
++        """Explicit no-tool admission. Never enters App.work or command dispatch."""
++        require(type(text) is str and 0<len(text)<=11000,'TEXT')
++        require(type(operation) is str and len(operation)==32 and all(c in '0123456789abcdef' for c in operation),'OPERATION')
++        require(self.text_router is not None,'TEXT_PROVIDER_UNAVAILABLE')
++        import server
++        from stage4_provider_fallback import Failure
++        with self.owners.lock:
++            owner=self.owners._session(token,self.epoch,'request')
++            require(self.owners.state=='RUNNING','ADMISSION_CLOSED')
++            rid,fresh=self.response_history.reserve(owner.client,owner.family,operation,text,'text-only')
++            if not fresh:
++                return {'response_id':rid,'duplicate':True,'status':self.response_history.status(owner.client,rid)}
++            run=server.Run('STAGE4_TEST-text-only')
++            run.request_mode='text-only'
++            ready=threading.Event()
++            def work(cancel):
++                ready.wait(2)
++                if not ready.is_set(): return 'UNKNOWN'
++                run.cancel=cancel
++                try:
++                    result=self.text_router.generate(rid,[{'role':'system','content':'Text-only TEST response. No tools, browsing, device actions or external actions are available. Do not claim to have performed them.'},{'role':'user','content':text}],cancel,tool_attempted=False,partial_output=False,requires_tools=False)
++                    with self.owners.lock:
++                        self.owners.next_step(run.stage4_work)
++                        if cancel.is_set(): raise Failure('CANCELLED')
++                        provenance=self.text_router.status(rid)
++                        self.response_history.finish(owner.client,rid,'COMPLETED',result['content'],provenance)
++                        run.emit('response.provenance',self.response_history.last(owner.client))
++                        run.emit('assistant.completed',{'text':result['content']})
++                        run.emit('run.completed',{})
++                    return 'SUCCEEDED'
++                except Exception as error:
++                    status='CANCELLED' if cancel.is_set() else 'FAILED'
++                    provenance=self.text_router.status(rid) or {}
++                    provenance['actual_final_provider']=None
++                    provenance['actual_final_model']=None
++                    self.response_history.finish(owner.client,rid,status,None,provenance)
++                    run.emit('run.cancelled' if cancel.is_set() else 'run.failed',{'message':str(error) if isinstance(error,Failure) else 'TEXT_REQUEST_FAILED'})
++                    return 'FAILED'
++                finally:
++                    with run.condition:
++                        run.done=True;run.condition.notify_all()
++            try:
++                wid=self.lifecycle.dispatch(token,self.epoch,'chat',work)
++            except Exception:
++                self.response_history.finish(owner.client,rid,'FAILED',None,{})
++                raise
++            run.stage4_work=wid
++            self.runs[wid]=run
++            self.app.runs[run.id]=run
++            ready.set()
++            return {'request_id':wid,'response_id':rid,'request_mode':'text-only','simulated':True}
+ 
+ 
+ def construct_app(context):
+@@ -177,7 +250,7 @@
+                 require(not writing or target.is_relative_to(context.root), 'TEST_WRITE_BOUNDARY')
+         elif event == 'sqlite3.connect':
+             expected=context.data/'jarvis.sqlite3'
+-            target=expected if args[0]==expected.as_uri()+'?mode=ro' else path(args[0])
++            target=expected if args[0] in (expected.as_uri()+'?mode=ro',expected.as_uri()+'?mode=rw') else path(args[0])
+             require(target is not None and target.is_relative_to(context.root), 'TEST_DATABASE_BOUNDARY')
+         elif event in ('socket.connect','subprocess.Popen','os.system'):
+             raise Denied('TEST_EXTERNAL_EXECUTION_DENIED')
+@@ -257,6 +330,14 @@
+         if op == 'request':
+             authentication.fields(args, ('text',))
+             return self.context.start_request(token, args['text'])
++        if op == 'request-text-only':
++            authentication.fields(args, ('text','operation'))
++            return self.context.start_text_request(token,args['text'],args['operation'])
++        if op == 'last-response-provider':
++            authentication.fields(args, ());require('read' in s.scopes,'SCOPE')
++            from stage4_response_history import describe
++            record=self.context.response_history.last(s.client)
++            return {'provenance':record,'answer':describe(record)}
+         if op == 'request-status':
+             authentication.fields(args, ('request_id',));wid=o.check_owner(token,o.epoch,args['request_id'])
+             run=self.context.runs[wid]
+@@ -335,6 +416,8 @@
+     with exclusion.Lock(root,'core.lock') as lock:
+         exclusion.event(root,'core_acquired',identity=exclusion.process_identity(os.getpid()))
+         context=Context(root,configuration['data_id'],lock,{k:v['scopes'] for k,v in enrollments.items()})
++        from stage4_provider_fallback import offline_router
++        context.text_router=offline_router(configuration.get('text_provider_scenario','openai'))
+         app=construct_app(context)
+         metadata={**exclusion.process_identity(os.getpid()),'namespace':root.name,'mode':'TEST','epoch':context.epoch}
+         exclusion.write(root/'core.json',metadata)
+--- before/stage4_client.cjs
++++ after/stage4_client.cjs
+@@ -166,11 +166,13 @@
+  }
+  const exposed=Object.freeze({
+   shared:[],request:['text'],'request-status':['request_id'],cancel:['request_id'],
++  'request-text-only':['text','operation'],'last-response-provider':[],
+   'stop-capture':['lease_id'],'stop-playback':['lease_id']
+  });
+  function argsFor(op,args){
+   requireThat(Object.hasOwn(exposed,op),'ORDINARY_OPERATION_ONLY');exact(args,exposed[op]);
+   if(op==='request')requireThat(typeof args.text==='string'&&args.text.length>0&&args.text.length<=12000,'TEXT');
++  if(op==='request-text-only')requireThat(typeof args.text==='string'&&args.text.length>0&&args.text.length<=11000&&typeof args.operation==='string'&&/^[a-f0-9]{32}$/.test(args.operation),'TEXT_ONLY_REQUEST');
+   if('request_id' in args)requireThat(typeof args.request_id==='string'&&/^[a-f0-9]{32}$/.test(args.request_id),'REQUEST_ID');
+   if('lease_id' in args)requireThat(args.lease_id===null || typeof args.lease_id==='string'&&/^[a-f0-9]{32}$/.test(args.lease_id),'LEASE_ID');
+   return args;
+--- before/stage4_provider_fallback.py
++++ after/stage4_provider_fallback.py
+@@ -125,3 +125,20 @@
+                 record.update(status='FAILED', failure=code)
+             reason = record.get('fallback_reason')
+             raise Failure((reason+': ' if reason else '')+code) from None
++
++
++def offline_router(scenario='openai'):
++    """Fixed scenario selected by trusted TEST parent; never live inference."""
++    if scenario not in ('openai','temporary','quota','offline','generation-failure'):
++        raise Failure('UNKNOWN_TEST_SCENARIO')
++    def primary(messages, model, cancel, deadline):
++        if scenario != 'openai':
++            raise HTTPFailure(429,'insufficient_quota' if scenario=='quota' else 'rate_limit_exceeded','7')
++        return {'model':'openai-offline-fixture','content':'STAGE4_TEST simulated OpenAI text-only answer. No actions performed.','complete':True}
++    def health(model,cancel,deadline):
++        return 'OFFLINE' if scenario=='offline' else 'ONLINE'
++    def local(messages,model,cancel,deadline):
++        if scenario=='generation-failure': raise Failure('LOCAL_GENERATION_FAILED')
++        return {'model':'qwen3:4b','content':'STAGE4_TEST simulated Qwen text-only answer. No actions performed.','complete':True}
++    return Router(mode='STAGE4_TEST',primary=primary,health=health,local=local,
++                  configured_model='openai-requested-fixture',enabled=True)
+--- before/stage4_response_history.py
++++ after/stage4_response_history.py
+@@ -0,0 +1,67 @@
++"""Provenance in the existing canonical TEST database, never production Store."""
++import hashlib
++import json
++import sqlite3
++import time
++import uuid
++
++
++class History:
++    def __init__(self, database):
++        self.database = database
++        with self.connect() as db:
++            db.execute('''CREATE TABLE IF NOT EXISTS stage4_response_provenance(
++                response_id TEXT PRIMARY KEY, owner TEXT NOT NULL, session TEXT NOT NULL,
++                operation TEXT NOT NULL, fingerprint TEXT NOT NULL, mode TEXT NOT NULL,
++                status TEXT NOT NULL, timestamp REAL NOT NULL, text TEXT,
++                provenance TEXT, UNIQUE(owner,operation))''')
++
++    def connect(self):
++        db = sqlite3.connect(self.database.as_uri()+'?mode=rw',uri=True,timeout=1)
++        if db.execute('PRAGMA application_id').fetchone()[0] != 0x544934:
++            db.close()
++            raise ValueError('TEST_DATABASE_REQUIRED')
++        return db
++
++    def reserve(self, owner, session, operation, text, mode):
++        fingerprint = hashlib.sha256((mode+'\0'+text).encode()).hexdigest()
++        with self.connect() as db:
++            db.execute('BEGIN IMMEDIATE')
++            row=db.execute('SELECT response_id,fingerprint FROM stage4_response_provenance WHERE owner=? AND operation=?',(owner,operation)).fetchone()
++            if row:
++                if row[1]!=fingerprint: raise ValueError('IDEMPOTENCY_CONFLICT')
++                return row[0],False
++            response_id=uuid.uuid4().hex
++            db.execute('INSERT INTO stage4_response_provenance VALUES(?,?,?,?,?,?,?,?,?,?)',
++                       (response_id,owner,session,operation,fingerprint,mode,'PENDING',time.time(),None,None))
++            return response_id,True
++
++    def finish(self, owner, response_id, status, text, provenance):
++        if status not in ('COMPLETED','FAILED','CANCELLED'): raise ValueError('STATUS')
++        # Persistence commits before any completed response event is exposed.
++        with self.connect() as db:
++            count=db.execute('UPDATE stage4_response_provenance SET status=?,timestamp=?,text=?,provenance=? WHERE response_id=? AND owner=? AND status=?',
++                (status,time.time(),text if status=='COMPLETED' else None,json.dumps(provenance),response_id,owner,'PENDING')).rowcount
++            if count!=1: raise ValueError('RESPONSE_ALREADY_FINAL_OR_NOT_OWNED')
++
++    def last(self, owner):
++        with self.connect() as db:
++            row=db.execute("SELECT response_id,session,timestamp,mode,status,provenance FROM stage4_response_provenance WHERE owner=? AND status='COMPLETED' ORDER BY timestamp DESC,rowid DESC LIMIT 1",(owner,)).fetchone()
++        if not row: return {'status':'NO_COMPLETED_RESPONSE'}
++        rid,session,stamp,mode,status,raw=row
++        return dict(response_id=rid,owner=owner,session=session,timestamp=stamp,
++                    request_mode=mode,final_status=status,**json.loads(raw))
++
++    def status(self, owner, response_id):
++        with self.connect() as db:
++            row=db.execute('SELECT status FROM stage4_response_provenance WHERE owner=? AND response_id=?',(owner,response_id)).fetchone()
++        if not row: raise ValueError('RESPONSE_NOT_OWNED')
++        return row[0]
++
++
++def describe(record):
++    if record.get('final_status')!='COMPLETED': return 'No completed response is recorded for this owner.'
++    provider=record.get('actual_final_provider')
++    model=record.get('actual_final_model')
++    prefix='TEST simulation: ' if record.get('simulated') else ''
++    return prefix+f"Your last completed response was generated by {provider}; model: {model or 'not applicable'}. Fallback: {'yes' if record.get('fallback') else 'no'}."
+--- before/tests/provider_fallback_integration.py
++++ after/tests/provider_fallback_integration.py
+@@ -0,0 +1,114 @@
++"""Real isolated Context/App integration with offline transports, no live APIs."""
++import json
++import os
++from pathlib import Path
++import sys
++import time
++import traceback
++import uuid
++
++ROOT=Path(__file__).resolve().parents[1]
++sys.path.insert(0,str(ROOT))
++import stage4_runtime as runtime
++from stage4_provider_fallback import offline_router
++from stage4_response_history import History
++
++root=runtime.exclusion.BASE/('TEST-STAGE4-'+uuid.uuid4().hex)
++root.mkdir()
++(root/'TEST_ONLY').write_text('NO PRODUCTION SERVICES')
++data_id='TEST-'+uuid.uuid4().hex
++runtime.provision(root,data_id)
++records=[]
++with runtime.exclusion.Lock(root,'core.lock') as lock:
++    context=runtime.Context(root,data_id,lock,{'A':['attach','read','request'],'B':['attach','read','request']})
++    app=runtime.construct_app(context)
++    authority=runtime.Authority(context,{}, {'A':{},'B':{}})
++    def call(client,token,op,args={}):
++        return authority.operation(client,dict(op=op,token=token,args=args),2)
++    a=call('A',None,'attach',{'scopes':['attach','read','request']})['token']
++    b=call('B',None,'attach',{'scopes':['attach','read','request']})['token']
++    def wait(reply):
++        wid=reply['request_id']
++        assert context.owners.work[wid].done.wait(5), 'worker deadline'
++        return call('A',a,'request-status',{'request_id':wid})['events']
++    def check(name,fn):
++        try:fn();records.append({'check':name,'passed':True})
++        except Exception:records.append({'check':name,'passed':False,'traceback':traceback.format_exc()})
++    def request(scenario):
++        context.text_router=offline_router(scenario)
++        reply=call('A',a,'request-text-only',{'text':'Explain triangles.','operation':uuid.uuid4().hex})
++        return reply,wait(reply)
++    def success(scenario,provider,model,reason):
++        reply,events=request(scenario)
++        assert sum(e['event']=='assistant.completed' for e in events)==1
++        assert not any(e['event'].startswith('tool.') for e in events)
++        r=call('A',a,'last-response-provider')['provenance']
++        assert r['response_id']==reply['response_id']
++        assert r['actual_final_provider']==provider and r['actual_final_model']==model
++        assert r['fallback_reason']==reason and r['request_mode']=='text-only'
++    check('A I OpenAI actual model persisted',lambda:success('openai','OpenAI','openai-offline-fixture',None))
++    check('B J K temporary429 Qwen provenance',lambda:success('temporary','Ollama','qwen3:4b','temporary_rate_limit'))
++    check('C quota429 Qwen provenance',lambda:success('quota','Ollama','qwen3:4b','quota_exhausted'))
++    def fails(scenario):
++        before=call('A',a,'last-response-provider')['provenance']['response_id']
++        reply,events=request(scenario)
++        assert any(e['event']=='run.failed' for e in events)
++        assert not any(e['event']=='assistant.completed' for e in events)
++        assert call('A',a,'last-response-provider')['provenance']['response_id']==before
++    check('D offline fails honestly',lambda:fails('offline'))
++    check('E generation failure not successful',lambda:fails('generation-failure'))
++    def isolation():
++        assert call('B',b,'last-response-provider')['provenance']['status']=='NO_COMPLETED_RESPONSE'
++        try:call('B',a,'last-response-provider')
++        except runtime.Denied:pass
++        else:raise AssertionError('foreign token accepted')
++    check('M owner isolation and token binding',isolation)
++    def no_tools():
++        reply,events=request('openai')
++        run=context.runs[reply['request_id']]
++        try:context.check_tool('time_now',run)
++        except runtime.Denied as e:assert str(e)=='TEXT_ONLY_NO_TOOLS'
++        else:raise AssertionError('tool allowed')
++    check('G tool guard rejects text-only',no_tools)
++    def normal():
++        reply=call('A',a,'request',{'text':'what time is it'})
++        events=wait(reply)
++        assert any(e['event']=='tool.completed' for e in events)
++        assert any(e['event']=='assistant.completed' for e in events)
++        assert call('A',a,'last-response-provider')['provenance']['request_mode']=='normal'
++    check('F H normal tools unchanged',normal)
++    def duplicate():
++        context.text_router=offline_router('openai');op=uuid.uuid4().hex
++        args={'text':'Explain triangles.','operation':op}
++        reply=call('A',a,'request-text-only',args);wait(reply)
++        duplicate=call('A',a,'request-text-only',args)
++        assert duplicate['duplicate'] and duplicate['response_id']==reply['response_id']
++        assert len(context.text_router.records)==1
++    check('O duplicate does not execute again',duplicate)
++    def cancel():
++        context.text_router=offline_router('openai')
++        def primary(messages,model,signal,deadline):
++            signal.wait(2)
++            return {'content':'must not publish','model':'fixture','complete':True}
++        context.text_router.primary=primary
++        reply=call('A',a,'request-text-only',{'text':'cancel me','operation':uuid.uuid4().hex})
++        call('A',a,'cancel',{'request_id':reply['request_id']});events=wait(reply)
++        assert not any(e['event']=='assistant.completed' for e in events)
++    check('N cancelled response never completed',cancel)
++    def restart():
++        previous=call('A',a,'last-response-provider')['provenance']
++        context.response_history=History(context.data/'jarvis.sqlite3')
++        assert call('A',a,'last-response-provider')['provenance']==previous
++        newtoken=call('A',None,'attach',{'scopes':['attach','read','request']})['token']
++        assert call('A',newtoken,'last-response-provider')['provenance']==previous
++        assert 'model:' in call('A',newtoken,'last-response-provider')['answer']
++    check('L P deterministic query storage reopen and reauthenticated owner',restart)
++    check('ONE App retained',lambda: (_ for _ in ()).throw(AssertionError(context.construction_counts)) if context.construction_counts!={'App':1,'VoiceEngine':1,'WakeDetector':1,'Store':1} else None)
++    for worker in context.lifecycle.workers.values():worker.join(5)
++    assert not any(w.is_alive() for w in context.lifecycle.workers.values())
++    result={'checks':records,'passed':sum(r['passed'] for r in records),'total':len(records),
++            'scope':'Real isolated App/Context; trusted authenticated dispatcher seam, no live named-pipe or Electron test. Storage reopen and new authenticated session, not process restart.',
++            'root':str(root),'production_changed':False,'live_provider_calls':0}
++    (root/'fallback-integration-results.json').write_text(json.dumps(result,indent=2))
++    print(json.dumps(result,indent=2))
++sys.exit(0 if all(r['passed'] for r in records) else 1)
+--- before/tests/provider_history_restart.py
++++ after/tests/provider_history_restart.py
+@@ -0,0 +1,31 @@
++"""Fresh TEST Context/App reattaches to existing synthetic data, offline only."""
++import json
++from pathlib import Path
++import sqlite3
++import sys
++sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
++import stage4_runtime as runtime
++from stage4_provider_fallback import offline_router
++root=runtime.validate_root(Path(sys.argv[1]))
++data_id=json.loads((root/'STAGE4_TEST-data/STAGE4_TEST.json').read_text())['data_id']
++with runtime.exclusion.Lock(root,'core.lock') as lock:
++    context=runtime.Context(root,data_id,lock,{'A':['attach','read','request'],'B':['attach','read','request']})
++    context.text_router=offline_router()
++    app=runtime.construct_app(context)
++    authority=runtime.Authority(context,{}, {'A':{},'B':{}})
++    def call(client,token,op,args={}):return authority.operation(client,dict(op=op,token=token,args=args),2)
++    a=call('A',None,'attach',{'scopes':['attach','read','request']})['token']
++    b=call('B',None,'attach',{'scopes':['attach','read','request']})['token']
++    result=call('A',a,'last-response-provider')
++    assert result['provenance']['final_status']=='COMPLETED'
++    assert call('B',b,'last-response-provider')['provenance']['status']=='NO_COMPLETED_RESPONSE'
++    with context.response_history.connect() as db:
++        operation,response_id=db.execute("SELECT operation,response_id FROM stage4_response_provenance WHERE owner='A' AND mode='text-only' AND status='COMPLETED' ORDER BY timestamp DESC LIMIT 1").fetchone()
++    reply=call('A',a,'request-text-only',{'text':'Explain triangles.','operation':operation})
++    assert reply['duplicate'] and reply['response_id']==response_id
++    assert not context.text_router.records
++    assert context.construction_counts=={'App':1,'VoiceEngine':1,'WakeDetector':1,'Store':1}
++    evidence={'passed':4,'checks':['fresh process/App history recovery','owner B excluded','duplicate prevented after restart','one App/Store/voice/wake'],
++              'scope':'Fresh isolated Context/App process, existing TEST lifetime lock; no named-pipe/Electron/live provider test','last_response':result}
++    (root/'fallback-restart-results.json').write_text(json.dumps(evidence,indent=2))
++    print(json.dumps(evidence,indent=2))

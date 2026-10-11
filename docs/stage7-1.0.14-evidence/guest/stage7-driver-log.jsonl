@@ -1,0 +1,7 @@
+{"utc":"2026-10-04T16:20:52.0874355Z","mode":"","package":"E:\\","outcome":"phase passed","phase":"Install","exit_code":0}
+{"utc":"2026-10-05T02:32:38.1049496Z","mode":"","package":"E:\\","outcome":"waiting for the Windows restart"}
+{"utc":"2026-10-05T02:39:02.0956487Z","mode":"","package":"E:\\","outcome":"phase passed","phase":"AfterRestart","exit_code":0}
+{"utc":"2026-10-05T02:49:06.0414276Z","mode":"","package":"E:\\","outcome":"phase passed","phase":"Uninstall","exit_code":0}
+{"utc":"2026-10-05T03:19:45.4855617Z","mode":"","package":"E:\\","outcome":"phase passed","phase":"Update","exit_code":0}
+{"utc":"2026-10-05T03:30:57.8098498Z","mode":"","package":"E:\\","outcome":"phase passed","phase":"Interrupt","exit_code":0}
+{"utc":"2026-10-05T03:30:57.8369251Z","mode":"","package":"E:\\","ran_now":["AfterRestart","Uninstall","Update","Interrupt"],"outcome":"all phases passed"}

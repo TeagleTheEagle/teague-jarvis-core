@@ -1,0 +1,18 @@
+{
+    "status":  "PASS",
+    "first_install_verify":  "verified",
+    "first_install_release":  "1.0.11-60d406fb6398",
+    "first_install_processes":  0,
+    "restore_target_exists":  false,
+    "extracted_package":  true,
+    "first_install_data":  {
+                               "database_sha256":  "762a4e8b0bc37c1b651f0b0cf252a9cb2d7fdcff5c5daec286b6091eea216375",
+                               "database_bytes":  143360,
+                               "data_files":  8
+                           },
+    "first_install_current":  {
+                                  "release":  "1.0.11-60d406fb6398",
+                                  "previous":  "1.0.10-915e906516dc",
+                                  "switched_at":  1791084916.601391
+                              }
+}

@@ -1,0 +1,28 @@
+{
+  "schema": "stage6-owner-decision-record-v1",
+  "subject": "Gate 20: the owner's decisions on the four open items of gate20-requirements-draft.json / docs/stage6-freshvm/GATE20-REVIEW.md",
+  "recorded_utc": "2026-10-04T08:08:03Z",
+  "owner_message": "Direct human message in the Claude Code chat, 2026-10-04 (local): \"accept all\", in reply to Claude's message that listed the four items with a recommendation for each and asked for 'accept all' or the items to be decided differently. The owner did not state a different reading of the section 9(g) deadlines.",
+  "dispositions": {
+    "1: section 6(g) build and UBR not recorded by the Gate 18 guest script": {
+      "decision": "APPROVED_DISPOSITION: accepted as recorded.",
+      "record": "the VM settings saved at snapshot GATE18-PASS hold the Guest Additions property /VirtualBox/GuestInfo/OS/Release = 10.0.26300.9457 (vm\\JARVIS-S6-FRESH.vbox.GATE18-PASS-copy); Windows Update paused until 2026-11-06 (Gate 17 C1-cleanliness).",
+      "stated_limitation": "host-side evidence; the value was not read inside the guest during Gate 18."
+    },
+    "2: section 9(g) deadlines and the v3 D9 timing bound": {
+      "decision": "APPROVED_DISPOSITION. Bound set from the VM measurements: install, update and rollback each within 600 s; stopping a running JARVIS within 120 s. The four collector-harness deadlines (heartbeat 10 s, probe 13.6 s, retained-handle 15 s, cleanup 20 s) had no occasion to apply on this route, because the collector/observer harness did not run in Gates 16R-20.",
+      "measured": "install 199.9 s (Gate 17) and about 208 s (Gate 18 K3); update 306.9 s; rollback 98.1 s; second update 165.8 s; stop 4.9 s, about 95 s (G5, G6); every measured run is inside the bound",
+      "note": "58bc2bcf Part 1: a finite bound from evidence, not an unlimited wait. The slow stops in the VM stay listed as a rough edge for the first release after cutover."
+    },
+    "3: FINAL 1.0.11 hangs when a backup lies on read-only media": {
+      "decision": "APPROVED_DISPOSITION: accepted as a known limitation of FINAL; no source change before cutover; to be fixed in the first release after cutover.",
+      "record": "gate18\\incident-04-k4-hang-read-only-disc.json"
+    },
+    "4: the test VM and the copies of the owner's data": {
+      "decision": "KEEP for now: the VM (snapshot GATE18-PASS) and the personal-data copies (media\\bcc2753f...zip, media\\JARVIS-RECOVERY.iso, D:\\JARVIS-release-work\\stage6-media\\JARVIS-RECOVERY.iso, D:\\JARVIS-release-work\\recovery-payload) stay under D: until the switch-over is done and has run well for a while; then they are deleted on the owner's word. Deleting the VM is the owner's act in VirtualBox (jarvis-s6-val).",
+      "conditions": "the VM stays Stage 6 acceptance-only (AMENDMENT-v2 section 6(j)); its storage does not leave D:\\JARVIS-S6-FRESHVM; no provider keys enter it."
+    }
+  },
+  "effect": "Items 1 to 3 are dispositioned, not passed. Item 4 is the owner's retention decision. Still outstanding for the verdict: checkpoint P5, only on the owner's own 'run P5'.",
+  "recorded_by": "Claude Code (Claude Fable 5.1), owner account. This record documents the owner's act; it grants no gate token."
+}

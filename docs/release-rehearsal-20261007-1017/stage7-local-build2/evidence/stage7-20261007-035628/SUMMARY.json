@@ -1,0 +1,21 @@
+{
+    "schema":  "jarvis-stage7-run-v1",
+    "overall":  "PASS",
+    "phase":  "AfterRestart",
+    "home":  "D:\\JARVIS-release-work\\stage7-local-1.0.17-build2\\home",
+    "package":  "D:\\JARVIS-release-work\\pkg-1.0.17",
+    "started_utc":  "2026-10-07T03:56:28.7161491Z",
+    "finished_utc":  "2026-10-07T03:56:29.3182466Z",
+    "steps":  [
+                  {
+                      "step":  "E0-not-elevated",
+                      "status":  "PASS",
+                      "at":  "2026-10-07T03:56:28.8617864Z"
+                  },
+                  {
+                      "step":  "R1-after-restart",
+                      "status":  "PASS",
+                      "at":  "2026-10-07T03:56:29.3137007Z"
+                  }
+              ]
+}

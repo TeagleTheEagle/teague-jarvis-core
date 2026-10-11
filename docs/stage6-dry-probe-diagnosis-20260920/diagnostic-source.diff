@@ -1,0 +1,95 @@
+--- frozen/EventTap.cs
++++ diagnostic/EventTap.cs
+@@ -11,7 +11,7 @@
+ 
+ public sealed class TapRow {
+  public long seq,qpc; public string utc,stage,kind,source,nativeTime,name,error;
+- public int pid,eventId,queueDepth,thread;
++ public int parentPid,pid,eventId,queueDepth,thread;
+ }
+ public static class EventTap {
+  static readonly ConcurrentQueue<TapRow> rows=new ConcurrentQueue<TapRow>();
+@@ -38,7 +38,8 @@
+    var props=Get(n,"CimInstanceProperties")??Get(n,"Properties");
+    foreach(object p in (IEnumerable)props) {
+     string name=Convert.ToString(Get(p,"Name"));object value=Get(p,"Value");
+-    if(name=="ProcessID")r.pid=Convert.ToInt32(value);
++    if(name=="ParentProcessID")r.parentPid=Convert.ToInt32(value);
++    else if(name=="ProcessID")r.pid=Convert.ToInt32(value);
+     else if(name=="ProcessName")r.name=Convert.ToString(value);
+     else if(name=="TIME_CREATED")r.nativeTime=Convert.ToString(value);
+    }
+--- frozen/monitor.ps1
++++ diagnostic/monitor.ps1
+@@ -66,7 +66,7 @@
+  # Separate System.Management/COM subscriber, same Windows provider. Not an independent kernel source.
+  [void][Reflection.Assembly]::LoadFrom((Join-Path $PSHOME 'System.Management.dll'))
+  if($config.telemetry -ne 'none'){foreach($pair in @(@('Win32_ProcessStartTrace','start'),@('Win32_ProcessStopTrace','stop'))){
+-  $watcher=[System.Management.ManagementEventWatcher]::new('root\cimv2',("SELECT * FROM "+$pair[0]+" WHERE ProcessName LIKE 'J6Probe%'"))
++  $watcher=[System.Management.ManagementEventWatcher]::new('root\cimv2',("SELECT * FROM "+$pair[0]))
+   $hookNames+=[EventTap]::AttachSecondary($watcher,$pair[1]);$watcher.Start();$secondary.Add($watcher)
+  }}
+  Save 'hooks.json' @{hooks=$hookNames;powershell=$PSVersionTable.PSVersion.ToString();observerB='parallel WMI COM subscriber; same native provider';groundTruth='separate retained kernel process handles';callback_tap='attached after original handler; may observe after enqueue'}
+@@ -117,7 +117,7 @@
+  $eventFlush=[IO.FileStream]::new((Join-Path $root 'events.jsonl'),[IO.FileMode]::Open,[IO.FileAccess]::ReadWrite,[IO.FileShare]::Read)
+  try{$eventFlush.Flush($true)}finally{$eventFlush.Dispose()}
+  Mark 'durable.flush.end';$stream.Dispose();$stream=$null
+- $exact.Reconcile();$gate.Seal($true,$true);$gate.AssertSealed();$success=$true
++ $exact.Reconcile();Mark 'diagnostic.freeze.without.acceptance.seal';$success=$true
+ }catch{Save 'monitor-failure.json' @{error=$_.Exception.Message;stack=$_.ScriptStackTrace;utc=[DateTime]::UtcNow.ToString('o')};exit 1}
+ finally{
+  if($null -ne $stream){Mark 'journal.close.begin';$stream.Dispose();Mark 'journal.close.end'}
+@@ -148,8 +148,5 @@
+  Save 'timing-state.json' @{overflow=[LoopTiming]::Overflow;journalPath=$journalPath;telemetry=$config.telemetry;observerMeaning='100ms independent diagnostic sleep observer, not a health publisher; jitter is not proof of CPU starvation'}
+ }
+ 
+-# A zero exit and this receipt are both required by external archival verification.
+-$gate.AssertSealed();$exact.Reconcile()
+-if(-not $success){throw 'No successful finalization'}
+-Save 'monitor-result.json' @{status='LIVE_COLLECTION_CLOSED';run=$nonce;sequences=$seq;events=$count;violations=$violations;journalDurableFlush=$true;acceptance=$false;finalization='SEALED'}
+-$gate.AssertSealed();$gate.Dispose()
++Save 'diagnostic-monitor-result.json' @{status='DIAGNOSTIC_ONLY';run=$nonce;events=$count;success=$success;acceptance=$false}
++$gate.Dispose()
+--- frozen/probe_timing.py
++++ diagnostic/probe_timing.py
+@@ -15,8 +15,9 @@
+  if not K.GetProcessTimes(int(p._handle),*[c.byref(t) for t in ts]):raise c.WinError(c.get_last_error())
+  return [str(ft(t)) for t in ts]
+ class Probe:
+- def __init__(self,executable):
+-  self.row=dict(parentPid=os.getpid(),executable=str(executable),arguments=[],cwd=os.getcwd(),stdout='DEVNULL',stderr='DEVNULL',creationflags='CREATE_NO_WINDOW',close_fds=True,frequency=frequency(),clockBefore=bridge(),launchRequestedQpc=ticks())
++ def __init__(self,executable,args=None,startupinfo=None):
++  args=[] if args is None else args
++  self.row=dict(parentPid=os.getpid(),executable=str(executable),arguments=args,cwd=os.getcwd(),stdout='DEVNULL',stderr='DEVNULL',creationflags='CREATE_NO_WINDOW',close_fds=True,frequency=frequency(),clockBefore=bridge(),launchRequestedQpc=ticks())
+   original=subprocess._winapi.CreateProcess
+   def measured(*args,**kwargs):
+    self.row['createProcessCalledQpc']=ticks()
+@@ -24,7 +25,7 @@
+    finally:self.row['createProcessReturnedQpc']=ticks()
+   try:
+    subprocess._winapi.CreateProcess=measured
+-   self.process=subprocess.Popen([str(executable)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,creationflags=0x08000000)
++   self.process=subprocess.Popen([str(executable),*args],startupinfo=startupinfo,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,creationflags=0x08000000)
+   finally:subprocess._winapi.CreateProcess=original
+   self.row['popenReturnedQpc']=ticks();self.row['pid']=self.process.pid
+   try:self.row['initialKernelTimes']=process_times(self.process);self.row['identityCapturedQpc']=ticks()
+@@ -61,7 +62,7 @@
+    raise
+  def finish_observation(self):
+   self.observer.join(timeout=16)
+-  if self.observer.is_alive() or self.row.get('observerResult')!=0:raise RuntimeError('Probe exit observation/cleanup uncertain')
++  self.row['independentObserverFailed']=self.observer.is_alive() or self.row.get('observerResult')!=0
+   self.row['finalKernelTimes']=process_times(self.process);self.row['clockAfter']=bridge()
+   code=w.DWORD()
+   if not K.GetExitCodeProcess(int(self.process._handle),c.byref(code)):raise c.WinError(c.get_last_error())
+--- frozen/resources.ps1
++++ diagnostic/resources.ps1
+@@ -5,7 +5,7 @@
+   $q=[Diagnostics.Stopwatch]::GetTimestamp()
+   $counterStart=[Diagnostics.Stopwatch]::GetTimestamp();$c=Get-Counter -Counter '\Processor(*)\% Processor Time','\PhysicalDisk(*)\% Idle Time','\PhysicalDisk(*)\Current Disk Queue Length','\PhysicalDisk(*)\Avg. Disk sec/Read','\PhysicalDisk(*)\Avg. Disk sec/Write','\PhysicalDisk(*)\Disk Read Bytes/sec','\PhysicalDisk(*)\Disk Write Bytes/sec','\Memory\Available MBytes','\Memory\Pages/sec','\Memory\Page Faults/sec','\System\Context Switches/sec' -MaxSamples 1
+   $counterEnd=[Diagnostics.Stopwatch]::GetTimestamp();$processStart=$counterEnd
+-  $p=@(Get-Process -Name pwsh,python,MsMpEng -ErrorAction SilentlyContinue|ForEach-Object{@{pid=$_.Id;name=$_.ProcessName;cpuSeconds=$_.CPU;workingSet=$_.WorkingSet64;priority=[string]$_.PriorityClass;threads=@($_.Threads|ForEach-Object{@{id=$_.Id;state=[string]$_.ThreadState;priority=$_.CurrentPriority}})}})
++  $p=@(Get-Process -Name pwsh,python,MsMpEng,J6Probe,J6ProbeNative,J6ProbeToken -ErrorAction SilentlyContinue|ForEach-Object{@{pid=$_.Id;name=$_.ProcessName;cpuSeconds=$_.CPU;workingSet=$_.WorkingSet64;priority=[string]$_.PriorityClass;threads=@($_.Threads|ForEach-Object{@{id=$_.Id;state=[string]$_.ThreadState;waitReason=$(if($_.ThreadState -eq 'Wait'){[string]$_.WaitReason}else{'NOT_WAITING'});priority=$_.CurrentPriority}})}})
+   $rows.Add(@{qpc=$q;counterStart=$counterStart;counterEnd=$counterEnd;processStart=$processStart;endQpc=[Diagnostics.Stopwatch]::GetTimestamp();utc=[DateTime]::UtcNow.ToString('o');counters=@($c.CounterSamples|Select-Object Path,CookedValue);processes=$p})
+   Start-Sleep -Seconds 1
+  }

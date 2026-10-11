@@ -1,0 +1,19 @@
+/* The Workshop panel (static/workshop.js), Settings > Workshop. Colours and spacing follow the Music panel. */
+.workshop-panel{display:flex;flex-direction:column;gap:14px}
+.workshop-panel h3{margin:0 0 6px;font-size:.95rem;letter-spacing:.04em;text-transform:uppercase;opacity:.85}
+.workshop-panel code{font-size:.85rem;word-break:break-all}
+.workshop-note{margin:4px 0 8px;opacity:.8;font-size:.9rem}
+.workshop-python{margin:0;opacity:.85;font-size:.9rem}
+.workshop-folders input,.workshop-minutes input{width:100%;max-width:560px;box-sizing:border-box;margin:0 8px 8px 0}
+.workshop-minutes input{max-width:120px}
+.workshop-missions textarea{width:100%;max-width:720px;box-sizing:border-box;resize:vertical}
+.workshop-controls{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}
+.workshop-mission{padding:8px 10px;margin:0 0 8px;border-left:3px solid rgba(255,255,255,.25);background:rgba(255,255,255,.03)}
+.workshop-mission.ok{border-left-color:#39f5b5}
+.workshop-mission.warn{border-left-color:#ffc857}
+.workshop-mission b{display:block;margin-bottom:4px}
+.workshop-plan{margin:4px 0 4px 18px;padding:0;opacity:.9;font-size:.9rem}
+.workshop-log{margin:4px 0 4px 18px;padding:0;opacity:.75;font-size:.85rem;list-style:none}
+.workshop-result{margin:6px 0;white-space:pre-wrap;font-size:.9rem}
+.workshop-mission small{opacity:.65}
+.workshop-lesson{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.08);font-size:.9rem}

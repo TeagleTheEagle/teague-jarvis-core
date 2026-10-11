@@ -1,0 +1,13 @@
+{
+    "schema":  "jarvis-stage7-authorized-v2",
+    "final":  "1.0.14-e03872680e1d",
+    "previous":  "1.0.11-60d406fb6398",
+    "label":  "1.0.14-e03872680e1d",
+    "expected_current_snapshot":  "STAGE7-PASS",
+    "owner_text":  "I approve the Stage 7 check of 1.0.14",
+    "issued_utc":  "2026-10-04T14:59:02Z",
+    "recorded_utc":  "2026-10-04T14:59:35Z",
+    "record":  "C:\\Users\\jonny\\JARVIS-claude-workspace\\governance\\STAGE7-1.0.14-APPROVAL-RECORD.json",
+    "plan_sha256":  "913988c1123e1a296a1b89672aadabf3977b8abfb680000aaba5cc60e4fa91a8",
+    "written_by":  "Claude Code (Claude Opus 5.5) on the owner\u0027s approval"
+}

@@ -1,0 +1,32 @@
+======================================================================
+ERROR: test_the_tool_call_limit (test_workshop.MissionTests.test_the_tool_call_limit)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "shutil.py", line 633, in _rmtree_unsafe
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'D:\\JARVIS-release-work\\regression-1.0.18-build2\\home\\AppData\\Local\\Temp\\tmposthwzxu\\jarvis.sqlite3'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "tempfile.py", line 954, in cleanup
+  File "tempfile.py", line 934, in _rmtree
+  File "shutil.py", line 781, in rmtree
+  File "shutil.py", line 635, in _rmtree_unsafe
+  File "tempfile.py", line 909, in onexc
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'D:\\JARVIS-release-work\\regression-1.0.18-build2\\home\\AppData\\Local\\Temp\\tmposthwzxu\\jarvis.sqlite3'
+
+======================================================================
+FAIL: test_the_tool_call_limit (test_workshop.MissionTests.test_the_tool_call_limit)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\JARVIS-release-work\regression-1.0.18-build2\release\app\test_workshop.py", line 373, in test_the_tool_call_limit
+    row = self.wait(desk)
+          ^^^^^^^^^^^^^^^
+  File "D:\JARVIS-release-work\regression-1.0.18-build2\release\app\test_workshop.py", line 294, in wait
+    self.assertTrue(mission.finished.wait(seconds), 'the mission did not end')
+AssertionError: False is not true : the mission did not end
+
+----------------------------------------------------------------------
+Ran 816 tests in 1694.030s
+
+FAILED (failures=1, errors=1, skipped=7)

@@ -1,0 +1,18 @@
+{
+  "schema": "stage6-incident-v1",
+  "id": "gate18-incident-04",
+  "recorded_utc": "2026-10-04T07:41:10Z",
+  "gate": "Gate 18, rerun after incident 03: guest run guest-egress-01\\gate18-20261004-072308 (started 07:23:08Z)",
+  "what_happened": "K0, K1, K2 (first install verified, 0 processes), K3 (second install at %LOCALAPPDATA%\\JARVIS-restore installed and verified, 07:29:40Z by host file time) PASS. K4 (dry run of the shipped switch_over.py on the backup) had not finished after more than ten minutes; in both rehearsals it took about one second. No K4 record, no SUMMARY.json. Nothing was imported: the dry run changes nothing and K5 was not reached.",
+  "cause": "FINAL's recovery.verify() checks the database by extracting it into a temporary folder created beside the archive: tempfile.TemporaryDirectory(dir=Path(archive).parent). The guest script passes the archive on the recovery disc (E:\\, read-only). On Windows, Python 3.12.10's tempfile.mkdtemp() treats PermissionError as a name collision and tries the next name whenever the parent is an existing directory for which os.access(W_OK) is true (always true for directories on Windows), up to TMP_MAX = 2,147,483,647 attempts: in effect it never returns.",
+  "how_established": "code reading (recovery.py at 60d406f; tools/guest/Invoke-Gate18.ps1 K4) and a test on the host with the FINAL package's Python: a write-protect error (winerror 19) is a PermissionError, and mkdtemp was still retrying after 20,000 refused attempts when the test stopped it. Not observed directly inside the VM; the timing (1 s in rehearsal, more than 10 minutes in the VM) is consistent with it.",
+  "why_not_found_in_rehearsal": "both rehearsals used a writable folder as the 'disc'; the disc build and a real read-only disc could not be rehearsed by Claude.",
+  "classification": [
+    "Gate 18 tooling gap: the guest script must restore from a copy of the backup in a writable folder, not directly from the read-only disc.",
+    "Product limitation of FINAL 1.0.11 (found, not fixed: no source change until cutover): verifying or importing a backup that lies on read-only media hangs instead of failing with a message. It does not affect a backup in a normal folder (the cutover case). To be listed for the owner at Gate 20 and fixed in the first release after cutover."
+  ],
+  "state_of_the_vm": "running; first install stopped (quit by the owner before the rerun); a second install exists at %LOCALAPPDATA%\\JARVIS-restore (verified, no data imported); the stuck python.exe of that install runs until the Gate 18 window is closed.",
+  "proposed_repeat_for_owner_decision": "Same VM session, same disc content, unchanged script: the owner closes the stuck window, copies the disc's six files to a writable folder (xcopy E:\\ C:\\g18\\) and starts the unchanged Invoke-Gate18.ps1 from there with -RestoreHome C:\\g18\\home (a new, empty restore target; the install left by the stuck run stays unused and is recorded). K1 proves the copied backup equals the recorded hash. Claude moves the stuck run's folder, unchanged, to guest-egress-01\\incident-04-run2\\. Recorded as rerun 2 with these deviations.",
+  "status": "Gate 18 STOPPED at K4 (hang). Not repeated without the owner's decision.",
+  "recorded_by": "Claude Code (Claude Fable 5.1)"
+}

@@ -1,0 +1,16 @@
+{
+  "old": "1.0.15-02ae75ed0374",
+  "new": "1.0.15-63362929d7ad",
+  "files_old": 10669,
+  "files_new": 10669,
+  "changed": 4008,
+  "added": 0,
+  "removed": 0,
+  "app_source_changed": [],
+  "app_source_added": [],
+  "app_source_removed": [],
+  "bytecode_changed": 3979,
+  "launchers_and_records_changed": 29,
+  "pinned_inputs_changed": [],
+  "pinned_inputs_identical": true
+}

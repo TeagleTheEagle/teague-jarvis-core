@@ -1,0 +1,11 @@
+--- D:\JARVIS-STAGE6-LIVE\82fe9772161e41578a7d9d93cdbcbcab\code\qualified_launch.ps1
++++ D:\JARVIS-STAGE6-LIVE\d880e9c8957c44b69fb5f90e0c6ec2f5\code\qualified_launch.ps1
+@@ -14,7 +14,7 @@
+ using System.Runtime.InteropServices;
+ using System.Threading.Tasks;
+ public static class J6Qualification {
+- [DllImport("D:\\JARVIS-STAGE6-LIVE\\929ba9ea1c724c46b549d1dff12b517d\\code\\J6OwnedEntry.dll",CharSet=CharSet.Unicode)] public static extern int RunQualification(string root);
++ [DllImport("D:\\JARVIS-STAGE6-LIVE\\d880e9c8957c44b69fb5f90e0c6ec2f5\\code\\J6OwnedEntry.dll",CharSet=CharSet.Unicode)] public static extern int RunQualification(string root);
+  public static Task<int> Start(string root) { return Task.Run(() => RunQualification(root)); }
+ }
+ '@

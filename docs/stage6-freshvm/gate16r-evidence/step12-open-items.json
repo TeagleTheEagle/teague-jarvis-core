@@ -1,0 +1,29 @@
+{
+  "schema": "stage6-gate16r-open-items-v1",
+  "subject": "Gate 16R step 12: two differences between the approved wording and what was built, found while checking every section 6(k) item. Neither is decided by Claude; both are put to the owner. FRESH_VM_QUALIFICATION_PASS is not declared until the owner disposes of them.",
+  "utc": "2026-10-04T03:22:00Z",
+  "items": {
+    "A: guest account is an administrator, the approved wording says 'standard'": {
+      "approved_text": "AMENDMENT-v3 D3: 'creating one local standard account with no Microsoft account and no network sign-in'. Approved execution prompt step 0.4: 'autounattend.xml creating one local standard account'; step 7: 'a local standard account is created with no Microsoft account'.",
+      "governing_text": "AMENDMENT-v2 section 6(c): 'Local account only. No Microsoft account sign-in ... Only Microsoft-supported or built-in Windows setup paths are allowed, recorded verbatim.' It does not say standard or administrator.",
+      "fact": "tools/guest/autounattend.xml (sha256 7d6114f494a22c4fff1737276069dae7ec1f05e8e15558e7e78271ec6ff4ec8c, committed once, 505569b, 2026-10-01, never changed; on UNATTEND.iso 89f97c7b...) creates the single local account jarvis-s6-guest with <Group>Administrators</Group>. Its own comment gives the reason: installing Guest Additions and pausing Windows Update need an administrator. The file existed in this form before the prompt was approved; the prompt's wording was not corrected to match and the difference was not put to the owner. Earlier records mention it only in passing (step8-evaluation.json: 'Administrators-group guest account'; docs/HANDOVER-20261002.md: 'local admin').",
+      "what_is_met": "Section 6(c) as written: one local account, no Microsoft account, a supported setup path, the answer file kept verbatim. The baseline shows the account's processes run without elevation (is_administrator false).",
+      "what_is_not_met": "The word 'standard' in v3 D3 and in the approved prompt.",
+      "effect_if_accepted": "Stage 6 tests JARVIS on the kind of account Windows itself creates as the first account on a new PC (an administrator account running without elevation). It does not test installing JARVIS on an account that is not an administrator; that case stays untested by Stage 6.",
+      "alternative": "Not accepted means this VM does not meet D3: a replacement VM built with a standard account plus a separate administrator account for Guest Additions and the update pause. A replacement VM is an owner decision (section 6(k)).",
+      "claude_recommendation": "Accept as recorded, with the condition carried into Gate 17 that the JARVIS install and run are recorded as non-elevated and that any UAC prompt during them is a STOP."
+    },
+    "B: VirtualBox's 'default machine folder' setting was not changed": {
+      "governing_text": "AMENDMENT-v2 section 7(d): 'VBOX_USER_HOME=D:\\JARVIS-S6-FRESHVM\\vbox-home ... Default machine folder: D:\\JARVIS-S6-FRESHVM\\machines.'",
+      "approved_prompt": "Step 4 sets VBOX_USER_HOME only; step 6 creates the VM with its disk 'in machines\\'. No step sets the default-machine-folder property.",
+      "fact": "vbox-home\\VirtualBox.xml holds defaultMachineFolder=\"C:\\Users\\jarvis-s6-val\\VirtualBox VMs\", VirtualBox's own default (noted in step6-evaluation.json as unused). The VM was created with an explicit folder: its .vbox, .nvram, disk, logs and both snapshots are all under D:\\JARVIS-S6-FRESHVM\\machines\\JARVIS-S6-FRESH, and it is the only machine registered. Claude cannot read C:\\Users\\jarvis-s6-val to show that the default folder is empty or absent.",
+      "what_is_met": "The purpose of the clause: everything belonging to the VM is in machines\\ on D:, nothing of it under C:\\Users\\jonny.",
+      "what_is_not_met": "The property itself does not name D:\\JARVIS-S6-FRESHVM\\machines.",
+      "effect_if_accepted": "None for the remaining gates: no further VM is created. The property only chooses where a new VM would go when no folder is given.",
+      "alternative": "Setting the property now would be an in-place change after the fact (section 6(k) allows none without the owner), and would not change where the existing VM is.",
+      "claude_recommendation": "Accept as recorded."
+    }
+  },
+  "everything_else": "Every other section 6(k) item was checked against the evidence and is met or already dispositioned by the owner (v3 A1-A4; step6-owner-decision-nat.json; step8-owner-dispositions.json). The full evaluation is written after the owner's answer.",
+  "recorded_by": "Claude Code (Claude Fable 5.1), owner account"
+}

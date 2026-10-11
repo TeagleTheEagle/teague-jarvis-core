@@ -1,0 +1,13 @@
+{
+  "schema": "stage6-limitation-note-v1",
+  "utc": "2026-10-02T01:24:30Z",
+  "observed_in": "step2-folders.json (owner-run New-Stage6SessionFolders.ps1, 2026-10-02T01:23:20Z)",
+  "observation": "Every folder created under D:\\JARVIS-S6-FRESHVM inherits 'NT AUTHORITY\\Authenticated Users: Modify' and 'BUILTIN\\Users: ReadAndExecute' from the D: volume's default ACL. jarvis-s6-val is an authenticated user, so it already has modify access to the whole D:\\JARVIS-S6-FRESHVM tree, including evidence\\ (the sealed P0 folder, the Gate 16R checkpoints) and, later, vbox-home\\, machines\\ and media\\. The explicit grants made by the owner's script are therefore redundant (harmless).",
+  "effect_on_the_route": {
+    "section_7e_isolation_test": "unaffected: the synthetic restricted fixture uses a protected (non-inherited) DACL with an explicit deny, and the protected original paths are under C:\\Users\\jonny, whose profile ACL excludes the validation account",
+    "section_6k_no_path_back_to_the_protected_original": "unaffected (C: paths)",
+    "evidence_integrity_on_D": "LIMITATION: folder permissions do not protect Gate 16R evidence from the validation account. Integrity relies on (a) MANIFEST.json hash lists written at the end of each run, (b) copies of key records versioned in the repository (docs/stage6-freshvm/gate16r-evidence) under the owner account, and (c) the sealed P0 archive's own verification record. No existing folder's ACL is changed (BOOTSTRAP-PROPOSAL: never set inheritable changes on existing parents)."
+  },
+  "recommended_owner_option": "If the owner wants evidence protected by ACL as well, the owner (not Claude) could later create a separate owner-only evidence copy folder; not required by AMENDMENT-v2/v3.",
+  "recorded_by": "Claude Code (Claude Fable 5.1), owner account; no permission changed"
+}

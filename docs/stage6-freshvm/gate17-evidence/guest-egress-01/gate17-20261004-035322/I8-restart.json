@@ -1,0 +1,13 @@
+{
+    "status":  "PASS",
+    "stop":  {
+                 "core_stopped_on_request":  true,
+                 "shell_processes_ended":  7,
+                 "processes_now":  0
+             },
+    "verify_after_use":  "verified",
+    "restarted":  true,
+    "seconds_to_ready":  5.8,
+    "memory_persisted":  true,
+    "identity_same":  true
+}

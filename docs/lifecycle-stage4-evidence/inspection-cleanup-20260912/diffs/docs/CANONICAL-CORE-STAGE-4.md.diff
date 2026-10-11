@@ -1,0 +1,18 @@
+--- before/docs/CANONICAL-CORE-STAGE-4.md
++++ after/docs/CANONICAL-CORE-STAGE-4.md
+@@ -1,4 +1,15 @@
+ # Canonical Core Stage 4 — implementation preflight / scope review
++
++## Latest checkpoint — 2026-09-12 inspection work cleanup
++
++The next approved worker-registration gate is partially implemented. Focused
++inspection/lifecycle tests: 13/13 PASS. The first real-App probe passed 35 checks
++then FAILED archive/exit acceptance: synthetic storage lacks the archive's
++required project. UNKNOWN outcome and TEST lifetime ownership were retained.
++No retry, force termination, acceptance commit, production activation or Stage 5.
++See [inspection cleanup review](lifecycle-stage4-evidence/inspection-cleanup-20260912/REVIEW.md)
++for preserved evidence, exact source scope and the required identity-verified
++cleanup approval for TEST Core PID 18372. Earlier entries below are historical.
+ 
+ Status: **FAIL / INCOMPLETE — SCOPE EXPANSION REVIEW REQUIRED**. No runtime implementation or Stage 4 acceptance is claimed.
+ 

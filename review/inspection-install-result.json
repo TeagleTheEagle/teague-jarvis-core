@@ -1,0 +1,15 @@
+{
+  "installed_at": "2026-09-09T12:28:12.772814",
+  "backup": "review/inspection-backup-20260909-122704",
+  "backend_tests": "78 passed in 6.965 seconds",
+  "installed_endpoint": {
+    "panel": "communications",
+    "mode": "dom_only",
+    "capture": "completed",
+    "external_submission": "not_attempted",
+    "side_effect_attempts": 0,
+    "errors": [],
+    "duration_ms": 3123
+  },
+  "desktop": "launcher invoked; voice and cloud vision not tested"
+}

@@ -1,0 +1,65 @@
+{
+  "schema": "jarvis-owner-decision-record-v1",
+  "subject": "Owner approval of the Stage 7 check of release 1.0.16",
+  "issued_utc": "2026-10-06T06:50:25Z",
+  "issued_utc_basis": "first clock reading by Claude in the turn that received the message (2026-10-06 17:50 local)",
+  "recorded_utc": "2026-10-06T06:52:02Z",
+  "owner_messages": [
+    { "text": "I approve the Stage 7 check of 1.0.16", "taken_as": "approval of docs/STAGE7-CHECK-1.0.16.md as presented, with every difference from the approved docs/STAGE7-PLAN.md and from docs/STAGE7-CHECK-1.0.15.md listed in it" }
+  ],
+  "approved_plan": {
+    "path": "C:\\Users\\jonny\\JARVIS-claude-workspace\\repo\\docs\\STAGE7-CHECK-1.0.16.md",
+    "sha256": "13ac32cde37d8977156d46cd457b7b87b07dbfef2461c44e353226f190212ed0",
+    "repo_commit": "bc896bb"
+  },
+  "standard_plan": {
+    "path": "C:\\Users\\jonny\\JARVIS-claude-workspace\\repo\\docs\\STAGE7-PLAN.md",
+    "sha256": "95d1ecab1ee168cfce4b3475f50c3e38459f89eb1c35b2b737c74f15708c16c1",
+    "approval": "C:\\Users\\jonny\\JARVIS-claude-workspace\\governance\\STAGE7-APPROVAL-RECORD.json"
+  },
+  "builds": {
+    "final": "1.0.16-fccde24e2cc6",
+    "final_commit": "fccde24e2cc6bf087b43b0245ba283c8d7951c35",
+    "final_zip": "D:\\JARVIS-release-work\\release\\JARVIS-1.0.16-fccde24e2cc6.zip",
+    "final_zip_sha256": "58bba7423cf0668ff7684e9370865b9951e473eb1e0818c9437bf4287032d23a",
+    "final_zip_bytes": 525906502,
+    "final_note": "build 2 of 1.0.16; build 1 (1.0.16-4e54fc946bc3) is superseded and never offered (docs/release-rehearsal-20261006-1016/README.md); the owner's decision of 2026-10-06, \"fix it in 1.0.16\", keeps the number",
+    "previous": "1.0.15-63362929d7ad",
+    "previous_disc": "D:\\JARVIS-S6-FRESHVM\\media\\JARVIS-STAGE7-1.0.15-63362929d7ad.iso",
+    "previous_disc_sha256": "7ec1976380739a24f828794efbdd7c200a32e2fcb7360e71581461883ef846fb",
+    "previous_disc_note": "1.0.15 has no package disc; its own Stage 7 disc carries that build's zip and record at its root and is what the version 3 VM start script attaches on SATA port 1 (hash record D:\\JARVIS-stage7\\1.0.15-63362929d7ad\\evidence\\stage7-disc-1.0.15-63362929d7ad.json); read again by Claude on 2026-10-06: equal"
+  },
+  "label": "1.0.16-fccde24e2cc6",
+  "expected_current_snapshot": "STAGE7-PASS-1.0.15-63362929d7ad",
+  "expected_current_snapshot_basis": "JARVIS-S6-FRESH.vbox read on 2026-10-06 at 17:50 local (file dated 2026-10-06 12:43 local): currentSnapshot f1add04d-3281-4894-8ccf-baa302755260 (STAGE7-PASS-1.0.15-63362929d7ad), currentStateModified false, lastStateChange 2026-10-06T01:43:48Z; seven snapshots present, none removed",
+  "vm_windows_update_paused_until_utc": "2026-11-06T05:27:32Z",
+  "discs_in_the_vm": "both discs carry the volume label JARVIS_S7: the previous build's (1.0.15) on SATA port 1, drive D: in the VM; this check's on SATA port 2, drive E: in the VM; the plan tells the owner to open drive E: and check that the zip on it says 1.0.16",
+  "timing_bound": "the Gate 20 bound (install, update and rollback each within 600 s, stopping JARVIS within 120 s) applies, per the owner's decision of 2026-10-06 (\"accept the VM time\"): a measurement outside it is accepted as a disposition only when this check's records show the cause to be the VM; otherwise the step is repeated before acceptance, on the owner's decision",
+  "tool_hashes": {
+    "tools/guest/stage7-v3/Invoke-Stage7Pass.ps1": "a9dce034e045712967073a4c891e153a4dc056ee60f3b1524fc36c504f2f0ff7",
+    "tools/guest/stage7-v3/Invoke-Stage7.ps1": "18fdc2380f6d37f033d106c6ff6d574ff377d5a2385be1ac8358d528119dd832",
+    "tools/guest/stage7-v3/stage7.cmd": "7b992f854b9c35fd501880baf8cb6fb6a67ae0ba092639585c23cac7d290fd5a",
+    "tools/host/stage7-v3/Invoke-Stage7Step.ps1": "25f636f52c6823d1aba8ad79617967aec46b4013b8f20b2615581c886765b7e9",
+    "tools/host/stage7-v3/New-Stage7Disc.ps1": "2128827d54d979aa25cb760f25c46fbe2e4075636fa9a69af792100255a6df98",
+    "tools/host/stage7-v3/Start-Stage7Vm.ps1": "71bec341feaf332d332905ae622a02fc2befc1427db27f89bda3a39a0d60f15d",
+    "tools/host/stage7-v3/stage7-step.cmd": "c10f0b213a37635b547ae8e1ac6766e5ec3ee422829d91928e8217430cac7a34",
+    "tools/host/Start-FreshVm.ps1": "d456da091c335e74c2f057068409cb5fe1a44ef3dcc156d780a83f16868a59a2",
+    "tools/host/Take-FreshVmSnapshot.ps1": "f4065b26a4abecf0bc71e6b219ee423832775ce822bde3588a764608bca3cad8",
+    "tools/New-PackageIso.ps1": "16df7178a9dea5a84829c225f76f421e379e86d3bc1c5c695cf1ab81f7b9ce60"
+  },
+  "tool_hashes_basis": "sha256 of the files at repo commit bc896bb, read on 2026-10-06; equal to the table in the approved plan and to the hashes of the 1.0.15 approval (the tools are unchanged since)",
+  "places": {
+    "launcher_folder": "D:\\JARVIS-S6-FRESHVM\\tools\\stage7-1.0.16",
+    "host_records": "D:\\JARVIS-stage7\\1.0.16-fccde24e2cc6\\evidence",
+    "guest_records": "D:\\JARVIS-S6-FRESHVM\\evidence\\guest-egress-01\\stage7-1.0.16-fccde24e2cc6",
+    "stage7_disc": "D:\\JARVIS-S6-FRESHVM\\media\\JARVIS-STAGE7-1.0.16-fccde24e2cc6.iso",
+    "final_snapshot": "STAGE7-PASS-1.0.16-fccde24e2cc6",
+    "repo_copy": "C:\\Users\\jonny\\JARVIS-claude-workspace\\repo\\docs\\stage7-1.0.16-evidence"
+  },
+  "effect": {
+    "authorized": "the owner runs the plan's seven steps with D:\\JARVIS-S6-FRESHVM\\tools\\stage7-1.0.16\\stage7-step.cmd (disc build in the jonny account; restore to FRESH-PREREQ only from STAGE7-PASS-1.0.15-63362929d7ad with no change recorded since, disc attach, VM start and the snapshot STAGE7-PASS-1.0.16-fccde24e2cc6 in the jarvis-s6-val account) and stage7 inside the VM from drive E:; Claude places the launcher folder and creates the two record folders",
+    "not_authorized": "any VirtualBox operation by Claude or under the owner account; provider keys or personal data in the VM; deleting any snapshot, the VM or the data copies; any change to the owner's installed JARVIS (updating it to 1.0.16 is a separate owner decision); turning the Private network switch on; the 1.0.11, 1.0.14 and 1.0.15 tool folders, discs and records stay as they are",
+    "stop_rules": "a failed step stops the pass, nothing repeated without the owner's decision; a UAC prompt is a STOP; no progress for 15 minutes: tell Claude before any reset; every VM start through the launcher, its window left open until it closes by itself; VirtualBox only in jarvis-s6-val; run before the VM's Windows Update pause ends (2026-11-06) or re-pause it first"
+  },
+  "recorded_by": "Claude Code (Claude Fable 5.1). This record documents the owner's act; it grants no authority of its own."
+}

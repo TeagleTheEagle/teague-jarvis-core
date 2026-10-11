@@ -1,0 +1,20 @@
+{
+    "schema":  "jarvis-everyday-update-rollback-v1",
+    "utc":  "2026-10-06T02:02:50.8070605Z",
+    "result":  {
+                   "status":  "rolled_back",
+                   "release":  "1.0.14-e03872680e1d",
+                   "previous":  "1.0.15-63362929d7ad",
+                   "seconds":  {
+                                   "verify_target":  7.824,
+                                   "stop":  0.782,
+                                   "switch":  0.233
+                               }
+               },
+    "verify":  "verified",
+    "current":  {
+                    "release":  "1.0.14-e03872680e1d",
+                    "previous":  "1.0.15-63362929d7ad",
+                    "switched_at":  1791252162.6561475
+                }
+}

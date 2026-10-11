@@ -1,0 +1,8 @@
+{"utc":"2026-10-04T14:41:58.1877058Z","mode":"","package":"D:\\JARVIS-release-work\\pkg-1.0.14","outcome":"phase passed","phase":"Install","exit_code":0}
+{"utc":"2026-10-04T14:41:59.0991995Z","mode":"","package":"D:\\JARVIS-release-work\\pkg-1.0.14","outcome":"waiting for the Windows restart"}
+{"utc":"2026-10-04T14:42:00.7510680Z","mode":"","package":"D:\\JARVIS-release-work\\pkg-1.0.14","outcome":"phase passed","phase":"AfterRestart","exit_code":0}
+{"utc":"2026-10-04T14:43:09.8383175Z","mode":"","package":"D:\\JARVIS-release-work\\pkg-1.0.14","outcome":"phase passed","phase":"Uninstall","exit_code":0}
+{"utc":"2026-10-04T14:48:49.9713074Z","mode":"","package":"D:\\JARVIS-release-work\\pkg-1.0.14","outcome":"phase passed","phase":"Update","exit_code":0}
+{"utc":"2026-10-04T14:51:30.3363663Z","mode":"","package":"D:\\JARVIS-release-work\\pkg-1.0.14","outcome":"phase passed","phase":"Interrupt","exit_code":0}
+{"utc":"2026-10-04T14:51:30.3363663Z","mode":"","package":"D:\\JARVIS-release-work\\pkg-1.0.14","ran_now":["AfterRestart","Uninstall","Update","Interrupt"],"outcome":"all phases passed"}
+{"utc":"2026-10-04T14:51:30.7993716Z","mode":"","package":"D:\\JARVIS-release-work\\pkg-1.0.14","ran_now":[],"outcome":"all phases passed"}

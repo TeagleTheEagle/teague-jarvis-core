@@ -1,0 +1,55 @@
+diff --git a/Build-JARVIS.ps1 b/Build-JARVIS.ps1
+index dbb8e63..c1fc9f4 100644
+--- a/Build-JARVIS.ps1
++++ b/Build-JARVIS.ps1
+@@ -2,6 +2,8 @@ $ErrorActionPreference = 'Stop'
+ $root = $PSScriptRoot
+ $python = Join-Path $root '.venv/Scripts/python.exe'
+ if (-not (Test-Path -LiteralPath $python)) { throw 'Create .venv before building.' }
++& $python -B (Join-Path $root 'check_windows_setup.py')
++if ($LASTEXITCODE -ne 0) { throw 'Build requires validated Windows Python 3.12 x64.' }
+ & $python -m pip install --disable-pip-version-check pyinstaller
+ & $python setup_wake.py
+ $dist = Join-Path $root 'release'
+diff --git a/README.md b/README.md
+index 7df395f..97369d6 100644
+--- a/README.md
++++ b/README.md
+@@ -8,15 +8,23 @@ Double-click **Start JARVIS.cmd**. Open **http://127.0.0.1:8765** if a window is
+ 
+ The launcher prefers `.venv/Scripts/python.exe`, then this computer's bundled Codex Python, then `python` on PATH. It opens a desktop-style Edge window when available. This is a Python/browser app, not a packaged Electron executable.
+ 
+-For another computer, install Python 3.11+ and run from this folder:
++For another Windows computer, use **Python 3.12 x64** (validated: 3.12.10
++in the clean VM and 3.12.14 on the existing host). Python 3.11.9 reproduced
++a wearable cancellation failure; it is not a supported Windows validation
++baseline. Use the explicit setup path below, not a developer-machine runtime:
+ 
+ ```powershell
+-python -m venv .venv
+-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+-.\.venv\Scripts\python.exe server.py
++.\Setup-Windows.ps1 -LocalVoice -Tests -CheckOnly
++.\Setup-Windows.ps1 -LocalVoice -Tests
+ ```
+ 
+-The HTTP server uses the standard library. Optional requirements enable PDF/Word export, PDF reading, and images; these are already installed in the bundled runtime used for this build.
++Node.js 24.x is required for JS-backed regressions and desktop source tooling;
++packaged Electron includes its own Node runtime. Local STT additionally requires
++Microsoft Visual C++ x64 Redistributable and the pinned local-voice requirements.
++Test dependencies are separate in `requirements-test.txt`; omit `-Tests` on a
++runtime-only setup. Setup never starts JARVIS or reads/copies `.env`.
++See [Windows deployment prerequisites](docs/WINDOWS-DEPLOYMENT-PREREQUISITES.md)
++for prerequisites, model provisioning, validation and packaged-release limits.
+ 
+ ## API configuration
+ 
+diff --git a/requirements-local-voice.txt b/requirements-local-voice.txt
+index 2c815ba..a603040 100644
+--- a/requirements-local-voice.txt
++++ b/requirements-local-voice.txt
+@@ -1,2 +1,3 @@
+-# Optional prototype; installed in the existing JARVIS virtual environment.
++# Optional local STT. Windows x64 / Python 3.12; requires VC++ x64 runtime.
+ faster-whisper==1.2.1
++ctranslate2==4.8.2

@@ -1,0 +1,4 @@
+Python suite run again on its own after the one load-related failure (test_auto_backup thinning test: 'Backup snapshot timed out', a 20 s deadline in recovery.py, while a 142,801-file copy and the C: survey loaded the disks; the test alone: 26 of 26):
+Ran 664 tests in 186.547s
+OK
+exit=0

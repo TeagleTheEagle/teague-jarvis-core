@@ -1,0 +1,39 @@
+{
+    "status":  "PASS",
+    "result":  "installed",
+    "release":  "1.0.18-4afd891c38f4",
+    "previous":  "1.0.17-0d38218c4e1d",
+    "installer_seconds":  {
+                              "verify_package":  8.132,
+                              "copy":  10.262,
+                              "verify_copy":  10.094,
+                              "stop":  2.24,
+                              "switch":  0.105
+                          },
+    "wall_seconds":  31,
+    "output":  null,
+    "processes_left_after_update":  0,
+    "verify":  "verified",
+    "verified_release":  "1.0.18-4afd891c38f4",
+    "current":  {
+                    "release":  "1.0.18-4afd891c38f4",
+                    "previous":  "1.0.17-0d38218c4e1d",
+                    "switched_at":  1791588976.5322537
+                },
+    "releases":  [
+                     "1.0.17-0d38218c4e1d",
+                     "1.0.18-4afd891c38f4"
+                 ],
+    "running":  {
+                    "core_ready":  true,
+                    "seconds_to_ready":  15.8,
+                    "installed_release":  "1.0.18-4afd891c38f4",
+                    "identity_matches":  true,
+                    "gate17_memory":  true,
+                    "gate19_memory":  true,
+                    "processes":  8,
+                    "processes_from_other_releases":  [
+
+                                                      ]
+                }
+}

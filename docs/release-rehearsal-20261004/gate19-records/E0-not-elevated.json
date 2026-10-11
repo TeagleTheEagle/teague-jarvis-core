@@ -1,0 +1,6 @@
+{
+    "status":  "PASS",
+    "account":  "THEGRIZZLYBEAR\\jonny",
+    "process_elevated":  false,
+    "note":  "the installer and JARVIS are started from this process and inherit its rights; a UAC prompt at any point is a STOP reported by the owner"
+}

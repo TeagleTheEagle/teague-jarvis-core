@@ -1,0 +1,46 @@
+--- D:\JARVIS-STAGE6-LIVE\0c93b626e738469d90b2d38e478edfea\code\timed_monitor.ps1
++++ D:\JARVIS-STAGE6-LIVE\e55504d627d24f24a6f56f9e2435230b\code\timed_monitor.ps1
+@@ -1,8 +1,10 @@
+ param([string]$Run,[int]$KernelPid)
+ $ErrorActionPreference='Stop';. (Join-Path $PSScriptRoot 'workspace.ps1');$root=Get-LiveRun $Run;Set-LiveTemp $root
++. (Join-Path $PSScriptRoot 'health_publication.ps1')
++$healthPublisher=$null
+ Add-Type -Path @((Join-Path $PSScriptRoot 'AuthoritativeEvents.cs'),(Join-Path $PSScriptRoot 'WriterTiming.cs'),(Join-Path $PSScriptRoot 'LoopTiming.cs'),(Join-Path $PSScriptRoot 'event_queue.cs'),(Join-Path $PSScriptRoot 'EventTap.cs'))
+ function Invoke-J6TimedStage([string]$Name,[scriptblock]$Code){$span=[LoopTiming]::Span($Name);try{& $Code}finally{$span.Dispose()}}
+-function Save($n,$v){Invoke-J6TimedStage ('output.'+$n) {$mode=if($n -eq 'app-health.json'){[IO.FileMode]::Create}else{[IO.FileMode]::CreateNew};$f=[IO.FileStream]::new((Join-Path $root $n),$mode,[IO.FileAccess]::Write,[IO.FileShare]::Read);try{$b=[Text.Encoding]::UTF8.GetBytes(($v|ConvertTo-Json -Depth 12));$f.Write($b,0,$b.Length);$f.Flush($true)}finally{$f.Dispose()}}}
++function Save($n,$v){Invoke-J6TimedStage ('output.'+$n) {$mode=[IO.FileMode]::CreateNew;$f=[IO.FileStream]::new((Join-Path $root $n),$mode,[IO.FileAccess]::Write,[IO.FileShare]::Read);try{$b=[Text.Encoding]::UTF8.GetBytes(($v|ConvertTo-Json -Depth 12));$f.Write($b,0,$b.Length);$f.Flush($true)}finally{$f.Dispose()}}}
+ $s='J6TimedStart-'+[guid]::NewGuid().ToString('N');$t='J6TimedStop-'+[guid]::NewGuid().ToString('N');$ids=@($s,$t)
+ $exact=[ExactEventQueue]::new($ExecutionContext.Events.ReceivedEvents,[string[]]$ids,$true)
+ [EventTap]::Initialize($root)
+@@ -26,7 +28,8 @@
+  [void][EventTap]::AttachQueue($ExecutionContext.Events.ReceivedEvents,$s,$t)
+  foreach($pair in @(@($s,'start'),@($t,'stop'))){$sub=Get-EventSubscriber -SourceIdentifier $pair[0];[void][EventTap]::AttachSource($sub.SourceObject,$sub.EventName,$pair[1])}
+  $me=Invoke-J6TimedStage 'process.inspection.identity' {Get-Process -Id $PID}
+- Save 'app-ready.json' @{pid=$PID;created=$me.StartTime.ToUniversalTime().ToFileTimeUtc().ToString();image=$me.Path;frequency=$frequency;qpc=[Diagnostics.Stopwatch]::GetTimestamp();source='independent CIM subscriptions'}
++ $ready=@{pid=$PID;created=$me.StartTime.ToUniversalTime().ToFileTimeUtc().ToString();image=$me.Path;frequency=$frequency;qpc=[Diagnostics.Stopwatch]::GetTimestamp();source='independent CIM subscriptions'}
++ $healthPublisher=New-J6HealthPublisher $root @{run=$Run;pid=$PID;created=$ready.created;frequency=$frequency}
+  while($clock.Elapsed.TotalSeconds -lt 1200){
+   [LoopTiming]::BeginLoop();Invoke-J6TimedStage 'loop.wake' {[LoopTiming]::Note('awake')}
+   Invoke-J6TimedStage 'queue.health' {if($exact.Failed -or [EventTap]::Errors -or [EventTap]::StreamFailure -or [LoopTiming]::Overflow){throw 'Collector/timing overflow or failure'}}
+@@ -36,7 +39,8 @@
+   $now=Invoke-J6TimedStage 'heartbeat.creation' {[Diagnostics.Stopwatch]::GetTimestamp()};$interval=($now-$lastHeartbeat)/$frequency
+   if($interval -ge 10){throw 'Heartbeat reached fixed 10-second limit'}
+   Invoke-J6TimedStage 'heartbeat.history.append' {$heartbeats.Add(@{qpc=$now;interval=$interval;loop=[LoopTiming]::CurrentLoop})};$lastHeartbeat=$now
+-  Invoke-J6TimedStage 'heartbeat.publish.overwrite' {Save 'app-health.json' @{qpc=$now;frequency=$frequency;pid=$PID;healthy=$true}}
++  Invoke-J6TimedStage 'heartbeat.publish.append' {Write-J6HealthRecord $healthPublisher $now}
++  if($healthPublisher.Sequence -eq 1){Invoke-J6TimedStage 'ready.publish.complete' {Publish-J6Ready $root $healthPublisher $ready}}
+   $stop=Invoke-J6TimedStage 'control.file.check' {Test-Path -LiteralPath (Join-Path $root 'app-stop')}
+   if($stop){
+    if($null -eq $closingAt){$closingAt=$now}
+@@ -49,9 +53,11 @@
+  Invoke-J6TimedStage 'subscription.close' {foreach($id in $ids){Unregister-Event -SourceIdentifier $id -ErrorAction Stop}};$unsubscribed=$true
+  Invoke-J6TimedStage 'final.event.drain' {Drain};Invoke-J6TimedStage 'queue.reconcile' {$exact.Reconcile()}
+  Invoke-J6TimedStage 'flush.durable' {$f=[IO.FileStream]::new((Join-Path $root 'app-events.jsonl'),[IO.FileMode]::Open,[IO.FileAccess]::ReadWrite,[IO.FileShare]::Read);try{$f.Flush($true)}finally{$f.Dispose()}}
++ Close-J6HealthPublisher $healthPublisher
+  $success=$true
+ }catch{$errorRecord=@{error=$_.Exception.Message;stack=$_.ScriptStackTrace;qpc=[Diagnostics.Stopwatch]::GetTimestamp()}}
+ finally{
++ if($null -ne $healthPublisher -and !$healthPublisher.Closed){try{Close-J6HealthPublisher $healthPublisher}catch{$success=$false;$errorRecord=@{error=$_.Exception.Message}}}
+  if(!$unsubscribed){foreach($id in $ids){Unregister-Event -SourceIdentifier $id -ErrorAction SilentlyContinue}}
+  [EventTap]::Detach()
+  try{[EventTap]::Finish();if([EventTap]::StreamFailure){$success=$false;$errorRecord=@{error=[EventTap]::StreamFailure}}}catch{$success=$false;$errorRecord=@{error=$_.Exception.Message}}

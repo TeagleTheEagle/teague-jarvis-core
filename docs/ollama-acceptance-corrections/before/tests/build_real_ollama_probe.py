@@ -1,0 +1,52 @@
+"""Generate a fixed TEST probe from the reviewed Electron diagnostic scaffolding."""
+from pathlib import Path
+p=Path(__file__).parent
+s=(p/'lifecycle_stage4/electron_challenge_diagnostic.py').read_text()
+s=s.replace('"""Diagnosis only; derived from existing authenticated Electron probe. No lifecycle correction."""','"""Real bounded local fallback validation; one disposable authenticated TEST Core."""')
+s=s.replace('parents[2]/"docs/lifecycle-stage4-evidence"','parents[1]/"docs/real-ollama-test"').replace('repo=Path(__file__).resolve().parents[2]','repo=Path(__file__).resolve().parents[1]')
+s=s.replace("'enrollments':enrolled}","'enrollments':enrolled,'real_local_ollama':True}")
+start=s.index('        def diagnose(label):')
+end=s.index("        with h.Lock(root,'core.lock'):record",start)
+s=s[:start]+'''        record('one TEST App/Store/Voice/Wake instance',all(ready[n]==1 for n in ('app_instances','store_instances','voice_instances','wake_instances')))
+        a=start_client('teague')
+        operation=uuid.uuid4().hex
+        prompt='What is 2 plus 2? Answer only with the number.'
+        begin=time.monotonic()
+        send(a,'text-fallback',text=prompt,operation=operation)
+        result=receive(a,'text-fallback',timeout=30)
+        report.append({'case':'real response evidence','passed':True,'elapsed_seconds':time.monotonic()-begin,'result':result})
+        events=result['status']['events'];provenance=result['provenance']['provenance']
+        record('same request completes once',sum(e['event']=='assistant.completed' for e in events)==1)
+        record('no tool execution',not any(e['event'].startswith('tool.') for e in events))
+        record('actual model and provider persisted',provenance['actual_final_provider']=='Ollama' and provenance['actual_final_model']=='qwen3:4b' and provenance['final_status']=='COMPLETED')
+        record('simulated primary and actual local attempt distinct',provenance['attempts'][0]['simulated'] is True and provenance['attempts'][0]['network_request'] is False and provenance['attempts'][1]['simulated'] is False and provenance['attempts'][1]['network_request'] is True)
+        record('fallback and owner recorded',provenance['fallback'] is True and provenance['fallback_reason']=='temporary_rate_limit' and provenance['owner']=='teague' and bool(provenance['session']))
+        record('deterministic last provider query', 'Ollama' in result['provenance']['answer'] and 'qwen3:4b' in result['provenance']['answer'] and not result['provenance']['answer'].startswith('TEST simulation:'))
+        send(a,'capture');capture=receive(a,'capture');screenshots.append(capture)
+        record('TEST Electron screenshot captured',not capture.get('failed'))
+        send(a,'text-fallback',text=prompt,operation=operation)
+        duplicate=receive(a,'text-fallback')
+        record('duplicate operation does not generate again',duplicate['admitted']['duplicate'] and duplicate['admitted']['response_id']==result['admitted']['response_id'])
+        send(a,'text-fallback',text='Explain the water cycle in detail.',operation=uuid.uuid4().hex,cancel=True)
+        cancelled=receive(a,'text-fallback',timeout=30)
+        report.append({'case':'cancellation evidence','passed':True,'result':cancelled})
+        record('cancelled request not published successfully',not any(e['event']=='assistant.completed' for e in cancelled['status']['events']))
+        record('cancel does not overwrite last successful provenance',cancelled['provenance']['provenance']['response_id']==provenance['response_id'])
+        send(a,'close');a['process'].wait(10)
+        record('client close leaves same Core running',core.poll() is None and h.reconcile(root))
+        # New authenticated session, then duplicate lookup reads durable history.
+        a=start_client('teague')
+        send(a,'text-fallback',text=prompt,operation=operation)
+        reopened=receive(a,'text-fallback')
+        record('reauthenticated client reads same persisted provenance',reopened['admitted']['duplicate'] and reopened['provenance']['provenance']==provenance)
+        send(a,'close');a['process'].wait(10)
+        begin=time.monotonic()
+        control('shutdown',{'operation':uuid.uuid4().hex});core.wait(8)
+        record('authorized shutdown bounded',core.returncode==0 and time.monotonic()-begin<8)
+        # Fresh process opens only the existing TEST provenance table; no App/Core.
+        script="import sys,json;from stage4_response_history import History;from pathlib import Path;print(json.dumps(History(Path(sys.argv[1])).last('teague')))"
+        reopened_history=subprocess.run([sys.executable,'-B','-c',script,str(root/'STAGE4_TEST-data/jarvis.sqlite3')],cwd=repo,capture_output=True,text=True,timeout=10)
+        record('fresh process persistence after Core exit',reopened_history.returncode==0 and json.loads(reopened_history.stdout)==provenance)
+''' +s[end:]
+s=s.replace("'electron-challenge-diagnostic-'","'real-ollama-electron-'")
+(p/'real_ollama_validation.py').write_text(s)

@@ -1,0 +1,10 @@
+{
+  "schema": "jarvis-stage7-owner-note-v1",
+  "label": "1.0.15-63362929d7ad",
+  "refers_to": "incident-01-vm-start-record.json",
+  "recorded_utc": "2026-10-05T23:58:55Z",
+  "question_put_to_the_owner": "did you close the first launcher window (the one that said 'Waiting for VM to power on') yourself, and what was the last line it showed?",
+  "owner_text": "i closed it yes and also what file do i clcik",
+  "taken_as": "the owner closed the first launcher window during the VM's slow power-on, before Start-FreshVm.ps1 could write vm\\start-<utc>.json; the last line shown was not stated (the owner's earlier photo shows 'Waiting for VM \"JARVIS-S6-FRESH\" to power on...' as the last line at that time). This confirms the likely cause in incident-01; the VM start itself completed as the VBox.log shows.",
+  "recorded_by": "Claude Code (Claude Fable 5.1); the note documents the owner's words and changes nothing"
+}

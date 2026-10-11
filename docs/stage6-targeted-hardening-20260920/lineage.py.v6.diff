@@ -1,0 +1,14 @@
+--- D:\JARVIS-STAGE6-LIVE\cd45670bb1894d5b99a1b469e4771535\code\lineage.py
++++ D:\JARVIS-STAGE6-LIVE\2ef4a4641a234b7dbfdce8db88cb1e39\code\lineage.py
+@@ -15,7 +15,10 @@
+   for i,r in enumerate(group):
+    upper=int(group[i+1]['created']) if i+1<len(group) else None
+    # A notification predating this creation cannot describe this incarnation.
+-   if stamp<int(r['created']) or (upper is not None and stamp>=upper):continue
++   # A delayed notification does not itself prove which same-image incarnation
++   # owns it. Never exclude an earlier incarnation just because another PID
++   # incarnation existed before notification time. Multiple candidates UNKNOWN.
++   if stamp<int(r['created']):continue
+    if q<r['startQpc'] or (e['kind']=='stop' and q<r['stopQpc']):continue
+    if e['name'].lower()!=pathlib.PureWindowsPath(r['image']).name.lower():continue
+    if e['parentPid'] not in ((r['parentPid'],) if e['kind']=='start' else (0,r['parentPid'])):continue

@@ -1,0 +1,358 @@
+--- before/stage4_runtime.py
++++ after/stage4_runtime.py
+@@ -263,9 +263,13 @@
+ 
+     def shared_state(self):
+         require(self.app is not None)
++        import workspaces
+         return {'mode':'STAGE4_TEST','data_id':self.data_id,'epoch':self.epoch,
+                 'memory':self.app.store.items('memory'),
+                 'conversations':self.app.store.conversations(),
++                'tasks':self.app.store.tasks(),
++                'projects':workspaces.listing(self.app.store),
++                'presence':self.app.devices.snapshot(),
+                 'voice':'DETERMINISTIC_CORE_AUDIO_ONLY','wake':'UNAVAILABLE_NO_TEST_MODEL',
+                 'ownership':self.owners.snapshot()}
+ 
+@@ -550,6 +554,12 @@
+             self.context.owners.flush_response_cancellations()
+ 
+     def _operation(self, client, request, selected):
++        # Restart admission opens only after the coordinator has independently
++        # reconciled the lifetime owner and authenticated the new pipe identity.
++        restart = getattr(self.context, 'restart_transaction', None)
++        if restart is not None:
++            verified = _start_read(self.context.root, restart, 'verified')
++            require(verified['identity'] == self.identity, 'START_NOT_VERIFIED')
+         authentication.fields(request, ('op','token','args'))
+         op, token, args = request['op'], request['token'], request['args']
+         require(type(args) is dict and client in self.enrollments, 'REQUEST')
+@@ -621,7 +631,10 @@
+             return {'result':result,'response_status':self.context.response_state(args['request_id'])}
+         if op == 'media':
+             authentication.fields(args, ('purpose','request_id','lease_id'))
+-            return o.media(token,o.epoch,args['purpose'],request_id=args['request_id'],lease_id=args['lease_id'])
++            lease=o.media(token,o.epoch,args['purpose'],request_id=args['request_id'],lease_id=args['lease_id'])
++            # Relative validity avoids comparing Python and Electron clock origins.
++            # Client subtracts the whole request round-trip conservatively.
++            return {**lease,'valid_for_ms':max(0,int((lease['expires']-o.clock())*1000))}
+         if op in ('stop-capture','stop-playback'):
+             authentication.fields(args, ('lease_id',))
+             o.stop_media(token,o.epoch,'capture' if op=='stop-capture' else 'playback',args['lease_id'])
+@@ -675,21 +688,28 @@
+         raise Denied('OPERATION_DENIED')
+ 
+ 
+-def serve(root, configuration, *, inspection_setup=None, repair_setup=None, expiry_setup=None):
++def serve(root, configuration, *, inspection_setup=None, repair_setup=None, expiry_setup=None, start_observer=None):
+     """Explicit isolated child entry; caller coordinates startup under supervisor.lock.
+ 
+     No stdin lifetime ownership and no restart loop. Credentials arrive only from
+     the trusted disposable test parent and are never written to evidence.
+     """
+     root=validate_root(root)
+-    require(not (root/'stop').exists(), 'STOP_LATCH')
++    restart = configuration.get('start_transaction')
++    if restart is None:
++        require(not (root/'stop').exists(), 'STOP_LATCH')
++    start_binding_configuration=json.loads(json.dumps(configuration)) if restart is not None else None
+     enrollments=configuration['enrollments']
+     for entry in enrollments.values():entry['key']=bytes.fromhex(entry['key'])
+     key=bytes.fromhex(configuration['server_key'])
+     require(len(key)==32 and all(len(e['key'])==32 for e in enrollments.values()), 'TEST_KEYS')
+     with exclusion.Lock(root,'core.lock') as lock:
+         exclusion.event(root,'core_acquired',identity=exclusion.process_identity(os.getpid()))
++        if restart is not None:
++            _claim_test_start(root, start_binding_configuration)
++            if start_observer:start_observer('claimed', None)
+         context=Context(root,configuration['data_id'],lock,{k:v['scopes'] for k,v in enrollments.items()})
++        if restart is not None:context.restart_transaction=restart
+         from stage4_provider_fallback import offline_router
+         context.text_router=offline_router(configuration.get('text_provider_scenario','openai'))
+         if configuration.get('deep_review_fixture') is True:
+@@ -719,6 +739,7 @@
+         identity={**transport.identity(os.getpid()),'mode':'TEST','namespace':root.name,
+                   'installation_id':'STAGE4_TEST','data_id':context.data_id,'core_instance_id':context.epoch,
+                   'startup_epoch':context.epoch,'runtime_build':'STAGE4_TEST-incomplete','protocol':[2,3]}
++        if start_observer:start_observer('identity', identity)
+         authority=Authority(context,identity,enrollments)
+         stopping=threading.Event()
+         def control_loop():
+@@ -792,3 +813,277 @@
+                 while True:time.sleep(1)
+             exclusion.event(root,'stage4_drained',work=len(context.owners.work),production=False)
+     # No second startup or automatic restart follows process exit.
++
++# Explicit TEST coordinator. No App/Store/provider/voice construction here.
++def test_child_command(role,root):
++    require(role in ('--restart-app-worker','--restart-coordinator-worker'),'TEST_CHILD_ROLE')
++    validate_root(root)
++    # Windows venv python.exe is a redirector with a different PID. Launch the
++    # known native interpreter directly, retaining only the fixed venv imports.
++    script="import runpy,sys;sys.path.insert(0,"+repr(str(REPO/'.venv/Lib/site-packages'))+");sys.argv=sys.argv[1:];runpy.run_path(sys.argv[0],run_name='__main__')"
++    return [sys._base_executable,'-I','-B','-c',script,str(REPO/'tests/lifecycle_stage4/fixtures.py'),role,str(root)]
++
++
++def _start_path(root, operation):
++    root=validate_root(root)
++    require(type(operation) is str and len(operation)==32 and all(c in '0123456789abcdef' for c in operation), 'START_OPERATION')
++    parent=root/'STAGE4_TEST-starts'
++    for p in (parent, parent/operation):
++        if p.exists():
++            st=p.lstat();require(p.is_dir() and not getattr(st,'st_file_attributes',0)&0x400 and not p.is_symlink(),'START_REPARSE')
++    return parent/operation
++
++
++def _start_read(root, operation, name):
++    require(name in ('grant','intent','claimed','verified'), 'START_RECORD')
++    path=_start_path(root,operation)/(name+'.json')
++    st=path.lstat();require(not getattr(st,'st_file_attributes',0)&0x400 and not path.is_symlink() and st.st_size<=16384,'START_RECORD_PATH')
++    return json.loads(path.read_text(encoding='utf8'))
++
++
++def _start_write(root, operation, name, record):
++    require(name in ('grant','intent','claimed','verified'), 'START_RECORD')
++    target=_start_path(root,operation)
++    target.mkdir(parents=True,exist_ok=True)
++    _start_path(root,operation)
++    # Immutable, exclusive, fsynced records. A partial record is never removed,
++    # overwritten or interpreted as authorization to retry a launch.
++    with (target/(name+'.json')).open('x',encoding='utf8') as stream:
++        json.dump(record,stream,sort_keys=True);stream.flush();os.fsync(stream.fileno())
++
++
++def _start_digest(value):
++    return hashlib.sha256(authentication.canonical(value)).hexdigest()
++
++
++def _stop_binding(root):
++    stop=root/'stop'
++    if not stop.exists():return None
++    st=stop.lstat()
++    require(not getattr(st,'st_file_attributes',0)&0x400 and not stop.is_symlink() and stop.is_file(),'STOP_PATH')
++    return {'sha256':hashlib.sha256(stop.read_bytes()).hexdigest(),'size':st.st_size,'mtime_ns':st.st_mtime_ns}
++
++
++def _old_core(root):
++    path=root/'core.json'
++    if not path.exists():return None
++    metadata=exclusion.read(path)
++    require(type(metadata) is dict and metadata.get('namespace')==root.name and metadata.get('mode')=='TEST','CORE_METADATA')
++    require(set(metadata)=={'pid','created','namespace','mode','epoch'},'CORE_METADATA_SCHEMA')
++    return metadata
++
++
++def _start_history(root,data_id):
++    validate_data(root,data_id)
++    for prior in root.glob('STAGE4_TEST-journal-*'):
++        Journal(prior,{'mode':'STAGE4_TEST','data_id':data_id}).inspect()
++    starts=root/'STAGE4_TEST-starts'
++    if starts.exists():
++        paths=list(starts.iterdir());require(len(paths)<=1024,'START_RECORD_LIMIT')
++        for path in paths:
++            _start_path(root,path.name)
++            if (path/'intent.json').exists():
++                intent=_start_read(root,path.name,'intent')
++                require((path/'verified.json').exists(),'RECOVERY_REQUIRED')
++                verified=_start_read(root,path.name,'verified')
++                claimed=_start_read(root,path.name,'claimed')
++                require(verified['operation']==intent['operation']==path.name and
++                        {k:verified['identity'][k] for k in ('pid','created','exe_digest')}==claimed['peer'], 'START_HISTORY')
++
++
++def _claim_test_start(root,configuration):
++    import hmac
++    operation=configuration['start_transaction']
++    intent=_start_read(root,operation,'intent')
++    require(intent['data_id']==configuration['data_id'] and intent['namespace']==root.name,'START_IDENTITY')
++    require(time.time()<intent['launch_expires'],'START_EXPIRED')
++    require(_stop_binding(root)==intent['stop'] and _old_core(root)==intent['prior'],'START_PRIOR_STATE')
++    nonce=configuration.get('launch_nonce')
++    require(type(nonce) is str and hmac.compare_digest(hashlib.sha256(nonce.encode()).hexdigest(),intent['launch_digest']),'START_LAUNCH_AUTHORITY')
++    base={k:v for k,v in configuration.items() if k not in ('start_transaction','launch_nonce')}
++    require(_start_digest(base)==intent['configuration_digest'],'START_CONFIGURATION')
++    _start_write(root,operation,'claimed',{'operation':operation,'peer':transport.identity(os.getpid()),'at':time.time()})
++
++
++class TestRestartCoordinator:
++    """One native TEST controller session; Stage 2 authenticates its exact peer.
++
++    All mutable authority is private to this coordinator instance. Durable
++    records carry hashes, never reusable grant tokens. Adoption can complete a
++    consumed transaction for an existing owner, but cannot spawn its replacement.
++    """
++    def __init__(self,root,configuration,observer=None):
++        self.root=validate_root(root);self.configuration=configuration;self.observer=observer
++        self.data_id=configuration['core']['data_id'];validate_data(self.root,self.data_id)
++        self.peer=transport.identity(os.getpid());self.instance=uuid.uuid4().hex
++        self.identity={**self.peer,'mode':'TEST','namespace':self.root.name,
++                       'installation_id':'STAGE4_TEST_COORDINATOR','data_id':self.data_id,
++                       'core_instance_id':self.instance,'startup_epoch':self.instance,
++                       'runtime_build':'STAGE4_TEST_COORDINATOR','protocol':[2,3]}
++        self.enrollments={configuration['owner']:{'enabled':True,'key':bytes.fromhex(configuration['owner_key']),
++            'exe_digest':configuration['owner_peer']['exe_digest'],'protocol':[2,3]}}
++        self.session=None;self.grants={};self.thread=None;self.closed=False;self.result={'result':'IDLE'}
++
++    def active(self):
++        authentication.validate_identity(self.identity,self.identity)
++
++    def checkpoint(self,stage):
++        if self.observer:self.observer(stage)
++
++    def _absent(self):
++        with exclusion.Lock(self.root,'core.lock'):pass
++        old=_old_core(self.root)
++        if old:
++            try:peer=transport.identity(old['pid'])
++            except transport.Rejected as exc:
++                require(str(exc)=='PROCESS_DEAD','PROCESS_UNCERTAIN');peer=None
++            except OSError as exc:
++                require(exc.errno in (87,1168),'PROCESS_UNCERTAIN');peer=None
++            require(peer is None or peer['created']!=old['created'],'CORE_EXIT_UNCONFIRMED')
++        return old
++
++    def _session(self,client,token):
++        require(client==self.configuration['owner'] and self.session is not None,'COORDINATOR_OWNER')
++        require(type(token) is str and authentication.digest(token)==self.session['digest'] and
++                time.monotonic()<self.session['expires'],'COORDINATOR_SESSION')
++
++    def operation(self,client,request,selected):
++        import secrets,hmac
++        authentication.fields(request,('op','token','args'))
++        op,token,args=request['op'],request['token'],request['args']
++        require(type(args) is dict and client==self.configuration['owner'],'COORDINATOR_OWNER')
++        if op=='attach':
++            authentication.fields(args,());require(token is None and self.session is None,'COORDINATOR_ATTACH')
++            token=secrets.token_hex(32);self.session={'digest':authentication.digest(token),'expires':time.monotonic()+120,'family':uuid.uuid4().hex}
++            return {'result':'ATTACHED','token':token,'identity':self.identity}
++        self._session(client,token)
++        if op=='status':authentication.fields(args,());return dict(self.result)
++        if op=='close':
++            authentication.fields(args,());require(self.thread is None or not self.thread.is_alive(),'START_ACTIVE')
++            self.closed=True;return {'result':'CLOSED'}
++        if op=='issue':
++            authentication.fields(args,('action','prior_epoch','ttl'))
++            require(args['action'] in ('start','restart') and type(args['ttl']) is int and 1<=args['ttl']<=30,'START_BOUNDS')
++            with exclusion.Lock(self.root,'supervisor.lock'):
++                prior=self._absent();_start_history(self.root,self.data_id)
++                stop=_stop_binding(self.root)
++                require((args['action']=='start' and prior is None and stop is None and args['prior_epoch'] is None) or
++                        (args['action']=='restart' and prior is not None and args['prior_epoch']==prior['epoch']),'START_TARGET')
++                require(not (self.root/'intent.json').exists() or prior is not None,'RECOVERY_REQUIRED')
++                operation=uuid.uuid4().hex;grant=secrets.token_hex(32)
++                record={'operation':operation,'coordinator':self.identity,'owner':client,'owner_peer':self.configuration['owner_peer'],
++                    'session':self.session['family'],'namespace':self.root.name,'data_id':self.data_id,'action':args['action'],
++                    'prior':prior,'stop':stop,'grant_digest':authentication.digest(grant),'expires':time.time()+args['ttl']}
++                _start_write(self.root,operation,'grant',record)
++                self.grants[operation]={'record':record,'expires':time.monotonic()+args['ttl']}
++            return {'result':'ISSUED','operation':operation,'authorization':grant}
++        if op=='execute':
++            authentication.fields(args,('operation','authorization'))
++            operation=args['operation'];local=self.grants.get(operation)
++            require(local is not None and time.monotonic()<local['expires'],'START_GRANT_UNKNOWN_OR_EXPIRED')
++            record=_start_read(self.root,operation,'grant')
++            require(record==local['record'] and record['session']==self.session['family'] and record['coordinator']==self.identity,'START_GRANT_BINDING')
++            require(type(args['authorization']) is str and hmac.compare_digest(authentication.digest(args['authorization']),record['grant_digest']),'START_GRANT_INVALID')
++            require(not (_start_path(self.root,operation)/'intent.json').exists(),'START_ALREADY_CONSUMED')
++            lock=exclusion.Lock(self.root,'supervisor.lock')
++            try:
++                require(self._absent()==record['prior'] and _stop_binding(self.root)==record['stop'],'START_STALE_TARGET')
++                _start_history(self.root,self.data_id)
++                self.checkpoint('before-intent')
++                nonce=secrets.token_hex(32)
++                intent={**record,'grant_consumed':True,'launch_digest':hashlib.sha256(nonce.encode()).hexdigest(),
++                        'launch_expires':time.time()+15,'configuration_digest':_start_digest(self.configuration['core'])}
++                _start_write(self.root,operation,'intent',intent)
++                del self.grants[operation]
++                self.checkpoint('intent')
++                self.result={'result':'STARTING','operation':operation}
++                self.thread=threading.Thread(target=self._launch,args=(lock,operation,nonce),daemon=False)
++                self.thread.start()
++            except BaseException:lock.close();raise
++            return {'result':'AUTHORIZATION_CONSUMED','operation':operation}
++        if op=='adopt':
++            authentication.fields(args,())
++            with exclusion.Lock(self.root,'supervisor.lock'):
++                try:
++                    with exclusion.Lock(self.root,'core.lock'):pass
++                except exclusion.Busy:
++                    self.result=self._verify_existing()
++                    return dict(self.result)
++                if (self.root/'stop').exists():raise Denied('STOP_LATCH')
++                raise Denied('RECOVERY_REQUIRED' if (self.root/'core.json').exists() or (self.root/'STAGE4_TEST-starts').exists() else 'EXPLICIT_START_REQUIRED')
++        raise Denied('COORDINATOR_OPERATION')
++
++    def _verify_existing(self,operation=None):
++        metadata=_old_core(self.root);require(metadata is not None and exclusion.reconcile(self.root),'CORE_RECONCILIATION')
++        ready=exclusion.read(self.root/'stage4-ready.json');require(type(ready) is dict,'CORE_READY')
++        identity=ready['identity'];peer=transport.identity(metadata['pid'])
++        require(ready['peer']==peer and identity['startup_epoch']==metadata['epoch'] and identity['data_id']==self.data_id and identity['namespace']==self.root.name,'CORE_READY_IDENTITY')
++        matches=[]
++        for directory in (self.root/'STAGE4_TEST-starts').glob('*'):
++            if (directory/'claimed.json').exists():
++                claimed=_start_read(self.root,directory.name,'claimed')
++                if claimed['peer']==peer:matches.append(directory.name)
++        require(len(matches)==1 and (operation is None or matches==[operation]),'START_CLAIM_IDENTITY')
++        operation=matches[0];intent=_start_read(self.root,operation,'intent');claimed=_start_read(self.root,operation,'claimed')
++        require(intent['data_id']==self.data_id and claimed['at']<=intent['launch_expires'] and
++                (intent['prior'] is None or identity['startup_epoch']!=intent['prior']['epoch']),'START_EPOCH')
++        core=self.configuration['core'];owner=self.configuration['owner']
++        # Authenticate the new peer before sending client proof/request. This
++        # does not restore a session or grant request authority.
++        response=authentication.client(core['endpoint'],peer,identity,bytes.fromhex(core['server_key']),owner,
++            bytes.fromhex(core['enrollments'][owner]['key']),{},drop=True)
++        require(response['result']=='DROPPED_BEFORE_CLIENT_PROOF','CORE_AUTHENTICATION')
++        target=_start_path(self.root,operation)/'verified.json'
++        if not target.exists():_start_write(self.root,operation,'verified',{'operation':operation,'identity':identity,'coordinator':self.identity,'at':time.time()})
++        else:require(_start_read(self.root,operation,'verified')['identity']==identity,'START_VERIFICATION')
++        exclusion.event(self.root,'start_verified',operation=operation,identity=identity,coordinator=self.peer)
++        return {'result':'ADOPTED' if self.result.get('operation')!=operation else 'STARTED','operation':operation,'identity':identity}
++
++    def _launch(self,lock,operation,nonce):
++        import subprocess
++        try:
++            core={**self.configuration['core'],'start_transaction':operation,'launch_nonce':nonce}
++            env={k.upper():v for k,v in os.environ.items() if k.upper() in ('SYSTEMROOT','WINDIR','TEMP','TMP')}
++            with (self.root/(operation+'.stdout.log')).open('w') as out,(self.root/(operation+'.stderr.log')).open('w') as err:
++                child=subprocess.Popen(test_child_command('--restart-app-worker',self.root),
++                    env=env,stdin=subprocess.PIPE,stdout=out,stderr=err,text=True,close_fds=True,creationflags=0x08000000)
++                peer=transport.identity(child.pid)
++                exclusion.event(self.root,'start_spawned',operation=operation,identity=peer,coordinator=self.peer)
++                child.stdin.write(json.dumps(core)+'\n');child.stdin.close()
++                self.checkpoint('spawned')
++                deadline=time.monotonic()+15
++                while True:
++                    require(child.poll() is None,'START_CHILD_EXITED')
++                    ready=exclusion.read(self.root/'stage4-ready.json')
++                    if ready and ready.get('peer')==peer:break
++                    require(time.monotonic()<deadline,'START_READINESS_TIMEOUT');time.sleep(.02)
++                self.result=self._verify_existing(operation)
++        except BaseException as exc:
++            import traceback
++            self.result={'result':'RECOVERY_REQUIRED','operation':operation,'error':type(exc).__name__,'reason':str(exc)}
++            exclusion.event(self.root,'start_recovery_required',operation=operation,error=type(exc).__name__,reason=str(exc),traceback=traceback.format_exc())
++        finally:lock.close()
++
++
++def serve_test_coordinator(root,configuration,observer=None):
++    authority=TestRestartCoordinator(root,configuration,observer)
++    require(transport.identity(configuration['owner_peer']['pid'])==configuration['owner_peer'],'CONTROLLER_PROCESS_IDENTITY')
++    key=bytes.fromhex(configuration['server_key']);first=True
++    deadline=time.monotonic()+120
++    while not authority.closed and time.monotonic()<deadline:
++        pipe=transport.listen(configuration['endpoint'])
++        try:
++            if first:
++                exclusion.write(authority.root/('coordinator-'+configuration['name']+'.json'),{'identity':authority.identity,'peer':authority.peer,'endpoint':configuration['endpoint']})
++                first=False
++            pipe.io('connect')
++            require(pipe.peer(server=True)==configuration['owner_peer'],'CONTROLLER_PROCESS_BINDING')
++            try:authentication.serve_one(pipe,authority,key,'normal')
++            except (Denied,authentication.Denied,OSError,ValueError,TypeError,KeyError,exclusion.Busy):
++                try:pipe.send({'result':'DENIED'})
++                except Exception:pass
++        except (Denied,authentication.Denied,OSError):pass
++        finally:pipe.close()
++    # A coordinator exit cannot kill its Core. A worker retains supervisor
++    # ownership until its bounded verification completes; never force cleanup.
++    if authority.thread:authority.thread.join()

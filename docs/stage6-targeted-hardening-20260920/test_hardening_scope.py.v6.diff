@@ -1,0 +1,11 @@
+--- D:\JARVIS-STAGE6-LIVE\cd45670bb1894d5b99a1b469e4771535\code\test_hardening_scope.py
++++ D:\JARVIS-STAGE6-LIVE\2ef4a4641a234b7dbfdce8db88cb1e39\code\test_hardening_scope.py
+@@ -8,7 +8,7 @@
+  def test_01_reused_parent_predates_creation(self):
+   p=row(1,200,400,'p');v=associate([p],[ev(7,100,parent=1)],{'p'});self.assertFalse(v['unknown']);self.assertEqual(len(v['outside']),1)
+  def test_02_child_pid_reuse(self):
+-  a=row(7,10,20,'a');b=row(7,100,120,'b');v=associate([a,b],[ev(7,11),ev(7,101)],{'a','b'});self.assertEqual(set(v['bound']),{'a','b'})
++  a=row(7,10,20,'a');b=row(7,100,120,'b');v=associate([a,b],[ev(7,11),ev(7,101)],{'a','b'});self.assertEqual(set(v['bound']),{'a'});self.assertEqual(len(v['unknown']),1)
+  def test_03_same_pid_different_creation_not_reassigned(self):
+   a=row(7,100,120,'a');v=associate([a],[ev(7,11)],{'a'});self.assertFalse(v['bound'])
+  def test_04_parent_exits_before_delayed_notification(self):

@@ -1,0 +1,85 @@
+{
+    "schema":  "stage6-gate16r-step4-storage-v1",
+    "utc":  "2026-10-02T02:43:30.3298356Z",
+    "created_by":  "THEGRIZZLYBEAR\\jonny",
+    "folders":  [
+                    {
+                        "path":  "D:\\JARVIS-S6-FRESHVM\\vbox-home",
+                        "acl":  [
+                                    "Allow thegrizzlybear\\jarvis-s6-val Modify, Synchronize",
+                                    "Allow BUILTIN\\Administrators FullControl",
+                                    "Allow BUILTIN\\Administrators 268435456",
+                                    "Allow NT AUTHORITY\\SYSTEM FullControl",
+                                    "Allow NT AUTHORITY\\SYSTEM 268435456",
+                                    "Allow NT AUTHORITY\\Authenticated Users Modify, Synchronize",
+                                    "Allow NT AUTHORITY\\Authenticated Users -536805376",
+                                    "Allow BUILTIN\\Users ReadAndExecute, Synchronize",
+                                    "Allow BUILTIN\\Users -1610612736"
+                                ]
+                    },
+                    {
+                        "path":  "D:\\JARVIS-S6-FRESHVM\\machines",
+                        "acl":  [
+                                    "Allow thegrizzlybear\\jarvis-s6-val Modify, Synchronize",
+                                    "Allow BUILTIN\\Administrators FullControl",
+                                    "Allow BUILTIN\\Administrators 268435456",
+                                    "Allow NT AUTHORITY\\SYSTEM FullControl",
+                                    "Allow NT AUTHORITY\\SYSTEM 268435456",
+                                    "Allow NT AUTHORITY\\Authenticated Users Modify, Synchronize",
+                                    "Allow NT AUTHORITY\\Authenticated Users -536805376",
+                                    "Allow BUILTIN\\Users ReadAndExecute, Synchronize",
+                                    "Allow BUILTIN\\Users -1610612736"
+                                ]
+                    },
+                    {
+                        "path":  "D:\\JARVIS-S6-FRESHVM\\media",
+                        "acl":  [
+                                    "Allow thegrizzlybear\\jarvis-s6-val Modify, Synchronize",
+                                    "Allow BUILTIN\\Administrators FullControl",
+                                    "Allow BUILTIN\\Administrators 268435456",
+                                    "Allow NT AUTHORITY\\SYSTEM FullControl",
+                                    "Allow NT AUTHORITY\\SYSTEM 268435456",
+                                    "Allow NT AUTHORITY\\Authenticated Users Modify, Synchronize",
+                                    "Allow NT AUTHORITY\\Authenticated Users -536805376",
+                                    "Allow BUILTIN\\Users ReadAndExecute, Synchronize",
+                                    "Allow BUILTIN\\Users -1610612736"
+                                ]
+                    }
+                ],
+    "discs":  [
+                  {
+                      "name":  "Windows11_Client_x64_en-us_26300_9457.iso",
+                      "bytes":  9047330816,
+                      "sha256":  "bd4307df32bc8af33b39ccecb1174aeb345386630f89a2b86c7a4e36b55ea650",
+                      "expected":  "bd4307df32bc8af33b39ccecb1174aeb345386630f89a2b86c7a4e36b55ea650",
+                      "verified":  true,
+                      "source":  "D:\\JARVIS-release-work\\stage6-media\\Windows11_Client_x64_en-us_26300_9457.iso"
+                  },
+                  {
+                      "name":  "UNATTEND.iso",
+                      "bytes":  1179648,
+                      "sha256":  "89f97c7b162d68b93b123517b1f823bf8ff9cce76f5e88d2cfbb303c7bc17c00",
+                      "expected":  "89f97c7b162d68b93b123517b1f823bf8ff9cce76f5e88d2cfbb303c7bc17c00",
+                      "verified":  true,
+                      "source":  "D:\\JARVIS-release-work\\stage6-media\\UNATTEND.iso"
+                  },
+                  {
+                      "name":  "JARVIS-TOOLS.iso",
+                      "bytes":  1245184,
+                      "sha256":  "0c0d5de3b93f8338ffb3b8e0ef608cb21a935b61863c56a68ecef0d972fcde4b",
+                      "expected":  "0c0d5de3b93f8338ffb3b8e0ef608cb21a935b61863c56a68ecef0d972fcde4b",
+                      "verified":  true,
+                      "source":  "D:\\JARVIS-release-work\\stage6-media\\JARVIS-TOOLS.iso"
+                  },
+                  {
+                      "name":  "VBoxGuestAdditions.iso",
+                      "bytes":  53141504,
+                      "sha256":  "346ea2b9ed47bb954464af83835b14bd8afa5fc1864f34e2561ed923fb74981c",
+                      "expected":  null,
+                      "verified":  "recorded (first measurement)",
+                      "source":  "C:\\Program Files\\Oracle\\VirtualBox\\VBoxGuestAdditions.iso"
+                  }
+              ],
+    "virtualbox_guest_additions_version_note":  "from the installed VirtualBox 7.2.18.175117 (host frozen since P0); version recorded again from inside the guest when installed",
+    "next":  "in the jarvis-s6-val session run step4b-set-vbox-home.cmd (sets the user-scoped VBOX_USER_HOME and re-runs the account check)"
+}

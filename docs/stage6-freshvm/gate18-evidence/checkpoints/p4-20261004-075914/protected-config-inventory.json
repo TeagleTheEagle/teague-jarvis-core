@@ -1,0 +1,87 @@
+[
+    {
+        "path":  "selectorwindow.log",
+        "bytes":  361,
+        "last_write_utc":  "2026-09-17T14:06:12.2186233Z"
+    },
+    {
+        "path":  "selectorwindow.log.1",
+        "bytes":  365,
+        "last_write_utc":  "2026-09-17T14:06:11.6422435Z"
+    },
+    {
+        "path":  "selectorwindow.log.2",
+        "bytes":  403,
+        "last_write_utc":  "2026-09-17T14:03:08.4751659Z"
+    },
+    {
+        "path":  "selectorwindow.log.3",
+        "bytes":  1012,
+        "last_write_utc":  "2026-09-17T11:32:54.9945947Z"
+    },
+    {
+        "path":  "selectorwindow.log.4",
+        "bytes":  332,
+        "last_write_utc":  "2026-09-17T10:18:09.4497530Z"
+    },
+    {
+        "path":  "selectorwindow.log.5",
+        "bytes":  295,
+        "last_write_utc":  "2026-09-17T09:48:58.6768243Z"
+    },
+    {
+        "path":  "selectorwindow.log.6",
+        "bytes":  1893,
+        "last_write_utc":  "2026-09-17T08:01:16.2973569Z"
+    },
+    {
+        "path":  "VBoxSVC.log",
+        "bytes":  12479,
+        "last_write_utc":  "2026-09-18T02:46:25.8478343Z"
+    },
+    {
+        "path":  "VBoxSVC.log.1",
+        "bytes":  5646,
+        "last_write_utc":  "2026-09-18T01:44:10.2795190Z"
+    },
+    {
+        "path":  "VBoxSVC.log.2",
+        "bytes":  5864,
+        "last_write_utc":  "2026-09-18T01:43:32.0780387Z"
+    },
+    {
+        "path":  "VBoxSVC.log.3",
+        "bytes":  4119,
+        "last_write_utc":  "2026-09-18T01:29:40.4845447Z"
+    },
+    {
+        "path":  "VBoxSVC.log.4",
+        "bytes":  4058,
+        "last_write_utc":  "2026-09-18T01:29:11.5683190Z"
+    },
+    {
+        "path":  "VBoxSVC.log.5",
+        "bytes":  4597,
+        "last_write_utc":  "2026-09-18T01:28:45.8176081Z"
+    },
+    {
+        "path":  "VBoxSVC.log.6",
+        "bytes":  4057,
+        "last_write_utc":  "2026-09-18T01:28:27.6681900Z"
+    },
+    {
+        "path":  "VBoxSVC.log.7",
+        "bytes":  31890,
+        "last_write_utc":  "2026-09-17T14:06:17.1906145Z"
+    },
+    {
+        "path":  "VirtualBox.xml",
+        "bytes":  2606,
+        "last_write_utc":  "2026-09-18T01:43:26.9831642Z"
+    },
+    {
+        "path":  "VirtualBox.xml-prev",
+        "bytes":  2713,
+        "last_write_utc":  "2026-09-18T01:43:26.8390078Z"
+    }
+]

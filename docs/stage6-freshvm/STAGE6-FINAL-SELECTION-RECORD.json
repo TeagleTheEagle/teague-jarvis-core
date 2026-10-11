@@ -1,0 +1,33 @@
+{
+    "schema":  "stage6-owner-decision-record-v1",
+    "subject":  "FINAL selection for Stage 6 Gates 17 to 20",
+    "recorded_utc":  "2026-10-04T03:42:52Z",
+    "owner_message":  {
+                          "source":  "Direct human message in the Claude Code chat, 2026-10-04 (local)",
+                          "text":  "FINAL is 1.0.11 and I approve the Gates 17 to 20 plan",
+                          "preceding_context":  "Claude proposed 1.0.11-60d406fb6398 as FINAL (the only 1.0.11 build), named 1.0.10-915e906516dc as the previous build for the Gate 19 update test, and gave this sentence as the reply that selects FINAL and approves the plan."
+                      },
+    "final":  {
+                  "release_id":  "1.0.11-60d406fb6398",
+                  "commit":  "60d406fb6398b95345aa50bafead369dc0f41d25",
+                  "zip":  "D:\\JARVIS-release-work\\release\\JARVIS-1.0.11-60d406fb6398.zip",
+                  "zip_bytes":  525622280,
+                  "zip_sha256":  "1923651176dd3095e84b0628a5c7a90608b6db57fe06986670e0ea8246225a58",
+                  "zip_matches_release_record":  true,
+                  "manifest_sha256":  "c835cef51375720529dd507be5ebeb26504c29109f6d52ebe894b937e1a4acb9",
+                  "release_record_sha256":  "e1486e7f301c8cf7fe198329d2d388fdc5f55e8bd357b3cd5d830ea47e927001"
+              },
+    "previous_build_for_gate19":  {
+                                      "release_id":  "1.0.10-915e906516dc",
+                                      "commit":  "915e906516dc31292bbc302e95b166f751e9d6d3",
+                                      "zip":  "D:\\JARVIS-release-work\\release\\JARVIS-1.0.10-915e906516dc.zip",
+                                      "zip_bytes":  525619975,
+                                      "zip_sha256":  "a945b38a3aff733d3228d617812c8ab7f85f0f8b09c66b2aaed5212c2ec771d4",
+                                      "zip_matches_release_record":  true,
+                                      "manifest_sha256":  "a4b18f189d68f13a580159d4995b0e41d6e54b51a840ee53f8bd98512e851f6d",
+                                      "release_record_sha256":  "f8df5a76bdb744503f6dd6385a3ce8f57b09b3b645a7f04cf034f8269ed99883"
+                                  },
+    "basis":  "docs/release-rehearsal-20261001/README.md section 6 (full regression, zip install, Gate 18 and Gate 17 rehearsals on 1.0.11) and docs/release-rehearsal-20261004/README.md (Gate 17 and Gate 19 tooling rehearsed with these two builds)",
+    "effect":  "FINAL = 1.0.11-60d406fb6398 for Gates 17 to 20. No source change until cutover: the build tested is the build shipped. This selection is not a cutover and starts no gate by itself.",
+    "recorded_by":  "Claude Code (Claude Fable 5.1), owner account. This record documents the owner\u0027s act; it grants no authority of its own and issues no token."
+}

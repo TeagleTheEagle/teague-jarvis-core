@@ -1,0 +1,40 @@
+--- D:\JARVIS-STAGE6-LIVE\1c1f5d0c390b42cc9ba9f4f6221dabc6\code\LoopTiming.cs
++++ D:\JARVIS-STAGE6-LIVE\cd45670bb1894d5b99a1b469e4771535\code\LoopTiming.cs
+@@ -5,10 +5,15 @@
+ using System.Runtime.CompilerServices;
+ using System.Runtime.InteropServices;
+ using System.Threading;
+-public sealed class TimingRow {public string stage;public long qpc,cpu100ns,sampleEndQpc;public uint nativeThread;}
++public sealed class SpanRow {public string stage;public long start,end,loop,thread;public double seconds;}
++public sealed class TimingRow {public long loop;public string stage;public long qpc,cpu100ns,sampleEndQpc;public uint nativeThread;}
+ public sealed class RuntimeRow {public long qpc,allocated,pauseTicks,processCpuTicks,workingSet;public int gc0,gc1,gc2;}
+ public sealed class WakeRow {public long before,after;public double excessSeconds;}
+ public static class LoopTiming {
++ static long loopSequence;public static long CurrentLoop {get{return Interlocked.Read(ref loopSequence);}}
++ public static void BeginLoop(){Interlocked.Increment(ref loopSequence);}
++ static readonly ConcurrentQueue<SpanRow> spans=new ConcurrentQueue<SpanRow>();
++ public static SpanRow[] SpanSnapshot(){return spans.ToArray();}
+  [DllImport("kernel32.dll")] static extern uint GetCurrentThreadId();
+  [DllImport("kernel32.dll")] static extern IntPtr GetCurrentThread();
+  [DllImport("kernel32.dll",SetLastError=true)] static extern bool GetThreadTimes(IntPtr h,out long created,out long exited,out long kernel,out long user);
+@@ -19,15 +24,17 @@
+  public static void Note(string stage){
+   if(Interlocked.Increment(ref count)>1000000){Interlocked.Increment(ref Overflow);return;}
+   long q=Stopwatch.GetTimestamp();long a,b,k,u;bool ok=GetThreadTimes(GetCurrentThread(),out a,out b,out k,out u);
+-  var row=new TimingRow{stage=stage,qpc=q,nativeThread=GetCurrentThreadId(),cpu100ns=ok?k+u:-1};row.sampleEndQpc=Stopwatch.GetTimestamp();rows.Enqueue(row);
++  var row=new TimingRow{loop=CurrentLoop,stage=stage,qpc=q,nativeThread=GetCurrentThreadId(),cpu100ns=ok?k+u:-1};row.sampleEndQpc=Stopwatch.GetTimestamp();rows.Enqueue(row);
+  }
+  public sealed class Region:IDisposable {
+-  readonly string name;public Region(string n){name=n;Note(n+".begin");}public void Dispose(){Note(name+".end");}
++  readonly string name;readonly long begin,loop,thread;bool done;
++  public Region(string n){name=n;begin=Stopwatch.GetTimestamp();loop=CurrentLoop;thread=GetCurrentThreadId();Note(n+".begin");}
++  public void Dispose(){if(done)return;done=true;long end=Stopwatch.GetTimestamp();if(spans.Count<1000000)spans.Enqueue(new SpanRow{stage=name,start=begin,end=end,loop=loop,thread=thread,seconds=(end-begin)/(double)Stopwatch.Frequency});else Interlocked.Increment(ref Overflow);Note(name+".end");}
+  }
+  public static Region Span(string n){return new Region(n);}
+  public sealed class QueueLock:IDisposable {
+   readonly object target;readonly string name;bool taken;
+-  public QueueLock(object o,string n){target=o;name="lock."+n;Note(name+".request");Monitor.Enter(target,ref taken);Note(name+".acquired");}
++  public QueueLock(object o,string n){target=o;name="lock."+n;Note(name+".request");using(Span("queue.lock.acquire."+n)){Monitor.Enter(target,ref taken);}Note(name+".acquired");}
+   public void Dispose(){if(taken){Note(name+".release");Monitor.Exit(target);taken=false;}}
+  }
+  public static QueueLock Lock(object o,[CallerMemberName]string name=""){return new QueueLock(o,name);}

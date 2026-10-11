@@ -1,0 +1,17 @@
+{
+    "status":  "PASS",
+    "seconds":  675.1,
+    "result":  {
+                   "status":  "installed",
+                   "release":  "1.0.15-63362929d7ad",
+                   "previous":  null,
+                   "home":  "C:\\Users\\jarvis-s6-guest\\AppData\\Local\\JARVIS",
+                   "seconds":  {
+                                   "verify_package":  93.242,
+                                   "copy":  229.016,
+                                   "verify_copy":  340.98,
+                                   "switch":  0.972
+                               }
+               },
+    "raw":  null
+}

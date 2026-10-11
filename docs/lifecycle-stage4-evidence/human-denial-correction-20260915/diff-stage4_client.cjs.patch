@@ -1,0 +1,24 @@
+--- before/stage4_client.cjs
++++ after/stage4_client.cjs
+@@ -292,9 +292,20 @@
+   emit({event:'ready',client:clientId,pid:process.pid,identity,profile,electron:process.versions.electron});
+  }
+  // Trusted TEST-parent driver: fixed actions only, never renderer-selected code,
+- // process IDs, paths, native functions, credentials or lifecycle operations.
++ // process IDs, paths, native functions or credentials. The fixed shutdown
++ // denial probe uses only this ordinary client's existing worker/session.
+  async function drive(command){
+   requireThat(configuration?.driver&&win&&!win.isDestroyed(),'DRIVER_UNAVAILABLE');
++  if(command.action==='shutdown-denial'){
++   exact(command,['action','operation']);
++   requireThat(attached&&!closing&&typeof command.operation==='string'&&/^[a-f0-9]{32}$/.test(command.operation),'DENIAL_PROBE');
++   let rejected=false;
++   try{await call('shutdown',{operation:command.operation});}
++   catch(error){if(error.message!=='ATTACHMENT_OR_OPERATION_DENIED')throw error;rejected=true;}
++   // This transport result alone is NOT acceptance. The fixture must correlate
++   // a Core-side SCOPE denial at management_capability with this operation.
++   emit({event:'shutdown-denial',operation:command.operation,rejected});return;
++  }
+   if(command.action==='modeled-media'){
+    requireThat(['start','stop','snapshot','advance','partition','callback'].includes(command.control),'MEDIA_DRIVER_CONTROL');
+    let accepted=null,error=null;

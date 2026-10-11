@@ -1,0 +1,9 @@
+{
+    "iso":  "JARVIS-TOOLS-v4.iso",
+    "bytes":  1245184,
+    "sha256":  "1a64839bc6b528cf05c18426eca10d8d639ac91ec19c38f9cd4e24e8e39c4cf2",
+    "label":  "JARVIS_TOOLS",
+    "payload_files":  7,
+    "payload_manifest_sha256":  "d96875c613458fdea24ac847f68032adb3763488e89ae73a5c365b27f9b3d845",
+    "readback":  "every payload file read back from the mounted ISO with its recorded SHA-256"
+}

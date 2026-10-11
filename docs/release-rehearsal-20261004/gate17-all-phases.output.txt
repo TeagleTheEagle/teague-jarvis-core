@@ -1,0 +1,14 @@
+﻿E0-not-elevated                PASS
+I1-package                     PASS
+I2-extract                     PASS
+I3-install                     PASS
+I4-verify                      PASS
+I5-launch                      PASS
+I6-duplicate-core              PASS
+I7-local-stt                   PASS
+I8-restart                     PASS
+JARVIS is running. VM: quit it from the tray ("Quit JARVIS completely"), restart Windows, then run -Phase AfterRestart.
+U1-uninstall                   PASS
+U2-reinstall                   PASS
+U3-final-stop                  PASS
+gate17 All : PASS  (D:\JARVIS-release-work\gate19-local\evidence\gate17-20261004-032049)

@@ -1,0 +1,568 @@
+--- D:\JARVIS-STAGE6-LIVE\5d7476373d4a4ad38017e89f15a538f0\checker-v2\schema.json
++++ D:\JARVIS-STAGE6-LIVE\ee61943f57a04354b41526fac01bd52f\code\medium-checker\schema.json
+@@ -13,7 +13,7 @@
+   "properties": {
+     "schema": {
+       "type": "string",
+-      "const": "stage6-checker-input-v2"
++      "const": "stage6-checker-input-v3"
+     },
+     "contract": {
+       "type": "string",
+@@ -21,7 +21,7 @@
+     },
+     "adapter": {
+       "type": "string",
+-      "const": "stage6-small-combined-v1"
++      "const": "stage6-medium-combined-v1"
+     },
+     "runId": {
+       "type": "string"
+@@ -337,23 +337,22 @@
+             "classes": {
+               "type": "object",
+               "required": [
+-                "OS_CONSOLE_HELPER",
+                 "DIRECT_PROBE",
+-                "APPLICATION_OBSERVER",
+-                "DIRECT_WORKER"
++                "DIRECT_WORKER",
++                "APPLICATION_OBSERVER"
+               ],
+               "additionalProperties": false,
+               "properties": {
++                "DIRECT_PROBE": {
++                  "type": "integer"
++                },
++                "DIRECT_WORKER": {
++                  "type": "integer"
++                },
+                 "OS_CONSOLE_HELPER": {
+                   "type": "integer"
+                 },
+-                "DIRECT_PROBE": {
+-                  "type": "integer"
+-                },
+                 "APPLICATION_OBSERVER": {
+-                  "type": "integer"
+-                },
+-                "DIRECT_WORKER": {
+                   "type": "integer"
+                 }
+               }
+@@ -409,132 +408,190 @@
+                   "properties": {
+                     "handle": {
+                       "type": "object",
+-                      "required": [
+-                        "PRESENT_AND_VALID"
+-                      ],
++                      "required": [],
+                       "additionalProperties": false,
+                       "properties": {
+                         "PRESENT_AND_VALID": {
+                           "type": "integer"
++                        },
++                        "MISSING_AND_REQUIRED": {
++                          "type": "integer"
++                        },
++                        "PRESENT_BUT_CONTRADICTORY": {
++                          "type": "integer"
++                        },
++                        "NOT_APPLICABLE": {
++                          "type": "integer"
+                         }
+                       }
+                     },
+                     "creation": {
+                       "type": "object",
+-                      "required": [
+-                        "NOT_APPLICABLE",
+-                        "PRESENT_AND_VALID"
+-                      ],
++                      "required": [],
+                       "additionalProperties": false,
+                       "properties": {
++                        "PRESENT_AND_VALID": {
++                          "type": "integer"
++                        },
++                        "MISSING_AND_REQUIRED": {
++                          "type": "integer"
++                        },
++                        "PRESENT_BUT_CONTRADICTORY": {
++                          "type": "integer"
++                        },
+                         "NOT_APPLICABLE": {
+-                          "type": "integer"
+-                        },
+-                        "PRESENT_AND_VALID": {
+                           "type": "integer"
+                         }
+                       }
+                     },
+                     "image": {
+                       "type": "object",
+-                      "required": [
+-                        "NOT_APPLICABLE",
+-                        "PRESENT_AND_VALID"
+-                      ],
++                      "required": [],
+                       "additionalProperties": false,
+                       "properties": {
++                        "PRESENT_AND_VALID": {
++                          "type": "integer"
++                        },
++                        "MISSING_AND_REQUIRED": {
++                          "type": "integer"
++                        },
++                        "PRESENT_BUT_CONTRADICTORY": {
++                          "type": "integer"
++                        },
+                         "NOT_APPLICABLE": {
+-                          "type": "integer"
+-                        },
+-                        "PRESENT_AND_VALID": {
+                           "type": "integer"
+                         }
+                       }
+                     },
+                     "native": {
+                       "type": "object",
+-                      "required": [
+-                        "NOT_APPLICABLE",
+-                        "PRESENT_AND_VALID"
+-                      ],
++                      "required": [],
+                       "additionalProperties": false,
+                       "properties": {
++                        "PRESENT_AND_VALID": {
++                          "type": "integer"
++                        },
++                        "MISSING_AND_REQUIRED": {
++                          "type": "integer"
++                        },
++                        "PRESENT_BUT_CONTRADICTORY": {
++                          "type": "integer"
++                        },
+                         "NOT_APPLICABLE": {
+-                          "type": "integer"
+-                        },
+-                        "PRESENT_AND_VALID": {
+                           "type": "integer"
+                         }
+                       }
+                     },
+                     "start": {
+                       "type": "object",
+-                      "required": [
+-                        "PRESENT_AND_VALID"
+-                      ],
++                      "required": [],
+                       "additionalProperties": false,
+                       "properties": {
+                         "PRESENT_AND_VALID": {
+                           "type": "integer"
++                        },
++                        "MISSING_AND_REQUIRED": {
++                          "type": "integer"
++                        },
++                        "PRESENT_BUT_CONTRADICTORY": {
++                          "type": "integer"
++                        },
++                        "NOT_APPLICABLE": {
++                          "type": "integer"
+                         }
+                       }
+                     },
+                     "stop": {
+                       "type": "object",
+-                      "required": [
+-                        "PRESENT_AND_VALID"
+-                      ],
++                      "required": [],
+                       "additionalProperties": false,
+                       "properties": {
+                         "PRESENT_AND_VALID": {
+                           "type": "integer"
++                        },
++                        "MISSING_AND_REQUIRED": {
++                          "type": "integer"
++                        },
++                        "PRESENT_BUT_CONTRADICTORY": {
++                          "type": "integer"
++                        },
++                        "NOT_APPLICABLE": {
++                          "type": "integer"
+                         }
+                       }
+                     },
+                     "exit": {
+                       "type": "object",
+-                      "required": [
+-                        "PRESENT_AND_VALID"
+-                      ],
++                      "required": [],
+                       "additionalProperties": false,
+                       "properties": {
+                         "PRESENT_AND_VALID": {
+                           "type": "integer"
++                        },
++                        "MISSING_AND_REQUIRED": {
++                          "type": "integer"
++                        },
++                        "PRESENT_BUT_CONTRADICTORY": {
++                          "type": "integer"
++                        },
++                        "NOT_APPLICABLE": {
++                          "type": "integer"
+                         }
+                       }
+                     },
+                     "parent": {
+                       "type": "object",
+-                      "required": [
+-                        "PRESENT_AND_VALID"
+-                      ],
++                      "required": [],
+                       "additionalProperties": false,
+                       "properties": {
+                         "PRESENT_AND_VALID": {
+                           "type": "integer"
++                        },
++                        "MISSING_AND_REQUIRED": {
++                          "type": "integer"
++                        },
++                        "PRESENT_BUT_CONTRADICTORY": {
++                          "type": "integer"
++                        },
++                        "NOT_APPLICABLE": {
++                          "type": "integer"
+                         }
+                       }
+                     },
+                     "source": {
+                       "type": "object",
+-                      "required": [
+-                        "PRESENT_AND_VALID"
+-                      ],
++                      "required": [],
+                       "additionalProperties": false,
+                       "properties": {
+                         "PRESENT_AND_VALID": {
+                           "type": "integer"
++                        },
++                        "MISSING_AND_REQUIRED": {
++                          "type": "integer"
++                        },
++                        "PRESENT_BUT_CONTRADICTORY": {
++                          "type": "integer"
++                        },
++                        "NOT_APPLICABLE": {
++                          "type": "integer"
+                         }
+                       }
+                     },
+                     "capture": {
+                       "type": "object",
+-                      "required": [
+-                        "PRESENT_AND_VALID"
+-                      ],
++                      "required": [],
+                       "additionalProperties": false,
+                       "properties": {
+                         "PRESENT_AND_VALID": {
++                          "type": "integer"
++                        },
++                        "MISSING_AND_REQUIRED": {
++                          "type": "integer"
++                        },
++                        "PRESENT_BUT_CONTRADICTORY": {
++                          "type": "integer"
++                        },
++                        "NOT_APPLICABLE": {
+                           "type": "integer"
+                         }
+                       }
+@@ -669,16 +726,16 @@
+           "properties": {
+             "counts": {
+               "type": "object",
+-              "required": [
+-                "AMBIGUOUS",
+-                "UNMATCHED"
+-              ],
++              "required": [],
+               "additionalProperties": false,
+               "properties": {
+                 "AMBIGUOUS": {
+                   "type": "integer"
+                 },
+                 "UNMATCHED": {
++                  "type": "integer"
++                },
++                "UNIQUE_CORRELATED": {
+                   "type": "integer"
+                 }
+               }
+@@ -2807,16 +2864,16 @@
+             },
+             "cim": {
+               "type": "object",
+-              "required": [
+-                "AMBIGUOUS",
+-                "UNMATCHED"
+-              ],
++              "required": [],
+               "additionalProperties": false,
+               "properties": {
+                 "AMBIGUOUS": {
+                   "type": "integer"
+                 },
+                 "UNMATCHED": {
++                  "type": "integer"
++                },
++                "UNIQUE_CORRELATED": {
+                   "type": "integer"
+                 }
+               }
+@@ -3176,132 +3233,190 @@
+                   "properties": {
+                     "handle": {
+                       "type": "object",
+-                      "required": [
+-                        "PRESENT_AND_VALID"
+-                      ],
++                      "required": [],
+                       "additionalProperties": false,
+                       "properties": {
+                         "PRESENT_AND_VALID": {
+                           "type": "integer"
++                        },
++                        "MISSING_AND_REQUIRED": {
++                          "type": "integer"
++                        },
++                        "PRESENT_BUT_CONTRADICTORY": {
++                          "type": "integer"
++                        },
++                        "NOT_APPLICABLE": {
++                          "type": "integer"
+                         }
+                       }
+                     },
+                     "creation": {
+                       "type": "object",
+-                      "required": [
+-                        "NOT_APPLICABLE",
+-                        "PRESENT_AND_VALID"
+-                      ],
++                      "required": [],
+                       "additionalProperties": false,
+                       "properties": {
++                        "PRESENT_AND_VALID": {
++                          "type": "integer"
++                        },
++                        "MISSING_AND_REQUIRED": {
++                          "type": "integer"
++                        },
++                        "PRESENT_BUT_CONTRADICTORY": {
++                          "type": "integer"
++                        },
+                         "NOT_APPLICABLE": {
+-                          "type": "integer"
+-                        },
+-                        "PRESENT_AND_VALID": {
+                           "type": "integer"
+                         }
+                       }
+                     },
+                     "image": {
+                       "type": "object",
+-                      "required": [
+-                        "NOT_APPLICABLE",
+-                        "PRESENT_AND_VALID"
+-                      ],
++                      "required": [],
+                       "additionalProperties": false,
+                       "properties": {
++                        "PRESENT_AND_VALID": {
++                          "type": "integer"
++                        },
++                        "MISSING_AND_REQUIRED": {
++                          "type": "integer"
++                        },
++                        "PRESENT_BUT_CONTRADICTORY": {
++                          "type": "integer"
++                        },
+                         "NOT_APPLICABLE": {
+-                          "type": "integer"
+-                        },
+-                        "PRESENT_AND_VALID": {
+                           "type": "integer"
+                         }
+                       }
+                     },
+                     "native": {
+                       "type": "object",
+-                      "required": [
+-                        "NOT_APPLICABLE",
+-                        "PRESENT_AND_VALID"
+-                      ],
++                      "required": [],
+                       "additionalProperties": false,
+                       "properties": {
++                        "PRESENT_AND_VALID": {
++                          "type": "integer"
++                        },
++                        "MISSING_AND_REQUIRED": {
++                          "type": "integer"
++                        },
++                        "PRESENT_BUT_CONTRADICTORY": {
++                          "type": "integer"
++                        },
+                         "NOT_APPLICABLE": {
+-                          "type": "integer"
+-                        },
+-                        "PRESENT_AND_VALID": {
+                           "type": "integer"
+                         }
+                       }
+                     },
+                     "start": {
+                       "type": "object",
+-                      "required": [
+-                        "PRESENT_AND_VALID"
+-                      ],
++                      "required": [],
+                       "additionalProperties": false,
+                       "properties": {
+                         "PRESENT_AND_VALID": {
+                           "type": "integer"
++                        },
++                        "MISSING_AND_REQUIRED": {
++                          "type": "integer"
++                        },
++                        "PRESENT_BUT_CONTRADICTORY": {
++                          "type": "integer"
++                        },
++                        "NOT_APPLICABLE": {
++                          "type": "integer"
+                         }
+                       }
+                     },
+                     "stop": {
+                       "type": "object",
+-                      "required": [
+-                        "PRESENT_AND_VALID"
+-                      ],
++                      "required": [],
+                       "additionalProperties": false,
+                       "properties": {
+                         "PRESENT_AND_VALID": {
+                           "type": "integer"
++                        },
++                        "MISSING_AND_REQUIRED": {
++                          "type": "integer"
++                        },
++                        "PRESENT_BUT_CONTRADICTORY": {
++                          "type": "integer"
++                        },
++                        "NOT_APPLICABLE": {
++                          "type": "integer"
+                         }
+                       }
+                     },
+                     "exit": {
+                       "type": "object",
+-                      "required": [
+-                        "PRESENT_AND_VALID"
+-                      ],
++                      "required": [],
+                       "additionalProperties": false,
+                       "properties": {
+                         "PRESENT_AND_VALID": {
+                           "type": "integer"
++                        },
++                        "MISSING_AND_REQUIRED": {
++                          "type": "integer"
++                        },
++                        "PRESENT_BUT_CONTRADICTORY": {
++                          "type": "integer"
++                        },
++                        "NOT_APPLICABLE": {
++                          "type": "integer"
+                         }
+                       }
+                     },
+                     "parent": {
+                       "type": "object",
+-                      "required": [
+-                        "PRESENT_AND_VALID"
+-                      ],
++                      "required": [],
+                       "additionalProperties": false,
+                       "properties": {
+                         "PRESENT_AND_VALID": {
+                           "type": "integer"
++                        },
++                        "MISSING_AND_REQUIRED": {
++                          "type": "integer"
++                        },
++                        "PRESENT_BUT_CONTRADICTORY": {
++                          "type": "integer"
++                        },
++                        "NOT_APPLICABLE": {
++                          "type": "integer"
+                         }
+                       }
+                     },
+                     "source": {
+                       "type": "object",
+-                      "required": [
+-                        "PRESENT_AND_VALID"
+-                      ],
++                      "required": [],
+                       "additionalProperties": false,
+                       "properties": {
+                         "PRESENT_AND_VALID": {
+                           "type": "integer"
++                        },
++                        "MISSING_AND_REQUIRED": {
++                          "type": "integer"
++                        },
++                        "PRESENT_BUT_CONTRADICTORY": {
++                          "type": "integer"
++                        },
++                        "NOT_APPLICABLE": {
++                          "type": "integer"
+                         }
+                       }
+                     },
+                     "capture": {
+                       "type": "object",
+-                      "required": [
+-                        "PRESENT_AND_VALID"
+-                      ],
++                      "required": [],
+                       "additionalProperties": false,
+                       "properties": {
+                         "PRESENT_AND_VALID": {
++                          "type": "integer"
++                        },
++                        "MISSING_AND_REQUIRED": {
++                          "type": "integer"
++                        },
++                        "PRESENT_BUT_CONTRADICTORY": {
++                          "type": "integer"
++                        },
++                        "NOT_APPLICABLE": {
+                           "type": "integer"
+                         }
+                       }
+@@ -3897,6 +4012,6 @@
+     }
+   },
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+-  "$id": "urn:jarvis:stage6:checker-input:v2",
++  "$id": "urn:jarvis:stage6:checker-input:v3",
+   "description": "Closed small-evidence adapter schema. Semantic checks and pinned original artifacts are additionally mandatory."
+ }

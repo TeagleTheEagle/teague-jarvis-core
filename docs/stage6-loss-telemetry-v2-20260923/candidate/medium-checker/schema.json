@@ -1,0 +1,4017 @@
+{
+  "type": "object",
+  "required": [
+    "schema",
+    "contract",
+    "adapter",
+    "runId",
+    "evidenceRoot",
+    "payload",
+    "bundle"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "stage6-checker-input-v3"
+    },
+    "contract": {
+      "type": "string",
+      "const": "STAGE6-TEST-KERNEL-INSTANCE-20260921-v1"
+    },
+    "adapter": {
+      "type": "string",
+      "const": "stage6-medium-combined-v1"
+    },
+    "runId": {
+      "type": "string"
+    },
+    "evidenceRoot": {
+      "type": "string"
+    },
+    "payload": {
+      "type": "object",
+      "required": [
+        "schema",
+        "run",
+        "contract",
+        "verificationStatus",
+        "acceptanceSealed",
+        "archiveStatus",
+        "identitySchema",
+        "authoritative",
+        "durable",
+        "verification",
+        "secondary",
+        "health",
+        "finalization"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {
+          "type": "string"
+        },
+        "run": {
+          "type": "string"
+        },
+        "contract": {
+          "type": "string"
+        },
+        "verificationStatus": {
+          "type": "string"
+        },
+        "acceptanceSealed": {
+          "type": "boolean"
+        },
+        "archiveStatus": {
+          "type": "string"
+        },
+        "identitySchema": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "authoritative": {
+          "type": "object",
+          "required": [
+            "records",
+            "starts",
+            "stops",
+            "canonicalIdentities",
+            "falseUnique",
+            "ambiguity",
+            "identities"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "records": {
+              "type": "integer"
+            },
+            "starts": {
+              "type": "integer"
+            },
+            "stops": {
+              "type": "integer"
+            },
+            "canonicalIdentities": {
+              "type": "integer"
+            },
+            "falseUnique": {
+              "type": "integer"
+            },
+            "ambiguity": {
+              "type": "integer"
+            },
+            "identities": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "pid",
+                      "created",
+                      "sequence",
+                      "scope",
+                      "image",
+                      "startQpc",
+                      "stopQpc",
+                      "exitFiletime",
+                      "exitCode",
+                      "parentPid",
+                      "parentSequence"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "pid": {
+                        "type": "integer"
+                      },
+                      "created": {
+                        "type": "string"
+                      },
+                      "sequence": {
+                        "type": "string"
+                      },
+                      "scope": {
+                        "type": "string"
+                      },
+                      "image": {
+                        "type": "string"
+                      },
+                      "startQpc": {
+                        "type": "integer"
+                      },
+                      "stopQpc": {
+                        "type": "integer"
+                      },
+                      "exitFiletime": {
+                        "type": "string"
+                      },
+                      "exitCode": {
+                        "type": "integer"
+                      },
+                      "parentPid": {
+                        "type": "integer"
+                      },
+                      "parentSequence": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "durable": {
+          "type": "object",
+          "required": [
+            "segments",
+            "first",
+            "last",
+            "gaps",
+            "duplicates",
+            "missing",
+            "failed",
+            "hashes",
+            "manifest",
+            "segmentManifest",
+            "finalizerHighWater",
+            "writerHighWater",
+            "writerHighWaterBytes",
+            "maxFlushSeconds",
+            "progressWhileFinalizing"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "segments": {
+              "type": "integer"
+            },
+            "first": {
+              "type": "integer"
+            },
+            "last": {
+              "type": "integer"
+            },
+            "gaps": {
+              "type": "integer"
+            },
+            "duplicates": {
+              "type": "integer"
+            },
+            "missing": {
+              "type": "integer"
+            },
+            "failed": {
+              "type": "integer"
+            },
+            "hashes": {
+              "type": "string"
+            },
+            "manifest": {
+              "type": "object",
+              "required": [
+                "authoritative",
+                "sha256"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "authoritative": {
+                  "type": "string"
+                },
+                "sha256": {
+                  "type": "string"
+                }
+              }
+            },
+            "segmentManifest": {
+              "type": "object",
+              "required": [
+                "format",
+                "accepted",
+                "bytes",
+                "segments"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "format": {
+                  "type": "string"
+                },
+                "accepted": {
+                  "type": "integer"
+                },
+                "bytes": {
+                  "type": "integer"
+                },
+                "segments": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "required": [
+                          "number",
+                          "name",
+                          "first",
+                          "last",
+                          "records",
+                          "bytes",
+                          "sha256",
+                          "states"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "number": {
+                            "type": "integer"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "first": {
+                            "type": "integer"
+                          },
+                          "last": {
+                            "type": "integer"
+                          },
+                          "records": {
+                            "type": "integer"
+                          },
+                          "bytes": {
+                            "type": "integer"
+                          },
+                          "sha256": {
+                            "type": "string"
+                          },
+                          "states": {
+                            "type": "array",
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "type": "integer"
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "finalizerHighWater": {
+              "type": "integer"
+            },
+            "writerHighWater": {
+              "type": "integer"
+            },
+            "writerHighWaterBytes": {
+              "type": "integer"
+            },
+            "maxFlushSeconds": {
+              "type": "number"
+            },
+            "progressWhileFinalizing": {
+              "type": "integer"
+            }
+          }
+        },
+        "verification": {
+          "type": "object",
+          "required": [
+            "classes",
+            "coverage",
+            "creatorImages",
+            "tracerHelperSuccess",
+            "qualifiedPostExitHelpers",
+            "failedHelpers",
+            "nativeEntries"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "classes": {
+              "type": "object",
+              "required": [
+                "DIRECT_PROBE",
+                "DIRECT_WORKER",
+                "APPLICATION_OBSERVER"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "DIRECT_PROBE": {
+                  "type": "integer"
+                },
+                "DIRECT_WORKER": {
+                  "type": "integer"
+                },
+                "OS_CONSOLE_HELPER": {
+                  "type": "integer"
+                },
+                "APPLICATION_OBSERVER": {
+                  "type": "integer"
+                }
+              }
+            },
+            "coverage": {
+              "type": "object",
+              "required": [
+                "status",
+                "requiredIdentities",
+                "verifiedIdentities",
+                "missingRequired",
+                "contradictory",
+                "notApplicableIdentities",
+                "evidenceTypes",
+                "errors",
+                "identities"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "status": {
+                  "type": "string"
+                },
+                "requiredIdentities": {
+                  "type": "integer"
+                },
+                "verifiedIdentities": {
+                  "type": "integer"
+                },
+                "missingRequired": {
+                  "type": "integer"
+                },
+                "contradictory": {
+                  "type": "integer"
+                },
+                "notApplicableIdentities": {
+                  "type": "integer"
+                },
+                "evidenceTypes": {
+                  "type": "object",
+                  "required": [
+                    "handle",
+                    "creation",
+                    "image",
+                    "native",
+                    "start",
+                    "stop",
+                    "exit",
+                    "parent",
+                    "source",
+                    "capture"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "handle": {
+                      "type": "object",
+                      "required": [],
+                      "additionalProperties": false,
+                      "properties": {
+                        "PRESENT_AND_VALID": {
+                          "type": "integer"
+                        },
+                        "MISSING_AND_REQUIRED": {
+                          "type": "integer"
+                        },
+                        "PRESENT_BUT_CONTRADICTORY": {
+                          "type": "integer"
+                        },
+                        "NOT_APPLICABLE": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "creation": {
+                      "type": "object",
+                      "required": [],
+                      "additionalProperties": false,
+                      "properties": {
+                        "PRESENT_AND_VALID": {
+                          "type": "integer"
+                        },
+                        "MISSING_AND_REQUIRED": {
+                          "type": "integer"
+                        },
+                        "PRESENT_BUT_CONTRADICTORY": {
+                          "type": "integer"
+                        },
+                        "NOT_APPLICABLE": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "image": {
+                      "type": "object",
+                      "required": [],
+                      "additionalProperties": false,
+                      "properties": {
+                        "PRESENT_AND_VALID": {
+                          "type": "integer"
+                        },
+                        "MISSING_AND_REQUIRED": {
+                          "type": "integer"
+                        },
+                        "PRESENT_BUT_CONTRADICTORY": {
+                          "type": "integer"
+                        },
+                        "NOT_APPLICABLE": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "native": {
+                      "type": "object",
+                      "required": [],
+                      "additionalProperties": false,
+                      "properties": {
+                        "PRESENT_AND_VALID": {
+                          "type": "integer"
+                        },
+                        "MISSING_AND_REQUIRED": {
+                          "type": "integer"
+                        },
+                        "PRESENT_BUT_CONTRADICTORY": {
+                          "type": "integer"
+                        },
+                        "NOT_APPLICABLE": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "start": {
+                      "type": "object",
+                      "required": [],
+                      "additionalProperties": false,
+                      "properties": {
+                        "PRESENT_AND_VALID": {
+                          "type": "integer"
+                        },
+                        "MISSING_AND_REQUIRED": {
+                          "type": "integer"
+                        },
+                        "PRESENT_BUT_CONTRADICTORY": {
+                          "type": "integer"
+                        },
+                        "NOT_APPLICABLE": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "stop": {
+                      "type": "object",
+                      "required": [],
+                      "additionalProperties": false,
+                      "properties": {
+                        "PRESENT_AND_VALID": {
+                          "type": "integer"
+                        },
+                        "MISSING_AND_REQUIRED": {
+                          "type": "integer"
+                        },
+                        "PRESENT_BUT_CONTRADICTORY": {
+                          "type": "integer"
+                        },
+                        "NOT_APPLICABLE": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "exit": {
+                      "type": "object",
+                      "required": [],
+                      "additionalProperties": false,
+                      "properties": {
+                        "PRESENT_AND_VALID": {
+                          "type": "integer"
+                        },
+                        "MISSING_AND_REQUIRED": {
+                          "type": "integer"
+                        },
+                        "PRESENT_BUT_CONTRADICTORY": {
+                          "type": "integer"
+                        },
+                        "NOT_APPLICABLE": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "parent": {
+                      "type": "object",
+                      "required": [],
+                      "additionalProperties": false,
+                      "properties": {
+                        "PRESENT_AND_VALID": {
+                          "type": "integer"
+                        },
+                        "MISSING_AND_REQUIRED": {
+                          "type": "integer"
+                        },
+                        "PRESENT_BUT_CONTRADICTORY": {
+                          "type": "integer"
+                        },
+                        "NOT_APPLICABLE": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "source": {
+                      "type": "object",
+                      "required": [],
+                      "additionalProperties": false,
+                      "properties": {
+                        "PRESENT_AND_VALID": {
+                          "type": "integer"
+                        },
+                        "MISSING_AND_REQUIRED": {
+                          "type": "integer"
+                        },
+                        "PRESENT_BUT_CONTRADICTORY": {
+                          "type": "integer"
+                        },
+                        "NOT_APPLICABLE": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "capture": {
+                      "type": "object",
+                      "required": [],
+                      "additionalProperties": false,
+                      "properties": {
+                        "PRESENT_AND_VALID": {
+                          "type": "integer"
+                        },
+                        "MISSING_AND_REQUIRED": {
+                          "type": "integer"
+                        },
+                        "PRESENT_BUT_CONTRADICTORY": {
+                          "type": "integer"
+                        },
+                        "NOT_APPLICABLE": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                },
+                "errors": {
+                  "type": "array",
+                  "items": false
+                },
+                "identities": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "required": [
+                          "pid",
+                          "created",
+                          "role",
+                          "states",
+                          "qualifiedPostExit",
+                          "reasons",
+                          "verified"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "pid": {
+                            "type": "integer"
+                          },
+                          "created": {
+                            "type": "string"
+                          },
+                          "role": {
+                            "type": "string"
+                          },
+                          "states": {
+                            "type": "object",
+                            "required": [
+                              "start",
+                              "stop",
+                              "handle",
+                              "creation",
+                              "image",
+                              "source",
+                              "capture",
+                              "native",
+                              "exit",
+                              "parent",
+                              "annotation"
+                            ],
+                            "additionalProperties": false,
+                            "properties": {
+                              "start": {
+                                "type": "string"
+                              },
+                              "stop": {
+                                "type": "string"
+                              },
+                              "handle": {
+                                "type": "string"
+                              },
+                              "creation": {
+                                "type": "string"
+                              },
+                              "image": {
+                                "type": "string"
+                              },
+                              "source": {
+                                "type": "string"
+                              },
+                              "capture": {
+                                "type": "string"
+                              },
+                              "native": {
+                                "type": "string"
+                              },
+                              "exit": {
+                                "type": "string"
+                              },
+                              "parent": {
+                                "type": "string"
+                              },
+                              "annotation": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "qualifiedPostExit": {
+                            "type": "boolean"
+                          },
+                          "reasons": {
+                            "type": "array",
+                            "items": false
+                          },
+                          "verified": {
+                            "type": "boolean"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "creatorImages": {
+              "type": "integer"
+            },
+            "tracerHelperSuccess": {
+              "type": "integer"
+            },
+            "qualifiedPostExitHelpers": {
+              "type": "integer"
+            },
+            "failedHelpers": {
+              "type": "integer"
+            },
+            "nativeEntries": {
+              "type": "integer"
+            }
+          }
+        },
+        "secondary": {
+          "type": "object",
+          "required": [
+            "counts",
+            "persisted",
+            "queue",
+            "authority"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "counts": {
+              "type": "object",
+              "required": [],
+              "additionalProperties": false,
+              "properties": {
+                "AMBIGUOUS": {
+                  "type": "integer"
+                },
+                "UNMATCHED": {
+                  "type": "integer"
+                },
+                "UNIQUE_CORRELATED": {
+                  "type": "integer"
+                }
+              }
+            },
+            "persisted": {
+              "type": "integer"
+            },
+            "queue": {
+              "type": "object",
+              "required": [
+                "enqueued",
+                "selected",
+                "persisted",
+                "removed",
+                "remaining",
+                "maxDepth",
+                "failed",
+                "failure",
+                "identity"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "enqueued": {
+                  "type": "integer"
+                },
+                "selected": {
+                  "type": "integer"
+                },
+                "persisted": {
+                  "type": "integer"
+                },
+                "removed": {
+                  "type": "integer"
+                },
+                "remaining": {
+                  "type": "integer"
+                },
+                "maxDepth": {
+                  "type": "integer"
+                },
+                "failed": {
+                  "type": "boolean"
+                },
+                "failure": {
+                  "type": "null"
+                },
+                "identity": {
+                  "type": "string"
+                }
+              }
+            },
+            "authority": {
+              "type": "boolean"
+            }
+          }
+        },
+        "health": {
+          "type": "object",
+          "required": [
+            "maxHeartbeat",
+            "maxAge",
+            "deadlineViolations",
+            "observers",
+            "writer",
+            "finalizer"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "maxHeartbeat": {
+              "type": "number"
+            },
+            "maxAge": {
+              "type": "number"
+            },
+            "deadlineViolations": {
+              "type": "integer"
+            },
+            "observers": {
+              "type": "string"
+            },
+            "writer": {
+              "type": "string"
+            },
+            "finalizer": {
+              "type": "string"
+            }
+          }
+        },
+        "finalization": {
+          "type": "object",
+          "required": [
+            "authoritativeQueue",
+            "finalizerQueue",
+            "allSegments",
+            "secondaryQueue",
+            "kernelTrace",
+            "nativeThreads",
+            "cleanup"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "authoritativeQueue": {
+              "type": "string"
+            },
+            "finalizerQueue": {
+              "type": "string"
+            },
+            "allSegments": {
+              "type": "string"
+            },
+            "secondaryQueue": {
+              "type": "string"
+            },
+            "kernelTrace": {
+              "type": "string"
+            },
+            "nativeThreads": {
+              "type": "string"
+            },
+            "cleanup": {
+              "type": "object",
+              "required": [
+                "utc",
+                "runId",
+                "matchingProcessCount",
+                "matchingProcesses",
+                "diagnosticTraceCount",
+                "diagnosticTraces",
+                "traceEnumeration",
+                "protectedFilesAccessed",
+                "productionChanged",
+                "status"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "utc": {
+                  "type": "string"
+                },
+                "runId": {
+                  "type": "string"
+                },
+                "matchingProcessCount": {
+                  "type": "integer"
+                },
+                "matchingProcesses": {
+                  "type": "array",
+                  "items": false
+                },
+                "diagnosticTraceCount": {
+                  "type": "integer"
+                },
+                "diagnosticTraces": {
+                  "type": "array",
+                  "items": false
+                },
+                "traceEnumeration": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  }
+                },
+                "protectedFilesAccessed": {
+                  "type": "boolean"
+                },
+                "productionChanged": {
+                  "type": "boolean"
+                },
+                "status": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "bundle": {
+      "type": "object",
+      "required": [
+        "root",
+        "events",
+        "manifest",
+        "writer",
+        "kernel",
+        "structural",
+        "coverage",
+        "qualification",
+        "cim",
+        "launch",
+        "app",
+        "bridge",
+        "hb",
+        "health",
+        "host",
+        "manifests"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "root": {
+          "type": "string"
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "required": [
+                  "source",
+                  "scope",
+                  "kind",
+                  "pid",
+                  "created",
+                  "sequence",
+                  "parentPid",
+                  "parentSequence",
+                  "image",
+                  "eventQpc",
+                  "callbackQpc",
+                  "exitFiletime",
+                  "exitCode",
+                  "version"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "source": {
+                    "type": "string"
+                  },
+                  "scope": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string"
+                  },
+                  "pid": {
+                    "type": "integer"
+                  },
+                  "created": {
+                    "type": "string"
+                  },
+                  "sequence": {
+                    "type": "string"
+                  },
+                  "parentPid": {
+                    "type": "integer"
+                  },
+                  "parentSequence": {
+                    "type": "string"
+                  },
+                  "image": {
+                    "type": "string"
+                  },
+                  "eventQpc": {
+                    "type": "integer"
+                  },
+                  "callbackQpc": {
+                    "type": "integer"
+                  },
+                  "exitFiletime": {
+                    "type": "string"
+                  },
+                  "exitCode": {
+                    "type": "integer"
+                  },
+                  "version": {
+                    "type": "integer"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "manifest": {
+          "type": "object",
+          "required": [
+            "format",
+            "accepted",
+            "bytes",
+            "segments"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "format": {
+              "type": "string"
+            },
+            "accepted": {
+              "type": "integer"
+            },
+            "bytes": {
+              "type": "integer"
+            },
+            "segments": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "number",
+                      "name",
+                      "first",
+                      "last",
+                      "records",
+                      "bytes",
+                      "sha256",
+                      "states"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "number": {
+                        "type": "integer"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "first": {
+                        "type": "integer"
+                      },
+                      "last": {
+                        "type": "integer"
+                      },
+                      "records": {
+                        "type": "integer"
+                      },
+                      "bytes": {
+                        "type": "integer"
+                      },
+                      "sha256": {
+                        "type": "string"
+                      },
+                      "states": {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "writer": {
+          "type": "object",
+          "required": [
+            "fault",
+            "accepted",
+            "written",
+            "attempted",
+            "segmentBytes",
+            "pendingLimit",
+            "warningSegments",
+            "peakPending",
+            "peakPendingBytes",
+            "peakQueueBytes",
+            "peakQueueItems",
+            "remaining",
+            "threadsExited",
+            "progressedWhileFinalizing",
+            "serializeSeconds",
+            "producerLockWaitSeconds",
+            "appendSeconds",
+            "maxAppendSeconds",
+            "rolloverSeconds",
+            "backpressureSeconds",
+            "flushSeconds",
+            "maxFlushSeconds",
+            "hashSeconds",
+            "elapsedSeconds",
+            "segments"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "fault": {
+              "type": "integer"
+            },
+            "accepted": {
+              "type": "integer"
+            },
+            "written": {
+              "type": "integer"
+            },
+            "attempted": {
+              "type": "integer"
+            },
+            "segmentBytes": {
+              "type": "integer"
+            },
+            "pendingLimit": {
+              "type": "integer"
+            },
+            "warningSegments": {
+              "type": "integer"
+            },
+            "peakPending": {
+              "type": "integer"
+            },
+            "peakPendingBytes": {
+              "type": "integer"
+            },
+            "peakQueueBytes": {
+              "type": "integer"
+            },
+            "peakQueueItems": {
+              "type": "integer"
+            },
+            "remaining": {
+              "type": "integer"
+            },
+            "threadsExited": {
+              "type": "boolean"
+            },
+            "progressedWhileFinalizing": {
+              "type": "integer"
+            },
+            "serializeSeconds": {
+              "type": "number"
+            },
+            "producerLockWaitSeconds": {
+              "type": "number"
+            },
+            "appendSeconds": {
+              "type": "number"
+            },
+            "maxAppendSeconds": {
+              "type": "number"
+            },
+            "rolloverSeconds": {
+              "type": "number"
+            },
+            "backpressureSeconds": {
+              "type": "number"
+            },
+            "flushSeconds": {
+              "type": "number"
+            },
+            "maxFlushSeconds": {
+              "type": "number"
+            },
+            "hashSeconds": {
+              "type": "number"
+            },
+            "elapsedSeconds": {
+              "type": "number"
+            },
+            "segments": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "number",
+                      "name",
+                      "first",
+                      "last",
+                      "records",
+                      "bytes",
+                      "sha256",
+                      "states"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "number": {
+                        "type": "integer"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "first": {
+                        "type": "integer"
+                      },
+                      "last": {
+                        "type": "integer"
+                      },
+                      "records": {
+                        "type": "integer"
+                      },
+                      "bytes": {
+                        "type": "integer"
+                      },
+                      "sha256": {
+                        "type": "string"
+                      },
+                      "states": {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "kernel": {
+          "type": "object",
+          "required": [
+            "requestedStop",
+            "session",
+            "flushResult",
+            "stopResult",
+            "consumerResult",
+            "eventsLost",
+            "realtimeBuffersLost",
+            "buffersLost",
+            "faults",
+            "discardedUnrelated",
+            "rows"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "requestedStop": {
+              "type": "boolean"
+            },
+            "session": {
+              "type": "string"
+            },
+            "flushResult": {
+              "type": "integer"
+            },
+            "stopResult": {
+              "type": "integer"
+            },
+            "consumerResult": {
+              "type": "integer"
+            },
+            "eventsLost": {
+              "type": "integer"
+            },
+            "realtimeBuffersLost": {
+              "type": "integer"
+            },
+            "buffersLost": {
+              "type": "integer"
+            },
+            "faults": {
+              "type": "integer"
+            },
+            "discardedUnrelated": {
+              "type": "integer"
+            },
+            "rows": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "pid",
+                      "parentPid",
+                      "created",
+                      "sequence",
+                      "parentSequence",
+                      "image",
+                      "handleImage",
+                      "handleCreated",
+                      "imageError",
+                      "imageBeginQpc",
+                      "imageEndQpc",
+                      "startQpc",
+                      "startCallbackQpc",
+                      "handleAttemptBeginQpc",
+                      "handleAttemptQpc",
+                      "handleRetained",
+                      "handleIdentity",
+                      "reason",
+                      "openError",
+                      "metadataError",
+                      "stopQpc",
+                      "stopCallbackQpc",
+                      "signalObservedQpc",
+                      "exitFiletime",
+                      "exitCode",
+                      "exitCodeKnown",
+                      "handleClosed",
+                      "startVersion",
+                      "stopVersion",
+                      "startSchema",
+                      "stopSchema"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "pid": {
+                        "type": "integer"
+                      },
+                      "parentPid": {
+                        "type": "integer"
+                      },
+                      "created": {
+                        "type": "string"
+                      },
+                      "sequence": {
+                        "type": "string"
+                      },
+                      "parentSequence": {
+                        "type": "string"
+                      },
+                      "image": {
+                        "type": "string"
+                      },
+                      "handleImage": {
+                        "type": "string"
+                      },
+                      "handleCreated": {
+                        "type": "string"
+                      },
+                      "imageError": {
+                        "type": "integer"
+                      },
+                      "imageBeginQpc": {
+                        "type": "integer"
+                      },
+                      "imageEndQpc": {
+                        "type": "integer"
+                      },
+                      "startQpc": {
+                        "type": "integer"
+                      },
+                      "startCallbackQpc": {
+                        "type": "integer"
+                      },
+                      "handleAttemptBeginQpc": {
+                        "type": "integer"
+                      },
+                      "handleAttemptQpc": {
+                        "type": "integer"
+                      },
+                      "handleRetained": {
+                        "type": "boolean"
+                      },
+                      "handleIdentity": {
+                        "type": "string"
+                      },
+                      "reason": {
+                        "type": "string"
+                      },
+                      "openError": {
+                        "type": "integer"
+                      },
+                      "metadataError": {
+                        "type": "integer"
+                      },
+                      "stopQpc": {
+                        "type": "integer"
+                      },
+                      "stopCallbackQpc": {
+                        "type": "integer"
+                      },
+                      "signalObservedQpc": {
+                        "type": "integer"
+                      },
+                      "exitFiletime": {
+                        "type": "string"
+                      },
+                      "exitCode": {
+                        "type": "integer"
+                      },
+                      "exitCodeKnown": {
+                        "type": "boolean"
+                      },
+                      "handleClosed": {
+                        "type": "boolean"
+                      },
+                      "startVersion": {
+                        "type": "integer"
+                      },
+                      "stopVersion": {
+                        "type": "integer"
+                      },
+                      "startSchema": {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        }
+                      },
+                      "stopSchema": {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "structural": {
+          "type": "object",
+          "required": [
+            "events",
+            "kernel",
+            "handles",
+            "natives",
+            "cim"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "events": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "source",
+                      "scope",
+                      "kind",
+                      "pid",
+                      "created",
+                      "sequence",
+                      "parentPid",
+                      "parentSequence",
+                      "image",
+                      "eventQpc",
+                      "callbackQpc",
+                      "exitFiletime",
+                      "exitCode",
+                      "version"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "source": {
+                        "type": "string"
+                      },
+                      "scope": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "type": "string"
+                      },
+                      "pid": {
+                        "type": "integer"
+                      },
+                      "created": {
+                        "type": "string"
+                      },
+                      "sequence": {
+                        "type": "string"
+                      },
+                      "parentPid": {
+                        "type": "integer"
+                      },
+                      "parentSequence": {
+                        "type": "string"
+                      },
+                      "image": {
+                        "type": "string"
+                      },
+                      "eventQpc": {
+                        "type": "integer"
+                      },
+                      "callbackQpc": {
+                        "type": "integer"
+                      },
+                      "exitFiletime": {
+                        "type": "string"
+                      },
+                      "exitCode": {
+                        "type": "integer"
+                      },
+                      "version": {
+                        "type": "integer"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "kernel": {
+              "type": "object",
+              "required": [
+                "requestedStop",
+                "session",
+                "flushResult",
+                "stopResult",
+                "consumerResult",
+                "eventsLost",
+                "realtimeBuffersLost",
+                "buffersLost",
+                "faults",
+                "discardedUnrelated",
+                "rows"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "requestedStop": {
+                  "type": "boolean"
+                },
+                "session": {
+                  "type": "string"
+                },
+                "flushResult": {
+                  "type": "integer"
+                },
+                "stopResult": {
+                  "type": "integer"
+                },
+                "consumerResult": {
+                  "type": "integer"
+                },
+                "eventsLost": {
+                  "type": "integer"
+                },
+                "realtimeBuffersLost": {
+                  "type": "integer"
+                },
+                "buffersLost": {
+                  "type": "integer"
+                },
+                "faults": {
+                  "type": "integer"
+                },
+                "discardedUnrelated": {
+                  "type": "integer"
+                },
+                "rows": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "required": [
+                          "pid",
+                          "parentPid",
+                          "created",
+                          "sequence",
+                          "parentSequence",
+                          "image",
+                          "handleImage",
+                          "handleCreated",
+                          "imageError",
+                          "imageBeginQpc",
+                          "imageEndQpc",
+                          "startQpc",
+                          "startCallbackQpc",
+                          "handleAttemptBeginQpc",
+                          "handleAttemptQpc",
+                          "handleRetained",
+                          "handleIdentity",
+                          "reason",
+                          "openError",
+                          "metadataError",
+                          "stopQpc",
+                          "stopCallbackQpc",
+                          "signalObservedQpc",
+                          "exitFiletime",
+                          "exitCode",
+                          "exitCodeKnown",
+                          "handleClosed",
+                          "startVersion",
+                          "stopVersion",
+                          "startSchema",
+                          "stopSchema"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "pid": {
+                            "type": "integer"
+                          },
+                          "parentPid": {
+                            "type": "integer"
+                          },
+                          "created": {
+                            "type": "string"
+                          },
+                          "sequence": {
+                            "type": "string"
+                          },
+                          "parentSequence": {
+                            "type": "string"
+                          },
+                          "image": {
+                            "type": "string"
+                          },
+                          "handleImage": {
+                            "type": "string"
+                          },
+                          "handleCreated": {
+                            "type": "string"
+                          },
+                          "imageError": {
+                            "type": "integer"
+                          },
+                          "imageBeginQpc": {
+                            "type": "integer"
+                          },
+                          "imageEndQpc": {
+                            "type": "integer"
+                          },
+                          "startQpc": {
+                            "type": "integer"
+                          },
+                          "startCallbackQpc": {
+                            "type": "integer"
+                          },
+                          "handleAttemptBeginQpc": {
+                            "type": "integer"
+                          },
+                          "handleAttemptQpc": {
+                            "type": "integer"
+                          },
+                          "handleRetained": {
+                            "type": "boolean"
+                          },
+                          "handleIdentity": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "type": "string"
+                          },
+                          "openError": {
+                            "type": "integer"
+                          },
+                          "metadataError": {
+                            "type": "integer"
+                          },
+                          "stopQpc": {
+                            "type": "integer"
+                          },
+                          "stopCallbackQpc": {
+                            "type": "integer"
+                          },
+                          "signalObservedQpc": {
+                            "type": "integer"
+                          },
+                          "exitFiletime": {
+                            "type": "string"
+                          },
+                          "exitCode": {
+                            "type": "integer"
+                          },
+                          "exitCodeKnown": {
+                            "type": "boolean"
+                          },
+                          "handleClosed": {
+                            "type": "boolean"
+                          },
+                          "startVersion": {
+                            "type": "integer"
+                          },
+                          "stopVersion": {
+                            "type": "integer"
+                          },
+                          "startSchema": {
+                            "type": "array",
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                }
+                              ]
+                            }
+                          },
+                          "stopSchema": {
+                            "type": "array",
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "handles": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "pid",
+                      "created",
+                      "image",
+                      "exitFiletime",
+                      "exitCode",
+                      "exited",
+                      "closed"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "pid": {
+                        "type": "integer"
+                      },
+                      "created": {
+                        "type": "string"
+                      },
+                      "image": {
+                        "type": "string"
+                      },
+                      "exitFiletime": {
+                        "type": "string"
+                      },
+                      "exitCode": {
+                        "type": "integer"
+                      },
+                      "exited": {
+                        "type": "boolean"
+                      },
+                      "closed": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "natives": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "identityPersistedQpc",
+                      "mode",
+                      "pid",
+                      "tid",
+                      "frequency",
+                      "launchQpc",
+                      "createBeginQpc",
+                      "createEndQpc",
+                      "handleAcquiredQpc",
+                      "created",
+                      "exitFiletime",
+                      "entryQpc",
+                      "entryAddress",
+                      "hardDeadlineQpc",
+                      "deadlineExceeded",
+                      "signalObservedQpc",
+                      "finalWait",
+                      "exitCode",
+                      "observerBeginQpc",
+                      "observerEndQpc",
+                      "observerResult",
+                      "fault",
+                      "error",
+                      "debugPauses",
+                      "debugHandlingTicks",
+                      "events"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "identityPersistedQpc": {
+                        "type": "integer"
+                      },
+                      "mode": {
+                        "type": "string"
+                      },
+                      "pid": {
+                        "type": "integer"
+                      },
+                      "tid": {
+                        "type": "integer"
+                      },
+                      "frequency": {
+                        "type": "integer"
+                      },
+                      "launchQpc": {
+                        "type": "integer"
+                      },
+                      "createBeginQpc": {
+                        "type": "integer"
+                      },
+                      "createEndQpc": {
+                        "type": "integer"
+                      },
+                      "handleAcquiredQpc": {
+                        "type": "integer"
+                      },
+                      "created": {
+                        "type": "string"
+                      },
+                      "exitFiletime": {
+                        "type": "string"
+                      },
+                      "entryQpc": {
+                        "type": "integer"
+                      },
+                      "entryAddress": {
+                        "type": "integer"
+                      },
+                      "hardDeadlineQpc": {
+                        "type": "integer"
+                      },
+                      "deadlineExceeded": {
+                        "type": "boolean"
+                      },
+                      "signalObservedQpc": {
+                        "type": "integer"
+                      },
+                      "finalWait": {
+                        "type": "integer"
+                      },
+                      "exitCode": {
+                        "type": "integer"
+                      },
+                      "observerBeginQpc": {
+                        "type": "integer"
+                      },
+                      "observerEndQpc": {
+                        "type": "integer"
+                      },
+                      "observerResult": {
+                        "type": "integer"
+                      },
+                      "fault": {
+                        "type": "boolean"
+                      },
+                      "error": {
+                        "type": "integer"
+                      },
+                      "debugPauses": {
+                        "type": "integer"
+                      },
+                      "debugHandlingTicks": {
+                        "type": "integer"
+                      },
+                      "events": {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "required": [
+                                "event",
+                                "qpc",
+                                "tid",
+                                "address",
+                                "path"
+                              ],
+                              "additionalProperties": false,
+                              "properties": {
+                                "event": {
+                                  "type": "string"
+                                },
+                                "qpc": {
+                                  "type": "integer"
+                                },
+                                "tid": {
+                                  "type": "integer"
+                                },
+                                "address": {
+                                  "type": "integer"
+                                },
+                                "path": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "cim": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "raw",
+                      "candidates",
+                      "selected",
+                      "result",
+                      "reason",
+                      "observationsNotEventProof",
+                      "token"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "raw": {
+                        "type": "object",
+                        "required": [
+                          "kind",
+                          "drainedQpc",
+                          "source",
+                          "queueSequence",
+                          "receivedQpc",
+                          "eventIdentifier",
+                          "nativeTime",
+                          "name",
+                          "parentPid",
+                          "pid"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "kind": {
+                            "type": "string"
+                          },
+                          "drainedQpc": {
+                            "type": "integer"
+                          },
+                          "source": {
+                            "type": "string"
+                          },
+                          "queueSequence": {
+                            "type": "integer"
+                          },
+                          "receivedQpc": {
+                            "type": "integer"
+                          },
+                          "eventIdentifier": {
+                            "type": "integer"
+                          },
+                          "nativeTime": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "parentPid": {
+                            "type": "integer"
+                          },
+                          "pid": {
+                            "type": "integer"
+                          }
+                        }
+                      },
+                      "candidates": {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "required": [
+                                "bootScope",
+                                "pid",
+                                "created",
+                                "kernelSequence"
+                              ],
+                              "additionalProperties": false,
+                              "properties": {
+                                "bootScope": {
+                                  "type": "string"
+                                },
+                                "pid": {
+                                  "type": "integer"
+                                },
+                                "created": {
+                                  "type": "string"
+                                },
+                                "kernelSequence": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      "selected": {
+                        "type": "null"
+                      },
+                      "result": {
+                        "type": "string"
+                      },
+                      "reason": {
+                        "type": "string"
+                      },
+                      "observationsNotEventProof": {
+                        "type": "boolean"
+                      },
+                      "token": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "raw",
+                      "candidates",
+                      "selected",
+                      "result",
+                      "reason",
+                      "observationsNotEventProof",
+                      "token"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "raw": {
+                        "type": "object",
+                        "required": [
+                          "kind",
+                          "drainedQpc",
+                          "source",
+                          "queueSequence",
+                          "receivedQpc",
+                          "eventIdentifier",
+                          "nativeTime",
+                          "name",
+                          "parentPid",
+                          "pid"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "kind": {
+                            "type": "string"
+                          },
+                          "drainedQpc": {
+                            "type": "integer"
+                          },
+                          "source": {
+                            "type": "string"
+                          },
+                          "queueSequence": {
+                            "type": "integer"
+                          },
+                          "receivedQpc": {
+                            "type": "integer"
+                          },
+                          "eventIdentifier": {
+                            "type": "integer"
+                          },
+                          "nativeTime": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "parentPid": {
+                            "type": "integer"
+                          },
+                          "pid": {
+                            "type": "integer"
+                          }
+                        }
+                      },
+                      "candidates": {
+                        "type": "array",
+                        "items": false
+                      },
+                      "selected": {
+                        "type": "null"
+                      },
+                      "result": {
+                        "type": "string"
+                      },
+                      "reason": {
+                        "type": "string"
+                      },
+                      "observationsNotEventProof": {
+                        "type": "boolean"
+                      },
+                      "token": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "coverage": {
+          "type": "object",
+          "required": [
+            "expected",
+            "events",
+            "handles",
+            "natives",
+            "mapping"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "expected": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "pid",
+                      "parentPid",
+                      "created",
+                      "sequence",
+                      "parentSequence",
+                      "image",
+                      "handleImage",
+                      "handleCreated",
+                      "imageError",
+                      "imageBeginQpc",
+                      "imageEndQpc",
+                      "startQpc",
+                      "startCallbackQpc",
+                      "handleAttemptBeginQpc",
+                      "handleAttemptQpc",
+                      "handleRetained",
+                      "handleIdentity",
+                      "reason",
+                      "openError",
+                      "metadataError",
+                      "stopQpc",
+                      "stopCallbackQpc",
+                      "signalObservedQpc",
+                      "exitFiletime",
+                      "exitCode",
+                      "exitCodeKnown",
+                      "handleClosed",
+                      "startVersion",
+                      "stopVersion",
+                      "startSchema",
+                      "stopSchema",
+                      "role",
+                      "parentVerified"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "pid": {
+                        "type": "integer"
+                      },
+                      "parentPid": {
+                        "type": "integer"
+                      },
+                      "created": {
+                        "type": "string"
+                      },
+                      "sequence": {
+                        "type": "string"
+                      },
+                      "parentSequence": {
+                        "type": "string"
+                      },
+                      "image": {
+                        "type": "string"
+                      },
+                      "handleImage": {
+                        "type": "string"
+                      },
+                      "handleCreated": {
+                        "type": "string"
+                      },
+                      "imageError": {
+                        "type": "integer"
+                      },
+                      "imageBeginQpc": {
+                        "type": "integer"
+                      },
+                      "imageEndQpc": {
+                        "type": "integer"
+                      },
+                      "startQpc": {
+                        "type": "integer"
+                      },
+                      "startCallbackQpc": {
+                        "type": "integer"
+                      },
+                      "handleAttemptBeginQpc": {
+                        "type": "integer"
+                      },
+                      "handleAttemptQpc": {
+                        "type": "integer"
+                      },
+                      "handleRetained": {
+                        "type": "boolean"
+                      },
+                      "handleIdentity": {
+                        "type": "string"
+                      },
+                      "reason": {
+                        "type": "string"
+                      },
+                      "openError": {
+                        "type": "integer"
+                      },
+                      "metadataError": {
+                        "type": "integer"
+                      },
+                      "stopQpc": {
+                        "type": "integer"
+                      },
+                      "stopCallbackQpc": {
+                        "type": "integer"
+                      },
+                      "signalObservedQpc": {
+                        "type": "integer"
+                      },
+                      "exitFiletime": {
+                        "type": "string"
+                      },
+                      "exitCode": {
+                        "type": "integer"
+                      },
+                      "exitCodeKnown": {
+                        "type": "boolean"
+                      },
+                      "handleClosed": {
+                        "type": "boolean"
+                      },
+                      "startVersion": {
+                        "type": "integer"
+                      },
+                      "stopVersion": {
+                        "type": "integer"
+                      },
+                      "startSchema": {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        }
+                      },
+                      "stopSchema": {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        }
+                      },
+                      "role": {
+                        "type": "string"
+                      },
+                      "parentVerified": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "events": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "source",
+                      "scope",
+                      "kind",
+                      "pid",
+                      "created",
+                      "sequence",
+                      "parentPid",
+                      "parentSequence",
+                      "image",
+                      "eventQpc",
+                      "callbackQpc",
+                      "exitFiletime",
+                      "exitCode",
+                      "version"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "source": {
+                        "type": "string"
+                      },
+                      "scope": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "type": "string"
+                      },
+                      "pid": {
+                        "type": "integer"
+                      },
+                      "created": {
+                        "type": "string"
+                      },
+                      "sequence": {
+                        "type": "string"
+                      },
+                      "parentPid": {
+                        "type": "integer"
+                      },
+                      "parentSequence": {
+                        "type": "string"
+                      },
+                      "image": {
+                        "type": "string"
+                      },
+                      "eventQpc": {
+                        "type": "integer"
+                      },
+                      "callbackQpc": {
+                        "type": "integer"
+                      },
+                      "exitFiletime": {
+                        "type": "string"
+                      },
+                      "exitCode": {
+                        "type": "integer"
+                      },
+                      "version": {
+                        "type": "integer"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "handles": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "pid",
+                      "created",
+                      "handleCreated",
+                      "image",
+                      "imageError",
+                      "source",
+                      "queryBeginQpc",
+                      "queryEndQpc",
+                      "retained",
+                      "exited",
+                      "closed",
+                      "exitFiletime",
+                      "exitCode",
+                      "qualifiedPostExit",
+                      "reason",
+                      "openError",
+                      "attemptBegin",
+                      "attemptEnd"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "pid": {
+                        "type": "integer"
+                      },
+                      "created": {
+                        "type": "string"
+                      },
+                      "handleCreated": {
+                        "type": "string"
+                      },
+                      "image": {
+                        "type": "string"
+                      },
+                      "imageError": {
+                        "type": "integer"
+                      },
+                      "source": {
+                        "type": "string"
+                      },
+                      "queryBeginQpc": {
+                        "type": "integer"
+                      },
+                      "queryEndQpc": {
+                        "type": "integer"
+                      },
+                      "retained": {
+                        "type": "boolean"
+                      },
+                      "exited": {
+                        "type": "boolean"
+                      },
+                      "closed": {
+                        "type": "boolean"
+                      },
+                      "exitFiletime": {
+                        "type": "string"
+                      },
+                      "exitCode": {
+                        "type": "integer"
+                      },
+                      "qualifiedPostExit": {
+                        "type": "boolean"
+                      },
+                      "reason": {
+                        "type": "string"
+                      },
+                      "openError": {
+                        "type": "integer"
+                      },
+                      "attemptBegin": {
+                        "type": "integer"
+                      },
+                      "attemptEnd": {
+                        "type": "integer"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "source",
+                      "recordId",
+                      "creatorPid",
+                      "pid",
+                      "tid",
+                      "handlePid",
+                      "handleIdentity",
+                      "created",
+                      "handleCreated",
+                      "frequency",
+                      "createBeginQpc",
+                      "createEndQpc",
+                      "handleAcquiredQpc",
+                      "queryBeginQpc",
+                      "queryEndQpc",
+                      "stateQpc",
+                      "processState",
+                      "image",
+                      "imageError",
+                      "imageCharacters",
+                      "success",
+                      "retained",
+                      "exited",
+                      "closed",
+                      "exitFiletime",
+                      "exitCode",
+                      "identityPersistedQpc",
+                      "evidenceSHA256"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "source": {
+                        "type": "string"
+                      },
+                      "recordId": {
+                        "type": "string"
+                      },
+                      "creatorPid": {
+                        "type": "integer"
+                      },
+                      "pid": {
+                        "type": "integer"
+                      },
+                      "tid": {
+                        "type": "integer"
+                      },
+                      "handlePid": {
+                        "type": "integer"
+                      },
+                      "handleIdentity": {
+                        "type": "string"
+                      },
+                      "created": {
+                        "type": "string"
+                      },
+                      "handleCreated": {
+                        "type": "string"
+                      },
+                      "frequency": {
+                        "type": "integer"
+                      },
+                      "createBeginQpc": {
+                        "type": "integer"
+                      },
+                      "createEndQpc": {
+                        "type": "integer"
+                      },
+                      "handleAcquiredQpc": {
+                        "type": "integer"
+                      },
+                      "queryBeginQpc": {
+                        "type": "integer"
+                      },
+                      "queryEndQpc": {
+                        "type": "integer"
+                      },
+                      "stateQpc": {
+                        "type": "integer"
+                      },
+                      "processState": {
+                        "type": "integer"
+                      },
+                      "image": {
+                        "type": "string"
+                      },
+                      "imageError": {
+                        "type": "integer"
+                      },
+                      "imageCharacters": {
+                        "type": "integer"
+                      },
+                      "success": {
+                        "type": "boolean"
+                      },
+                      "retained": {
+                        "type": "boolean"
+                      },
+                      "exited": {
+                        "type": "boolean"
+                      },
+                      "closed": {
+                        "type": "boolean"
+                      },
+                      "exitFiletime": {
+                        "type": "string"
+                      },
+                      "exitCode": {
+                        "type": "integer"
+                      },
+                      "identityPersistedQpc": {
+                        "type": "integer"
+                      },
+                      "evidenceSHA256": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "natives": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "identityPersistedQpc",
+                      "mode",
+                      "pid",
+                      "tid",
+                      "frequency",
+                      "launchQpc",
+                      "createBeginQpc",
+                      "createEndQpc",
+                      "handleAcquiredQpc",
+                      "created",
+                      "exitFiletime",
+                      "entryQpc",
+                      "entryAddress",
+                      "hardDeadlineQpc",
+                      "deadlineExceeded",
+                      "signalObservedQpc",
+                      "finalWait",
+                      "exitCode",
+                      "observerBeginQpc",
+                      "observerEndQpc",
+                      "observerResult",
+                      "fault",
+                      "error",
+                      "debugPauses",
+                      "debugHandlingTicks",
+                      "events"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "identityPersistedQpc": {
+                        "type": "integer"
+                      },
+                      "mode": {
+                        "type": "string"
+                      },
+                      "pid": {
+                        "type": "integer"
+                      },
+                      "tid": {
+                        "type": "integer"
+                      },
+                      "frequency": {
+                        "type": "integer"
+                      },
+                      "launchQpc": {
+                        "type": "integer"
+                      },
+                      "createBeginQpc": {
+                        "type": "integer"
+                      },
+                      "createEndQpc": {
+                        "type": "integer"
+                      },
+                      "handleAcquiredQpc": {
+                        "type": "integer"
+                      },
+                      "created": {
+                        "type": "string"
+                      },
+                      "exitFiletime": {
+                        "type": "string"
+                      },
+                      "entryQpc": {
+                        "type": "integer"
+                      },
+                      "entryAddress": {
+                        "type": "integer"
+                      },
+                      "hardDeadlineQpc": {
+                        "type": "integer"
+                      },
+                      "deadlineExceeded": {
+                        "type": "boolean"
+                      },
+                      "signalObservedQpc": {
+                        "type": "integer"
+                      },
+                      "finalWait": {
+                        "type": "integer"
+                      },
+                      "exitCode": {
+                        "type": "integer"
+                      },
+                      "observerBeginQpc": {
+                        "type": "integer"
+                      },
+                      "observerEndQpc": {
+                        "type": "integer"
+                      },
+                      "observerResult": {
+                        "type": "integer"
+                      },
+                      "fault": {
+                        "type": "boolean"
+                      },
+                      "error": {
+                        "type": "integer"
+                      },
+                      "debugPauses": {
+                        "type": "integer"
+                      },
+                      "debugHandlingTicks": {
+                        "type": "integer"
+                      },
+                      "events": {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "required": [
+                                "event",
+                                "qpc",
+                                "tid",
+                                "address",
+                                "path"
+                              ],
+                              "additionalProperties": false,
+                              "properties": {
+                                "event": {
+                                  "type": "string"
+                                },
+                                "qpc": {
+                                  "type": "integer"
+                                },
+                                "tid": {
+                                  "type": "integer"
+                                },
+                                "address": {
+                                  "type": "integer"
+                                },
+                                "path": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "mapping": {
+              "type": "object",
+              "required": [
+                "C:",
+                "D:"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "C:": {
+                  "type": "string"
+                },
+                "D:": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "qualification": {
+          "type": "object",
+          "required": [
+            "contract",
+            "status",
+            "identities",
+            "unique",
+            "starts",
+            "stops",
+            "falseUnique",
+            "authoritativeAmbiguous",
+            "cim",
+            "kernelPIDReuse",
+            "realProbeCount",
+            "probeCases",
+            "kernelRecords",
+            "kernelSegments",
+            "retained",
+            "qualifiedPostExit",
+            "exactProbeImagesVerified",
+            "nativeEntriesVerified",
+            "actualPIDReuse",
+            "actualParentPIDReuse",
+            "maxHeartbeat",
+            "maxHeartbeatAge",
+            "deadlineViolations",
+            "applicationAuthority",
+            "queue",
+            "writer",
+            "run",
+            "combinedAcceptance",
+            "coverage",
+            "workerNativeEntryVerified",
+            "realNativeCount"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "contract": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "identities": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "pid",
+                      "created",
+                      "sequence",
+                      "scope",
+                      "image",
+                      "startQpc",
+                      "stopQpc",
+                      "exitFiletime",
+                      "exitCode",
+                      "parentPid",
+                      "parentSequence"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "pid": {
+                        "type": "integer"
+                      },
+                      "created": {
+                        "type": "string"
+                      },
+                      "sequence": {
+                        "type": "string"
+                      },
+                      "scope": {
+                        "type": "string"
+                      },
+                      "image": {
+                        "type": "string"
+                      },
+                      "startQpc": {
+                        "type": "integer"
+                      },
+                      "stopQpc": {
+                        "type": "integer"
+                      },
+                      "exitFiletime": {
+                        "type": "string"
+                      },
+                      "exitCode": {
+                        "type": "integer"
+                      },
+                      "parentPid": {
+                        "type": "integer"
+                      },
+                      "parentSequence": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "unique": {
+              "type": "integer"
+            },
+            "starts": {
+              "type": "integer"
+            },
+            "stops": {
+              "type": "integer"
+            },
+            "falseUnique": {
+              "type": "integer"
+            },
+            "authoritativeAmbiguous": {
+              "type": "integer"
+            },
+            "cim": {
+              "type": "object",
+              "required": [],
+              "additionalProperties": false,
+              "properties": {
+                "AMBIGUOUS": {
+                  "type": "integer"
+                },
+                "UNMATCHED": {
+                  "type": "integer"
+                },
+                "UNIQUE_CORRELATED": {
+                  "type": "integer"
+                }
+              }
+            },
+            "kernelPIDReuse": {
+              "type": "integer"
+            },
+            "realProbeCount": {
+              "type": "integer"
+            },
+            "probeCases": {
+              "type": "object",
+              "required": [
+                "idle",
+                "churn",
+                "overlap"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "idle": {
+                  "type": "integer"
+                },
+                "churn": {
+                  "type": "integer"
+                },
+                "overlap": {
+                  "type": "integer"
+                }
+              }
+            },
+            "kernelRecords": {
+              "type": "integer"
+            },
+            "kernelSegments": {
+              "type": "integer"
+            },
+            "retained": {
+              "type": "integer"
+            },
+            "qualifiedPostExit": {
+              "type": "integer"
+            },
+            "exactProbeImagesVerified": {
+              "type": "integer"
+            },
+            "nativeEntriesVerified": {
+              "type": "integer"
+            },
+            "actualPIDReuse": {
+              "type": "integer"
+            },
+            "actualParentPIDReuse": {
+              "type": "integer"
+            },
+            "maxHeartbeat": {
+              "type": "number"
+            },
+            "maxHeartbeatAge": {
+              "type": "number"
+            },
+            "deadlineViolations": {
+              "type": "integer"
+            },
+            "applicationAuthority": {
+              "type": "object",
+              "required": [
+                "records",
+                "segments",
+                "sequenceGaps",
+                "bytes",
+                "tapRows",
+                "tapTruncated",
+                "manifestSHA256"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "records": {
+                  "type": "integer"
+                },
+                "segments": {
+                  "type": "integer"
+                },
+                "sequenceGaps": {
+                  "type": "integer"
+                },
+                "bytes": {
+                  "type": "integer"
+                },
+                "tapRows": {
+                  "type": "integer"
+                },
+                "tapTruncated": {
+                  "type": "integer"
+                },
+                "manifestSHA256": {
+                  "type": "string"
+                }
+              }
+            },
+            "queue": {
+              "type": "object",
+              "required": [
+                "enqueued",
+                "selected",
+                "persisted",
+                "removed",
+                "remaining",
+                "maxDepth",
+                "failed",
+                "failure",
+                "identity"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "enqueued": {
+                  "type": "integer"
+                },
+                "selected": {
+                  "type": "integer"
+                },
+                "persisted": {
+                  "type": "integer"
+                },
+                "removed": {
+                  "type": "integer"
+                },
+                "remaining": {
+                  "type": "integer"
+                },
+                "maxDepth": {
+                  "type": "integer"
+                },
+                "failed": {
+                  "type": "boolean"
+                },
+                "failure": {
+                  "type": "null"
+                },
+                "identity": {
+                  "type": "string"
+                }
+              }
+            },
+            "writer": {
+              "type": "object",
+              "required": [
+                "fault",
+                "accepted",
+                "written",
+                "attempted",
+                "segmentBytes",
+                "pendingLimit",
+                "warningSegments",
+                "peakPending",
+                "peakPendingBytes",
+                "peakQueueBytes",
+                "peakQueueItems",
+                "remaining",
+                "threadsExited",
+                "progressedWhileFinalizing",
+                "serializeSeconds",
+                "producerLockWaitSeconds",
+                "appendSeconds",
+                "maxAppendSeconds",
+                "rolloverSeconds",
+                "backpressureSeconds",
+                "flushSeconds",
+                "maxFlushSeconds",
+                "hashSeconds",
+                "elapsedSeconds",
+                "segments"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "fault": {
+                  "type": "integer"
+                },
+                "accepted": {
+                  "type": "integer"
+                },
+                "written": {
+                  "type": "integer"
+                },
+                "attempted": {
+                  "type": "integer"
+                },
+                "segmentBytes": {
+                  "type": "integer"
+                },
+                "pendingLimit": {
+                  "type": "integer"
+                },
+                "warningSegments": {
+                  "type": "integer"
+                },
+                "peakPending": {
+                  "type": "integer"
+                },
+                "peakPendingBytes": {
+                  "type": "integer"
+                },
+                "peakQueueBytes": {
+                  "type": "integer"
+                },
+                "peakQueueItems": {
+                  "type": "integer"
+                },
+                "remaining": {
+                  "type": "integer"
+                },
+                "threadsExited": {
+                  "type": "boolean"
+                },
+                "progressedWhileFinalizing": {
+                  "type": "integer"
+                },
+                "serializeSeconds": {
+                  "type": "number"
+                },
+                "producerLockWaitSeconds": {
+                  "type": "number"
+                },
+                "appendSeconds": {
+                  "type": "number"
+                },
+                "maxAppendSeconds": {
+                  "type": "number"
+                },
+                "rolloverSeconds": {
+                  "type": "number"
+                },
+                "backpressureSeconds": {
+                  "type": "number"
+                },
+                "flushSeconds": {
+                  "type": "number"
+                },
+                "maxFlushSeconds": {
+                  "type": "number"
+                },
+                "hashSeconds": {
+                  "type": "number"
+                },
+                "elapsedSeconds": {
+                  "type": "number"
+                },
+                "segments": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "required": [
+                          "number",
+                          "name",
+                          "first",
+                          "last",
+                          "records",
+                          "bytes",
+                          "sha256",
+                          "states"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "number": {
+                            "type": "integer"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "first": {
+                            "type": "integer"
+                          },
+                          "last": {
+                            "type": "integer"
+                          },
+                          "records": {
+                            "type": "integer"
+                          },
+                          "bytes": {
+                            "type": "integer"
+                          },
+                          "sha256": {
+                            "type": "string"
+                          },
+                          "states": {
+                            "type": "array",
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "type": "integer"
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "run": {
+              "type": "string"
+            },
+            "combinedAcceptance": {
+              "type": "boolean"
+            },
+            "coverage": {
+              "type": "object",
+              "required": [
+                "status",
+                "requiredIdentities",
+                "verifiedIdentities",
+                "missingRequired",
+                "contradictory",
+                "notApplicableIdentities",
+                "evidenceTypes",
+                "errors",
+                "identities"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "status": {
+                  "type": "string"
+                },
+                "requiredIdentities": {
+                  "type": "integer"
+                },
+                "verifiedIdentities": {
+                  "type": "integer"
+                },
+                "missingRequired": {
+                  "type": "integer"
+                },
+                "contradictory": {
+                  "type": "integer"
+                },
+                "notApplicableIdentities": {
+                  "type": "integer"
+                },
+                "evidenceTypes": {
+                  "type": "object",
+                  "required": [
+                    "handle",
+                    "creation",
+                    "image",
+                    "native",
+                    "start",
+                    "stop",
+                    "exit",
+                    "parent",
+                    "source",
+                    "capture"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "handle": {
+                      "type": "object",
+                      "required": [],
+                      "additionalProperties": false,
+                      "properties": {
+                        "PRESENT_AND_VALID": {
+                          "type": "integer"
+                        },
+                        "MISSING_AND_REQUIRED": {
+                          "type": "integer"
+                        },
+                        "PRESENT_BUT_CONTRADICTORY": {
+                          "type": "integer"
+                        },
+                        "NOT_APPLICABLE": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "creation": {
+                      "type": "object",
+                      "required": [],
+                      "additionalProperties": false,
+                      "properties": {
+                        "PRESENT_AND_VALID": {
+                          "type": "integer"
+                        },
+                        "MISSING_AND_REQUIRED": {
+                          "type": "integer"
+                        },
+                        "PRESENT_BUT_CONTRADICTORY": {
+                          "type": "integer"
+                        },
+                        "NOT_APPLICABLE": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "image": {
+                      "type": "object",
+                      "required": [],
+                      "additionalProperties": false,
+                      "properties": {
+                        "PRESENT_AND_VALID": {
+                          "type": "integer"
+                        },
+                        "MISSING_AND_REQUIRED": {
+                          "type": "integer"
+                        },
+                        "PRESENT_BUT_CONTRADICTORY": {
+                          "type": "integer"
+                        },
+                        "NOT_APPLICABLE": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "native": {
+                      "type": "object",
+                      "required": [],
+                      "additionalProperties": false,
+                      "properties": {
+                        "PRESENT_AND_VALID": {
+                          "type": "integer"
+                        },
+                        "MISSING_AND_REQUIRED": {
+                          "type": "integer"
+                        },
+                        "PRESENT_BUT_CONTRADICTORY": {
+                          "type": "integer"
+                        },
+                        "NOT_APPLICABLE": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "start": {
+                      "type": "object",
+                      "required": [],
+                      "additionalProperties": false,
+                      "properties": {
+                        "PRESENT_AND_VALID": {
+                          "type": "integer"
+                        },
+                        "MISSING_AND_REQUIRED": {
+                          "type": "integer"
+                        },
+                        "PRESENT_BUT_CONTRADICTORY": {
+                          "type": "integer"
+                        },
+                        "NOT_APPLICABLE": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "stop": {
+                      "type": "object",
+                      "required": [],
+                      "additionalProperties": false,
+                      "properties": {
+                        "PRESENT_AND_VALID": {
+                          "type": "integer"
+                        },
+                        "MISSING_AND_REQUIRED": {
+                          "type": "integer"
+                        },
+                        "PRESENT_BUT_CONTRADICTORY": {
+                          "type": "integer"
+                        },
+                        "NOT_APPLICABLE": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "exit": {
+                      "type": "object",
+                      "required": [],
+                      "additionalProperties": false,
+                      "properties": {
+                        "PRESENT_AND_VALID": {
+                          "type": "integer"
+                        },
+                        "MISSING_AND_REQUIRED": {
+                          "type": "integer"
+                        },
+                        "PRESENT_BUT_CONTRADICTORY": {
+                          "type": "integer"
+                        },
+                        "NOT_APPLICABLE": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "parent": {
+                      "type": "object",
+                      "required": [],
+                      "additionalProperties": false,
+                      "properties": {
+                        "PRESENT_AND_VALID": {
+                          "type": "integer"
+                        },
+                        "MISSING_AND_REQUIRED": {
+                          "type": "integer"
+                        },
+                        "PRESENT_BUT_CONTRADICTORY": {
+                          "type": "integer"
+                        },
+                        "NOT_APPLICABLE": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "source": {
+                      "type": "object",
+                      "required": [],
+                      "additionalProperties": false,
+                      "properties": {
+                        "PRESENT_AND_VALID": {
+                          "type": "integer"
+                        },
+                        "MISSING_AND_REQUIRED": {
+                          "type": "integer"
+                        },
+                        "PRESENT_BUT_CONTRADICTORY": {
+                          "type": "integer"
+                        },
+                        "NOT_APPLICABLE": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "capture": {
+                      "type": "object",
+                      "required": [],
+                      "additionalProperties": false,
+                      "properties": {
+                        "PRESENT_AND_VALID": {
+                          "type": "integer"
+                        },
+                        "MISSING_AND_REQUIRED": {
+                          "type": "integer"
+                        },
+                        "PRESENT_BUT_CONTRADICTORY": {
+                          "type": "integer"
+                        },
+                        "NOT_APPLICABLE": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                },
+                "errors": {
+                  "type": "array",
+                  "items": false
+                },
+                "identities": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "required": [
+                          "pid",
+                          "created",
+                          "role",
+                          "states",
+                          "qualifiedPostExit",
+                          "reasons",
+                          "verified"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "pid": {
+                            "type": "integer"
+                          },
+                          "created": {
+                            "type": "string"
+                          },
+                          "role": {
+                            "type": "string"
+                          },
+                          "states": {
+                            "type": "object",
+                            "required": [
+                              "start",
+                              "stop",
+                              "handle",
+                              "creation",
+                              "image",
+                              "source",
+                              "capture",
+                              "native",
+                              "exit",
+                              "parent",
+                              "annotation"
+                            ],
+                            "additionalProperties": false,
+                            "properties": {
+                              "start": {
+                                "type": "string"
+                              },
+                              "stop": {
+                                "type": "string"
+                              },
+                              "handle": {
+                                "type": "string"
+                              },
+                              "creation": {
+                                "type": "string"
+                              },
+                              "image": {
+                                "type": "string"
+                              },
+                              "source": {
+                                "type": "string"
+                              },
+                              "capture": {
+                                "type": "string"
+                              },
+                              "native": {
+                                "type": "string"
+                              },
+                              "exit": {
+                                "type": "string"
+                              },
+                              "parent": {
+                                "type": "string"
+                              },
+                              "annotation": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "qualifiedPostExit": {
+                            "type": "boolean"
+                          },
+                          "reasons": {
+                            "type": "array",
+                            "items": false
+                          },
+                          "verified": {
+                            "type": "boolean"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "workerNativeEntryVerified": {
+              "type": "boolean"
+            },
+            "realNativeCount": {
+              "type": "integer"
+            }
+          }
+        },
+        "cim": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "required": [
+                  "raw",
+                  "candidates",
+                  "selected",
+                  "result",
+                  "reason",
+                  "observationsNotEventProof",
+                  "token"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "raw": {
+                    "type": "object",
+                    "required": [
+                      "kind",
+                      "drainedQpc",
+                      "source",
+                      "queueSequence",
+                      "receivedQpc",
+                      "eventIdentifier",
+                      "nativeTime",
+                      "name",
+                      "parentPid",
+                      "pid"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "kind": {
+                        "type": "string"
+                      },
+                      "drainedQpc": {
+                        "type": "integer"
+                      },
+                      "source": {
+                        "type": "string"
+                      },
+                      "queueSequence": {
+                        "type": "integer"
+                      },
+                      "receivedQpc": {
+                        "type": "integer"
+                      },
+                      "eventIdentifier": {
+                        "type": "integer"
+                      },
+                      "nativeTime": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "parentPid": {
+                        "type": "integer"
+                      },
+                      "pid": {
+                        "type": "integer"
+                      }
+                    }
+                  },
+                  "candidates": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "required": [
+                            "bootScope",
+                            "pid",
+                            "created",
+                            "kernelSequence"
+                          ],
+                          "additionalProperties": false,
+                          "properties": {
+                            "bootScope": {
+                              "type": "string"
+                            },
+                            "pid": {
+                              "type": "integer"
+                            },
+                            "created": {
+                              "type": "string"
+                            },
+                            "kernelSequence": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "selected": {
+                    "type": "null"
+                  },
+                  "result": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "observationsNotEventProof": {
+                    "type": "boolean"
+                  },
+                  "token": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "raw",
+                  "candidates",
+                  "selected",
+                  "result",
+                  "reason",
+                  "observationsNotEventProof",
+                  "token"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "raw": {
+                    "type": "object",
+                    "required": [
+                      "kind",
+                      "drainedQpc",
+                      "source",
+                      "queueSequence",
+                      "receivedQpc",
+                      "eventIdentifier",
+                      "nativeTime",
+                      "name",
+                      "parentPid",
+                      "pid"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "kind": {
+                        "type": "string"
+                      },
+                      "drainedQpc": {
+                        "type": "integer"
+                      },
+                      "source": {
+                        "type": "string"
+                      },
+                      "queueSequence": {
+                        "type": "integer"
+                      },
+                      "receivedQpc": {
+                        "type": "integer"
+                      },
+                      "eventIdentifier": {
+                        "type": "integer"
+                      },
+                      "nativeTime": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "parentPid": {
+                        "type": "integer"
+                      },
+                      "pid": {
+                        "type": "integer"
+                      }
+                    }
+                  },
+                  "candidates": {
+                    "type": "array",
+                    "items": false
+                  },
+                  "selected": {
+                    "type": "null"
+                  },
+                  "result": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "observationsNotEventProof": {
+                    "type": "boolean"
+                  },
+                  "token": {
+                    "type": "string"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "launch": {
+          "type": "object",
+          "required": [
+            "error",
+            "workerExit",
+            "applicationExit",
+            "workerExited",
+            "applicationExited",
+            "kernelExit",
+            "kernelExited"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "type": "null"
+            },
+            "workerExit": {
+              "type": "integer"
+            },
+            "applicationExit": {
+              "type": "integer"
+            },
+            "workerExited": {
+              "type": "boolean"
+            },
+            "applicationExited": {
+              "type": "boolean"
+            },
+            "kernelExit": {
+              "type": "integer"
+            },
+            "kernelExited": {
+              "type": "boolean"
+            }
+          }
+        },
+        "app": {
+          "type": "object",
+          "required": [
+            "tapErrors",
+            "authoritativeManifest",
+            "error",
+            "source",
+            "unsubscribed",
+            "durableFinalization",
+            "tapTruncated",
+            "tapOverflow",
+            "success",
+            "queue"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "tapErrors": {
+              "type": "integer"
+            },
+            "authoritativeManifest": {
+              "type": "string"
+            },
+            "error": {
+              "type": "null"
+            },
+            "source": {
+              "type": "string"
+            },
+            "unsubscribed": {
+              "type": "boolean"
+            },
+            "durableFinalization": {
+              "type": "boolean"
+            },
+            "tapTruncated": {
+              "type": "integer"
+            },
+            "tapOverflow": {
+              "type": "integer"
+            },
+            "success": {
+              "type": "boolean"
+            },
+            "queue": {
+              "type": "object",
+              "required": [
+                "enqueued",
+                "selected",
+                "persisted",
+                "removed",
+                "remaining",
+                "maxDepth",
+                "failed",
+                "failure",
+                "identity"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "enqueued": {
+                  "type": "integer"
+                },
+                "selected": {
+                  "type": "integer"
+                },
+                "persisted": {
+                  "type": "integer"
+                },
+                "removed": {
+                  "type": "integer"
+                },
+                "remaining": {
+                  "type": "integer"
+                },
+                "maxDepth": {
+                  "type": "integer"
+                },
+                "failed": {
+                  "type": "boolean"
+                },
+                "failure": {
+                  "type": "null"
+                },
+                "identity": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "bridge": {
+          "type": "object",
+          "required": [
+            "threadCount",
+            "allThreadsExited",
+            "createdPids",
+            "errors"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "threadCount": {
+              "type": "integer"
+            },
+            "allThreadsExited": {
+              "type": "boolean"
+            },
+            "createdPids": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  }
+                ]
+              }
+            },
+            "errors": {
+              "type": "array",
+              "items": false
+            }
+          }
+        },
+        "hb": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "required": [
+                  "qpc",
+                  "interval",
+                  "loop"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "qpc": {
+                    "type": "integer"
+                  },
+                  "interval": {
+                    "type": "number"
+                  },
+                  "loop": {
+                    "type": "integer"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "health": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "required": [
+                  "qpc",
+                  "age"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "qpc": {
+                    "type": "integer"
+                  },
+                  "age": {
+                    "type": "number"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "host": {
+          "type": "object",
+          "required": [
+            "utc",
+            "runId",
+            "matchingProcessCount",
+            "matchingProcesses",
+            "diagnosticTraceCount",
+            "diagnosticTraces",
+            "traceEnumeration",
+            "protectedFilesAccessed",
+            "productionChanged",
+            "status"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "utc": {
+              "type": "string"
+            },
+            "runId": {
+              "type": "string"
+            },
+            "matchingProcessCount": {
+              "type": "integer"
+            },
+            "matchingProcesses": {
+              "type": "array",
+              "items": false
+            },
+            "diagnosticTraceCount": {
+              "type": "integer"
+            },
+            "diagnosticTraces": {
+              "type": "array",
+              "items": false
+            },
+            "traceEnumeration": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  }
+                ]
+              }
+            },
+            "protectedFilesAccessed": {
+              "type": "boolean"
+            },
+            "productionChanged": {
+              "type": "boolean"
+            },
+            "status": {
+              "type": "string"
+            }
+          }
+        },
+        "manifests": {
+          "type": "object",
+          "required": [
+            "authoritative",
+            "sha256"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "authoritative": {
+              "type": "string"
+            },
+            "sha256": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:jarvis:stage6:checker-input:v3",
+  "description": "Closed small-evidence adapter schema. Semantic checks and pinned original artifacts are additionally mandatory."
+}

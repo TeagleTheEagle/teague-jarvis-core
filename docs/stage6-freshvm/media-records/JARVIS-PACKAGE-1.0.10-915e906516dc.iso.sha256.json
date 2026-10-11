@@ -1,0 +1,9 @@
+{
+    "iso":  "JARVIS-PACKAGE-1.0.10-915e906516dc.iso",
+    "bytes":  526778368,
+    "sha256":  "d3830e3e5334530d39f6d41a4b11ee5b4e0c256de3be1cc2abcd4d24d786873d",
+    "label":  "JARVIS_PREV",
+    "payload_files":  3,
+    "payload_manifest_sha256":  "c30d477ef2014dc3573b75ab0730d6af3dc83c89610505ee478426d8ece331a4",
+    "readback":  "every payload file read back from the mounted ISO with its recorded SHA-256"
+}

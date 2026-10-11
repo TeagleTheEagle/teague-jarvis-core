@@ -1,0 +1,1 @@
+{"name":"jarvis-intelligence","version":"0.1.0","private":true,"main":"main.cjs","description":"JARVIS Intelligence prototype shell powered by Teague Industries","scripts":{"start":"electron .","test":"node --test test/*.test.cjs"},"devDependencies":{"electron":"44.2.0"}}

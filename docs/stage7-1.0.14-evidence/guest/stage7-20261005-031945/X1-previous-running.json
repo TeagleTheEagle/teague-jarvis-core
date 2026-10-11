@@ -1,0 +1,26 @@
+{
+    "status":  "PASS",
+    "uninstall":  "uninstalled",
+    "install":  "installed",
+    "release":  "1.0.11-60d406fb6398",
+    "installer_seconds":  {
+                              "verify_package":  156.742,
+                              "copy":  21.965,
+                              "verify_copy":  69.086,
+                              "switch":  0.061
+                          },
+    "output":  null,
+    "running":  {
+                    "core_ready":  true,
+                    "seconds_to_ready":  26.2,
+                    "installed_release":  "1.0.11-60d406fb6398",
+                    "identity_matches":  true,
+                    "gate17_memory":  true,
+                    "gate19_memory":  true,
+                    "processes":  8,
+                    "processes_from_other_releases":  [
+
+                                                      ]
+                },
+    "new_release_present":  false
+}

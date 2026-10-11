@@ -1,0 +1,24 @@
+{
+    "schema":  "jarvis-cutover-check-v1",
+    "utc":  "2026-10-04T08:23:53.5449910Z",
+    "performed_by":  "THEGRIZZLYBEAR\\jonny",
+    "elevated":  false,
+    "script":  {
+                   "name":  "Invoke-Cutover.ps1",
+                   "sha256":  "06a2d72edd94c25427cdfd7de10315bca66190dc4faf5178b33017213c3bf410"
+               },
+    "zip":  "D:\\JARVIS-release-work\\release\\JARVIS-1.0.11-60d406fb6398.zip",
+    "zip_sha256":  "1923651176dd3095e84b0628a5c7a90608b6db57fe06986670e0ea8246225a58",
+    "release_id":  "1.0.11-60d406fb6398",
+    "install_home":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS",
+    "install_home_existed":  false,
+    "free_bytes":  15482662912,
+    "backup":  "C:\\Users\\jonny\\Documents\\Codex\\2026-09-07\\cr\\outputs\\jarvis-backups\\bcc2753f736f43ba946ec3f342b35c3a.zip",
+    "backup_sha256":  "b81be404e1677c48cffc7d26a8d77998b54fa2fa588bd4eeb5614e841ce0bfe3",
+    "backup_bytes":  4659473,
+    "backup_written_utc":  "2026-10-04T06:20:27.6981848Z",
+    "restore_check":  "restore_rehearsal_passed",
+    "old_database_not_newer_than_backup":  true,
+    "jarvis_processes":  0,
+    "shortcuts":  true
+}

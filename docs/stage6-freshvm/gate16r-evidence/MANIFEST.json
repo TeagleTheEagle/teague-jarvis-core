@@ -1,0 +1,594 @@
+{
+  "schema": "stage6-evidence-manifest-v1",
+  "generated_utc": "2026-10-04T03:13:18Z",
+  "root": "D:\\JARVIS-S6-FRESHVM\\evidence",
+  "folders": [
+    "gate16r-20261002",
+    "guest-egress-01"
+  ],
+  "not_listed": "this manifest itself; the sealed P0 folder is never read",
+  "files": 116,
+  "bytes": 444371,
+  "entries": [
+    {
+      "file": "gate16r-20261002/account/validation-account-check.json",
+      "bytes": 1734,
+      "sha256": "9fd11662a7b1ff5c82b2e92fbf5650e10a031624bee09a25fff953df783ddec0"
+    },
+    {
+      "file": "gate16r-20261002/checkpoints/p0-20261002-011703/census-before.json",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "gate16r-20261002/checkpoints/p0-20261002-011703/CHECKPOINT.json",
+      "bytes": 651,
+      "sha256": "5723e8f5a80c7d10fc22acdc354a7e8a6f338903953a6e7f0f54d0ba4f630a6c"
+    },
+    {
+      "file": "gate16r-20261002/checkpoints/p0-20261002-011703/control-hashes.json",
+      "bytes": 264,
+      "sha256": "ecf0933ccfecb18092d24207bf298e86a4ee9914ae7f471b416ef3c1d2687f27"
+    },
+    {
+      "file": "gate16r-20261002/checkpoints/p0-20261002-011703/dacl.json",
+      "bytes": 627,
+      "sha256": "2eaa7473a71816bb9919a37ef733c8f2cf6886590d2dca4aedeac7b7eaa2524d"
+    },
+    {
+      "file": "gate16r-20261002/checkpoints/p0-20261002-011703/protected-config-inventory.json",
+      "bytes": 2330,
+      "sha256": "5d1fec69d0e6fd7fc9a0f76dde9de53c2900e4a3d54a8487bbef7f2ee5f152f0"
+    },
+    {
+      "file": "gate16r-20261002/checkpoints/p0-20261002-011703/protected-vm-inventory.json",
+      "bytes": 1854,
+      "sha256": "e5dac26433fafa28f0fb693e5ac5bff1be399647ad604032c8bcc6a1cb9d415f"
+    },
+    {
+      "file": "gate16r-20261002/checkpoints/p0-20261002-012032/census-after.json",
+      "bytes": 6,
+      "sha256": "b423bb45501e0fa49d3b77e635f800a29f1fdcf5a58e00c7e04a7ff7833045f2"
+    },
+    {
+      "file": "gate16r-20261002/checkpoints/p0-20261002-012032/census-before.json",
+      "bytes": 6,
+      "sha256": "b423bb45501e0fa49d3b77e635f800a29f1fdcf5a58e00c7e04a7ff7833045f2"
+    },
+    {
+      "file": "gate16r-20261002/checkpoints/p0-20261002-012032/CHECKPOINT.json",
+      "bytes": 874,
+      "sha256": "ff8c230db38da4e861cb8be664789183e553008b4a20b51c0ad8291a4c756bac"
+    },
+    {
+      "file": "gate16r-20261002/checkpoints/p0-20261002-012032/control-hashes.json",
+      "bytes": 264,
+      "sha256": "ecf0933ccfecb18092d24207bf298e86a4ee9914ae7f471b416ef3c1d2687f27"
+    },
+    {
+      "file": "gate16r-20261002/checkpoints/p0-20261002-012032/dacl.json",
+      "bytes": 627,
+      "sha256": "2eaa7473a71816bb9919a37ef733c8f2cf6886590d2dca4aedeac7b7eaa2524d"
+    },
+    {
+      "file": "gate16r-20261002/checkpoints/p0-20261002-012032/protected-config-inventory.json",
+      "bytes": 2330,
+      "sha256": "5d1fec69d0e6fd7fc9a0f76dde9de53c2900e4a3d54a8487bbef7f2ee5f152f0"
+    },
+    {
+      "file": "gate16r-20261002/checkpoints/p0-20261002-012032/protected-vm-inventory.json",
+      "bytes": 1854,
+      "sha256": "e5dac26433fafa28f0fb693e5ac5bff1be399647ad604032c8bcc6a1cb9d415f"
+    },
+    {
+      "file": "gate16r-20261002/checkpoints/p1-20261002-025102/census-after.json",
+      "bytes": 6,
+      "sha256": "b423bb45501e0fa49d3b77e635f800a29f1fdcf5a58e00c7e04a7ff7833045f2"
+    },
+    {
+      "file": "gate16r-20261002/checkpoints/p1-20261002-025102/census-before.json",
+      "bytes": 6,
+      "sha256": "b423bb45501e0fa49d3b77e635f800a29f1fdcf5a58e00c7e04a7ff7833045f2"
+    },
+    {
+      "file": "gate16r-20261002/checkpoints/p1-20261002-025102/CHECKPOINT.json",
+      "bytes": 874,
+      "sha256": "c34cf280eb7e7a92db811a0eb062a2beb734964a86f2e8fe0e01983dfa2a7923"
+    },
+    {
+      "file": "gate16r-20261002/checkpoints/p1-20261002-025102/control-hashes.json",
+      "bytes": 264,
+      "sha256": "ecf0933ccfecb18092d24207bf298e86a4ee9914ae7f471b416ef3c1d2687f27"
+    },
+    {
+      "file": "gate16r-20261002/checkpoints/p1-20261002-025102/dacl.json",
+      "bytes": 627,
+      "sha256": "2eaa7473a71816bb9919a37ef733c8f2cf6886590d2dca4aedeac7b7eaa2524d"
+    },
+    {
+      "file": "gate16r-20261002/checkpoints/p1-20261002-025102/protected-config-inventory.json",
+      "bytes": 2330,
+      "sha256": "5d1fec69d0e6fd7fc9a0f76dde9de53c2900e4a3d54a8487bbef7f2ee5f152f0"
+    },
+    {
+      "file": "gate16r-20261002/checkpoints/p1-20261002-025102/protected-vm-inventory.json",
+      "bytes": 1854,
+      "sha256": "e5dac26433fafa28f0fb693e5ac5bff1be399647ad604032c8bcc6a1cb9d415f"
+    },
+    {
+      "file": "gate16r-20261002/checkpoints/p2-20261004-030308/census-after.json",
+      "bytes": 6,
+      "sha256": "b423bb45501e0fa49d3b77e635f800a29f1fdcf5a58e00c7e04a7ff7833045f2"
+    },
+    {
+      "file": "gate16r-20261002/checkpoints/p2-20261004-030308/census-before.json",
+      "bytes": 6,
+      "sha256": "b423bb45501e0fa49d3b77e635f800a29f1fdcf5a58e00c7e04a7ff7833045f2"
+    },
+    {
+      "file": "gate16r-20261002/checkpoints/p2-20261004-030308/CHECKPOINT.json",
+      "bytes": 874,
+      "sha256": "be7179a1299e0e351a9edec7e2dda7939e8040dfffd00a37a6f483c30a7ec6bc"
+    },
+    {
+      "file": "gate16r-20261002/checkpoints/p2-20261004-030308/control-hashes.json",
+      "bytes": 264,
+      "sha256": "ecf0933ccfecb18092d24207bf298e86a4ee9914ae7f471b416ef3c1d2687f27"
+    },
+    {
+      "file": "gate16r-20261002/checkpoints/p2-20261004-030308/dacl.json",
+      "bytes": 627,
+      "sha256": "2eaa7473a71816bb9919a37ef733c8f2cf6886590d2dca4aedeac7b7eaa2524d"
+    },
+    {
+      "file": "gate16r-20261002/checkpoints/p2-20261004-030308/protected-config-inventory.json",
+      "bytes": 2330,
+      "sha256": "5d1fec69d0e6fd7fc9a0f76dde9de53c2900e4a3d54a8487bbef7f2ee5f152f0"
+    },
+    {
+      "file": "gate16r-20261002/checkpoints/p2-20261004-030308/protected-vm-inventory.json",
+      "bytes": 1854,
+      "sha256": "e5dac26433fafa28f0fb693e5ac5bff1be399647ad604032c8bcc6a1cb9d415f"
+    },
+    {
+      "file": "gate16r-20261002/FRESH-CLEAN-BASELINE-manifest.json",
+      "bytes": 27813,
+      "sha256": "dbba6c4a0636c8bfc9069d4829a3e705ec35ea012d6a03a1f9fefe112b85fb84"
+    },
+    {
+      "file": "gate16r-20261002/FRESH-PREREQ-manifest.json",
+      "bytes": 28366,
+      "sha256": "16752ac763233550221bcf1c1439a989905339ac1dfd7bb74e9dbac0321ef58e"
+    },
+    {
+      "file": "gate16r-20261002/fresh-vm-identity.json",
+      "bytes": 3409,
+      "sha256": "1d9aa85e190bd66af845be3ca37219d6cd9e1bc40e6473bc0f88785ee428377b"
+    },
+    {
+      "file": "gate16r-20261002/isolation/owner-postflight.json",
+      "bytes": 7491,
+      "sha256": "7632ee24b162b700e87770e3bc975aee5dc8258322371ed7de922609602296ae"
+    },
+    {
+      "file": "gate16r-20261002/isolation/owner-preflight.json",
+      "bytes": 7424,
+      "sha256": "96b3e5204a0509838b81de7883f10cd866b0e5aea1cfaaf095b0443b68e5a4f9"
+    },
+    {
+      "file": "gate16r-20261002/isolation/run1-classification-note.json",
+      "bytes": 2234,
+      "sha256": "dc6eb062de5ccc40b6197f3dee4eec8fd3f32256bfb7b6ec7ffaede1a392d139"
+    },
+    {
+      "file": "gate16r-20261002/isolation/validation-results-20261002-015310.jsonl",
+      "bytes": 8965,
+      "sha256": "22d03e524ce77b0f4efde5e4d3e164f50851223a3fb53755107b6281dc84d9d8"
+    },
+    {
+      "file": "gate16r-20261002/isolation/validation-results.jsonl",
+      "bytes": 8938,
+      "sha256": "d254115dfea33580c696d030abf8d4699501b218372dd4bd36b183d0f697a2b4"
+    },
+    {
+      "file": "gate16r-20261002/isolation/validation-summary-20261002-015310.json",
+      "bytes": 1028,
+      "sha256": "c30df00dead0294828fde3875456c29d2d7c98a82e4211b027d9d787ffb27d1a"
+    },
+    {
+      "file": "gate16r-20261002/isolation/validation-summary.json",
+      "bytes": 913,
+      "sha256": "b17bf329d115cd345220e7334ddac1edcdee1fbda356cc6df9fb39a8a0b8d023"
+    },
+    {
+      "file": "gate16r-20261002/STAGE6-RESUME-FRESH-VM-RECORD.json",
+      "bytes": 2433,
+      "sha256": "4bfc70c85d177a1d4de9c1239f03c65072f4b167f5bf3d287c06f1eb43be0cbb"
+    },
+    {
+      "file": "gate16r-20261002/step0/capacity-and-freeze-note.json",
+      "bytes": 741,
+      "sha256": "8d97d578b324179be228bcc5714c71d39c5efe8b11cab4ada4fb7e1144dd1443"
+    },
+    {
+      "file": "gate16r-20261002/step0/JARVIS-TOOLS-PAYLOAD-MANIFEST.json",
+      "bytes": 1892,
+      "sha256": "9d511bf2c0d0e57a29925d44dc8bb87eba1e2f83e1fc11e997fe286ebc09f7b3"
+    },
+    {
+      "file": "gate16r-20261002/step0/JARVIS-TOOLS.iso.sha256.json",
+      "bytes": 399,
+      "sha256": "3c04195c0f4655bdea8f246296d32a7da8278ce26d2592114ec2eb9cefe13a40"
+    },
+    {
+      "file": "gate16r-20261002/step0/PAYLOAD-MANIFEST.json",
+      "bytes": 1892,
+      "sha256": "94f3e0873f4a42c31bf920616993f36adaafb1aa048fd4cb45d229807a60354f"
+    },
+    {
+      "file": "gate16r-20261002/step0/STAGE6-GATE16R-PROMPT-APPROVAL.json",
+      "bytes": 2840,
+      "sha256": "a9daae1e0712c7477b42b56cd5063e4d3eeb4b943e49462943f0e6f4956c4aab"
+    },
+    {
+      "file": "gate16r-20261002/step0/UNATTEND-PAYLOAD-MANIFEST.json",
+      "bytes": 401,
+      "sha256": "0a8ff4ddaecef80b5a7b1aaec5b4f3655dee4be151ae1a0f7ef5c359f2c680f0"
+    },
+    {
+      "file": "gate16r-20261002/step0/UNATTEND.iso.sha256.json",
+      "bytes": 391,
+      "sha256": "e10e88f02bbf3a1266435fa79d20e2e399ace90f6951f4a6bc1641baf7abc3d8"
+    },
+    {
+      "file": "gate16r-20261002/step0/windows-iso-26H2-acquisition.json",
+      "bytes": 978,
+      "sha256": "e215d376c5e3dd51761dff327aa4bbeab49537303d9a40b9a55810cc81eff2e0"
+    },
+    {
+      "file": "gate16r-20261002/step0/windows-iso-hash.json",
+      "bytes": 1733,
+      "sha256": "cb2b7b6d345b9c78b79f46715254570f9cc19783f476293eabb7b93f6ce36b39"
+    },
+    {
+      "file": "gate16r-20261002/step10-evaluation.json",
+      "bytes": 2596,
+      "sha256": "d140f1682e703f560bad656c2d345569069456146c881574f4d1546c94e673fa"
+    },
+    {
+      "file": "gate16r-20261002/step11-evaluation.json",
+      "bytes": 4587,
+      "sha256": "77e67b157409d7f4bffdfb1ac0d7ae183b1d519a7f41616851b2ba1e37159ad1"
+    },
+    {
+      "file": "gate16r-20261002/step12-evaluation.json",
+      "bytes": 10920,
+      "sha256": "c27161c550bf5674dae60b004a7adcfa924d196cc6318c43af132506883037b1"
+    },
+    {
+      "file": "gate16r-20261002/step12-open-items.json",
+      "bytes": 4637,
+      "sha256": "19138e882dc6ff86603214508f49b1c30c9733abb62806d73f2ab4d9a5992098"
+    },
+    {
+      "file": "gate16r-20261002/step12-owner-dispositions.json",
+      "bytes": 2127,
+      "sha256": "7137873892c9a729ba6611c281098c9a6432d9634d92e6b3f50a69739240ca66"
+    },
+    {
+      "file": "gate16r-20261002/step2-evaluation.json",
+      "bytes": 2223,
+      "sha256": "f2ea450ce14da06553ac6cece259aa18fd45b4445320660936a19db40dcf6584"
+    },
+    {
+      "file": "gate16r-20261002/step2-folders.json",
+      "bytes": 4230,
+      "sha256": "a7a9d580aa37ab6971a1c2669dc1ca698f19fb74f8e1f55d041a60e48814e0f6"
+    },
+    {
+      "file": "gate16r-20261002/step2-limitation-d-volume-acl.json",
+      "bytes": 1840,
+      "sha256": "518757e1c4c3142c4a5d6358170884963cfd107edf8f2b6f7afa404310454011"
+    },
+    {
+      "file": "gate16r-20261002/step3-evaluation.json",
+      "bytes": 2667,
+      "sha256": "500aa82d716d8e3b8601032220c67fdf78f6b921a7809da5c1e55fa79dbe3c9c"
+    },
+    {
+      "file": "gate16r-20261002/step3-tools-hashes.txt",
+      "bytes": 550,
+      "sha256": "c27b247be593a521bfcb16a4a6359d0048a0b56db619c12d59bb935133a1e218"
+    },
+    {
+      "file": "gate16r-20261002/step4-evaluation.json",
+      "bytes": 4418,
+      "sha256": "f544413e5cdbdedc9821d8bf5d872be2c60b18f2a68ad268b41d156adba19540"
+    },
+    {
+      "file": "gate16r-20261002/step4-run1-incident.json",
+      "bytes": 3608,
+      "sha256": "8f433d8754853ebd06c1a5f487d4954f1dd54c8bd7b7898d4b74eb9c761123cb"
+    },
+    {
+      "file": "gate16r-20261002/step4-storage.json",
+      "bytes": 5323,
+      "sha256": "86c846fea7328422f28369140f366b6cd9a2ed7c6e00a12b01ad0d611b0dfec6"
+    },
+    {
+      "file": "gate16r-20261002/step4-tools-hashes.txt",
+      "bytes": 452,
+      "sha256": "e7057418d89fb87e3143800bfd84358cfca5a4a57b62752968915e2ce31c3264"
+    },
+    {
+      "file": "gate16r-20261002/step5-evaluation.json",
+      "bytes": 2268,
+      "sha256": "90580a28a35d74e1fbaf5f95bc10185dec0098984d1d9627b1eec038a5d1aef4"
+    },
+    {
+      "file": "gate16r-20261002/step6-egress-folder.json",
+      "bytes": 1195,
+      "sha256": "e409cae0e4822be4eb92f82f1d916ef6b20173f7b6f0c454e673f1db56dfabb6"
+    },
+    {
+      "file": "gate16r-20261002/step6-evaluation.json",
+      "bytes": 8205,
+      "sha256": "3497c2704f3ef00e7753100debaa8925a54ab411aa09fc0a54f7e1cec7abce23"
+    },
+    {
+      "file": "gate16r-20261002/step6-owner-decision-nat.json",
+      "bytes": 1347,
+      "sha256": "762eacf3cc5c8ed3d065c772f236a91c0b584a9d5fe448f007e15a807da64a83"
+    },
+    {
+      "file": "gate16r-20261002/step6-tools-hashes.txt",
+      "bytes": 1679,
+      "sha256": "f610d1ad6a6897de6f7eb02c0d0dfb651370b3775e29f6fe8fa3579bcd504222"
+    },
+    {
+      "file": "gate16r-20261002/step7-evaluation.json",
+      "bytes": 5857,
+      "sha256": "68e0695e236a7561ace305e0e14a4a70c0a7f34d3531c1a985b39483a5e64938"
+    },
+    {
+      "file": "gate16r-20261002/step8-evaluation.json",
+      "bytes": 6859,
+      "sha256": "4c93cb9fb26a249a75c1f1a785875fdcc003cabe633d04b044c3764f6cff4ac0"
+    },
+    {
+      "file": "gate16r-20261002/step8-owner-dispositions.json",
+      "bytes": 2625,
+      "sha256": "1ef7db36e8e8c54c38154a0db859729d80b418a3a6551851aa1ef63a71aa9975"
+    },
+    {
+      "file": "gate16r-20261002/step8-run1-note.json",
+      "bytes": 2865,
+      "sha256": "cf34041767a087daf03ade0ef2eec12fc84c9ff5e6021bd087e475e44f9633ed"
+    },
+    {
+      "file": "gate16r-20261002/step8-run3-note.json",
+      "bytes": 2675,
+      "sha256": "595c993344028faa57388faffea46831d40c76302f46a03d64c29399da11c471"
+    },
+    {
+      "file": "gate16r-20261002/step8-tools-disc-v2.json",
+      "bytes": 1177,
+      "sha256": "7e6616bf3c7e0d93ae7a88fad4caf5faadd4d078f3577183c4800968eb1d82cb"
+    },
+    {
+      "file": "gate16r-20261002/step8-tools-disc-v3.json",
+      "bytes": 1757,
+      "sha256": "69ac46c44d709d6e2d482513c58a93ff57b3fdef51c18fb81e3334acbf82ac29"
+    },
+    {
+      "file": "gate16r-20261002/step8-tools-disc-v4.json",
+      "bytes": 2022,
+      "sha256": "71b19ae1f50e321fb0379026b6caf73efa0edaa6f28c80e85a6591cdbe6058d3"
+    },
+    {
+      "file": "gate16r-20261002/step8-tools-hashes.txt",
+      "bytes": 899,
+      "sha256": "67a96e5e5dc2fd63bcf330eaf29b8f6e9a6b3924c433dccf66a0cd9b4e81b7f7"
+    },
+    {
+      "file": "gate16r-20261002/step9-11-tools-hashes.txt",
+      "bytes": 284,
+      "sha256": "d2f61c2e08a02495493a7b62db0d0cef6ba4c0ea8446179167e2cedc823e19a6"
+    },
+    {
+      "file": "gate16r-20261002/step9-evaluation.json",
+      "bytes": 6239,
+      "sha256": "a86d9feb990e02de6b799236ae5b4df3d0b66014dea05f784a833b8b5dabdb27"
+    },
+    {
+      "file": "gate16r-20261002/vm/JARVIS-S6-FRESH.vbox.FRESH-CLEAN-BASELINE-copy",
+      "bytes": 14750,
+      "sha256": "8647a9ec115e721920185419ff5e5bc6795408116d4258424cb89c8bd1a01b91"
+    },
+    {
+      "file": "gate16r-20261002/vm/JARVIS-S6-FRESH.vbox.FRESH-PREREQ-copy",
+      "bytes": 21813,
+      "sha256": "03ce709e3e000298e4696d30692f563c12b07d848927e9c61a75e7e28f457130"
+    },
+    {
+      "file": "gate16r-20261002/vm/JARVIS-S6-FRESH.vbox.step6-copy",
+      "bytes": 3066,
+      "sha256": "67b62f9e576abcb92ba855ae040e5f53118ea52af99321537b38f338ae96e492"
+    },
+    {
+      "file": "gate16r-20261002/vm/JARVIS-S6-FRESH.vbox.step6b-copy",
+      "bytes": 3078,
+      "sha256": "35a589495bc6e5a9d3b68b362b9996df74bf90efd33475db63bd5e640ab9d60b"
+    },
+    {
+      "file": "gate16r-20261002/vm/showvminfo-after-6b.txt",
+      "bytes": 3767,
+      "sha256": "989268cb80e4df59299017ae29bed56d8890581ca140fd05f6dc007943cd0861"
+    },
+    {
+      "file": "gate16r-20261002/vm/showvminfo.txt",
+      "bytes": 3767,
+      "sha256": "f5a0adc963c58ed90d76704c0f43146c39f6e8f483be403f18f9dc64a94a5fad"
+    },
+    {
+      "file": "gate16r-20261002/vm/snapshot-FRESH-CLEAN-BASELINE-20261004-024018.json",
+      "bytes": 2164,
+      "sha256": "84314b5a5c9b246eb5bba7f10eb1501c3bc2db58fc81920684c905fbad6d54d5"
+    },
+    {
+      "file": "gate16r-20261002/vm/snapshot-FRESH-PREREQ-20261004-030455.json",
+      "bytes": 2964,
+      "sha256": "ef90f692d83fd4d213153e7ffec94d2c784c1fc3e10b38f041bc7d1ace1d59a7"
+    },
+    {
+      "file": "gate16r-20261002/vm/start-20261002-041112.json",
+      "bytes": 1298,
+      "sha256": "19396b2b76c68492ea457932e555b9352fbf7332f42dfbeee261fcec0bfacd4d"
+    },
+    {
+      "file": "gate16r-20261002/vm/start-20261002-051608.json",
+      "bytes": 1298,
+      "sha256": "60e877c7bcd78f54f88e565ea88e7f35b2274919fb485f3e042f1555da662327"
+    },
+    {
+      "file": "gate16r-20261002/vm/start-20261002-052503.json",
+      "bytes": 1369,
+      "sha256": "6521f8adf1da905bdfa962a4dfc72274e156497f39664a88419fccad16b538ee"
+    },
+    {
+      "file": "gate16r-20261002/vm/start-20261002-052912.json",
+      "bytes": 1369,
+      "sha256": "1392f65126f9338e641f73b3c50d0a3d68a8d3f84e4d454750fe19a652a7a875"
+    },
+    {
+      "file": "gate16r-20261002/vm/start-20261004-021406.json",
+      "bytes": 1369,
+      "sha256": "371c1ae6d3da58161cde129451154f6a90afe42adadf82539aa023b799354fd5"
+    },
+    {
+      "file": "gate16r-20261002/vm/step6b-audio-off.json",
+      "bytes": 800,
+      "sha256": "3ed9454ae38679fb874ca4e4c48cf83ead887fc47ed9edec51451209d7e43f50"
+    },
+    {
+      "file": "gate16r-20261002/vm/step7-nvram-reset-20261002-052334.json",
+      "bytes": 1262,
+      "sha256": "930647281c150bf720ca5413581f86fd88d391a6420b6fb367da6366832cb433"
+    },
+    {
+      "file": "gate16r-20261002/vm/step7-nvram-reset-20261002-052909.json",
+      "bytes": 1262,
+      "sha256": "ad4aa00154c84690c3edc0d1783e93168a17ae09f77dd14ede71ada595ef3ceb"
+    },
+    {
+      "file": "gate16r-20261002/vm/VirtualBox.xml.step6-copy",
+      "bytes": 1362,
+      "sha256": "944c9f14b011caa5f12dd919576c3bb23b64bcbc25aee1da320a392c08169492"
+    },
+    {
+      "file": "gate16r-20261002/vm/vm-creation.json",
+      "bytes": 762,
+      "sha256": "35de283461628210d6218ab862d59eab2001b37a2f73bf2b893365ff2d385439"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261002-071120/B1-baseline.json",
+      "bytes": 1230,
+      "sha256": "73436fa8f8deca9aa0297825801e3056229684393991384da0d6c6cb4b0bff05"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261002-071120/baseline-programs.json",
+      "bytes": 803,
+      "sha256": "1e48eb90156c88be33b4ec6e476e6546d209170c23183e53056529e215cdc6f1"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261002-071120/baseline-services.json",
+      "bytes": 24982,
+      "sha256": "8e9e4f6c11dba61830d76510c09ca79735e228e6382c9665ca650df0749fd29d"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261002-071120/SUMMARY.json",
+      "bytes": 522,
+      "sha256": "21807e3da2633b088c52349f63deec03b345f98f9ed646c1873d202864164beb"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-014927/B1-baseline.json",
+      "bytes": 1544,
+      "sha256": "26bafa76f3899213f5208559c313efa64d365659ba291295605c15c691a4e915"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-014927/baseline-programs.json",
+      "bytes": 965,
+      "sha256": "dcfc72dba6b6cade449ecf51356eb63e49710625b4d169ef62a140b7c076c2ed"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-014927/baseline-services.json",
+      "bytes": 24982,
+      "sha256": "708212d40a3e17ef9a3f7ef4df44a762ae2a708d8ac9de3325fec469f1f4b7cc"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-014927/SUMMARY.json",
+      "bytes": 522,
+      "sha256": "5c9b500a6e4fa87a49780c83e0068e1f05d82f75a5556f9f0749d08709c013f0"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-015834/B1-baseline.json",
+      "bytes": 2563,
+      "sha256": "e8a0b3055d35fa9e34a1937eb580e045ba41c63870c6582a37f91f5cb9e42d8a"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-015834/baseline-programs.json",
+      "bytes": 965,
+      "sha256": "dcfc72dba6b6cade449ecf51356eb63e49710625b4d169ef62a140b7c076c2ed"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-015834/baseline-services.json",
+      "bytes": 24982,
+      "sha256": "b5369dc14786f024d650d2bfb21431075cebde7159498b09f58b6ae11af6982d"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-015834/SUMMARY.json",
+      "bytes": 522,
+      "sha256": "44160f1b818a39ec6f856c3b771c91982bdb3167f7f286f125c6640ac9e91a2a"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-020257/B1-baseline.json",
+      "bytes": 2800,
+      "sha256": "db191f62ba4ced0d5519f3a295c8ada3b288cc5a302169adf0cedd541a86f54b"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-020257/baseline-programs.json",
+      "bytes": 965,
+      "sha256": "dcfc72dba6b6cade449ecf51356eb63e49710625b4d169ef62a140b7c076c2ed"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-020257/baseline-services.json",
+      "bytes": 24982,
+      "sha256": "8dbcb588043c0f5a6628bf2ea57f5f016187f4f5d653a3c39dd56ddd437b2717"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-020257/SUMMARY.json",
+      "bytes": 522,
+      "sha256": "7fd31346df0a8ce3af51d2995f454c8a8bb7fbad87c4270d589063c64edd38eb"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-022130/B1-baseline.json",
+      "bytes": 2800,
+      "sha256": "e6741b98fe8720b310badeb96f97d084fdb7c8a518a3baa8f1ab6ea0995f8137"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-022130/baseline-programs.json",
+      "bytes": 965,
+      "sha256": "dcfc72dba6b6cade449ecf51356eb63e49710625b4d169ef62a140b7c076c2ed"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-022130/baseline-services.json",
+      "bytes": 24958,
+      "sha256": "50132eb419e79cedbaab208de072052318e5129615b984d8a66ae608e779368b"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-022130/SUMMARY.json",
+      "bytes": 522,
+      "sha256": "7bfd419ae63c3addc55166c2195d9449cffeaa42e8bbfc8452e2c97e30b6409b"
+    }
+  ]
+}

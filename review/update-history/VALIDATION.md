@@ -1,0 +1,9 @@
+# Update history and evidence reporting
+
+Implemented: automatic source fingerprint history under data/update-history; curated release-notes.json; unified Change History alongside existing development proposals; loaded app.js/assistant-controls.js hash comparison; backend-start revision; service_status tool; deterministic service-status answers; bounded service/test-success claim guard before final response text is emitted; tool-evidence summary under chat replies.
+
+Validation: 47 offline Python tests passed, one isolated Chrome UI test passed, timer fast-path Node regression passed, app.js and desktop/local-updates.cjs syntax checks passed. UI screenshot history-preview.png was visually reviewed. Browser fixtures deny external service/device actions and use synthetic records. No live provider, microphone, or audible voice test was performed.
+
+Limitations: pattern-based claim detection is not a universal factual guarantee. Sources can be inaccurate; tool results have limited scope. Existing historical chat is not rewritten. Service check records are session-scoped; absent after restart means not checked. Source observation is not test success, deployment, or attribution. Automatic observations happen on backend startup, state refresh (10-second throttle), and history reads; intermediate edits may not be recorded. The first record is a baseline, not invented older history. Curated older entries were reconstructed from this conversation and the installed package receipt. No screenshot/audio/credential contents are retained by source history. The two main script hashes do not prove all assets or native desktop behaviour.
+
+Rollback: preserve data/update-history and release-notes.json as records. These source edits are outside the in-app proposal undo mechanism; revert the affected source files from a reviewed backup/revision and restart. No automatic rollback was implemented or tested.

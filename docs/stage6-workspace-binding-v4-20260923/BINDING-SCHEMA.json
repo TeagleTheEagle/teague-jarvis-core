@@ -1,0 +1,127 @@
+{
+  "dependencyClasses": [
+    "RUN-LOCAL",
+    "CANDIDATE-LOCAL",
+    "APPROVED SHARED RUNTIME",
+    "FORBIDDEN OLD-WORKSPACE DEPENDENCY"
+  ],
+  "exactEquality": true,
+  "exampleIsLiveEvidence": false,
+  "exampleOfflineFixture": "D:\\JARVIS-STAGE6-LIVE\\fb0bf86657a64aff85a1799db37e94c7\\code\\protected-0c57ade5c42341789849ca044c23f0f5\\workspace-binding-v4.json",
+  "existingSmallDeclarationUnchanged": true,
+  "extraFieldsAllowed": false,
+  "fields": [
+    {
+      "name": "candidateManifestSHA256",
+      "required": true,
+      "type": "str"
+    },
+    {
+      "name": "candidateRoot",
+      "required": true,
+      "type": "str"
+    },
+    {
+      "name": "dataset",
+      "required": true,
+      "type": "list"
+    },
+    {
+      "name": "datasetManifestSHA256",
+      "required": true,
+      "type": "str"
+    },
+    {
+      "name": "datasetRoot",
+      "required": true,
+      "type": "str"
+    },
+    {
+      "name": "dependencyClasses",
+      "required": true,
+      "type": "list"
+    },
+    {
+      "name": "entryPoints",
+      "required": true,
+      "type": "list"
+    },
+    {
+      "name": "environmentPolicy",
+      "required": true,
+      "type": "dict"
+    },
+    {
+      "name": "evidenceRoot",
+      "required": true,
+      "type": "str"
+    },
+    {
+      "name": "launcherDLL",
+      "required": true,
+      "type": "dict"
+    },
+    {
+      "name": "observers",
+      "required": true,
+      "type": "list"
+    },
+    {
+      "name": "preservationDestination",
+      "required": true,
+      "type": "str"
+    },
+    {
+      "name": "preservationPolicySHA256",
+      "required": true,
+      "type": "str"
+    },
+    {
+      "name": "preservationTool",
+      "required": true,
+      "type": "dict"
+    },
+    {
+      "name": "probe",
+      "required": true,
+      "type": "dict"
+    },
+    {
+      "name": "run",
+      "required": true,
+      "type": "str"
+    },
+    {
+      "name": "runtimes",
+      "required": true,
+      "type": "dict"
+    },
+    {
+      "name": "schema",
+      "required": true,
+      "type": "str"
+    },
+    {
+      "name": "scripts",
+      "required": true,
+      "type": "list"
+    },
+    {
+      "name": "sharedRuntimeManifestSHA256",
+      "required": true,
+      "type": "str"
+    },
+    {
+      "name": "smallDeclarationSHA256",
+      "required": true,
+      "type": "str"
+    },
+    {
+      "name": "workspaceRoot",
+      "required": true,
+      "type": "str"
+    }
+  ],
+  "schema": "stage6-workspace-binding-v4",
+  "validation": "Duplicate JSON keys rejected; compare with fresh snapshot of run, current manifest, local files, dataset metadata, runtimes and fixed preservation policy."
+}

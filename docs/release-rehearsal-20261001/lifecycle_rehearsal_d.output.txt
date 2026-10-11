@@ -1,0 +1,13 @@
+0 fresh install 1.0.2          {"result": "installed", "release": "1.0.2-3dc1a2016c6b"}
+  running 1.0.2                {"processes_old": 8, "memory_saved": true}
+  verify 1.0.2 while in use    {"result": "verified", "reason": null}
+1 update while running         {"result": "installed", "release": "1.0.3-f3f8e4b2c30e", "previous": "1.0.2-3dc1a2016c6b", "stale_old_processes": 0, "memory_kept": true}
+  launch 1.0.3                 {"processes_new": 8, "processes_old": 0}
+  verify 1.0.3 after use       {"result": "verified", "reason": null}
+2 rollback                     {"result": "rolled_back", "release": "1.0.2-3dc1a2016c6b", "reason": null, "stale_new_processes": 0, "memory_kept": true}
+  launch 1.0.2 again           {"processes_old": 8, "processes_new": 0}
+3 uninstall                    {"result": "uninstalled", "files_removed": 21290, "kept": ["data", "config", "profile"], "jarvis_processes": 0, "home_now": ["config", "data", "profile"], "leftover_program_files": 0, "memory_kept": true}
+4 reinstall 1.0.3              {"result": "installed", "release": "1.0.3-f3f8e4b2c30e", "memory_restored": true}
+5 verify installed files       {"result": "verified", "release": "1.0.3-f3f8e4b2c30e"}
+
+[exited with code 0]

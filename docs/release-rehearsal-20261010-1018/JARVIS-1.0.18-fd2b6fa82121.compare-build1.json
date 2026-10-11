@@ -1,0 +1,21 @@
+{
+  "old": "1.0.18-4afd891c38f4",
+  "new": "1.0.18-fd2b6fa82121",
+  "files_old": 10772,
+  "files_new": 10772,
+  "changed": 4020,
+  "added": 0,
+  "removed": 0,
+  "app_source_changed": [
+    "app/device_gateway.py",
+    "app/release-notes.json",
+    "app/server.py",
+    "app/wearables/service.py"
+  ],
+  "app_source_added": [],
+  "app_source_removed": [],
+  "bytecode_changed": 3987,
+  "launchers_and_records_changed": 29,
+  "pinned_inputs_changed": [],
+  "pinned_inputs_identical": true
+}

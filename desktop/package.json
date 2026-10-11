@@ -1,0 +1,1 @@
+{"name":"jarvis-desktop","version":"0.1.0","private":true,"main":"main.cjs","description":"JARVIS Windows desktop shell preview","scripts":{"start":"electron .","test":"node --test test/*.test.cjs"},"devDependencies":{"electron":"44.2.0","rcedit":"5.0.2"}}

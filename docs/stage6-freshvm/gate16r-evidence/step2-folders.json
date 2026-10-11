@@ -1,0 +1,71 @@
+{
+    "utc":  "2026-10-02T01:23:20.5572303Z",
+    "created_by":  "THEGRIZZLYBEAR\\jonny",
+    "validation_sid":  "S-1-5-21-3412258525-483417857-2736759773-1010",
+    "folders":  [
+                    {
+                        "path":  "D:\\JARVIS-S6-FRESHVM\\tools",
+                        "acl":  [
+                                    "Allow thegrizzlybear\\jarvis-s6-val ReadAndExecute, Synchronize",
+                                    "Allow BUILTIN\\Administrators FullControl",
+                                    "Allow BUILTIN\\Administrators 268435456",
+                                    "Allow NT AUTHORITY\\SYSTEM FullControl",
+                                    "Allow NT AUTHORITY\\SYSTEM 268435456",
+                                    "Allow NT AUTHORITY\\Authenticated Users Modify, Synchronize",
+                                    "Allow NT AUTHORITY\\Authenticated Users -536805376",
+                                    "Allow BUILTIN\\Users ReadAndExecute, Synchronize",
+                                    "Allow BUILTIN\\Users -1610612736"
+                                ]
+                    },
+                    {
+                        "path":  "D:\\JARVIS-S6-FRESHVM\\evidence\\gate16r-20261002\\account",
+                        "acl":  [
+                                    "Allow thegrizzlybear\\jarvis-s6-val Modify, Synchronize",
+                                    "Allow BUILTIN\\Administrators FullControl",
+                                    "Allow BUILTIN\\Administrators 268435456",
+                                    "Allow NT AUTHORITY\\SYSTEM FullControl",
+                                    "Allow NT AUTHORITY\\SYSTEM 268435456",
+                                    "Allow NT AUTHORITY\\Authenticated Users Modify, Synchronize",
+                                    "Allow NT AUTHORITY\\Authenticated Users -536805376",
+                                    "Allow BUILTIN\\Users ReadAndExecute, Synchronize",
+                                    "Allow BUILTIN\\Users -1610612736"
+                                ]
+                    },
+                    {
+                        "path":  "D:\\JARVIS-S6-FRESHVM\\evidence\\gate16r-20261002\\isolation",
+                        "acl":  [
+                                    "Allow thegrizzlybear\\jarvis-s6-val Modify, Synchronize",
+                                    "Allow BUILTIN\\Administrators FullControl",
+                                    "Allow BUILTIN\\Administrators 268435456",
+                                    "Allow NT AUTHORITY\\SYSTEM FullControl",
+                                    "Allow NT AUTHORITY\\SYSTEM 268435456",
+                                    "Allow NT AUTHORITY\\Authenticated Users Modify, Synchronize",
+                                    "Allow NT AUTHORITY\\Authenticated Users -536805376",
+                                    "Allow BUILTIN\\Users ReadAndExecute, Synchronize",
+                                    "Allow BUILTIN\\Users -1610612736"
+                                ]
+                    }
+                ],
+    "scripts":  [
+                    {
+                        "name":  "Invoke-IsolationCheck.ps1",
+                        "sha256":  "d14076a07c83ad6c33ce917391f74fb8b908a81adb65614ea75cbbeb046d2007"
+                    },
+                    {
+                        "name":  "Invoke-PreservationCheckpoint.ps1",
+                        "sha256":  "0ab71837303263144cd8e1aeaa2f69e8adc326a558314d73653f8482f7ed6f7d"
+                    },
+                    {
+                        "name":  "Invoke-ValidationAccountCheck.ps1",
+                        "sha256":  "85b4871817d7a28b505d3fab86f7f60fc1a35d55de9be9377a65122439dbae7c"
+                    },
+                    {
+                        "name":  "New-FreshVm.ps1",
+                        "sha256":  "86488234c3990ecceef13bdec5afca7da9fe2477dc13c8ce74482ed0db15994e"
+                    },
+                    {
+                        "name":  "New-IsolationFixtures.ps1",
+                        "sha256":  "0239306ab466c046e72ac463706d608fc94bfd693c08dcf03d3c7e242672117c"
+                    }
+                ]
+}

@@ -1,0 +1,70 @@
+{
+    "schema":  "stage6-gate18-old-backup-made-v1",
+    "utc":  "2026-10-04T06:20:27.7107683Z",
+    "performed_by":  "THEGRIZZLYBEAR\\jonny",
+    "helper":  {
+                   "name":  "New-OldJarvisBackup.ps1",
+                   "sha256":  "a324f7a8f5a380f882e79e3b647f78ef0daae3e8ca4bbb2708a7059613c1d056"
+               },
+    "everyday_jarvis_folder":  "C:\\Users\\jonny\\Documents\\Codex\\2026-09-07\\cr\\outputs\\jarvis",
+    "backup_code":  {
+                        "path":  "C:\\Users\\jonny\\Documents\\Codex\\2026-09-07\\cr\\outputs\\jarvis\\recovery.py",
+                        "sha256":  "5895c92407c2caec9cf778f219096f31edf0c3e4914d2e4381bbcd9e34a68721"
+                    },
+    "python":  {
+                   "path":  "D:\\JARVIS-release-work\\release\\JARVIS-1.0.11-60d406fb6398\\release\\python\\python.exe",
+                   "sha256":  "4d6f5f81a4bca11191c4c7c6b43632694d0a4ce74e068619d8fdc161d469859a",
+                   "version":  "Python 3.12.10",
+                   "why":  "the everyday JARVIS\u0027s own Python (Codex runtime) no longer exists (gate18-incident-02)"
+               },
+    "create":  {
+                   "status":  "backup_verified",
+                   "id":  "bcc2753f736f43ba946ec3f342b35c3a",
+                   "files":  398,
+                   "bytes":  4659473,
+                   "database_counts":  {
+                                           "items":  6,
+                                           "messages":  1133,
+                                           "reminders":  0,
+                                           "settings":  12,
+                                           "audit":  689,
+                                           "feedback":  8,
+                                           "documents":  6,
+                                           "task_meta":  0,
+                                           "research":  26,
+                                           "workspaces":  2,
+                                           "workspace_links":  3,
+                                           "turn_evidence":  13,
+                                           "inspection_records":  1,
+                                           "inspection_findings":  9,
+                                           "inspection_finding_sources":  9,
+                                           "inspection_finding_events":  9,
+                                           "project_budget_limits":  0,
+                                           "project_budget_reservations":  0
+                                       }
+               },
+    "rehearse":  {
+                     "status":  "restore_rehearsal_passed",
+                     "files":  398,
+                     "database_counts":  {
+                                             "items":  6,
+                                             "messages":  1133,
+                                             "reminders":  0,
+                                             "settings":  12,
+                                             "audit":  689,
+                                             "feedback":  8,
+                                             "documents":  6,
+                                             "task_meta":  0,
+                                             "research":  26,
+                                             "workspaces":  2,
+                                             "workspace_links":  3,
+                                             "turn_evidence":  13,
+                                             "inspection_records":  1,
+                                             "inspection_findings":  9,
+                                             "inspection_finding_sources":  9,
+                                             "inspection_finding_events":  9,
+                                             "project_budget_limits":  0,
+                                             "project_budget_reservations":  0
+                                         }
+                 }
+}

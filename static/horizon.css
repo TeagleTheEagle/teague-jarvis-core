@@ -1,0 +1,155 @@
+/* Horizon theme (1.0.15): the owner's new look for the whole interface (docs/design/NEW-LOOK.md).
+   Loaded last. Active while <html> carries .hz (added by horizon.js), so the earlier look remains if that script
+   does not run. Presentation only: no control is added or removed here. */
+html.hz{--ti-bg:#02070d;--ti-s1:#0a1f3566;--ti-s2:#071a2ed9;--ti-s3:#0d2a47;--ti-s4:#08192b;
+ --ti-line:#2f8fdc33;--ti-line-strong:#2f8fdc66;--ti-cyan:#5cc8ff;--ti-blue:#3d9bff;--ti-ice:#e6f1fa;--ti-steel:#8aa6c0;--ti-teal:#4de3c1;
+ --ti-green:#4de3c1;--ti-amber:#f0b866;--ti-radius:10px;--teague-blue:#1e90ff;--electric-blue:#38b6ff;
+ --hz-glow:#38b6ff;--hz-line:#2f8fdc59;--hz-panel:linear-gradient(180deg,#071a2ed9,#06121fe6)}
+
+/* Sky: stars and the Earth's horizon behind every section. */
+.hz-sky{position:fixed;inset:0;width:100vw;height:100vh;z-index:-1;pointer-events:none;display:block}
+html.hz body{background-color:#02070d!important;background-image:none!important}
+html.hz body:before{display:block!important;background:linear-gradient(180deg,#020810d9,#020810b3 55%,#02081073)!important}
+html.hz body[data-page=command]:before{display:none!important}
+
+/* Header: one row. Brand, sections, command search, connection, clock. */
+html.hz body .shell,html.hz body[data-page=command] .shell:has(#commandView:not(.hidden)){padding:0 22px!important}
+html.hz body .topbar{position:relative;display:grid!important;grid-template-columns:auto minmax(0,1fr) auto!important;grid-template-rows:62px!important;grid-template-areas:none!important;
+ align-items:center;gap:26px;height:62px!important;min-height:62px!important;padding:0 4px!important;margin:0 0 28px!important;
+ background:linear-gradient(180deg,#030b16f2,#030b16b8);border-bottom:1px solid var(--hz-line);box-shadow:0 1px 18px #0a6fd01f}
+html.hz.desktop-integrated-titlebar body .topbar{padding-right:150px!important}
+html.hz.desktop-integrated-titlebar body .topbar nav{-webkit-app-region:drag}html.hz.desktop-integrated-titlebar body .topbar nav>*{-webkit-app-region:no-drag}
+html.hz body .topbar>.brand{grid-area:1/1!important}html.hz body .topbar>nav{grid-area:1/2!important}html.hz body .topbar>.top-actions{grid-area:1/3!important}
+html.hz body .brand{gap:12px}
+html.hz body .brand>img{width:38px;height:38px;filter:drop-shadow(0 0 9px #38b6ff77)}
+html.hz body .brand-corporate{display:none}
+html.hz body .brand-product{margin:0;padding:0;border:0;font:300 23px/1 var(--sans);letter-spacing:.34em;color:#f3f8fc;text-shadow:0 0 16px #38b6ff55}
+html.hz body .brand-product small{margin-top:6px;font:600 8.5px/1 var(--sans);letter-spacing:.3em;color:#5fb9ee}
+html.hz body .topbar nav{display:flex;flex-wrap:nowrap;align-items:stretch;justify-content:flex-start;gap:0 4px;height:62px!important;min-width:0;overflow:visible;padding:0;margin:0}
+html.hz body .topbar nav>.nav,html.hz .hz-more-toggle{flex:none;display:flex;align-items:center;height:100%;min-height:0;padding:0 11px;border:0;border-bottom:2px solid transparent;border-radius:0;
+ background:none;box-shadow:none;color:#a9bfd3;font:600 11.5px/1 var(--sans);letter-spacing:.14em;white-space:nowrap;cursor:pointer}
+html.hz body .topbar nav>.nav:hover,html.hz .hz-more-toggle:hover{color:#fff;background:linear-gradient(0deg,#38b6ff14,transparent)}
+html.hz body .topbar nav>.nav.active,html.hz .hz-more-toggle.active{color:#7fd4ff;border-bottom-color:var(--hz-glow);background:linear-gradient(0deg,#38b6ff24,transparent 70%);box-shadow:0 10px 14px -12px var(--hz-glow)}
+html.hz body .topbar nav>.nav:focus-visible,html.hz .hz-more-toggle:focus-visible{outline:1px solid #7fd4ff;outline-offset:-4px}
+.hz-more{position:relative;flex:none;display:flex}
+.hz-more-toggle:after{content:"";margin-left:7px;border:4px solid transparent;border-top-color:currentColor;transform:translateY(2px)}
+.hz-menu{position:absolute;top:calc(100% + 6px);left:0;z-index:40;min-width:210px;display:grid;gap:2px;padding:7px;border:1px solid var(--hz-line);border-radius:10px;
+ background:#061423f7;box-shadow:0 14px 40px #000a,0 0 22px #0a6fd033}
+.hz-menu[hidden]{display:none}
+html.hz .hz-menu>button{display:block;width:100%;height:auto;min-height:0;padding:10px 12px;border:0;border-radius:7px;background:none;box-shadow:none;color:#c6d8e8;
+ font:600 11px/1.2 var(--sans);letter-spacing:.14em;text-align:left;white-space:nowrap;cursor:pointer;margin:0}
+html.hz .hz-menu>button:hover,html.hz .hz-menu>button:focus-visible{background:#0f3a63;color:#fff;outline:none}
+html.hz .hz-menu>button.active{color:#7fd4ff;background:#0a2743}
+html.hz .hz-menu>button:before,html.hz .hz-menu>button:after{display:none!important}
+html.hz body .top-actions{flex-direction:row;align-items:center;gap:14px;margin:0}
+html.hz .ti-palette-trigger{display:flex;align-items:center;gap:9px;height:34px;min-width:190px;padding:0 10px 0 12px;border:1px solid var(--hz-line);border-radius:8px;background:#04101dcc;
+ color:#8aa6c0;font:400 12px var(--sans);letter-spacing:.02em;cursor:pointer;box-shadow:none}
+html.hz .ti-palette-trigger:hover,html.hz .ti-palette-trigger:focus-visible{border-color:#7fd4ff;color:#e6f1fa;outline:none}
+.hz-search-icon{width:13px;height:13px;border:1.6px solid #6cc7ff;border-radius:50%;position:relative;flex:none}
+.hz-search-icon:after{content:"";position:absolute;left:10px;top:10px;width:6px;height:1.6px;background:#6cc7ff;transform:rotate(45deg);transform-origin:left center}
+.hz-search-text{flex:1;text-align:left}
+html.hz .ti-palette-trigger kbd{font:10px var(--ti-mono);color:#6f8ba6;border:1px solid #2f8fdc4d;border-radius:4px;padding:2px 5px}
+html.hz body .connection{display:flex;align-items:center;gap:7px;font:600 9.5px var(--sans);letter-spacing:.16em;color:#b8cde0;white-space:nowrap}
+html.hz body .connection i{width:7px;height:7px;border-radius:50%;background:var(--ti-teal);box-shadow:0 0 8px var(--ti-teal)}
+html.hz body .connection.lost{color:var(--ti-amber)}html.hz body .connection.lost i{background:var(--ti-amber);box-shadow:0 0 8px var(--ti-amber)}
+html.hz body .connection.pending{color:#8aa6c0}html.hz body .connection.pending i{background:#55708a;box-shadow:none}html.hz body .connection.pending #connection{display:none}
+.hz-link-note:empty{display:none}
+.hz-warning{color:var(--ti-amber)}.hz-warning .hz-sep{color:var(--ti-amber)}.hz-strip p[hidden]{display:none}
+html.hz .ti-core-telemetry.lost span:first-child{color:var(--ti-amber)}html.hz .ti-core-telemetry.lost i{background:var(--ti-amber)!important;box-shadow:none!important}
+html.hz .ti-core-telemetry.pending i{background:#55708a!important;box-shadow:none!important}
+html.hz .ti-clock{font:12px var(--ti-mono);color:#dbe9f5;letter-spacing:.08em}
+
+/* Strip under the header */
+.hz-strip{position:absolute;left:0;right:0;top:100%;z-index:1;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px;height:28px;pointer-events:none;
+ font:600 9px var(--sans);letter-spacing:.3em;color:#5fb9ee;white-space:nowrap}
+.hz-strip p{grid-column:2;margin:0;display:flex;gap:14px;align-items:center}
+.hz-strip p:before,.hz-strip p:after{content:"";width:70px;height:1px;background:linear-gradient(90deg,transparent,#f0b86699)}
+.hz-strip p:after{transform:scaleX(-1)}
+.hz-sep{font-weight:600;color:#f0b866}
+.hz-strip-edge{grid-column:1}
+.hz-strip-right{grid-column:3;justify-self:end;display:flex;align-items:center;gap:22px}
+.hz-version{font:10px var(--ti-mono);letter-spacing:.14em;color:#8aa6c0}
+.hz-owner{color:#55708a;letter-spacing:.34em}
+
+/* Panels, headings and figures in every section */
+html.hz body .panel,html.hz .ti-stats,html.hz .ti-rail>section,html.hz .ti-focus-aside,html.hz .ti-settings-nav,html.hz .ti-settings-group,html.hz .ti-database-panel,
+html.hz .ti-file-inspector,html.hz .ti-recent{border:1px solid var(--hz-line)!important;border-radius:10px!important;background:var(--hz-panel)!important;
+ box-shadow:0 0 26px #0a6fd014,inset 0 1px 0 #38b6ff1a!important}
+html.hz body #settingsView,html.hz body #changesView{border:0!important;background:none!important;box-shadow:none!important}
+html.hz body .panel.file-drop{border-style:dashed!important}html.hz body .panel.file-drop[data-drag=true]{border-color:#7fd4ff!important;background:#0f3a63!important}
+html.hz .ti-recent{padding:14px 16px}
+/* The Save bar stays at the bottom of the window while the settings scroll under it. It needs a solid ground:
+   without one the button floated over whatever row was beneath it. */
+html.hz .ti-save-bar{background:linear-gradient(180deg,#071a2ef5,#06121ffc)!important;border-top:1px solid var(--hz-line)!important;border-radius:0 0 10px 10px;
+ box-shadow:0 -14px 22px -8px #020a15}
+/* The settings section scrolls and has 28px of padding at its foot; without this the bar stopped 28px short of the
+   bottom and a strip of the rows showed beneath it. */
+html.hz body #settingsView #settingsForm>.ti-save-bar{bottom:-28px}
+/* Settings rows that app.js adds sit deeper (a div inside the "Response length" row) and missed the spacing of
+   the other rows: a label touched the control above it. */
+html.hz body .ti-settings-group label>div{margin-top:20px}
+html.hz body .ti-settings-group label>div>label{display:block;margin-bottom:20px;max-width:900px}
+html.hz body .ti-settings-group label>div>label:last-child{margin-bottom:0}
+html.hz body .ti-settings-group label>div>label>select,html.hz body .ti-settings-group label>div>label>input:not([type=checkbox]){display:block;width:min(100%,620px);margin-top:8px}
+html.hz body .ti-settings-group label>div>label.check-label{display:flex;align-items:center}
+html.hz .ti-stats{overflow:hidden}
+html.hz .ti-stat strong{color:#f3f8fc;font-weight:300}
+html.hz .ti-stat small,html.hz body .panel-heading span{color:#8aa6c0}
+html.hz body .panel-heading h2{letter-spacing:.2em;color:#e6f1fa}
+html.hz body .view-title>span{color:#5fb9ee;letter-spacing:.26em}
+html.hz body .view-title h1{font-weight:300;letter-spacing:.05em;color:#f3f8fc;text-shadow:0 0 22px #38b6ff33}
+html.hz body .view-title p{color:#a9bfd3}
+
+/* Controls */
+html.hz body button.primary,html.hz body .primary,html.hz body #sendButton{border:1px solid #5cc8ff!important;border-radius:8px!important;
+ background:linear-gradient(180deg,#1273c8,#0a4a8c)!important;color:#fff!important;box-shadow:0 0 16px #38b6ff40!important}
+html.hz body button.primary:hover,html.hz body #sendButton:hover{background:linear-gradient(180deg,#1a86e0,#0d5aa8)!important}
+html.hz body button.outline,html.hz body .text-button,html.hz .ti-toolbar button,html.hz .ti-focus-aside button,html.hz .ti-rail button,html.hz .conversation-actions button,
+html.hz .ti-settings-nav button,html.hz .saved-item button{border-radius:8px!important;border-color:#2f8fdc66!important}
+html.hz body button.outline:hover,html.hz .ti-toolbar button:hover,html.hz .ti-focus-aside button:hover,html.hz .ti-rail button:hover,html.hz .conversation-actions button:hover,
+html.hz .ti-settings-nav button:hover{border-color:#7fd4ff!important;color:#fff!important;box-shadow:0 0 12px #38b6ff33}
+html.hz .ti-toolbar button[aria-pressed=true],html.hz .ti-settings-nav button[aria-current=true]{border-color:#5cc8ff!important;color:#7fd4ff!important;background:#0a2743!important}
+html.hz body input:not([type=checkbox]):not([type=radio]):not([type=range]),html.hz body textarea,html.hz body select{border-radius:8px;border-color:#2f8fdc59;background-color:#04101dcc}
+html.hz body input:not([type=checkbox]):not([type=radio]):not([type=range]):focus-visible,html.hz body textarea:focus-visible,html.hz body select:focus-visible{border-color:#7fd4ff;box-shadow:0 0 0 2px #38b6ff33;outline:none}
+html.hz body .composer{border-radius:12px!important;border-color:#2f8fdc80;box-shadow:0 0 22px #38b6ff1f!important}
+html.hz body.thinking .composer{border-color:#5cc8ffb3}html.hz body.listening .composer{border-color:#7fd4ff;box-shadow:0 0 24px #38b6ff59!important}
+html.hz body dialog{border:1px solid var(--hz-line);border-radius:12px;background:#061423f7;box-shadow:0 24px 70px #000c,0 0 30px #0a6fd033}
+html.hz body dialog::backdrop{background:#01050bcc;backdrop-filter:blur(3px)}
+
+/* Formatted replies (markdown-view.js). The paragraph app.js writes to stays in the page for screen readers and for
+   app.js itself; it is only taken out of sight. */
+.message.assistant>p.md-source{position:absolute!important;width:1px!important;height:1px!important;margin:-1px!important;padding:0!important;overflow:hidden!important;
+ clip-path:inset(50%);white-space:nowrap!important;border:0!important}
+.md-view{margin-top:7px;font-size:15px;line-height:1.7;overflow-wrap:anywhere}
+.md-view>*{margin:0 0 .75em!important}.md-view>*:last-child{margin-bottom:0!important}
+.md-view p,.md-view blockquote{white-space:normal!important;font-size:inherit!important;line-height:inherit!important}
+.md-view h4{font-family:var(--sans,'Segoe UI',Arial,sans-serif);font-weight:600;letter-spacing:.02em;color:#f3f8fc;line-height:1.35}
+.md-view .md-h1{font-size:19px}.md-view .md-h2{font-size:17px}.md-view .md-h3{font-size:15.5px;color:#cfe6f7}
+.md-view ul,.md-view ol{padding-left:1.7em;display:grid;gap:.4em;list-style-position:outside}.md-view ul{list-style-type:disc}.md-view ol{list-style-type:decimal}
+.md-view .md-indent{margin-left:1.4em!important}
+.md-view li{display:list-item}.md-view li::marker{color:#5cc8ff;font-weight:600}
+.md-view strong{font-weight:600;color:#fff}.md-view em{font-style:italic}
+.md-view code{font:13px var(--ti-mono,Consolas,monospace);padding:1px 5px;border:1px solid #2f8fdc40;border-radius:4px;background:#0a2038}
+.md-view pre{padding:11px 13px;border:1px solid #2f8fdc40;border-radius:8px;background:#04101d;overflow:auto;line-height:1.5}
+.md-view pre code{padding:0;border:0;background:none;white-space:pre}
+.md-view blockquote{padding-left:13px;border-left:2px solid #38b6ff;color:#b8cde0}
+.md-view hr{height:0;border:0;border-top:1px solid #2f8fdc40}
+.md-view .md-link{color:#7fd4ff;border-bottom:1px dotted #7fd4ff80;cursor:help}
+.md-view[data-activity]:not([data-activity=""]):after{content:attr(data-activity);display:block;margin-top:10px;padding-left:12px;border-left:2px solid #5cc8ff;
+ color:#5cc8ff;font:12px var(--ti-mono,Consolas,monospace);letter-spacing:.08em;text-transform:uppercase;animation:jarvisPulse 1.2s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.md-view[data-activity]:after{animation:none!important}}
+
+/* Narrower windows */
+@media (max-width:1500px){html.hz body .topbar{gap:16px!important}html.hz body .topbar nav>.nav,html.hz .hz-more-toggle{padding:0 8px;font-size:11px;letter-spacing:.1em}
+ html.hz .ti-palette-trigger{min-width:0}.hz-search-text{display:none}html.hz .ti-clock{display:none}.hz-owner{display:none}}
+@media (max-width:1500px){html.hz.desktop-integrated-titlebar .ti-palette-trigger kbd{display:none}html.hz.desktop-integrated-titlebar body .topbar nav>.nav,html.hz.desktop-integrated-titlebar .hz-more-toggle{padding:0 7px}}
+/* The desktop window gives 150px of the header to the Windows buttons, so the compact header applies 150px earlier
+   there. (Seen in a desktop window 1600 wide: MAPS was folded into MORE although all eight sections fit at 1280.) */
+@media (min-width:1501px) and (max-width:1650px){html.hz.desktop-integrated-titlebar body .topbar{gap:16px!important}
+ html.hz.desktop-integrated-titlebar body .topbar nav>.nav,html.hz.desktop-integrated-titlebar .hz-more-toggle{padding:0 8px;font-size:11px;letter-spacing:.1em}
+ html.hz.desktop-integrated-titlebar .ti-palette-trigger{min-width:0}html.hz.desktop-integrated-titlebar .ti-palette-trigger kbd,html.hz.desktop-integrated-titlebar .hz-search-text,
+ html.hz.desktop-integrated-titlebar .ti-clock,html.hz.desktop-integrated-titlebar .hz-owner{display:none}}
+@media (max-width:1100px){html.hz body .brand-product small,html.hz body .connection:not(.lost) span,html.hz .ti-palette-trigger kbd{display:none}html.hz body .brand-product{font-size:19px}
+ .hz-strip p:before,.hz-strip p:after{display:none}.hz-strip{letter-spacing:.2em}}
+@media (max-width:760px){.hz-strip{display:none}html.hz body .topbar{margin-bottom:0!important}
+ html.hz body .shell,html.hz body[data-page=command] .shell:has(#commandView:not(.hidden)){padding:0 10px!important}}

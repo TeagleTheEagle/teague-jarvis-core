@@ -1,0 +1,30 @@
+{
+    "status":  "PASS",
+    "first_install_verify":  "verified",
+    "restore_target_verify":  "verified",
+    "first_install_current":  {
+                                  "release":  "1.0.11-60d406fb6398",
+                                  "previous":  "1.0.10-915e906516dc",
+                                  "switched_at":  1791090157.6078906
+                              },
+    "first_install_releases":  [
+                                   "1.0.10-915e906516dc",
+                                   "1.0.11-60d406fb6398"
+                               ],
+    "restore_target_current":  {
+                                   "release":  "1.0.11-60d406fb6398",
+                                   "previous":  null,
+                                   "switched_at":  1791100181.355223
+                               },
+    "first_install_data_before":  {
+                                      "database_sha256":  "fa8c3588a8b11093d7ad6d8b10ddd8afb2a7cddbb0341f5ef10af17eab706a92",
+                                      "database_bytes":  143360,
+                                      "data_files":  7
+                                  },
+    "first_install_data_after":  {
+                                     "database_sha256":  "fa8c3588a8b11093d7ad6d8b10ddd8afb2a7cddbb0341f5ef10af17eab706a92",
+                                     "database_bytes":  143360,
+                                     "data_files":  7
+                                 },
+    "first_install_data_unchanged":  true
+}

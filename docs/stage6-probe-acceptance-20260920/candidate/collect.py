@@ -1,0 +1,122 @@
+"""Bounded diagnostic collection; health failures remain latched, never accepted."""
+import ctypes as c,ctypes.wintypes as w,datetime,json,pathlib,subprocess,sys,time,traceback,hashlib,os
+from journal import Reader,PublisherWatch,ticks,frequency
+from workspace import CODE as R,run_dir,activate_temp
+from probe_timing import Probe
+run=sys.argv[1];out=run_dir(run);activate_temp(out)
+config=json.loads((out/'case.json').read_text());mode=config['mode'];duration=config['duration']
+assert mode in ('idle','disk','sustained','cpu','Dhash','dry') and 0<duration<=160
+def save(n,v):
+ if n in ('producer-closed.json','collector-finished.json'):
+  temporary=out/(n+'.publishing')
+  with temporary.open('x',encoding='utf-8') as f:
+   json.dump(v,f,indent=2);f.flush();os.fsync(f.fileno())
+  os.replace(temporary,out/n)
+ else:
+  with (out/n).open('w',encoding='utf-8') as f:json.dump(v,f,indent=2)
+def utc():return datetime.datetime.now(datetime.timezone.utc).isoformat()
+deadline=time.monotonic()+20
+while not (out/'ready.json').exists():
+ if (out/'monitor-failure.json').exists():raise RuntimeError('Monitor startup failed; no probes started')
+ if time.monotonic()>deadline:raise RuntimeError('Monitor readiness failed')
+ time.sleep(.1)
+identity=json.loads((out/'ready.json').read_text(encoding='utf-8-sig'));watch=PublisherWatch(identity)
+journal=out/'heartbeat.jsonl';assert all(config[k]=='D' for k in ('journalVolume','eventVolume','controlVolume'))
+reader=Reader(journal,identity,liveness=watch.check);k=watch.k;k.GetExitCodeProcess.argtypes=[w.HANDLE,c.POINTER(w.DWORD)]
+def times(p):
+ v=[w.FILETIME() for _ in range(4)]
+ if not k.GetProcessTimes(int(p._handle),*[c.byref(x) for x in v]):raise c.WinError(c.get_last_error())
+ return [str((x.dwHighDateTime<<32)|x.dwLowDateTime) for x in v]
+pwsh=r'C:\Users\jonny\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\powershell\pwsh.exe'
+resource=None
+if config['telemetry']=='full':resource=subprocess.Popen([pwsh,'-NoProfile','-File',str(R/'resources.ps1'),'-Run',run],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,creationflags=0x08000000)
+samples=[];probes=[];handles=[];measured=[];child=None;status='LIVE_MONITOR_HEALTHY';error=None;phase={'mode':mode,'start_qpc':ticks(),'start_utc':utc(),'duration_requested':duration}
+def health():
+ if (out/'monitor-failure.json').exists():raise RuntimeError('Monitor failure')
+ before=ticks()
+ try:v=reader.poll()
+ except BaseException:
+  save('rejected-poll.json',dict(before=before,after=ticks(),last=reader.last,traceback=traceback.format_exc()));raise
+ if v['age']>=10:raise RuntimeError('Heartbeat must remain below ten seconds')
+ if not reader.last.get('subscriberHealthy') or reader.last.get('queueFailure'):raise RuntimeError('Subscriber/queue unhealthy')
+ samples.append(dict(v,qpc=before,pollEnd=ticks(),phase=mode))
+def warning(v):
+ with (out/'slow-probe-warnings.jsonl').open('a',encoding='utf-8') as f:
+  f.write(json.dumps(v)+'\n');f.flush()
+try:
+ if mode!='idle':
+  child=subprocess.Popen(([sys._base_executable,'-B',str(R/'dry_worker.py'),run] if mode=='dry' else [sys._base_executable,'-B',str(R/'workload.py'),run,mode,str(duration)]),stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,creationflags=0x08000000)
+  phase['worker_identity']={'pid':child.pid,'created':times(child)[0]}
+ save('phases.json',[phase]);began=time.monotonic();campaign_deadline=ticks()/frequency()+duration+15;last=-1
+ while (child is not None and child.poll() is None) or (mode=='idle' and time.monotonic()-began<duration):
+  health()
+  if time.monotonic()-began-last>=1:
+   cluster=config.get('cluster',1) if not measured else 1
+   if type(cluster) is not int or not 1<=cluster<=8:raise RuntimeError('Bounded cluster fixture required')
+   batch=[]
+   for _ in range(cluster):
+    health()
+    if ticks()/frequency()+13.6>=campaign_deadline:break
+    item=Probe(R/'J6Probe.exe');measured.append(item);handles.append(item.process);batch.append(item)
+   for measured_probe in batch:
+    p=measured_probe.process;t=measured_probe.row['launchRequestedQpc']
+    created=times(p)[0]
+    code=measured_probe.wait_approved(health,warning,campaign_deadline);ts=times(p)
+    if any(x['pid']==p.pid for x in probes) or created!=ts[0] or k.WaitForSingleObject(int(p._handle),0)!=0:raise RuntimeError('Probe identity/exit failure')
+    probes.append(dict(pid=p.pid,created=created,kernel_exit_filetime=ts[1],exit=code,start_qpc=t,end_qpc=ticks(),phase=mode,retained_handle=True,handle_signalled=True))
+    save('probes.json',probes);measured_probe.row['recordPersistedQpc']=ticks();last=time.monotonic()-began
+    if code:raise RuntimeError('Probe exit failed')
+  if time.monotonic()-began>duration+15:raise RuntimeError('Existing bounded workload deadline exceeded')
+  time.sleep(.05)
+ if child:
+  _,err=child.communicate(timeout=1);phase['worker_exit']=child.returncode
+  if child.returncode:raise RuntimeError('Workload failed '+err.decode(errors='replace'))
+  child=None
+ health();phase.update(status='COMPLETE',end_qpc=ticks())
+except BaseException:
+ status='FAILED_CLOSED';error=traceback.format_exc();save('collector-failure.json',dict(error=error,qpc=ticks()))
+finally:
+ save('producer-closed.json',dict(run=identity['run'],qpc=ticks(),new_probes_forbidden=True))
+ (out/'workload-stop').touch()
+ if child:
+  try:child.communicate(timeout=15)
+  except subprocess.TimeoutExpired:child.kill();child.communicate();save('workload-forced-cleanup.json',dict(pid=child.pid,method='directly retained child handle'))
+  phase['worker_exit']=child.returncode
+ phase.setdefault('end_qpc',ticks());save('probes.json',probes);save('phases.json',[phase]);save('collector-samples.json',samples)
+ try:
+  for measurement in measured:measurement.finish_observation()
+  save('probe-timings.json',[m.row for m in measured])
+  verified=[]
+  for p in handles:
+   if k.WaitForSingleObject(int(p._handle),0)!=0:raise RuntimeError('Probe still active')
+   p.poll();ts=times(p)
+   verified.append(dict(pid=p.pid,times=ts,exit=p.returncode))
+  if len({x['pid'] for x in verified})!=len(verified):raise RuntimeError('Duplicate PID')
+  save('retained-handle-verification.json',verified)
+ except BaseException:
+  status='FAILED_CLOSED';error=traceback.format_exc();save('collector-failure.json',dict(error=error,qpc=ticks()))
+  verified=[]
+  save('probe-timings.json',[m.row for m in measured])
+ save('collector-finished.json',dict(run=identity['run'],status=status,error=error,qpc=ticks(),utc=utc(),acceptance=False,
+  allHandlesExited=bool(verified) and len(verified)==len(handles),identities=[dict(pid=x['pid'],created=x['times'][0],exited=x['times'][1],exit=x['exit']) for x in verified]))
+ reader.close()
+try:
+ end=time.monotonic()+60
+ while k.WaitForSingleObject(watch.handle,0)==258:
+  if time.monotonic()>end:raise RuntimeError('Monitor finalization deadline; stop batch')
+  time.sleep(.05)
+ code=w.DWORD()
+ if not k.GetExitCodeProcess(watch.handle,c.byref(code)):raise c.WinError(c.get_last_error())
+ save('monitor-exit.json',dict(identity=identity,exit_code=code.value))
+ if resource:
+  _,err=resource.communicate(timeout=10);save('resource-exit.json',dict(pid=resource.pid,exit=resource.returncode,stderr=err.decode(errors='replace')))
+ for measurement in measured:measurement.finish_observation()
+ save('probe-timings.json',[m.row for m in measured])
+ verified=[]
+ for p in handles:
+  if k.WaitForSingleObject(int(p._handle),0)!=0:raise RuntimeError('Probe still active')
+  verified.append(dict(pid=p.pid,times=times(p),exit=p.returncode))
+ save('retained-handle-verification.json',verified)
+ if code.value:raise RuntimeError('Monitor error requires review before next diagnostic run')
+finally:watch.close()
+print(json.dumps(dict(run=run,status=status,probes=len(probes),acceptance=False)),flush=True)

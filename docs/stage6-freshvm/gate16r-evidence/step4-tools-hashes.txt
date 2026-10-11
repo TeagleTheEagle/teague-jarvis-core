@@ -1,0 +1,4 @@
+616139c8fffb44b371e5bbe29b3ab8e601bd0c90f29c0da36a6c2483d90368fd *New-Stage6Storage.ps1
+d4462182d26bb14380e917a526c8d355d671a95cbf01295412c227fc23adb7d1 *step4a-prepare-storage.cmd
+b1ca1c5dd8e76bc8d3b46b8a219498ada0238d9a3d0569e92f5fd3f6afec0a5f *step4b-set-vbox-home.cmd
+4d0ad4043f470d0941a39a7e18bf418be06ccbe932530be90589203d4569344f *step4a-prepare-storage.cmd  (revision 2, 2026-10-02T02:35Z: prints STOPPED on a non-zero exit; script unchanged)

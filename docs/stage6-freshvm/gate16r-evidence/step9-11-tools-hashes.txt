@@ -1,0 +1,3 @@
+f4065b26a4abecf0bc71e6b219ee423832775ce822bde3588a764608bca3cad8 *Take-FreshVmSnapshot.ps1
+e0d9b19c73c873ed5400ca6da4fe7c0b78ab72c9fdb89cf1f9cc8aa90c5be100 *step9-snapshot-clean-baseline.cmd
+ecc152e1dfdabc9b42c0b90491fb7e119e9ee87604e15b04f842453b28836f8b *step11-snapshot-prereq.cmd

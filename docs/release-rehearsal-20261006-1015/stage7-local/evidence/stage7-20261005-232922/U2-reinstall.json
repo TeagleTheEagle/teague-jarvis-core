@@ -1,0 +1,8 @@
+{
+    "status":  "PASS",
+    "reinstall":  "installed",
+    "release":  "1.0.15-63362929d7ad",
+    "core_ready":  true,
+    "memory_restored":  true,
+    "verify":  "verified"
+}

@@ -1,0 +1,18 @@
+--- D:\JARVIS-STAGE6-LIVE\1c1f5d0c390b42cc9ba9f4f6221dabc6\code\evidence_support.py
++++ D:\JARVIS-STAGE6-LIVE\cd45670bb1894d5b99a1b469e4771535\code\evidence_support.py
+@@ -106,11 +106,13 @@
+     added=False
+     for pid,parent,name in entries:
+      parents=[r for r in self.rows.values() if r['pid']==parent]
+-     if not parents or any(k[0]==pid for k in self.rows):continue
++     if not parents:continue
+      h=K.OpenProcess(0x100000|0x1000,False,pid)
+      if not h:continue # Late-event reconciliation will mark missing handles.
+      try:
+-      ts=times(h);matches=[r for r in parents if int(r['created'])<=int(ts[0]) and (r['exitFiletime'] is None or int(ts[0])<=int(r['exitFiletime']))]
++      ts=times(h)
++      if (pid,ts[0]) in self.rows:K.CloseHandle(h);continue
++      matches=[r for r in parents if int(r['created'])<=int(ts[0]) and (r['exitFiletime'] is None or int(ts[0])<=int(r['exitFiletime']))]
+       if len(matches)!=1:K.CloseHandle(h);continue
+       self.add(h,pid,parent,'descendant:'+name);added=True
+      except BaseException:K.CloseHandle(h);raise

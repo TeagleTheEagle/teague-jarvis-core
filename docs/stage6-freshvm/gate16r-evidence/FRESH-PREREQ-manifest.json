@@ -1,0 +1,1486 @@
+{
+  "schema": "stage6-fresh-vm-snapshot-manifest-v1",
+  "requirement": "AMENDMENT-v2 section 6(h): edition, build.UBR, installed programs, services, PATH, the 6(f) outputs, snapshot UUID, .vbox SHA-256",
+  "generated_utc": "2026-10-04T03:06:04Z",
+  "snapshot": {
+    "name": "FRESH-PREREQ",
+    "uuid": "9f1d7bec-e410-4ed0-bc2f-4966125329ad",
+    "taken_utc": "2026-10-04T03:04:55.9448102Z",
+    "taken_by_account": "jarvis-s6-val",
+    "vm_name": "JARVIS-S6-FRESH",
+    "vm_uuid": "4ef16bdd-2a1b-46af-83db-ee69c2f868bb",
+    "current_snapshot_uuid": "9f1d7bec-e410-4ed0-bc2f-4966125329ad",
+    "all_snapshots": [
+      {
+        "name": "FRESH-CLEAN-BASELINE",
+        "uuid": "0da943df-12e5-4eac-93bf-727c03dd5d94"
+      },
+      {
+        "name": "FRESH-PREREQ",
+        "uuid": "9f1d7bec-e410-4ed0-bc2f-4966125329ad"
+      }
+    ],
+    "vm_state": "poweroff"
+  },
+  "vbox": {
+    "file": "D:\\JARVIS-S6-FRESHVM\\machines\\JARVIS-S6-FRESH\\JARVIS-S6-FRESH.vbox",
+    "sha256": "03ce709e3e000298e4696d30692f563c12b07d848927e9c61a75e7e28f457130",
+    "sha256_before_snapshot": "8647a9ec115e721920185419ff5e5bc6795408116d4258424cb89c8bd1a01b91",
+    "nvram_sha256": "a57321307a5296ab3a759bb1113726bdff35e7dbe7fe51ff85c886403dd027bc",
+    "snapshots_folder": [
+      {
+        "name": "2026-10-04T02-40-17-827151100Z.nvram",
+        "bytes": 547328,
+        "last_write_utc": "2026-10-04T02:26:33.6341554Z"
+      },
+      {
+        "name": "2026-10-04T03-04-55-784457300Z.nvram",
+        "bytes": 547328,
+        "last_write_utc": "2026-10-04T02:26:33.6341554Z"
+      },
+      {
+        "name": "{0d8d6176-2b81-4fc8-90d9-e2007869cc58}.vdi",
+        "bytes": 2097152,
+        "last_write_utc": "2026-10-04T02:40:17.8271511Z"
+      },
+      {
+        "name": "{979ac965-1d18-4965-bc20-64bc957b4346}.vdi",
+        "bytes": 2097152,
+        "last_write_utc": "2026-10-04T03:04:55.7844573Z"
+      }
+    ]
+  },
+  "guest": {
+    "edition": "Microsoft Windows 11 Home",
+    "architecture": "64-bit",
+    "edition_id": "Core",
+    "display_version": "26H2",
+    "build_ubr": "26300.9457",
+    "activation_license_status": 5,
+    "windows_update_pause_expiry": "2026-11-06T05:27:32Z",
+    "account": "JARVIS-S6-FRESH\\jarvis-s6-guest"
+  },
+  "path": "C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\WINDOWS\\System32\\OpenSSH\\;C:\\Users\\jarvis-s6-guest\\AppData\\Local\\Microsoft\\WindowsApps;",
+  "installed_programs": [
+    {
+      "DisplayName": "Copilot",
+      "DisplayVersion": "154.0.4258.53",
+      "Publisher": "Microsoft Corporation"
+    },
+    {
+      "DisplayName": "Microsoft Edge",
+      "DisplayVersion": "154.0.4258.53",
+      "Publisher": "Microsoft Corporation"
+    },
+    {
+      "DisplayName": "Microsoft Edge WebView2 Runtime",
+      "DisplayVersion": "154.0.4258.53",
+      "Publisher": "Microsoft Corporation"
+    },
+    {
+      "DisplayName": "Microsoft OneDrive",
+      "DisplayVersion": "26.168.0830.0006",
+      "Publisher": "Microsoft Corporation"
+    },
+    {
+      "DisplayName": "Microsoft Windows Application Compatibility Fix Database",
+      "DisplayVersion": null,
+      "Publisher": null
+    },
+    {
+      "DisplayName": "Oracle VirtualBox Guest Additions 7.2.18",
+      "DisplayVersion": "7.2.18.175117",
+      "Publisher": "Oracle and/or its affiliates"
+    }
+  ],
+  "services": [
+    {
+      "Name": "AarSvc_50e5f",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "ADPSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "ALG",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "AppIDSvc",
+      "Status": 4,
+      "StartType": 3
+    },
+    {
+      "Name": "Appinfo",
+      "Status": 4,
+      "StartType": 3
+    },
+    {
+      "Name": "AppReadiness",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "AppXSvc",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "ApxSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "AudioEndpointBuilder",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "Audiosrv",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "autotimesvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "AxInstSV",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "BcastDVRUserService_50e5f",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "BDESVC",
+      "Status": 4,
+      "StartType": 3
+    },
+    {
+      "Name": "BFE",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "BITS",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "BluetoothUserService_50e5f",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "BrokerInfrastructure",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "BTAGService",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "BthAvctpSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "bthserv",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "camsvc",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "CaptureService_50e5f",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "cbdhsvc_50e5f",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "CDPSvc",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "CDPUserSvc_50e5f",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "CertPropSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "ClipSVC",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "CloudBackupRestoreSvc_50e5f",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "COMSysApp",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "ConsentUxUserSvc_50e5f",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "CoreMessagingRegistrar",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "CredentialEnrollmentManagerUserSvc_50e5f",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "CryptSvc",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "DcomLaunch",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "dcsvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "defragsvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "DeviceAssociationBrokerSvc_50e5f",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "DeviceAssociationService",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "DeviceInstall",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "DevicePickerUserSvc_50e5f",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "DevicesFlowUserSvc_50e5f",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "DevQueryBroker",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "Dhcp",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "diagsvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "DiagTrack",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "DispBrokerDesktopSvc",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "DisplayEnhancementService",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "DmEnrollmentSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "dmwappushservice",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "Dnscache",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "DoSvc",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "dot3svc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "DPS",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "DsmSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "DsSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "DusmSvc",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "EapHost",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "edgeupdate",
+      "Status": 1,
+      "StartType": 2
+    },
+    {
+      "Name": "edgeupdatem",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "EFS",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "embeddedmode",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "EntAppSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "EventLog",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "EventSystem",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "fdPHost",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "FDResPub",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "fhsvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "FontCache",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "FrameServer",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "FrameServerMonitor",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "GameInputSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "gpsvc",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "GraphicsPerfSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "hidserv",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "hpatchmon",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "HvHost",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "icssvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "IKEEXT",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "InstallService",
+      "Status": 4,
+      "StartType": 3
+    },
+    {
+      "Name": "InventorySvc",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "iphlpsvc",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "IpxlatCfgSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "IsoEnvBroker",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "IsolationSession",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "KeyIso",
+      "Status": 4,
+      "StartType": 3
+    },
+    {
+      "Name": "KtmRm",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "LanmanServer",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "LanmanWorkstation",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "lfsvc",
+      "Status": 4,
+      "StartType": 3
+    },
+    {
+      "Name": "LicenseManager",
+      "Status": 4,
+      "StartType": 3
+    },
+    {
+      "Name": "lltdsvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "lmhosts",
+      "Status": 4,
+      "StartType": 3
+    },
+    {
+      "Name": "LocalKdc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "LSM",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "LxpSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "MapsBroker",
+      "Status": 1,
+      "StartType": 2
+    },
+    {
+      "Name": "McmSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "McpManagementService",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "MDCoreSvc",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "MessagingService_50e5f",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "MicrosoftCopilotElevationService",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "MicrosoftEdgeElevationService",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "midisrv",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "mpssvc",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "MSDTC",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "MSiSCSI",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "msiserver",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "NaturalAuthentication",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "NcaSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "NcbService",
+      "Status": 4,
+      "StartType": 3
+    },
+    {
+      "Name": "NcdAutoSetup",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "Netlogon",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "Netman",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "netprofm",
+      "Status": 4,
+      "StartType": 3
+    },
+    {
+      "Name": "NetSetupSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "NetTcpPortSharing",
+      "Status": 1,
+      "StartType": 4
+    },
+    {
+      "Name": "NgcCtnrSvc",
+      "Status": 4,
+      "StartType": 3
+    },
+    {
+      "Name": "NgcSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "NlaSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "NPSMSvc_50e5f",
+      "Status": 4,
+      "StartType": 3
+    },
+    {
+      "Name": "nsi",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "OneSyncSvc_50e5f",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "P9RdrService_50e5f",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "PcaSvc",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "PenService_50e5f",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "perceptionsimulation",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "PerfHost",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "PhoneSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "PimIndexMaintenanceSvc_50e5f",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "pla",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "PlugPlay",
+      "Status": 4,
+      "StartType": 3
+    },
+    {
+      "Name": "PolicyAgent",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "Power",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "PrintDeviceConfigurationService",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "PrintNotify",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "PrintScanBrokerService",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "PrintWorkflowUserSvc_50e5f",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "ProfSvc",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "PushToInstall",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "QWAVE",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "RasAuto",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "RasMan",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "refsdedupsvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "RemoteAccess",
+      "Status": 1,
+      "StartType": 4
+    },
+    {
+      "Name": "RemoteRegistry",
+      "Status": 1,
+      "StartType": 4
+    },
+    {
+      "Name": "RetailDemo",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "RmSvc",
+      "Status": 4,
+      "StartType": 3
+    },
+    {
+      "Name": "RpcEptMapper",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "RpcLocator",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "RpcSs",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "SamSs",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "SCardSvr",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "ScDeviceEnum",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "Schedule",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "SCPolicySvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "SDRSVC",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "seclogon",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "SecurityHealthService",
+      "Status": 4,
+      "StartType": 3
+    },
+    {
+      "Name": "SEMgrSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "SENS",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "SensorDataService",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "SensorService",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "SensrSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "SessionEnv",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "SharedAccess",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "ShellHWDetection",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "shpamsvc",
+      "Status": 1,
+      "StartType": 4
+    },
+    {
+      "Name": "smphost",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "SmsRouter",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "SNMPTrap",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "Spooler",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "sppsvc",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "SSDPSRV",
+      "Status": 4,
+      "StartType": 3
+    },
+    {
+      "Name": "ssh-agent",
+      "Status": 1,
+      "StartType": 4
+    },
+    {
+      "Name": "SstpSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "StateRepository",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "StiSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "StorSvc",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "svsvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "swprv",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "SysMain",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "SystemEventsBroker",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "TapiSrv",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "TermService",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "TextInputManagementService",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "Themes",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "TieringEngineService",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "TimeBrokerSvc",
+      "Status": 4,
+      "StartType": 3
+    },
+    {
+      "Name": "TokenBroker",
+      "Status": 4,
+      "StartType": 3
+    },
+    {
+      "Name": "TrkWks",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "TroubleshootingSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "TrustedInstaller",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "tzautoupdate",
+      "Status": 1,
+      "StartType": 4
+    },
+    {
+      "Name": "UdkUserSvc_50e5f",
+      "Status": 4,
+      "StartType": 3
+    },
+    {
+      "Name": "UmRdpService",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "UnistoreSvc_50e5f",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "upnphost",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "UserDataSvc_50e5f",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "UserManager",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "UsoSvc",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "VaultSvc",
+      "Status": 4,
+      "StartType": 3
+    },
+    {
+      "Name": "VBoxService",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "vds",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "vmicguestinterface",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "vmicheartbeat",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "vmickvpexchange",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "vmicrdv",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "vmicshutdown",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "vmictimesync",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "vmicvmsession",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "vmicvss",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "VSS",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "W32Time",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "WaaSMedicSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "WalletService",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "WarpJITSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "wbengine",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "WbioSrvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "Wcmsvc",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "wcncsvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "WdiServiceHost",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "WdiSystemHost",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "WdNisSvc",
+      "Status": 4,
+      "StartType": 3
+    },
+    {
+      "Name": "WebClient",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "webthreatdefsvc",
+      "Status": 4,
+      "StartType": 3
+    },
+    {
+      "Name": "webthreatdefusersvc_50e5f",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "Wecsvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "WEPHOSTSVC",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "wercplsupport",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "WerSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "WFDSConMgrSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "whesvc",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "WiaRpc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "WinDefend",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "WinHttpAutoProxySvc",
+      "Status": 4,
+      "StartType": 3
+    },
+    {
+      "Name": "Winmgmt",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "WinRM",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "wisvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "WlanSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "wlidsvc",
+      "Status": 4,
+      "StartType": 3
+    },
+    {
+      "Name": "wlpasvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "WManSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "wmiApSrv",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "WMPNetworkSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "workfolderssvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "WpcMonSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "WPDBusEnum",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "WpnService",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "WpnUserService_50e5f",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "WSAIFabricSvc",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "wscsvc",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "WSearch",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "wuauserv",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "wuqisvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "WwanSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "XblAuthManager",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "XblGameSave",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "XboxGipSvc",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "XboxNetApiSvc",
+      "Status": 1,
+      "StartType": 3
+    }
+  ],
+  "section_6f_outputs": {
+    "status": "PASS",
+    "at": "2026-10-04T02:21:53.9845655Z",
+    "os_caption": "Microsoft Windows 11 Home",
+    "os_architecture": "64-bit",
+    "edition": "Windows 10 Home",
+    "display_version": "26H2",
+    "build": "26300.9457",
+    "edition_id": "Core",
+    "activation_license_status": 5,
+    "hypervisor_present": true,
+    "windows_update_pause_expiry": "2026-11-06T05:27:32Z",
+    "account": "JARVIS-S6-FRESH\\jarvis-s6-guest",
+    "is_administrator": false,
+    "path": "C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\WINDOWS\\System32\\OpenSSH\\;C:\\Users\\jarvis-s6-guest\\AppData\\Local\\Microsoft\\WindowsApps;",
+    "development_tools_on_path": [],
+    "store_app_execution_aliases": [
+      "python -> C:\\Users\\jarvis-s6-guest\\AppData\\Local\\Microsoft\\WindowsApps\\python.exe (Microsoft Store app execution alias, 0 bytes; nothing installed)"
+    ],
+    "development_tool_folders": [],
+    "jarvis_install_present": false,
+    "jarvis_processes": 0,
+    "env_files_in_profile": [],
+    "jarvis_credentials": false,
+    "credential_entries": 2,
+    "credential_targets": [
+      "MicrosoftAccount:target=SSO_POP_Device",
+      "WindowsLive:target=virtualapp/didlogical"
+    ],
+    "account_principal_source": "Local",
+    "onedrive_account_configured": false,
+    "jarvis_services": [],
+    "jarvis_scheduled_tasks": [],
+    "jarvis_named_pipes": [],
+    "named_pipes_enumerated": 55,
+    "jarvis_folders": [],
+    "pipes_named_after_the_account": [
+      "\\\\.\\pipe\\VBoxTrayIPC-jarvis-s6-guest"
+    ],
+    "name_matching_note": "the account name 'jarvis-s6-guest' and the computer name 'JARVIS-S6-FRESH' are removed from names before testing for 'jarvis'",
+    "global_package_folders": [],
+    "non_default_path_entries": [],
+    "owner_disposition_required": [
+      "credential-manager entries exist (2); section 6(f) lists credential-manager entries under 'no secrets'; recorded for the owner's disposition, not failed by the script"
+    ],
+    "installed_programs": 6,
+    "services": 260
+  },
+  "baseline_run": {
+    "folder": "gate17-20261004-022130",
+    "phase": "Baseline",
+    "overall": "PASS",
+    "started_utc": "2026-10-04T02:21:30.0737123Z",
+    "finished_utc": "2026-10-04T02:21:55.0678368Z"
+  },
+  "sources": [
+    {
+      "file": "gate16r-20261002/vm/snapshot-FRESH-PREREQ-20261004-030455.json",
+      "bytes": 2964,
+      "sha256": "ef90f692d83fd4d213153e7ffec94d2c784c1fc3e10b38f041bc7d1ace1d59a7"
+    },
+    {
+      "file": "gate16r-20261002/vm/JARVIS-S6-FRESH.vbox.FRESH-PREREQ-copy",
+      "bytes": 21813,
+      "sha256": "03ce709e3e000298e4696d30692f563c12b07d848927e9c61a75e7e28f457130"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-022130/SUMMARY.json",
+      "bytes": 522,
+      "sha256": "7bfd419ae63c3addc55166c2195d9449cffeaa42e8bbfc8452e2c97e30b6409b"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-022130/B1-baseline.json",
+      "bytes": 2800,
+      "sha256": "e6741b98fe8720b310badeb96f97d084fdb7c8a518a3baa8f1ab6ea0995f8137"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-022130/baseline-programs.json",
+      "bytes": 965,
+      "sha256": "dcfc72dba6b6cade449ecf51356eb63e49710625b4d169ef62a140b7c076c2ed"
+    },
+    {
+      "file": "guest-egress-01/gate17-20261004-022130/baseline-services.json",
+      "bytes": 24958,
+      "sha256": "50132eb419e79cedbaab208de072052318e5129615b984d8a66ae608e779368b"
+    }
+  ],
+  "statement": "the documented deployment procedure requires no prerequisites; the release carries CPython 3.12.10, Electron, the VC++ runtime and models"
+}

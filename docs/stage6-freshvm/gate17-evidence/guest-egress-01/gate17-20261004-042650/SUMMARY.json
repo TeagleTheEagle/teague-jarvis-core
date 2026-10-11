@@ -1,0 +1,21 @@
+{
+    "schema":  "jarvis-gate17-run-v1",
+    "overall":  "PASS",
+    "phase":  "Cleanliness",
+    "home":  "C:\\Users\\jarvis-s6-guest\\AppData\\Local\\JARVIS",
+    "package":  "E:\\",
+    "started_utc":  "2026-10-04T04:26:50.8492292Z",
+    "finished_utc":  "2026-10-04T04:27:30.3040539Z",
+    "steps":  [
+                  {
+                      "step":  "E0-not-elevated",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T04:26:51.0885713Z"
+                  },
+                  {
+                      "step":  "C1-cleanliness",
+                      "status":  "PASS",
+                      "at":  "2026-10-04T04:27:30.2907781Z"
+                  }
+              ]
+}

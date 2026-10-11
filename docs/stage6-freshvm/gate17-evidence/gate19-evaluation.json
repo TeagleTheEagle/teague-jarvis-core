@@ -1,0 +1,34 @@
+{
+  "schema": "stage6-gate-evaluation-v1",
+  "gate": "19: update / interruption / rollback reconciliation for FINAL 1.0.11-60d406fb6398 (run in the same VM sitting as Gate 17, as approved 2026-10-02)",
+  "written_utc": "2026-10-04T05:08:03Z",
+  "inputs": {
+    "previous_build_disc": "JARVIS-PACKAGE-1.0.10-915e906516dc.iso, sha256 d3830e3e5334530d39f6d41a4b11ee5b4e0c256de3be1cc2abcd4d24d786873d (package-disc-1.0.10-915e906516dc.json), found by the driver as drive D: inside the VM",
+    "guest_run": "guest-egress-01/gate19-20261004-043210 (SUMMARY sha256 e0b016dcf85486b857622980bda0e947592de88899175e9bb38d4034d41f714e), phase Update, 04:32Z to 05:03Z host time, not elevated"
+  },
+  "rerun_on_the_vm": {
+    "package provenance": "PASS. G1: previous zip sha256 a945b38a3aff733d3228d617812c8ab7f85f0f8b09c66b2aaed5212c2ec771d4 equals its release record; payload manifest of the disc clean; FINAL was the installed build and its extracted package was present.",
+    "starting point": "PASS. G2: previous build extracted. G3: FINAL uninstalled (data kept), 1.0.10-915e906516dc installed over the kept data, running and reporting 1.0.10, the Gate 17 memory present, a Gate 19 memory written under it; all 8 processes from the 1.0.10 folder.",
+    "update while running (1.0.10 -> FINAL)": "PASS. G4: installed 1.0.11-60d406fb6398 with previous 1.0.10; 0 processes left after the update; files verified; current.json FINAL / previous 1.0.10; both releases present; running FINAL reports 1.0.11, both memories intact, no process from the old release.",
+    "rollback while running (FINAL -> 1.0.10)": "PASS. G5: rolled back; 0 processes left; files of 1.0.10 verified; running 1.0.10, both memories intact, no process from the other release.",
+    "update again (1.0.10 -> FINAL)": "PASS. G6: installed (both builds already present, so no copy), verified, running FINAL with both memories, then stopped on request with 0 processes; the VM ends on FINAL, stopped.",
+    "correct version identity / intact data and config / no mixed installation / no stale processes / rollback integrity": "met at each of G3 to G6 as listed"
+  },
+  "measured_seconds_on_the_vm": {
+    "G3 fresh install of 1.0.10": { "verify_package": 13.3, "copy": 24.8, "verify_copy": 80.1, "switch": 0.04 },
+    "G4 update": { "verify_package": 106.0, "copy": 78.8, "verify_copy": 114.8, "stop": 4.9, "switch": 0.04, "wall": 306.9 },
+    "G5 rollback": { "wall": 98.1 },
+    "G6 second update": { "verify_package": 67.8, "stop": 95.5, "switch": 0.02, "wall": 165.8 },
+    "Gate 17 first install (I3)": { "verify_package": 61.3, "copy": 54.8, "verify_copy": 78.0, "switch": 0.03, "wall": 199.9 },
+    "note": "AMENDMENT-v3 D9: no bound was chosen in advance; these measurements are the basis for one. Stopping a running JARVIS took 4.9 s at G4 but about 95 s at G6 and most of the 98 s at G5 (the installer waits for the Core to stop and then ends the remaining window processes). Slow, not failed: every stop ended with 0 processes. On this PC the same steps took 31.8 s, 9.0 s and 17.2 s (docs/release-rehearsal-20261004)."
+  },
+  "classified_from_earlier_evidence": {
+    "interrupted update at every step (unit level)": "STILL_APPLICABLE and current: test_installer.py (12 tests, including a fault at each update step) is part of FINAL's own full regression, run with the release's bundled Python (docs/release-rehearsal-20261001/regression-1.0.11-report.json).",
+    "real kill in the middle of copying": "STILL_APPLICABLE: run on this PC on 2026-10-01 with the 1.0.4 installer (interrupted_update_rehearsal.output.txt: killed at 3,502 of 10,645 files; the running JARVIS unharmed; rerun installed and verified). tools/installer.py has one change between that build and FINAL, commit 37eb838, which only adds the per-phase timing output (13 lines added, 1 changed). installer.py is identical in 1.0.10 and 1.0.11. Not repeated in the VM, as the approved plan states.",
+    "timing failure of 2026-09-17": "preserved as recorded; not re-graded."
+  },
+  "result": "UPDATE_ROLLBACK_RECONCILED",
+  "result_statement": "Update, rollback and repeated update of FINAL passed inside the qualified VM with data, version identity and process hygiene intact; the interruption evidence is classified STILL_APPLICABLE with the single installer change since then shown to be timing output only.",
+  "for_gate_20": "The timing bound under D9 is still to be stated from the measurements above; the long stop times in the VM are noted for the first release after cutover (known rough edge: the installer stopping JARVIS).",
+  "recorded_by": "Claude Code (Claude Fable 5.1), owner account"
+}

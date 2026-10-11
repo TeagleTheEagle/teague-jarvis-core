@@ -1,0 +1,4 @@
+# 2026-10-04T08:22:19Z switch-over tools in D:\JARVIS-cutover\tools after the owner's approval
+8886bf02de92c49339f36379ef4a5198bb11cfa26095f9f63f42b73eae63aa7a  cutover-authorized.json
+7fd3b66aa59d9fc4dc5273ec6158f15ce9da4ddefadaf7452a2a59f554c972da  cutover-step.cmd
+06a2d72edd94c25427cdfd7de10315bca66190dc4faf5178b33017213c3bf410  Invoke-Cutover.ps1

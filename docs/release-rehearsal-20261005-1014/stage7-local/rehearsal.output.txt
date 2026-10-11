@@ -1,0 +1,75 @@
+live JARVIS processes at the start: 0
+===== first start: Install, then the driver asks for the Windows restart  01:38:10
+
+=== Install (1.0.14-e03872680e1d) started 01:38:10; each line below is one finished check ===
+E0-not-elevated                PASS
+I1-package                     PASS
+I2-extract                     PASS
+I3-install                     PASS
+I4-verify                      PASS
+I5-launch                      PASS
+I6-duplicate-core              PASS
+I7-local-stt                   PASS
+I8-restart                     PASS
+JARVIS is running. On the VM the next phase is AfterRestart, after quitting JARVIS from the tray and restarting Windows.
+stage7 Install : PASS  (D:\JARVIS-release-work\stage7-local-1.0.14\evidence\stage7-20261004-143810)
+
+The install step PASSED. JARVIS is running. Now do this:
+  1. Near the clock, right-click the JARVIS icon (click the ^ arrow if it is hidden) and choose "Quit JARVIS completely".
+  2. Start > Power > Restart.
+  3. Sign in again, wait one minute, then open this disc and double-click stage7 again.
+
+exit=0  01:41:58
+===== second start without a restart: the uptime check must refuse  01:41:58
+
+Windows has not been restarted since the install step. Do this now:
+  1. Near the clock, right-click the JARVIS icon (click the ^ arrow if it is hidden) and choose "Quit JARVIS completely".
+  2. Start > Power > Restart.
+  3. Sign in again, wait one minute, then open this disc and double-click stage7 again.
+
+exit=0  01:41:59
+===== second start with -NoRestartCheck: AfterRestart, Uninstall, Update, Interrupt  01:41:59
+
+=== AfterRestart (1.0.14-e03872680e1d) started 01:41:59; each line below is one finished check ===
+E0-not-elevated                PASS
+R1-after-restart               PASS
+stage7 AfterRestart : PASS  (D:\JARVIS-release-work\stage7-local-1.0.14\evidence\stage7-20261004-144159)
+
+=== Uninstall (1.0.14-e03872680e1d) started 01:42:00; each line below is one finished check ===
+E0-not-elevated                PASS
+U1-uninstall                   PASS
+U2-reinstall                   PASS
+U3-final-stop                  PASS
+stage7 Uninstall : PASS  (D:\JARVIS-release-work\stage7-local-1.0.14\evidence\stage7-20261004-144201)
+
+=== Update (1.0.14-e03872680e1d) started 01:43:09; each line below is one finished check ===
+E0-not-elevated                PASS
+G1-packages                    PASS
+G2-extract-previous            PASS
+G3-previous-installed          PASS
+G4-update                      PASS
+G5-rollback                    PASS
+G6-update-again                PASS
+stage7 Update : PASS  (D:\JARVIS-release-work\stage7-local-1.0.14\evidence\stage7-20261004-144310)
+
+=== Interrupt (1.0.14-e03872680e1d) started 01:48:49; each line below is one finished check ===
+E0-not-elevated                PASS
+X0-starting-point              PASS
+X1-previous-running            PASS
+X2-killed-mid-copy             PASS
+X3-update-after-interruption   PASS
+stage7 Interrupt : PASS  (D:\JARVIS-release-work\stage7-local-1.0.14\evidence\stage7-20261004-144850)
+
+ALL STAGE 7 STEPS PASSED for 1.0.14-e03872680e1d.
+Now shut Windows down: Start > Power > Shut down. Wait until the VM window closes.
+Then, on the PC in the jarvis-s6-val account, double-click stage7-step again (it takes the snapshot) and tell Claude: stage 7 done
+
+exit=0  01:51:30
+===== third start: nothing left to do  01:51:30
+
+ALL STAGE 7 STEPS PASSED for 1.0.14-e03872680e1d.
+Now shut Windows down: Start > Power > Shut down. Wait until the VM window closes.
+Then, on the PC in the jarvis-s6-val account, double-click stage7-step again (it takes the snapshot) and tell Claude: stage 7 done
+
+exit=0  01:51:30
+live JARVIS processes at the end: 0 (start: 0); sandbox processes at the end: 0

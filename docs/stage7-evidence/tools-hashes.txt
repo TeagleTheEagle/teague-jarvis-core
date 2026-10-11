@@ -1,0 +1,8 @@
+# 2026-10-04T09:16:31Z Stage 7 tools in D:\JARVIS-S6-FRESHVM\tools after the owner's approval
+afa1be4d4f8c964eb8a3a67fbe049b6fa273b265222f3c5b2b62ddb28e33550e  New-Stage7Disc.ps1
+b68d1e1017b9f89375a70ec4dc2040f7257a32594fea24d927215ffae799c1a3  Start-Stage7Vm.ps1
+ef4ba3759ab1d34847881abf69e72aad354becca0fc1713039f2574eb11844f0  Invoke-Stage7Step.ps1
+e41093ae96ae64775470b96c4385beab38d1293a6d674c4673e34418da6c8d64  stage7-step.cmd
+e16085420b6133a795c956a8c24fb4ae5f0b15653de62c6a5c7a602b6e474e83  stage7-authorized.json
+d456da091c335e74c2f057068409cb5fe1a44ef3dcc156d780a83f16868a59a2  Start-FreshVm.ps1
+f4065b26a4abecf0bc71e6b219ee423832775ce822bde3588a764608bca3cad8  Take-FreshVmSnapshot.ps1

@@ -1,0 +1,306 @@
+--- D:\JARVIS-STAGE6-LIVE\a34f91e1db274bf78fc5a80e2a9d417c\code\trace_telemetry.hpp
++++ D:\JARVIS-STAGE6-LIVE\timestamp-reuse-v1-20260924\code\trace_telemetry.hpp
+@@ -9,6 +9,7 @@
+ #include <sstream>
+ #include <algorithm>
+ #include "loss_diagnostic_v2.hpp"
++#include "loss_measurement_v3.hpp"
+ 
+ // TEST-only, bounded in-memory instrumentation. No callback filesystem I/O.
+ namespace j6t {
+@@ -64,8 +65,9 @@
+ };
+ struct CallbackScope {
+  long long begin=now();bool selected=false;long long eventQpc=0;j6d::Queue before=j6d::diagnostic.spanQueue();j6d::U previous=j6d::diagnostic.sampleSequence;
++ j6m::Handoff lifecycle;
+  CallbackScope(){j6d::diagnostic.enter(begin);++telemetry.callbacks;long long empty=0;telemetry.firstCallback.compare_exchange_strong(empty,begin);}
+- ~CallbackScope(){auto end=now();telemetry.metrics[Callback].add(end-begin);if(selected)++telemetry.selected;else ++telemetry.rejected;j6d::diagnostic.callback(begin,end,selected,eventQpc);j6d::diagnostic.span(j6d::Callback,begin,end,before,previous);}
++ ~CallbackScope(){auto end=now();telemetry.metrics[Callback].add(end-begin);if(selected)++telemetry.selected;else ++telemetry.rejected;j6d::diagnostic.callback(begin,end,selected,eventQpc);j6d::diagnostic.span(j6d::Callback,begin,end,before,previous);lifecycle.publish(end);}
+ };
+ struct Lock {
+  std::unique_lock<std::mutex> lock;long long held;j6d::Queue before;j6d::U previous;
+--- D:\JARVIS-STAGE6-LIVE\a34f91e1db274bf78fc5a80e2a9d417c\code\authority_trace_v3.cpp
++++ D:\JARVIS-STAGE6-LIVE\timestamp-reuse-v1-20260924\code\authority_trace_v3.cpp
+@@ -46,13 +46,14 @@
+ 
+ static void WINAPI Event(EVENT_RECORD* e){j6t::CallbackScope timing;timing.eventQpc=e->EventHeader.TimeStamp.QuadPart;try{
+  if(!IsEqualGUID(e->EventHeader.ProviderId,Provider))return;unsigned id=e->EventHeader.EventDescriptor.Id;if(id!=1&&id!=2)return;
+- bool hasPid=false,hasTime=false;DWORD pid=static_cast<DWORD>(Number(e,L"ProcessID",&hasPid));ULONGLONG created=Number(e,L"CreateTime",&hasTime);
++ timing.lifecycle.start(timing.begin,e->EventHeader.TimeStamp.QuadPart,id,e->EventHeader.EventDescriptor.Version,e->EventHeader.ThreadId);
++ bool hasPid=false,hasTime=false;DWORD pid=static_cast<DWORD>(Number(e,L"ProcessID",&hasPid));timing.lifecycle.pid(pid,hasPid);ULONGLONG created=Number(e,L"CreateTime",&hasTime);timing.lifecycle.created(created,hasTime);
+  j6t::Lock l(guard);
+- if(id==1){DWORD parent=static_cast<DWORD>(Number(e,L"ParentProcessID"));if(!ParentKnown(parent,created,Number(e,L"ParentProcessSequenceNumber"))){++discarded;return;}
+-  if(!hasPid||!hasTime||!created||rows.size()>=8192){++faults;return;}auto key=std::make_pair(pid,created);if(rows.count(key)){++faults;return;}
+-  Row r;r.pid=pid;r.parent=parent;r.created=created;r.start=e->EventHeader.TimeStamp.QuadPart;r.notified=Q();r.version=e->EventHeader.EventDescriptor.Version;r.image=Text(e,L"ImageName");r.sequence=Number(e,L"ProcessSequenceNumber");r.parentSequence=Number(e,L"ParentProcessSequenceNumber");r.schema=Schemas(e);timing.selected=true;Capture(r,true);Acquire(r);rows.emplace(key,std::move(r));
+- }else{auto it=rows.find(std::make_pair(pid,created));if(it==rows.end()){++discarded;return;}auto&r=it->second;if(r.stop){++faults;return;}if(r.sequence!=Number(e,L"ProcessSequenceNumber"))++faults;r.stop=e->EventHeader.TimeStamp.QuadPart;r.stopNotified=Q();r.stopVersion=e->EventHeader.EventDescriptor.Version;auto exitTime=Number(e,L"ExitTime");bool known=false;auto code=static_cast<DWORD>(Number(e,L"ExitCode",&known));if(r.exitFT&&exitTime!=r.exitFT)++faults;if(r.exitCodeKnown&&(!known||r.exitCode!=code))++faults;r.exitFT=exitTime;r.exitCode=code;r.exitCodeKnown=known;r.stopSchema=Schemas(e);timing.selected=true;Capture(r,false);}
+- }catch(...){++faults;}}
++ if(id==1){bool parentOk=false,parentSequenceOk=false;DWORD parent=static_cast<DWORD>(Number(e,L"ParentProcessID",&parentOk));timing.lifecycle.parent(parent,parentOk);auto parentSequence=Number(e,L"ParentProcessSequenceNumber",&parentSequenceOk);timing.lifecycle.parentSequence(parentSequence,parentSequenceOk);if(!ParentKnown(parent,created,parentSequence)){++discarded;timing.lifecycle.finish(j6m::Disposition::UNKNOWN_PARENT);return;}
++  if(!hasPid||!hasTime){++faults;timing.lifecycle.finish(j6m::Disposition::DECODE_FAILURE);return;}if(!created){++faults;timing.lifecycle.finish(j6m::Disposition::INVALID_IDENTITY,j6m::ZERO_CREATION);return;}if(rows.size()>=8192){++faults;timing.lifecycle.finish(j6m::Disposition::OTHER_EXPLICIT_REJECTION,j6m::CAPACITY);return;}auto key=std::make_pair(pid,created);if(rows.count(key)){++faults;timing.lifecycle.finish(j6m::Disposition::DuplicateRecord,j6m::DUP_START);return;}
++  Row r;r.pid=pid;r.parent=parent;r.created=created;r.start=e->EventHeader.TimeStamp.QuadPart;r.notified=Q();r.version=e->EventHeader.EventDescriptor.Version;r.image=Text(e,L"ImageName");bool sequenceOk=false,secondParentSequenceOk=false;r.sequence=Number(e,L"ProcessSequenceNumber",&sequenceOk);timing.lifecycle.sequence(r.sequence,sequenceOk);r.parentSequence=Number(e,L"ParentProcessSequenceNumber",&secondParentSequenceOk);r.schema=Schemas(e);timing.selected=true;timing.lifecycle.value.reserved|=j6m::AUTHORITATIVE_ATTEMPT;Capture(r,true);timing.lifecycle.value.reserved|=j6m::AUTHORITATIVE_RETURNED;timing.lifecycle.value.reserved|=j6m::HANDLE_ATTEMPT;Acquire(r);timing.lifecycle.value.reserved|=j6m::HANDLE_RETURNED;rows.emplace(key,std::move(r));timing.lifecycle.value.reserved|=j6m::MAP_COMMITTED;timing.lifecycle.finish(j6m::Disposition::ADMITTED);
++ }else{auto it=rows.find(std::make_pair(pid,created));if(it==rows.end()){++discarded;timing.lifecycle.finish(j6m::Disposition::UNKNOWN_PROCESS_INSTANCE);return;}auto&r=it->second;if(r.stop){++faults;timing.lifecycle.finish(j6m::Disposition::DuplicateRecord,j6m::DUP_STOP);return;}bool stopSequenceOk=false;auto stopSequence=Number(e,L"ProcessSequenceNumber",&stopSequenceOk);timing.lifecycle.sequence(stopSequence,stopSequenceOk);if(r.sequence!=stopSequence){++faults;timing.lifecycle.value.reserved|=j6m::SEQUENCE_CONTRADICTION;}r.stop=e->EventHeader.TimeStamp.QuadPart;r.stopNotified=Q();r.stopVersion=e->EventHeader.EventDescriptor.Version;auto exitTime=Number(e,L"ExitTime");bool known=false;auto code=static_cast<DWORD>(Number(e,L"ExitCode",&known));if(r.exitFT&&exitTime!=r.exitFT){++faults;timing.lifecycle.value.reserved|=j6m::EXIT_TIME_CONTRADICTION;}if(r.exitCodeKnown&&(!known||r.exitCode!=code)){++faults;timing.lifecycle.value.reserved|=j6m::EXIT_CODE_CONTRADICTION;}r.exitFT=exitTime;r.exitCode=code;r.exitCodeKnown=known;r.stopSchema=Schemas(e);timing.selected=true;timing.lifecycle.value.reserved|=j6m::AUTHORITATIVE_ATTEMPT;Capture(r,false);timing.lifecycle.value.reserved|=j6m::AUTHORITATIVE_RETURNED;timing.lifecycle.finish(j6m::Disposition::ADMITTED);}
++ }catch(...){++faults;timing.lifecycle.exception();}}
+ static void Sample(){j6t::Lock l(guard);for(auto& a:rows){auto&r=a.second;if(r.handle&&!r.signal){DWORD s=WaitForSingleObject(r.handle,0);if(s==WAIT_OBJECT_0){r.signal=Q();FILETIME a,b,c,d;DWORD exit=0;if(GetProcessTimes(r.handle,&a,&b,&c,&d)&&GetExitCodeProcess(r.handle,&exit)){if(FT(a)!=r.created)++faults;if(r.exitFT&&r.exitFT!=FT(b))++faults;if(r.exitCodeKnown&&r.exitCode!=exit)++faults;r.exitFT=FT(b);r.exitCode=exit;r.exitCodeKnown=true;}else{r.metadataError=GetLastError();++faults;}}else if(s!=WAIT_TIMEOUT){++faults;}}}}
+ #include "terminal_receipt_v3.hpp"
+ #include "helper_handoff_v1.hpp"
+--- D:\JARVIS-STAGE6-LIVE\a34f91e1db274bf78fc5a80e2a9d417c\code\startup_trace.cpp
++++ D:\JARVIS-STAGE6-LIVE\timestamp-reuse-v1-20260924\code\startup_trace.cpp
+@@ -38,15 +38,16 @@
+ static std::map<std::pair<DWORD,ULONGLONG>,Row> rows;
+ static bool ParentKnown(DWORD pid,ULONGLONG childTime,ULONGLONG parentSequence){if(pid==rootPid)return childTime>=rootCreated;for(auto& a:rows){auto&r=a.second;if(r.pid==pid&&r.created<=childTime&&(!r.exitFT||childTime<=r.exitFT)&&(!parentSequence||r.sequence==parentSequence))return true;}return false;}
+ static void Acquire(Row& r){j6d::Span diagnosticProcessImage(j6d::ProcessImage);r.attemptBegin=Q();r.handle=OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION|SYNCHRONIZE,FALSE,r.pid);DWORD openError=r.handle?0:GetLastError();r.retained=Q();if(!r.handle){r.openError=openError;r.reason="OPEN_PROCESS_FAILED";return;}FILETIME a,b,c,d;if(!GetProcessTimes(r.handle,&a,&b,&c,&d)){r.metadataError=GetLastError();r.reason="KERNEL_IDENTITY_QUERY_FAILED";return;}if(FT(a)!=r.created){r.reason="PID_REUSED_KERNEL_CREATION_MISMATCH";CloseHandle(r.handle);r.handle=nullptr;return;}r.reason="RETAINED_MATCHING_KERNEL_CREATION";}
+-static void LifecycleEvent(EVENT_RECORD* e){try{
++static void LifecycleEvent(EVENT_RECORD* e,j6t::CallbackScope& timing){try{
+  if(!IsEqualGUID(e->EventHeader.ProviderId,Provider))return;unsigned id=e->EventHeader.EventDescriptor.Id;if(id!=1&&id!=2)return;
+- bool hasPid=false,hasTime=false;DWORD pid=static_cast<DWORD>(Number(e,L"ProcessID",&hasPid));ULONGLONG created=Number(e,L"CreateTime",&hasTime);
++ timing.lifecycle.start(timing.begin,e->EventHeader.TimeStamp.QuadPart,id,e->EventHeader.EventDescriptor.Version,e->EventHeader.ThreadId);
++ bool hasPid=false,hasTime=false;DWORD pid=static_cast<DWORD>(Number(e,L"ProcessID",&hasPid));timing.lifecycle.pid(pid,hasPid);ULONGLONG created=Number(e,L"CreateTime",&hasTime);timing.lifecycle.created(created,hasTime);
+  j6t::Lock l(guard);
+- if(id==1){DWORD parent=static_cast<DWORD>(Number(e,L"ParentProcessID"));if(!ParentKnown(parent,created,Number(e,L"ParentProcessSequenceNumber"))){++discarded;return;}
+-  if(!hasPid||!hasTime||!created||rows.size()>=8192){++faults;return;}auto key=std::make_pair(pid,created);if(rows.count(key)){++faults;return;}
+-  Row r;r.pid=pid;r.parent=parent;r.created=created;r.start=e->EventHeader.TimeStamp.QuadPart;r.notified=Q();r.version=e->EventHeader.EventDescriptor.Version;r.image=Text(e,L"ImageName");r.sequence=Number(e,L"ProcessSequenceNumber");r.parentSequence=Number(e,L"ParentProcessSequenceNumber");r.schema=Schemas(e);Acquire(r);rows.emplace(key,std::move(r));
+- }else{auto it=rows.find(std::make_pair(pid,created));if(it==rows.end()){++discarded;return;}auto&r=it->second;if(r.stop){++faults;return;}if(r.sequence!=Number(e,L"ProcessSequenceNumber"))++faults;r.stop=e->EventHeader.TimeStamp.QuadPart;r.stopNotified=Q();r.stopVersion=e->EventHeader.EventDescriptor.Version;auto exitTime=Number(e,L"ExitTime");bool known=false;auto code=static_cast<DWORD>(Number(e,L"ExitCode",&known));if(r.exitFT&&exitTime!=r.exitFT)++faults;if(r.exitCodeKnown&&(!known||r.exitCode!=code))++faults;r.exitFT=exitTime;r.exitCode=code;r.exitCodeKnown=known;r.stopSchema=Schemas(e);}
+- }catch(...){++faults;}}
++ if(id==1){bool parentOk=false,parentSequenceOk=false;DWORD parent=static_cast<DWORD>(Number(e,L"ParentProcessID",&parentOk));timing.lifecycle.parent(parent,parentOk);auto parentSequence=Number(e,L"ParentProcessSequenceNumber",&parentSequenceOk);timing.lifecycle.parentSequence(parentSequence,parentSequenceOk);if(!ParentKnown(parent,created,parentSequence)){++discarded;timing.lifecycle.finish(j6m::Disposition::UNKNOWN_PARENT);return;}
++  if(!hasPid||!hasTime){++faults;timing.lifecycle.finish(j6m::Disposition::DECODE_FAILURE);return;}if(!created){++faults;timing.lifecycle.finish(j6m::Disposition::INVALID_IDENTITY,j6m::ZERO_CREATION);return;}if(rows.size()>=8192){++faults;timing.lifecycle.finish(j6m::Disposition::OTHER_EXPLICIT_REJECTION,j6m::CAPACITY);return;}auto key=std::make_pair(pid,created);if(rows.count(key)){++faults;timing.lifecycle.finish(j6m::Disposition::DuplicateRecord,j6m::DUP_START);return;}
++  Row r;r.pid=pid;r.parent=parent;r.created=created;r.start=e->EventHeader.TimeStamp.QuadPart;r.notified=Q();r.version=e->EventHeader.EventDescriptor.Version;r.image=Text(e,L"ImageName");bool sequenceOk=false,secondParentSequenceOk=false;r.sequence=Number(e,L"ProcessSequenceNumber",&sequenceOk);timing.lifecycle.sequence(r.sequence,sequenceOk);r.parentSequence=Number(e,L"ParentProcessSequenceNumber",&secondParentSequenceOk);r.schema=Schemas(e);timing.lifecycle.value.reserved|=j6m::HANDLE_ATTEMPT;Acquire(r);timing.lifecycle.value.reserved|=j6m::HANDLE_RETURNED;rows.emplace(key,std::move(r));timing.lifecycle.value.reserved|=j6m::MAP_COMMITTED;timing.lifecycle.finish(j6m::Disposition::ADMITTED);
++ }else{auto it=rows.find(std::make_pair(pid,created));if(it==rows.end()){++discarded;timing.lifecycle.finish(j6m::Disposition::UNKNOWN_PROCESS_INSTANCE);return;}auto&r=it->second;if(r.stop){++faults;timing.lifecycle.finish(j6m::Disposition::DuplicateRecord,j6m::DUP_STOP);return;}bool stopSequenceOk=false;auto stopSequence=Number(e,L"ProcessSequenceNumber",&stopSequenceOk);timing.lifecycle.sequence(stopSequence,stopSequenceOk);if(r.sequence!=stopSequence){++faults;timing.lifecycle.value.reserved|=j6m::SEQUENCE_CONTRADICTION;}r.stop=e->EventHeader.TimeStamp.QuadPart;r.stopNotified=Q();r.stopVersion=e->EventHeader.EventDescriptor.Version;auto exitTime=Number(e,L"ExitTime");bool known=false;auto code=static_cast<DWORD>(Number(e,L"ExitCode",&known));if(r.exitFT&&exitTime!=r.exitFT){++faults;timing.lifecycle.value.reserved|=j6m::EXIT_TIME_CONTRADICTION;}if(r.exitCodeKnown&&(!known||r.exitCode!=code)){++faults;timing.lifecycle.value.reserved|=j6m::EXIT_CODE_CONTRADICTION;}r.exitFT=exitTime;r.exitCode=code;r.exitCodeKnown=known;r.stopSchema=Schemas(e);timing.lifecycle.finish(j6m::Disposition::ADMITTED);}
++ }catch(...){++faults;timing.lifecycle.exception();}}
+ 
+ static const GUID FileProvider={0xedd08927,0x9cc4,0x4e65,{0xb9,0x70,0xc2,0x56,0x0f,0xb5,0xc2,0x89}};
+ static const GUID ClassicReg={0xae53722e,0xc863,0x11d2,{0x86,0x59,0x00,0xc0,0x4f,0xa3,0x21,0xa1}};
+@@ -58,7 +59,7 @@
+ static std::map<ULONGLONG,std::pair<DWORD,ULONGLONG>> irps;
+ static Row* Target(DWORD pid,LONGLONG q){for(auto& a:rows){auto&r=a.second;if(r.pid==pid&&q>=r.start&&(!r.stop||q<=r.stop))return &r;}return nullptr;}
+ static void WINAPI Event(EVENT_RECORD* e){j6t::CallbackScope timing;timing.eventQpc=e->EventHeader.TimeStamp.QuadPart;
+- LifecycleEvent(e);
++ LifecycleEvent(e,timing);
+  try {
+   bool proc=IsEqualGUID(e->EventHeader.ProviderId,Provider),file=IsEqualGUID(e->EventHeader.ProviderId,FileProvider),reg=(IsEqualGUID(e->EventHeader.ProviderId,RegProvider)||IsEqualGUID(e->EventHeader.ProviderId,ClassicReg)),sched=IsEqualGUID(e->EventHeader.ProviderId,ThreadProvider);
+   if(!proc&&!file&&!reg&&!sched)return;
+@@ -87,7 +88,7 @@
+   for(auto n:texts){if(std::find(schema.begin(),schema.end(),U(n))==schema.end())continue;auto v=Text(e,n);if(!v.empty()){if(!first)o<<",";first=false;o<<J(U(n))<<":"<<J(U(v));}}
+   if(sched&&op==36&&e->UserDataLength>=8){DWORD ts[2];memcpy(ts,e->UserData,8);if(!first)o<<",";o<<"\"newTid\":"<<ts[0]<<",\"oldTid\":"<<ts[1];}
+   o<<"},\"schema\":"<<List(Schemas(e))<<"}";}if(!j6t::measure(j6t::Admission,[&]{return sink->add(o.str());}))++startupOverflow;if(file&&id==24)irps.erase(irp);
+- }catch(...){++faults;}
++ }catch(...){++faults;timing.lifecycle.exception();}
+ }
+ static void Sample(){j6t::Lock l(guard);for(auto& a:rows){auto&r=a.second;if(r.handle&&!r.signal){DWORD s=WaitForSingleObject(r.handle,0);if(s==WAIT_OBJECT_0){r.signal=Q();FILETIME a,b,c,d;DWORD exit=0;if(GetProcessTimes(r.handle,&a,&b,&c,&d)&&GetExitCodeProcess(r.handle,&exit)){if(FT(a)!=r.created)++faults;if(r.exitFT&&r.exitFT!=FT(b))++faults;if(r.exitCodeKnown&&r.exitCode!=exit)++faults;r.exitFT=FT(b);r.exitCode=exit;r.exitCodeKnown=true;}else{r.metadataError=GetLastError();++faults;}}else if(s!=WAIT_TIMEOUT){++faults;}}}}
+ static std::string List(const std::vector<std::string>& names){std::string s="[";bool first=true;for(auto&n:names){if(!first)s+=",";first=false;s+=J(n);}return s+"]";}
+--- D:\JARVIS-STAGE6-LIVE\a34f91e1db274bf78fc5a80e2a9d417c\code\loss_measurement_v3.hpp
++++ D:\JARVIS-STAGE6-LIVE\timestamp-reuse-v1-20260924\code\loss_measurement_v3.hpp
+@@ -35,6 +35,37 @@
+  bool complete() const noexcept {return overflow==0&&attempted==count;}
+ };
+ static_assert(sizeof(LifecycleTap)<=2*1024*1024,"Lifecycle sidecar exceeds reviewed fixed cap");
++
++// Prospective callback-body endpoint, not historical fixture completion.
++enum Reason:unsigned { PID_DECODE=1,TIME_DECODE=2,ZERO_CREATION=4,CAPACITY=8,
++ DUP_START=16,DUP_STOP=32,SEQUENCE_CONTRADICTION=64,EXIT_TIME_CONTRADICTION=128,
++ EXIT_CODE_CONTRADICTION=256,AUTHORITATIVE_ATTEMPT=512,AUTHORITATIVE_RETURNED=1024,
++ HANDLE_ATTEMPT=2048,HANDLE_RETURNED=4096,MAP_COMMITTED=8192,
++ PARENT_DECODE=16384,SEQUENCE_DECODE=32768,PARENT_SEQUENCE_DECODE=65536 };
++inline LifecycleTap lifecycleTap; // default disabled; offline candidate only
++inline U handoffErrors=0;
++struct Handoff {
++ Lifecycle value{};bool eligible=false,finalized=false;
++ void start(long long arrival,long long event,unsigned id,unsigned version,unsigned thread) noexcept {
++  eligible=true;value.arrivalQpc=arrival;value.eventQpc=event;value.eventId=id;value.version=version;value.thread=thread;
++ }
++ void pid(U v,bool ok) noexcept {value.pid=unsigned(v);if(ok)value.valid|=PID_VALID;else value.reserved|=PID_DECODE;}
++ void created(U v,bool ok) noexcept {value.created=v;if(ok)value.valid|=CREATED_VALID;else value.reserved|=TIME_DECODE;}
++ void parent(U v,bool ok) noexcept {value.parentPid=unsigned(v);if(ok)value.valid|=PARENT_VALID;else value.reserved|=PARENT_DECODE;}
++ void sequence(U v,bool ok) noexcept {value.sequence=v;if(ok)value.valid|=SEQUENCE_VALID;else value.reserved|=SEQUENCE_DECODE;}
++ void parentSequence(U v,bool ok) noexcept {value.parentSequence=v;if(ok)value.valid|=PARENT_SEQUENCE_VALID;else value.reserved|=PARENT_SEQUENCE_DECODE;}
++ void finish(Disposition d,unsigned reason=0) noexcept {value.disposition=d;value.reserved|=reason;finalized=true;}
++ void exception() noexcept {if(eligible)finish(Disposition::ExceptionCaught);}
++ void publish(long long end) noexcept {
++  if(!lifecycleTap.enabled||!eligible)return;
++  if(!finalized||end<value.arrivalQpc){++handoffErrors;return;}
++  value.completionQpc=end;lifecycleTap.append(value);
++ }
++};
++static_assert(std::is_trivially_copyable_v<Handoff>);
++static_assert(sizeof(Handoff)<=96,"fixed scope payload");
++inline bool lifecycleComplete() noexcept {return !handoffErrors&&lifecycleTap.complete();}
++
+ enum class Operation:unsigned { Loop,Sample,Handoff,Attributes,Read,Hash,LockWait,LockHold,Write,Flush,Publish,Terminal,Count };
+ struct Totals {U count=0,total=0,maximum=0,success=0,failure=0;};
+ struct Slow {long long begin=0,end=0;unsigned thread=0,phase=0;Operation operation{};unsigned result=0;};
+--- D:\JARVIS-STAGE6-LIVE\a34f91e1db274bf78fc5a80e2a9d417c\code\loss_measurement_fixture_v3.cpp
++++ D:\JARVIS-STAGE6-LIVE\timestamp-reuse-v1-20260924\code\loss_measurement_fixture_v3.cpp
+@@ -1,88 +1,97 @@
+-// OFFLINE ONLY: TDH manifest decoding + synthetic callback replay. Never starts an ETW session.
++// Offline source-derived branch equivalence only. No tracing/session creation.
+ #define NOMINMAX
+-#include "loss_measurement_v3.hpp"
++#include "trace_telemetry.hpp"
+ #include <evntcons.h>
+-#include <tdh.h>
+-#include <psapi.h>
++#include <map>
++#include <vector>
++#include <string>
+ #include <iostream>
+-#include <vector>
+-#include <algorithm>
+-#include <mutex>
+-#include <memory>
+-#include <cmath>
+-#include <atomic>
++#include <stdexcept>
+ #include <cstdlib>
+ #include <new>
+-static std::atomic<unsigned long long> allocations{0};
++static unsigned long long allocations=0;
+ void* operator new(size_t n){++allocations;if(auto p=malloc(n?n:1))return p;throw std::bad_alloc();}
+-void operator delete(void* p) noexcept {free(p);}
+-void operator delete(void* p,size_t) noexcept {free(p);}
++void operator delete(void*p) noexcept {free(p);}
++void operator delete(void*p,size_t) noexcept {free(p);}
++namespace fixture {
+ using U=unsigned long long;
+-static const GUID provider={0x22fb2cd6,0x0e7b,0x422b,{0xa0,0xc7,0x2f,0xad,0x1f,0xd0,0xe7,0x16}};
+-static U ft(FILETIME x){return (U(x.dwHighDateTime)<<32)|x.dwLowDateTime;}
+-static U cpu(bool thread){FILETIME a,b,k,u;BOOL ok=thread?GetThreadTimes(GetCurrentThread(),&a,&b,&k,&u):GetProcessTimes(GetCurrentProcess(),&a,&b,&k,&u);if(!ok)throw std::runtime_error("CPU query");return ft(k)+ft(u);}
+-// Same TDH property calls and allocation form as the inspected observer's Field/Number.
+-static U number(EVENT_RECORD* e,const wchar_t* name){PROPERTY_DATA_DESCRIPTOR p{};p.PropertyName=reinterpret_cast<ULONGLONG>(name);p.ArrayIndex=ULONG_MAX;ULONG n=0;auto r=TdhGetPropertySize(e,0,nullptr,1,&p,&n);if(r||n>65536||(n!=4&&n!=8))throw std::runtime_error("Offline manifest decode unavailable");std::vector<BYTE> v(n);if(TdhGetProperty(e,0,nullptr,1,&p,n,v.data()))throw std::runtime_error("Offline property read");U value=0;memcpy(&value,v.data(),n);return value;}
+-static volatile U observable=0;
+-static std::mutex mapGuard;
+-static void dispatch(EVENT_RECORD* e,j6m::LifecycleTap& tap){
+- auto arrival=j6m::tick();
+- auto pid=number(e,L"ProcessID");auto created=number(e,L"CreateTime");
+- auto wait=j6m::tick();mapGuard.lock();auto held=j6m::tick();
+- auto parent=number(e,L"ParentProcessID");auto ps=number(e,L"ParentProcessSequenceNumber");
+- // Replay the real unknown-parent branch, with no OpenProcess or selected-output filesystem access.
+- observable=pid^created^parent^ps^U(wait)^U(held);
+- mapGuard.unlock();
+- if(tap.enabled){j6m::Lifecycle v;v.eventQpc=e->EventHeader.TimeStamp.QuadPart;v.arrivalQpc=arrival;v.completionQpc=j6m::tick();v.pid=unsigned(pid);v.created=created;v.parentPid=unsigned(parent);v.parentSequence=ps;v.eventId=1;v.version=4;v.valid=j6m::PID_VALID|j6m::CREATED_VALID|j6m::PARENT_VALID|j6m::PARENT_SEQUENCE_VALID;v.disposition=j6m::Disposition::UNKNOWN_PARENT;tap.append(v);}
+- // Existing observer bookkeeping has its own completion clock; retained in both modes.
+- observable^=U(j6m::tick());
++static const GUID Provider={1},FileProvider={2},RegProvider={3},ClassicReg={4},ThreadProvider={5};
++struct Row{DWORD pid=0,parent=0;U created=0,sequence=0,parentSequence=0,exitFT=0;DWORD exitCode=0;bool exitCodeKnown=false;long long start=0,notified=0,stop=0,stopNotified=0;unsigned version=0,stopVersion=0;std::wstring image;std::vector<int> schema,stopSchema;};
++std::map<std::pair<DWORD,U>,Row> rows;
++std::mutex guard;
++unsigned faults=0,discarded=0;int calls=0,throwAt=0,captures=0,acquires=0;
++bool parentKnown=true;
++std::map<std::wstring,std::pair<U,bool>> fields;
++std::vector<std::string> operations;
++void step(const std::string&x){operations.push_back(x);if(++calls==throwAt)throw std::runtime_error("controlled dependency failure");}
++U Number(EVENT_RECORD*,const wchar_t* n,bool*ok=nullptr){std::wstring w(n);step("number:"+std::string(w.begin(),w.end()));auto v=fields.at(w);if(ok)*ok=v.second;return v.second?v.first:0;}
++bool ParentKnown(DWORD,U,U){step("parent");return parentKnown;}
++std::wstring Text(EVENT_RECORD*,const wchar_t*){step("text");return L"synthetic";}
++std::vector<int> Schemas(EVENT_RECORD*){step("schema");return {1,2};}
++long long Q(){return 100;}
++void Capture(const Row&,bool start){step(start?"capture-start":"capture-stop");++captures;}
++void Acquire(Row&){step("acquire");++acquires;}
++void reset(int scenario,int fail){
++ rows.clear();faults=discarded=0;calls=captures=acquires=0;throwAt=fail;parentKnown=true;operations.clear();
++ fields={{L"ProcessID",{19,true}},{L"CreateTime",{23,true}},{L"ParentProcessID",{7,true}},{L"ParentProcessSequenceNumber",{11,true}},{L"ProcessSequenceNumber",{13,true}},{L"ExitTime",{71,true}},{L"ExitCode",{0,true}}};
++ if(scenario==1||scenario==9)parentKnown=false;
++ if(scenario==4)fields[L"CreateTime"]={0,true};
++ if(scenario==5||scenario==9)fields[L"ProcessID"]={0,false};
++ if(scenario==10)fields[L"ParentProcessID"]={0,false};
++ if(scenario==3||scenario==7||scenario==8||scenario==11){Row r;r.pid=19;r.created=23;r.sequence=13;if(scenario==7)r.stop=9;if(scenario==8){r.sequence=99;r.exitFT=99;r.exitCodeKnown=true;r.exitCode=3;}rows[{19,23}]=r;}
++ if(scenario==6)for(unsigned i=0;i<8192;i++)rows[{1000+i,23}]=Row{};
++ j6m::lifecycleTap.count=0;j6m::lifecycleTap.attempted=0;j6m::lifecycleTap.overflow=0;j6m::handoffErrors=0;j6m::lifecycleTap.enabled=true;
+ }
+-static void check(bool b,const char* m,unsigned& checks){if(!b)throw std::runtime_error(m);++checks;}
+-static unsigned tests(){
+- unsigned checks=0;auto tap=std::make_unique<j6m::LifecycleTap>();j6m::Lifecycle v;v.pid=19;v.created=23;
+- auto before=allocations.load();tap->append(v);check(tap->count==0,"disabled",checks);tap->enabled=true;
+- for(size_t i=0;i<tap->capacity;i++)tap->append(v);
+- check(tap->count==tap->capacity,"capacity",checks);check(tap->complete(),"complete",checks);
+- auto first=tap->records[0];tap->append(v);check(tap->overflow==1&&!tap->complete(),"overflow explicit",checks);
+- check(tap->records[0].localSequence==first.localSequence&&tap->records[0].pid==19,"no overwrite",checks);
+- check(allocations.load()==before,"no tap allocations",checks);
+- check(tap->records.back().localSequence==tap->capacity,"recorder sequence",checks);
+- check(tap->records[0].valid==0,"optional not decoded",checks);
+- SetLastError(12345);tap->append(v);check(GetLastError()==12345,"append preserves LastError",checks);
+- auto c=std::make_unique<j6m::Coordination>();c->enabled=true;c->frequency=10000000;
+- c->append(j6m::Operation::Attributes,0,10000,1,0,0,true);check(c->count==0,"strict over 1ms",checks);
+- c->append(j6m::Operation::Attributes,0,10001,1,0,5,false);check(c->count==1,"slow captured",checks);
+- auto t=c->totals[size_t(j6m::Operation::Attributes)];check(t.count==2&&t.success==1&&t.failure==1&&t.total==20001,"counts",checks);
+- c->append(j6m::Operation::Attributes,2,1,1,0,0,true);check(c->overflow==1,"invalid time explicit",checks);
+- return checks;
++std::string state(){std::ostringstream s;s<<faults<<','<<discarded<<','<<captures<<','<<acquires<<','<<rows.size();for(auto&a:rows){auto&r=a.second;s<<';'<<a.first.first<<','<<a.first.second<<','<<r.pid<<','<<r.parent<<','<<r.created<<','<<r.sequence<<','<<r.parentSequence<<','<<r.start<<','<<r.stop<<','<<r.exitFT<<','<<r.exitCode<<','<<r.exitCodeKnown<<','<<r.schema.size()<<','<<r.stopSchema.size();}return s.str();}
+ }
+-struct Trial{bool enabled;U count,threadTicks,processTicks,allocated;double wall;long long p50,p95,p99,maximum;SIZE_T peakWorkingSet;};
+-static Trial trial(EVENT_RECORD& e,j6m::LifecycleTap& tap,bool enabled,U n,long long frequency){
+- tap.enabled=enabled;tap.count=0;tap.attempted=0;tap.overflow=0;std::array<long long,4096> latency{};size_t samples=0;
+- auto alloc=allocations.load();auto pc=cpu(false);auto tc=cpu(true);auto begin=j6m::tick();long long maximum=0;
+- for(U i=0;i<n;++i){
+-  if(tap.count==8192){observable^=tap.records[0].localSequence^tap.records[8191].localSequence;tap.count=0;tap.attempted=0;}
+-  // Sparse timing sample is identical in both modes; not a live-recorder reset policy.
+-  if(i%128==0&&samples<latency.size()){auto b=j6m::tick();dispatch(&e,tap);auto dt=j6m::tick()-b;latency[samples++]=dt;if(dt>maximum)maximum=dt;}else dispatch(&e,tap);
++#include "callback-bodies.inc"
++static unsigned checks=0,cases=0;
++static void check(bool ok,const char*why){++checks;if(!ok)throw std::runtime_error(why);}
++using Callback=void(WINAPI*)(EVENT_RECORD*);
++static void compare(Callback oldFn,Callback newFn,int scenario,int fail){
++ EVENT_RECORD e{};e.EventHeader.ProviderId=fixture::Provider;e.EventHeader.EventDescriptor.Id=(scenario==2||scenario==7||scenario==8||scenario==11)?2:1;e.EventHeader.EventDescriptor.Version=4;e.EventHeader.ThreadId=81;e.EventHeader.TimeStamp.QuadPart=1;
++ fixture::reset(scenario,fail);oldFn(&e);auto state=fixture::state();auto ops=fixture::operations;
++ fixture::reset(scenario,fail);newFn(&e);++cases;
++ check(state==fixture::state(),"selector / authority state differs");check(ops==fixture::operations,"existing dependency ordering/query differs");
++ check(j6m::lifecycleTap.count==1,"one eligible record");check(j6m::lifecycleComplete(),"handoff complete");
++ auto&r=j6m::lifecycleTap.records[0];check(r.arrivalQpc<=r.completionQpc,"monotonic completion");check(r.eventQpc==1&&r.thread==81&&r.version==4,"event identity");check(r.completionQpc-r.arrivalQpc>=0,"body duration");check(r.arrivalQpc-r.eventQpc>=0,"delivery lag");
++ if(fail&&fail<=fixture::calls){check(r.disposition==j6m::Disposition::ExceptionCaught,"exception disposition");if(fail==1)check(r.valid==0,"exception before decode");if(fail==2)check(r.valid==j6m::PID_VALID,"exception after pid");if(!fixture::operations.empty()&&fixture::operations.back().find("capture-")==0)check((r.reserved&j6m::AUTHORITATIVE_ATTEMPT)&&!(r.reserved&j6m::AUTHORITATIVE_RETURNED),"partial authoritative attempt retained");if(!fixture::operations.empty()&&fixture::operations.back()=="acquire")check((r.reserved&j6m::HANDLE_ATTEMPT)&&!(r.reserved&j6m::HANDLE_RETURNED),"partial handle attempt retained");return;}
++ j6m::Disposition expected=j6m::Disposition::ADMITTED;
++ switch(scenario){case 1:case 9:expected=j6m::Disposition::UNKNOWN_PARENT;break;case 2:expected=j6m::Disposition::UNKNOWN_PROCESS_INSTANCE;break;case 3:case 7:expected=j6m::Disposition::DuplicateRecord;break;case 4:expected=j6m::Disposition::INVALID_IDENTITY;break;case 5:expected=j6m::Disposition::DECODE_FAILURE;break;case 6:expected=j6m::Disposition::OTHER_EXPLICIT_REJECTION;break;}
++ check(r.disposition==expected,"exact disposition");
++ check(r.pid==(scenario==5||scenario==9?0:19)&&r.created==(scenario==4?0:23),"identity values");
++ if(scenario==9)check(!(r.valid&j6m::PID_VALID)&&(r.reserved&j6m::PID_DECODE),"unknown parent precedence with invalid pid");
++ if(scenario==10)check(!(r.valid&j6m::PARENT_VALID)&&(r.reserved&j6m::PARENT_DECODE),"no inferred parent validity");
++ if(scenario==6)check(r.reserved&j6m::CAPACITY,"capacity reason");
++ if(scenario==8)check((r.reserved&(j6m::SEQUENCE_CONTRADICTION|j6m::EXIT_TIME_CONTRADICTION|j6m::EXIT_CODE_CONTRADICTION))==(j6m::SEQUENCE_CONTRADICTION|j6m::EXIT_TIME_CONTRADICTION|j6m::EXIT_CODE_CONTRADICTION),"fault and continue facts");
++ if(scenario==0||scenario==11)check(r.sequence==13&&(r.valid&j6m::SEQUENCE_VALID),"process sequence");
++}
++extern "C" __declspec(noinline) void clock_path(unsigned disposition){
++ j6t::CallbackScope timing;timing.lifecycle.start(timing.begin,1,1,4,81);timing.lifecycle.finish(static_cast<j6m::Disposition>(disposition));
++}
++int main(){try{
++ for(auto pair:{std::make_pair(old_authority::Event,new_authority::Event),std::make_pair(old_detail::Event,new_detail::Event)}){
++  for(int scenario=0;scenario<12;scenario++)compare(pair.first,pair.second,scenario,0);
++  for(int scenario:{0,11}){fixture::reset(scenario,0);EVENT_RECORD e{};e.EventHeader.ProviderId=fixture::Provider;e.EventHeader.EventDescriptor.Id=scenario==11?2:1;pair.first(&e);int n=fixture::calls;for(int fail=1;fail<=n;fail++)compare(pair.first,pair.second,scenario,fail);}
++  for(int id:{0,3,9}){fixture::reset(0,0);EVENT_RECORD e{};e.EventHeader.ProviderId=fixture::Provider;e.EventHeader.EventDescriptor.Id=USHORT(id);pair.second(&e);check(j6m::lifecycleTap.count==0,"nonlifecycle not fabricated");}
++  fixture::reset(0,0);EVENT_RECORD wrong{};pair.second(&wrong);check(j6m::lifecycleTap.count==0,"wrong provider");
+  }
+- auto end=j6m::tick();auto thread=cpu(true)-tc;auto process=cpu(false)-pc;auto added=allocations.load()-alloc;
+- std::sort(latency.begin(),latency.begin()+samples);PROCESS_MEMORY_COUNTERS pm{};GetProcessMemoryInfo(GetCurrentProcess(),&pm,sizeof(pm));
+- auto q=[&](double x){return samples?latency[size_t((samples-1)*x)]:0;};
+- return {enabled,n,thread,process,added,double(end-begin)/frequency,q(.5),q(.95),q(.99),maximum,pm.PeakWorkingSetSize};
+-}
+-int main(int argc,char**argv){try{
+- if(argc!=2)return 90;std::string mode=argv[1];
+- if(mode=="tests"){auto n=tests();std::cout<<"{\"status\":\"PASS\",\"checks\":"<<n<<",\"lifecycleBytes\":"<<sizeof(j6m::LifecycleTap)<<",\"coordinationBytes\":"<<sizeof(j6m::Coordination)<<",\"liveETW\":false}"<<std::endl;return 0;}
+- if(mode!="benchmark")return 90;
+- EVENT_RECORD e{};std::array<BYTE,1024> payload{};e.EventHeader.Size=sizeof(EVENT_HEADER);e.EventHeader.ProviderId=provider;e.EventHeader.EventDescriptor.Id=1;e.EventHeader.EventDescriptor.Version=4;e.EventHeader.EventDescriptor.Opcode=1;e.EventHeader.EventDescriptor.Level=4;e.EventHeader.EventDescriptor.Keyword=0x10;e.EventHeader.Flags=EVENT_HEADER_FLAG_64_BIT_HEADER;e.UserData=payload.data();e.UserDataLength=USHORT(payload.size());
+- auto tap=std::make_unique<j6m::LifecycleTap>();LARGE_INTEGER freq;QueryPerformanceFrequency(&freq);
+- // Decoding must really succeed. No synthetic sleep/spin to inflate the baseline.
+- for(int i=0;i<100;i++)dispatch(&e,*tap);
+- auto pilot=trial(e,*tap,false,20000,freq.QuadPart);
+- U n=std::max<U>(20000,std::min<U>(1000000,U(std::ceil(30000000.0/double(std::max<U>(pilot.threadTicks,1))*20000))));
+- std::cout<<"{\"kind\":\"protocol\",\"fixture\":\"actual TDH property APIs; unknown-parent lifecycle decode branch\",\"sameBinary\":true,\"pairs\":8,\"iterationsPerTrial\":"<<n<<",\"pilotCpu100ns\":"<<pilot.threadTicks<<",\"screenPercent\":1,\"liveETW\":false}"<<std::endl;
+- for(int pair=0;pair<8;++pair)for(int order=0;order<2;++order){bool on=(pair%2==0)?order==1:order==0;auto r=trial(e,*tap,on,n,freq.QuadPart);
+- std::cout<<"{\"kind\":\"trial\",\"pair\":"<<pair<<",\"enabled\":"<<(on?"true":"false")<<",\"callbacks\":"<<r.count<<",\"dispatcherCpu100ns\":"<<r.threadTicks<<",\"processCpu100ns\":"<<r.processTicks<<",\"wallSeconds\":"<<r.wall<<",\"allocations\":"<<r.allocated<<",\"sampledLatencyTicks\":{\"p50\":"<<r.p50<<",\"p95\":"<<r.p95<<",\"p99\":"<<r.p99<<",\"max\":"<<r.maximum<<"},\"frequency\":"<<freq.QuadPart<<",\"peakWorkingSetBytes\":"<<r.peakWorkingSet<<"}"<<std::endl;
+- }
+- return 0;
+- }catch(const std::exception&e){std::cerr<<e.what()<<std::endl;return 97;}}
++ fixture::reset(0,0);auto a=allocations;for(unsigned i=0;i<8;i++)clock_path(i);check(allocations==a,"handoff allocates");check(j6m::lifecycleTap.count==8,"all explicit dispositions");
++ for(size_t i=0;i<8;i++)check(j6m::lifecycleTap.records[i].localSequence==i+1,"sequence continuity");
++ auto first=j6m::lifecycleTap.records[0];for(size_t i=8;i<j6m::LifecycleTap::capacity+1;i++)clock_path(0);
++ check(j6m::lifecycleTap.count==j6m::LifecycleTap::capacity&&j6m::lifecycleTap.overflow==1,"capacity overflow");check(j6m::lifecycleTap.records[0].completionQpc==first.completionQpc,"no overwrite");check(!j6m::lifecycleComplete(),"overflow fails closed");
++ j6m::lifecycleTap.enabled=false;auto n=j6m::lifecycleTap.attempted;clock_path(0);check(j6m::lifecycleTap.attempted==n,"disabled recorder");
++ fixture::reset(0,0);{j6t::CallbackScope t;t.lifecycle.start(t.begin,1,1,4,1);}check(j6m::handoffErrors==1&&j6m::lifecycleTap.count==0,"unfinalized fails closed");
++ fixture::reset(0,0);j6m::Handoff invalid;invalid.start(10,1,1,4,1);invalid.finish(j6m::Disposition::ADMITTED);invalid.publish(9);check(j6m::handoffErrors==1,"reversed time fails closed");
++ fixture::reset(0,0);j6d::diagnostic.enabled=true;long long cleanupQpc=0,arrival=0;
++ auto metricBefore=j6t::telemetry.metrics[j6t::Callback].ticks.load();
++ {j6t::CallbackScope t;arrival=t.begin;t.lifecycle.start(t.begin,1,1,4,81);struct Cleanup{long long& q;~Cleanup(){q=j6m::tick();}} cleanup{cleanupQpc};t.lifecycle.finish(j6m::Disposition::ADMITTED);}
++ auto record=j6m::lifecycleTap.records[0];check(record.completionQpc>=cleanupQpc,"body local cleanup included");check(record.arrivalQpc==arrival,"existing arrival reused");
++#ifndef J6_REFERENCE_TEST
++ check(record.completionQpc==j6d::diagnostic.lastCallback.load(),"same existing completion reused");check(j6t::telemetry.metrics[j6t::Callback].ticks.load()-metricBefore==static_cast<unsigned long long>(record.completionQpc-record.arrivalQpc),"duration equals existing callback metric");
++#endif
++ check(j6d::diagnostic.activeCallback.load()==0,"existing bookkeeping completed before inspection");j6d::diagnostic.enabled=false;
++ fixture::reset(0,0);j6m::Handoff zeros;zeros.start(1,0,1,4,1);zeros.pid(0,true);zeros.created(0,true);zeros.parent(0,true);zeros.sequence(0,true);zeros.parentSequence(0,true);zeros.finish(j6m::Disposition::ADMITTED);zeros.publish(2);check(j6m::lifecycleTap.records[0].valid==31,"zero decoded fields remain valid");
++ fixture::reset(0,0);SetLastError(54321);j6m::Handoff absent;absent.start(1,0,1,4,1);absent.finish(j6m::Disposition::UNKNOWN_PROCESS_INSTANCE);absent.publish(2);check(GetLastError()==54321,"handoff LastError preservation");check(j6m::lifecycleTap.records[0].valid==0,"unavailable fields explicit");
++ std::cout<<"{\"status\":\"PASS\",\"checks\":"<<checks<<",\"sourceDerivedCases\":"<<cases<<",\"liveETW\":false,\"handoffBytes\":"<<sizeof(j6m::Handoff)<<"}"<<std::endl;return 0;
++ }catch(const std::exception&e){std::cerr<<"{\"status\":\"FAIL\",\"checks\":"<<checks<<",\"error\":\""<<e.what()<<"\"}"<<std::endl;return 97;}}

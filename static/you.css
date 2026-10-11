@@ -1,0 +1,15 @@
+/* The You page (1.0.19, static/you.js): the panel at the top of the Memory section, across the whole grid. */
+#memoryView .memory-grid > .you-panel { grid-column: 1 / -1; min-height: 0; }
+.you-note { font-size: 12px; line-height: 1.5; opacity: .75; margin: 4px 0 10px; }
+.you-count { opacity: .8; }
+.you-soon h3, .you-list h3, .you-add h3 { margin: 12px 0 6px; letter-spacing: .08em; text-transform: uppercase; font-size: 12px; opacity: .85; }
+.you-soon-line { margin: 4px 0; padding: 6px 10px; border-left: 2px solid #ffc857; background: rgba(255, 200, 87, .06); }
+.you-entry { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 10px; margin: 4px 0;
+  border: 1px solid rgba(0, 217, 255, .25); border-radius: 8px; background: rgba(6, 21, 34, .55); }
+.you-add { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.you-add h3 { flex-basis: 100%; }
+.you-add input:not([type=number]) { flex: 1 1 220px; min-width: 0; }
+.you-date { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.you-date input[type=number] { width: 7em; }
+.you-date-label { font-size: 12px; opacity: .8; }
+@media (max-width: 650px) { .you-add > * { flex-basis: 100%; } }

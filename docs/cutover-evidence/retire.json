@@ -1,0 +1,26 @@
+{
+    "schema":  "jarvis-cutover-retire-v1",
+    "utc":  "2026-10-04T08:45:24.3896956Z",
+    "moved":  [
+                  {
+                      "from":  "C:\\Users\\jonny\\OneDrive\\Desktop\\JARVIS Desktop.lnk",
+                      "to":  "D:\\JARVIS-cutover\\old-shortcuts\\desktop\\JARVIS Desktop.lnk",
+                      "sha256":  "d339ec73cb6e376a0e7d9ec42ee63e8af628ceacb0ab8564ccb85db736bce12e"
+                  },
+                  {
+                      "from":  "C:\\Users\\jonny\\OneDrive\\Desktop\\JARVIS INDUSTRIES.lnk",
+                      "to":  "D:\\JARVIS-cutover\\old-shortcuts\\desktop\\JARVIS INDUSTRIES.lnk",
+                      "sha256":  "eae1677768d7989f5af69637101092699848ac47de407165ddeedf4a2b7a06ff"
+                  },
+                  {
+                      "from":  "C:\\Users\\jonny\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\JARVIS Desktop.lnk",
+                      "to":  "D:\\JARVIS-cutover\\old-shortcuts\\startup\\JARVIS Desktop.lnk",
+                      "sha256":  "4bf6888b0d8405eb257b0db0c2ab614114bc85bf5fcf3aefa42512e1236723b8"
+                  }
+              ],
+    "new_shortcuts":  {
+                          "desktop":  true,
+                          "startup":  true
+                      },
+    "undo":  "move each file back from \"to\" to \"from\""
+}

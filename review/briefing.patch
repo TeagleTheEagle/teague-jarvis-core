@@ -1,0 +1,44 @@
+--- server.py
++++ server.py
+@@ -221,11 +221,36 @@
+                 result = actions.news_search(args['query'])
+                 if run: self.store.save_research(run.conversation, 'News: '+args['query'], result)
+             elif name == 'daily_briefing':
+-                news = actions.news_search('top news')
+-                tasks = self.store.tasks(include_completed=False)[:8]
+-                projects = self.store.items('project')[:6]
+-                reminders = self.store.reminders()[:8]
+-                result = {'news': news.get('results', [])[:5], 'tasks': tasks, 'projects': projects, 'reminders': reminders, 'generated_at': time.time()}
++                result = {'checks': {}, 'generated_at': time.time()}
++                sources = {
++                    'news': (lambda: actions.news_search('top news'), 5),
++                    'tasks': (lambda: self.store.tasks(include_completed=False), 8),
++                    'projects': (lambda: workspaces.listing(self.store), 6),
++                    'reminders': (self.store.reminders, 8),
++                }
++                for section, (check, limit) in sources.items():
++                    started = time.perf_counter()
++                    try:
++                        payload = check()
++                        rows = payload['results'] if section == 'news' else payload
++                        if not isinstance(rows, list):
++                            raise ValueError('Invalid briefing source')
++                        result[section] = rows[:limit]
++                        result['checks'][section] = {
++                            'status': 'ok' if rows else 'empty',
++                            'checked_at': time.time(), 'total': len(rows),
++                            'truncated': len(rows) > limit,
++                        }
++                        if section == 'news':
++                            result['checks'][section]['retrieved_at'] = payload.get('retrieved_at')
++                    except Exception:
++                        result[section] = []
++                        result['checks'][section] = {
++                            'status': 'unavailable', 'checked_at': time.time(),
++                            'message': 'Could not check this source. Do not infer that nothing exists.',
++                        }
++                    result['checks'][section]['duration_ms'] = round((time.perf_counter() - started) * 1000, 2)
++                result['evidence_rule'] = 'Use checks for availability. Retrieval time is not publication time. Unknown publication dates are not verified current news. Truncated lists are partial.'
+             elif name == 'image_search':
+                 result = actions.image_search(args['query'])
+             elif name == 'system_health':

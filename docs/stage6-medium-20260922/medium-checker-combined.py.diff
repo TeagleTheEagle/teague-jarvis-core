@@ -1,0 +1,31 @@
+--- D:\JARVIS-STAGE6-LIVE\5d7476373d4a4ad38017e89f15a538f0\checker-v2\combined.py
++++ D:\JARVIS-STAGE6-LIVE\ee61943f57a04354b41526fac01bd52f\code\medium-checker\combined.py
+@@ -19,8 +19,8 @@
+   hb=q.load(root/'app-heartbeats.json'),health=q.load(root/'live-health-checks.json'),host=q.load(host),
+   manifests=dict(authoritative=str(root/'kernel-authority-manifest.json'),sha256=q.sha(root/'kernel-authority-manifest.json')))
+ 
+-def validate(b):
+- m,w=b['manifest'],b['writer'];require(len(m['segments'])>=2,'MULTIPLE_SEGMENTS_REQUIRED')
++def validate(b,*,declaration):
++ m,w=b['manifest'],b['writer'];require(len(m['segments'])>=declaration['minimumSegments'],'MULTIPLE_SEGMENTS_REQUIRED')
+  require(w['fault']==0 and w['threadsExited'] and w['remaining']==0,'FINALIZER_OR_WRITER_FAILURE')
+  require(w['pendingLimit']==2 and 0<=w['peakPending']<=2,'FINALIZER_BACKLOG_LIMIT')
+  require(w['peakQueueItems']<=65536 and w['peakQueueBytes']<=67108864,'WRITER_QUEUE_LIMIT')
+@@ -35,7 +35,7 @@
+  canonical=lambda x:(int(x['pid']),str(x['created']),str(x['sequence']))
+  require({canonical(x) for x in expected}=={canonical(x) for x in b['kernel']['rows']} and len(expected)==len(b['kernel']['rows']),'REQUIRED_INVENTORY_MISMATCH')
+  classes=collections.Counter(x['role'] for x in expected)
+- require(classes['DIRECT_PROBE']==16 and classes['DIRECT_WORKER']==1,'DECLARED_WORKLOAD_MISSING')
++ require(classes['DIRECT_PROBE']==declaration['directProbes'] and classes['DIRECT_WORKER']==declaration['directWorkers'],'DECLARED_WORKLOAD_MISSING')
+  cv=coverage(**c);require(cv['status']=='PASS' and cv['missingRequired']==cv['contradictory']==0 and cv['verifiedIdentities']==cv['requiredIdentities'],'INDEPENDENT_VERIFICATION_FAILURE')
+  launch=b['launch'];require(launch['error'] is None and all(launch[k] is True for k in ('applicationExited','workerExited','kernelExited')) and all(launch[k]==0 for k in ('applicationExit','workerExit','kernelExit')),'CLEANUP_FAILURE')
+  a=b['app'];cq=a['queue'];require(a['success'] and a['unsubscribed'] and a['durableFinalization'] and not a['error'] and not a['tapErrors'] and not a['tapOverflow'],'SECONDARY_COLLECTOR_FAILURE')
+@@ -46,7 +46,7 @@
+  require(b['qualification']['status']=='PASS' and b['qualification']['deadlineViolations']==0 and aa['records']>0 and aa['sequenceGaps']==0 and bool(aa['manifestSHA256']),'QUALIFICATION_FAILURE')
+  require(b['host']['status']=='PASS' and b['host']['matchingProcessCount']==b['host']['diagnosticTraceCount']==0,'HOST_CLEANUP_FAILURE')
+  helper=[x for x in cv['identities'] if x['role']=='OS_CONSOLE_HELPER'];post=sum(x['qualifiedPostExit'] for x in helper)
+- return dict(schema='stage6-small-combined-v1',run=b['root'],contract='STAGE6-TEST-KERNEL-INSTANCE-20260921-v1 + owner creator/helper clarification',
++ return dict(schema='stage6-medium-combined-v1',run=b['root'],contract='STAGE6-TEST-KERNEL-INSTANCE-20260921-v1 + owner creator/helper clarification',
+   verificationStatus='PASS',acceptanceSealed=False,archiveStatus='PENDING',
+   identitySchema=['captureScope','pid','creationFiletime','kernelProcessSequence'],
+   authoritative=dict(records=len(b['events']),starts=kr['starts'],stops=kr['stops'],canonicalIdentities=kr['unique'],falseUnique=kr['falseUnique'],ambiguity=kr['authoritativeAmbiguous'],identities=kr['identities']),

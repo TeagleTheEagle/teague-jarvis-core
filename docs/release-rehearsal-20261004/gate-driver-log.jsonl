@@ -1,0 +1,5 @@
+{"utc":"2026-10-04T03:30:10.4195827Z","mode":"","package":"D:\\JARVIS-release-work\\pkg-1.0.11","outcome":"phase passed","phase":"Install","exit_code":0}
+{"utc":"2026-10-04T03:31:09.1719608Z","mode":"","package":"D:\\JARVIS-release-work\\pkg-1.0.11","outcome":"phase passed","phase":"Uninstall","exit_code":0}
+{"utc":"2026-10-04T03:35:39.9861972Z","mode":"","package":"D:\\JARVIS-release-work\\pkg-1.0.11","outcome":"phase passed","phase":"Update","exit_code":0}
+{"utc":"2026-10-04T03:35:39.9891971Z","mode":"","package":"D:\\JARVIS-release-work\\pkg-1.0.11","ran_now":["Uninstall","Update"],"outcome":"all phases passed"}
+{"utc":"2026-10-04T03:35:40.4231726Z","mode":"","package":"D:\\JARVIS-release-work\\pkg-1.0.11","ran_now":[],"outcome":"all phases passed"}
