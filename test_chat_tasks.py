@@ -1,7 +1,7 @@
 """Research tasks and memory from VERONICA's chat (agent.py), with a scripted Claude and a temporary store."""
 import pytest
 
-import store as store_mod
+import veronica_store as store_mod
 from agent import Veronica
 from test_veronica import FakeClaude, message as said, text, tool
 

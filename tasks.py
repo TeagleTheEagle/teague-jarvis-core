@@ -33,7 +33,7 @@ import threading
 import time
 import uuid
 
-import store as store_mod
+import veronica_store as store_mod
 
 log = logging.getLogger('veronica.tasks')
 

@@ -11,7 +11,7 @@ from email.message import EmailMessage
 import pytest
 
 import gmail
-import store as store_mod
+import veronica_store as store_mod
 from agent import Veronica
 from test_veronica import FakeClaude, message as said, text, tool
 

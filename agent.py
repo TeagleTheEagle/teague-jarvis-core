@@ -297,7 +297,7 @@ class Veronica:
     @property
     def store(self):
         if self._store is None:
-            import store as store_module
+            import veronica_store as store_module
             self._store = store_module.Store()
         return self._store
 

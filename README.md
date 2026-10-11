@@ -1,212 +1,106 @@
-# VERONICA: your assistant
+# JARVIS
 
-One agent, named VERONICA. She works on your code, reads your Gmail, writes email drafts, tells you what's in your
-Google Calendar, researches topics in the background and writes cited reports, and remembers what you ask her to. You
-can talk to her the way you talk to JARVIS ("Veronica, ..."), or type.
+Local personal assistant with a cyan command centre inspired by your two reference images. OpenAI or Qwen (Alibaba Cloud Model Studio) supplies AI conversation and vision, chosen with `JARVIS_PROVIDER`; Fish Audio or a Qwen cloned voice supplies speech. Groq, Gemini and ElevenLabs were removed in 1.0.15.
 
-VERONICA is separate from JARVIS and from FRIDAY: her own folder, git repository, Python and keys. She is not
-connected to JARVIS and does not work on JARVIS: JARVIS's folders are refused in code.
+## Launch
 
-## Starting VERONICA
+Double-click **Start JARVIS.cmd**. Open **http://127.0.0.1:8765** if a window is already running. Double-click **Stop JARVIS.cmd** to stop the backend. Closing the browser alone leaves the backend running.
 
-- **The window:** double-click **`VERONICA.exe`** in this folder (`C:\Users\jonny\JARVIS-claude-workspace\veronica`).
-  You can pin it to the taskbar or Start menu: right-click it.
-  - **Wide window:** the sidebar (Chat, Tools, Memory, Projects, Research, Settings), the orb and your messages in
-    the middle, and "Suggested for you" and your recent research on the right. Narrow the window and it becomes the
-    phone layout.
-  - **Chat:** type to her, or tap the orb or the wave button for voice mode.
-  - **Voice mode:** works like ChatGPT's: just talk, no name needed. The orb moves with your voice while she
-    listens, swirls while she thinks, and moves with her voice while she speaks. Tap the orb to stop her talking, or
-    to pause listening.
-  - **Listening from Home:** while the window is open and **Listen for "Veronica"** is on (Profile), saying
-    "Veronica, ..." opens voice mode and she answers, as JARVIS does.
-- **Without the window:** `Talk to VERONICA.cmd` (voice in a console) and `Type to VERONICA.cmd` (typing in a
-  console).
+The launcher prefers `.venv/Scripts/python.exe`, then this computer's bundled Codex Python, then `python` on PATH. It opens a desktop-style Edge window when available. This is a Python/browser app, not a packaged Electron executable.
 
-Things to say (or type):
+For another Windows computer, use **Python 3.12 x64** (validated: 3.12.10
+in the clean VM and 3.12.14 on the existing host). Python 3.11.9 reproduced
+a wearable cancellation failure; it is not a supported Windows validation
+baseline. Use the explicit setup path below, not a developer-machine runtime:
 
-| Say | What happens |
-|---|---|
-| "Veronica, open the website project" | Opens a saved project, or a folder you name by its full path |
-| "Veronica, the add function gives the wrong answer, fix it" | She reads the code, edits it and runs the tests |
-| "Keep it" / "Undo it" / "Show the changes" | Keeps her code changes, puts the files back, or shows the changes |
-| "Any important unread emails?" | She searches and reads your Gmail |
-| "Reply to Jack and say Thursday works" | She writes a draft. **Nothing is sent yet.** |
-| "Send it" / "Don't send it" | Sends the draft, or throws it away (or press Send / Discard on the draft card) |
-| "What's on my calendar this week?" | She reads your Google Calendar |
-| "Research heat pumps in cold climates" | Starts a research task in the background (see below) |
-| "Remember that I like British spelling" | She remembers it, with your words and the date (see Memory) |
-| "Veronica, goodbye" | Leaves voice mode |
-
-## How a code change works
-
-1. VERONICA reads the code and changes it with her tools. Before a file is first changed, its original is kept.
-2. When she finishes, **this program runs the project's tests itself**, so you don't have to take her word for it.
-   - **Tests pass:** she tells you, and the changes wait for you to say "keep" or "undo".
-   - **Tests fail:** the failure goes back to her to fix, up to 2 more times. If they still fail, the changes are
-     undone automatically.
-   - **No tests:** she says she couldn't check the change, and the choice is yours.
-3. While changes are waiting, she won't switch to another project.
-
-VERONICA never runs git, so she makes no commits. When you've kept a change, commit it yourself.
-
-## Email and calendar
-
-- **Reading:** she searches and reads your Gmail inbox. Nothing is marked as read.
-- **Sending:** she can only write **drafts**. A draft is sent only when you say "send it" or press **Send** on the
-  draft card. That is handled by VERONICA's program itself; Claude has no way to send anything.
-- **Never twice:** each draft is sent at most once, even if you press Send twice or her connection drops.
-  - Before sending, the send is recorded.
-  - After sending, she checks that the email is in your Sent folder.
-  - If the connection broke mid-send, she looks in your Sent folder before trying again, so it never goes out twice.
-- **Calendar:** read only. She can tell you what's coming up, but she can't add, move or delete events.
-- **Untrusted text:** emails and calendar entries are written by other people, so she treats their text as
-  information, never as orders. If an email asks her to send, forward, reply or change code, she tells you instead.
-
-## Research in the background (Deep Agents)
-
-Research runs as a **task**, on LangChain Deep Agents, in a background worker that keeps going when the window is
-closed and picks up where it left off after a crash or a restart.
-
-1. **Start:** ask her ("Veronica, research ..."), use **Research** in the window, or
-   `.venv\Scripts\python.exe tasks.py research "your topic" --wait`.
-2. **She plans** (a to-do list you can see), **searches** with Brave, **reads** pages (each becomes source [n]), and
-   **writes** a report that cites them.
-3. **The check:** the report is saved only if every [n] is a page she read and every supporting quote is found word
-   for word in that page. If not, the problems go back to her to fix. The check proves the citations match real
-   pages; **it does not prove the claims are true**, and the report says so.
-4. **Saved:** `reports\<date>-<topic>-<task>.md`, with the sources and quotes listed by the program, not the model.
-   The task counts as done only when that file exists and matches the hash recorded when it was written.
-
-Follow it in the window (Research, or "Recent research" on the right), or with `tasks.py list` / `tasks.py show ID`.
-Cancel with the window's Cancel button or `tasks.py cancel ID`. Repeat a topic with
-`tasks.py schedule "AI news" --every 1d`; scheduled runs happen while a worker is running (the window starts one).
-
-Limits (in `.env` if you want to change them): at most 40 model calls (`VERONICA_TASK_MAX_STEPS`), 20 minutes of
-running time (`VERONICA_TASK_MAX_MINUTES`), $3.00 of Claude usage, counted from the usage Claude reports
-(`VERONICA_TASK_MAX_COST_USD`), and 3 attempts after temporary failures (`VERONICA_TASK_MAX_ATTEMPTS`).
-
-How it stays safe and correct:
-- **One agent:** Deep Agents' sub-agent tool is switched off.
-- **Limited tools:** search, read pages, read more of a page, and hand in the report. Its notes stay inside the
-  task. It cannot touch your files, email or projects.
-- **Untrusted web pages:** pages are treated as data, never as orders. Nothing on your PC or home network is ever
-  fetched, and every redirect is checked.
-- **Durable progress:** every step is saved before the next starts (LangGraph checkpoints in
-  `data\checkpoints.db`). Steps that finished are never redone after a restart.
-- **No double actions:** saving the report is recorded once per task, so a retry never saves a second copy. A save
-  cut off part-way is checked against the file on disk.
-
-## Memory
-
-She remembers only what **you** say or confirm ("remember that...", or a preference you state), never things from
-emails, files or web pages. Each memory keeps your exact words and the date as its source. See, edit and delete them
-on the **Memory** page, by asking her, or with `tasks.py memory list | edit ID "text" | forget ID`. Your preferences
-are also given to research tasks. Memories are kept apart from task records; deleting one never touches the other.
-
-## Setting up the keys (you do this; VERONICA never shows the values)
-
-1. Copy `.env.example` to `.env` in this folder.
-2. Fill in these lines after the `=`:
-
-| Line | What goes there |
-|---|---|
-| `ANTHROPIC_API_KEY` | Your Claude key (or sign in with `ant auth login` instead) |
-| `FISH_API_KEY` and `FISH_VOICE_ID` | Your Fish Audio key, and your voice's ID from its page in My Voices. Without these, Windows' own voice speaks. |
-| `GMAIL_ADDRESS` and `GMAIL_APP_PASSWORD` | Your Gmail address, and an app password from myaccount.google.com/apppasswords |
-| `GOOGLE_CALENDAR_ICS` | Your calendar's "secret address in iCal format" (Google Calendar, then the calendar's settings) |
-| `BRAVE_API_KEY` | Brave Search, for research |
-| `GOOGLE_MAPS_EMBED_KEY` | Google Maps (not used yet) |
-
-`.env` is ignored by git and never printed. Keys and passwords never go into her prompt or her log. They are also
-taken out of the environment whenever she runs a project's tests.
-
-## Saved projects
-
-Copy `projects.example.json` to `projects.json` and list your projects. Each entry has a name, its folder, and
-optionally its test command:
-
-```json
-{"calculator": {"folder": "C:\\Users\\jonny\\projects\\calculator", "test": "python -m pytest -q"}}
+```powershell
+.\Setup-Windows.ps1 -LocalVoice -Tests -CheckOnly
+.\Setup-Windows.ps1 -LocalVoice -Tests
 ```
 
-Without a test command, she uses `npm test` if `package.json` has a test script, or `python -m pytest -q` if there
-are `test_*.py` files (with the project's own `.venv` when it has one).
+Node.js 24.x is required for JS-backed regressions and desktop source tooling;
+packaged Electron includes its own Node runtime. Local STT additionally requires
+Microsoft Visual C++ x64 Redistributable and the pinned local-voice requirements.
+Test dependencies are separate in `requirements-test.txt`; omit `-Tests` on a
+runtime-only setup. Setup never starts JARVIS or reads/copies `.env`.
+See [Windows deployment prerequisites](docs/WINDOWS-DEPLOYMENT-PREREQUISITES.md)
+for prerequisites, model provisioning, validation and packaged-release limits.
 
-## What VERONICA can and can't do
+## API configuration
 
-**Can:**
-- **Code:** list, read and search the open project's files; edit them and create new ones; run its tests; undo her
-  own changes.
-- **Email:** read and search your Gmail; write drafts for you to send.
-- **Calendar:** read your Google Calendar.
+Your supplied credentials are saved in **.env**, ignored by Git and never served to the browser. Do not share this file or your `data/` directory. The `.env.example` file contains placeholders only. Restart JARVIS after changing configuration.
 
-**Can't:** send email by herself, change your calendar, run any other command, install anything, browse the internet,
-delete files, or work outside the open project.
-- Secret files (`.env`, keys, credentials) are never read or written.
-- `.git`, virtual environments and `node_modules` are never written.
-- These folders are refused: the JARVIS workspace (including this folder), any folder with "jarvis" in its path, the
-  installed JARVIS, the JARVIS release and test folders on D:, whole drives, your home folder and Windows' own
-  folders.
-
-**One thing to know:** the project's tests run the code she wrote, under your Windows account, like any test you
-run yourself. Only point her at your own projects.
-
-## Where your words go
-
-| What | Where |
+| Service | Status |
 |---|---|
-| **Microphone** | Read in memory and never saved. Speech becomes text on this PC with the Whisper model in `models\base.en`, so the audio never leaves the PC. |
-| **What you say, and the files, emails and calendar entries she reads** | Sent to Claude (Anthropic) to work out the answer. |
-| **What she says** | Sent to Fish Audio to be turned into speech (only when `FISH_API_KEY` is set). |
-| **Emails you approve** | Sent by Gmail from your address. |
+| AI chat and vision | OpenAI (`JARVIS_PROVIDER=openai`, the default) or Qwen (`JARVIS_PROVIDER=qwen`, with `QWEN_VISION_MODEL` for images) |
+| Fish Audio | Connected; audio generation succeeded after API credit was added |
+| Qwen voice | Optional cloned voice: `QWEN_TTS_VOICE` with the Qwen key |
+| Speech recognition | Local Whisper on this PC; no key needed; recording requires microphone permission. Since 1.0.15, optionally the chosen AI provider instead (Settings > AI > Speech recognition; docs/SPEECH.md) |
+| Spotify | Optional; needs Client ID and browser sign-in |
+| YouTube search | Optional; needs YouTube API key; pasted URLs need no key |
+| Web search | Best-effort DuckDuckGo results; optional Brave API key supported |
 
-## Files
+Fish voice reference: `14129c3e320149449d6bada6862f7338`. The synthesis model is `s2-pro`. A Qwen cloned voice takes priority when configured, then Fish; OpenAI Cedar can be chosen in Settings. A configured badge indicates credentials are present, not guaranteed connectivity or quota.
 
-| File | What it is |
-|---|---|
-| `VERONICA.exe` | Opens the window (built from `launcher\VERONICA.cs` by `launcher\build.py`) |
-| `app.py`, `ui\index.html` | The window: listening, voice mode, the page and its buttons |
-| `veronica.py` | The console version: typing, `--voice`, `--project` |
-| `agent.py` | VERONICA herself: the conversation with Claude, her tools, the test check, keep, undo, send and discard |
-| `gmail.py` | Gmail: reading, drafts, and sending each draft once (adapted from JARVIS's mail code) |
-| `calendar_feed.py` | Reading the calendar's iCal feed (adapted from JARVIS's calendar code) |
-| `safety.py` | Where she may and may not work (in code, not just in the prompt) |
-| `changes.py` | Keeping originals for undo, the changes shown on screen, running the project's tests |
-| `voice.py` | Hearing "Veronica", speech recognition on this PC, Fish Audio or Windows' voice |
-| `store.py` | Her database (`data\veronica.db`): tasks and their progress, schedules, actions done once, sources, memory |
-| `research.py` | The research workflow on Deep Agents: tools, limits, cost, and the success check |
-| `tasks.py` | Background tasks: the worker, resuming after a restart, cancel, schedules, and the console commands |
-| `web.py`, `citations.py` | Brave Search and safe page fetching; the citation check and saving a report exactly once |
-| `test_*.py` | The tests. They use no network, microphone, speakers or keys. |
+## Controls
 
-Settings (in `.env` or the environment):
+- Type into Communications; Enter sends, Shift+Enter inserts a newline.
+- Click **VOICE OFF** to turn spoken replies on. Text remains visible if speech fails.
+- Click **ENABLE MIC** or press F4 to begin listening; grant browser permission. Escape stops the interaction.
+- Always-on listening starts on page load. Say **Hey Jarvis**, followed by your command, then pause. Wake detection and transcription run locally; only the transcribed text of an activated command goes to the AI provider. (Since 1.0.15 you can choose, in Settings > AI > Speech recognition, to have the chosen AI provider turn your speech into text instead; then the recording of each command is sent to that company. Off unless you choose it; wake detection always stays local.) Say **Hey Jarvis** during a reply to interrupt. Mute, Stop, or Escape turns the mic off. Browser microphone permission is required.
+- Commands end after about 1.3 seconds of silence and are capped at 30 seconds. An empty wake activation expires after seven seconds. See [Voice and memory](VOICE-AND-MEMORY.md) for setup, memory commands, and limitations.
+- Use Memory to add/edit/delete saved facts and notes. No automatic extraction of personal facts occurs.
+- Use Files to upload documents and create PDF, Word, Markdown or text files. Generated files stay under `data/generated/` and never silently overwrite another file.
+- Share my screen captures one browser-approved screen/window frame, stops screen sharing immediately, and attaches it for your next question.
+- App launching is limited to Calculator, Notepad and Paint and requires a two-minute, single-use approval. No arbitrary shell or mouse/keyboard automation is exposed.
+- YouTube URLs load an embedded player. Use its own play/pause/volume controls. Some videos disallow embedding.
+- Spotify uses PKCE, so no client secret is needed. Register the exact callback in `.env.example`, add `SPOTIFY_CLIENT_ID`, restart, and connect from Settings. Tokens stay in RAM; reconnect after restarting. Playback needs an eligible account and active device.
 
-| Setting | Default | What it does |
-|---|---|---|
-| `VERONICA_MODEL` | `claude-opus-5-5` | The Claude model she uses |
-| `VERONICA_EFFORT` | `high` | How hard she thinks: `low`, `medium`, `high`, `xhigh` or `max` |
-| `FISH_MODEL` | `s2.1-pro` | The Fish Audio voice model |
-| `VERONICA_WINDOWS_VOICE` | `Zira` | The Windows voice used when Fish Audio isn't |
+Try these commands:
 
-If Claude declines a request, it is retried automatically on another Claude model. If that one declines too, she says
-so and starts a fresh conversation.
-
-## What is not done yet
-
-- **Coding and email chat stay on her own loop.** Her conversations (code, email, calendar, memory) still run on
-  the loop that existed before; Deep Agents runs the background research tasks. Moving the chat onto Deep Agents
-  would mean rebuilding the keep/undo and send checks on it, so it is left for later.
-- **Scheduled runs need a running worker.** They happen only while a worker is running. To have them run with the
-  window closed, the worker would need to start with Windows. That is a system change, so it's your call.
-- **Code under test can read files.** Code being tested runs as your Windows account and could read
-  VERONICA's `.env` from disk. Any secret it prints is hidden, but only point her at your own projects.
-- **Maps are not used yet.**
-
-## Tests
-
-```
-.venv\Scripts\python.exe -m pytest -q -p no:cacheprovider
+```text
+Remember I prefer short answers.
+Note: review the prototype tomorrow.
+Add task test the microphone.
+Set a timer for 5 minutes.
+What time is it?
+Search for the latest space news.
+Open calculator.
+Create a PDF with a checklist for my next project.
+Spotify pause.
 ```
 
-The tests' practice folders are made under `%LOCALAPPDATA%\Temp\veronica-tests` and removed afterwards.
+## Persistence and limits
+
+SQLite stores conversations, memory, notes, tasks, one-time timers and preferences under `data/`. Timers become due when the app polls while the backend runs; overdue timers appear after restart. Alerts remain until dismissed and can reappear on a new browser session. Recurring calendar reminders and operating-system notifications are not included.
+
+Chat context uses up to 12 recent messages / 12,000 characters and selects relevant saved facts locally. Older messages remain in the database. The current version deliberately avoids silent automatic memory extraction and external embeddings; those can be added later with explicit privacy controls.
+
+Uploads: 8 MB, 30,000 extracted characters, first 80 PDF pages. Scanned PDFs require OCR, not included. Images are resized to 1600 pixels. Attachments remain in memory (at most ten), persist across follow-up questions in the current interface, and expire when the backend restarts. Remove an attachment to stop supplying it as context.
+
+One run executes at a time. Tool loops are bounded. Cancellation prevents subsequent actions, but an in-flight provider request can take up to its network timeout to return, and completed external effects cannot be undone.
+
+## Source and verification
+
+- `server.py`: authenticated loopback API, runs, approvals, uploads/downloads.
+- `providers.py`: OpenAI, Qwen, Fish, Spotify PKCE.
+- `actions.py`: tool schemas, commands, document handling, search and YouTube.
+- `store.py`: transactional SQLite, initial schema migration version 1.
+- `personality.txt`: editable assistant behavior.
+- `static/`: interface, no build step.
+- `test_jarvis.py`: offline tests.
+
+Run `python -m unittest -v`. The test suite covers persistence, approval expiry/replay/denial, cancellation, credential non-disclosure, cross-origin access, file confinement and document round-trips. External services and real application launches are mocked.
+
+Original build (before 1.0.15 removed Groq): live Groq text and Fish audio generation were tested. The browser rendered and completed a real chat response without console errors. Vision testing returned HTTP 429. Microphone device capture, Spotify and YouTube playback still depend on browser/device/account permissions.
+
+The PDFs were reference material. Fragile recipes were replaced with structured document parsing, explicit microphone/screen consent, scoped launches, transactional storage and a single Groq key. No additional accounts, quota-evading key rotation, antivirus changes, or guide-suggested plugin installations were performed. Activity rings represent assistant state, not CPU/network telemetry.
+
+This app binds only to localhost and is intended for one local user. Do not publish it as a public service without additional hardening.
+
+Provider references: [OpenAI API](https://platform.openai.com/docs/api-reference), [Qwen (Alibaba Cloud Model Studio)](https://www.alibabacloud.com/help/en/model-studio/), [Fish Audio](https://docs.fish.audio/api-reference/endpoint/openapi-v1/text-to-speech), [Spotify PKCE](https://developer.spotify.com/documentation/web-api/tutorials/code-pkce-flow).
+
+Provider 429 handling: a temporary rate limit is reported as temporary. For OpenAI Chat Completions models it pauses voice commands for 30 seconds; OpenAI Responses-API models (gpt-6-*) and Qwen set no pause (wait, then retry). A billing or credit refusal (for example OpenAI insufficient_quota) is reported as such, names the provider and sets no pause, because waiting will not help. Identical tool calls cannot repeat within one run. This does not increase your provider quota.
+# Backup and recovery
+
+Use **Settings → Backup & recovery** for verified local backups and restoration into a separate folder. This preserves the complete saved database and saved data folders; the older export/import flow is not a full recovery mechanism. See [RECOVERY.md](RECOVERY.md) for exclusions, CLI recovery and validation limits.

@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 import research
-import store as store_mod
+import veronica_store as store_mod
 import tasks
 import web
 from research_fakes import BAD, BODY, GOOD, Effects, ScriptedModel, call, script

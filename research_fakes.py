@@ -122,7 +122,7 @@ class Effects:
 
 def crash_main(db_path, checkpoints, reports, log_path):
     import research
-    import store
+    import veronica_store as store
     import tasks
     db = store.Store(db_path)
     effects = Effects(log_path, crash_on='https://b.example/cold')

@@ -1,431 +1,392 @@
-"""VERONICA's durable state, in one SQLite file (data/veronica.db):
-
-- tasks and their events: what a background task is, its status, progress, result, error, and the LangGraph thread it
-  runs in (thread_id), so a task that was running when the PC or the worker stopped is picked up again and resumed;
-- schedules: recurring runs (a research topic every day, say);
-- operations: one row per external action, keyed by a stable operation id, so an action is never done twice and an
-  action whose outcome is uncertain is checked before it is tried again;
-- sources: the pages a research task actually retrieved (their text and a hash), the only things a report may cite;
-- memories: what the owner asked VERONICA to remember, with where it came from and when. Memory is separate from task
-  state: deleting tasks never deletes memories, and the other way round.
-
-Where a running task is inside its plan (LangGraph's checkpoints) is kept by LangGraph in data/checkpoints.db.
-Every change is one SQLite transaction; claiming work uses BEGIN IMMEDIATE so two workers never take the same task.
-"""
+"""Small transactional local store; one connection per operation."""
 import json
 import sqlite3
-import threading
 import time
 import uuid
+import re
+import memory
+import permissions
 from pathlib import Path
+from contextlib import contextmanager
 
-import safety
-
-DATA = safety.HERE / 'data'
-DB_PATH = DATA / 'veronica.db'
-CHECKPOINTS_PATH = DATA / 'checkpoints.db'
-
-FINISHED = ('succeeded', 'failed', 'cancelled')
-STATUSES = ('queued', 'running') + FINISHED
-
-SCHEMA = """
-CREATE TABLE IF NOT EXISTS tasks (
-    id TEXT PRIMARY KEY,
-    kind TEXT NOT NULL,
-    title TEXT NOT NULL,
-    input TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'queued',
-    progress TEXT NOT NULL DEFAULT '{}',
-    result TEXT,
-    error TEXT,
-    thread_id TEXT NOT NULL,
-    request_id TEXT UNIQUE,
-    schedule_id TEXT,
-    attempts INTEGER NOT NULL DEFAULT 0,
-    cancel_requested INTEGER NOT NULL DEFAULT 0,
-    lease_owner TEXT,
-    lease_until REAL,
-    tokens_in INTEGER NOT NULL DEFAULT 0,
-    tokens_out INTEGER NOT NULL DEFAULT 0,
-    cost_usd REAL NOT NULL DEFAULT 0,
-    created_at REAL NOT NULL,
-    updated_at REAL NOT NULL,
-    started_at REAL,
-    finished_at REAL
-);
-CREATE INDEX IF NOT EXISTS tasks_status ON tasks (status, created_at);
-CREATE TABLE IF NOT EXISTS task_events (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    task_id TEXT NOT NULL,
-    at REAL NOT NULL,
-    kind TEXT NOT NULL,
-    message TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS task_events_task ON task_events (task_id, id);
-CREATE TABLE IF NOT EXISTS schedules (
-    id TEXT PRIMARY KEY,
-    kind TEXT NOT NULL,
-    title TEXT NOT NULL,
-    input TEXT NOT NULL,
-    every_seconds INTEGER NOT NULL,
-    next_run_at REAL NOT NULL,
-    enabled INTEGER NOT NULL DEFAULT 1,
-    created_at REAL NOT NULL
-);
-CREATE TABLE IF NOT EXISTS operations (
-    op_id TEXT PRIMARY KEY,
-    task_id TEXT,
-    kind TEXT NOT NULL,
-    target TEXT NOT NULL,
-    intent TEXT NOT NULL,
-    status TEXT NOT NULL,
-    result TEXT,
-    created_at REAL NOT NULL,
-    updated_at REAL NOT NULL
-);
-CREATE TABLE IF NOT EXISTS sources (
-    task_id TEXT NOT NULL,
-    n INTEGER NOT NULL,
-    url TEXT NOT NULL,
-    title TEXT NOT NULL,
-    text TEXT NOT NULL,
-    content_hash TEXT NOT NULL,
-    fetched_at REAL NOT NULL,
-    PRIMARY KEY (task_id, n),
-    UNIQUE (task_id, url)
-);
-CREATE TABLE IF NOT EXISTS memories (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    kind TEXT NOT NULL,
-    content TEXT NOT NULL,
-    provenance TEXT NOT NULL,
-    created_at REAL NOT NULL,
-    updated_at REAL NOT NULL
-);
-CREATE TABLE IF NOT EXISTS workers (
-    id TEXT PRIMARY KEY,
-    pid INTEGER NOT NULL,
-    beat_at REAL NOT NULL
-);
-"""
-
-
-def now():
-    return time.time()
-
-
-def _row(row, *json_fields):
-    if row is None:
-        return None
-    item = dict(row)
-    for name in json_fields:
-        if item.get(name) is not None:
-            item[name] = json.loads(item[name])
-    return item
+VOICE_PROFILES = ('auto', 'fish', 'openai', 'qwen')  # the same as providers.VOICE_PROFILES
+ANSWER_MODES = ('auto', 'deep', 'economy')  # the same as providers.ANSWER_MODES
+DEFAULT_ANSWER_MODE = 'deep'  # the same as providers.DEFAULT_ANSWER_MODE
 
 
 class Store:
-    def __init__(self, path=DB_PATH):
-        self.path = Path(path)
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.conn = sqlite3.connect(str(self.path), timeout=30, isolation_level=None, check_same_thread=False)
-        self.conn.row_factory = sqlite3.Row
-        self.lock = threading.RLock()
-        with self.lock:
-            self.conn.execute('PRAGMA journal_mode=WAL')
-            self.conn.execute('PRAGMA busy_timeout=30000')
-            self.conn.executescript(SCHEMA)
+    def __init__(self, root):
+        self.root = Path(root).resolve()
+        # 1.0.17 item E (docs/PHONE-ACCESS-1.0.17.md section 5): every saved thing records the release it was saved under;
+        # server.App sets the real value (the installed release, or the development revision) after making the store.
+        self.release = 'development'
+        self.root.mkdir(parents=True, exist_ok=True)
+        self.path = self.root / 'jarvis.sqlite3'
+        with self.connect() as db:
+            db.executescript('''
+                PRAGMA journal_mode=WAL;
+                CREATE TABLE IF NOT EXISTS items (
+                    id TEXT PRIMARY KEY, kind TEXT NOT NULL, body TEXT NOT NULL,
+                    created REAL NOT NULL, updated REAL NOT NULL,
+                    item_key TEXT, category TEXT, source TEXT, confidence REAL NOT NULL DEFAULT 1.0);
+                CREATE TABLE IF NOT EXISTS messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT, conversation TEXT NOT NULL,
+                    role TEXT NOT NULL, content TEXT NOT NULL, created REAL NOT NULL);
+                CREATE TABLE IF NOT EXISTS reminders (
+                    id TEXT PRIMARY KEY, title TEXT NOT NULL, due REAL NOT NULL,
+                    fired INTEGER NOT NULL DEFAULT 0);
+                CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS audit (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT, action TEXT NOT NULL,
+                    status TEXT NOT NULL, created REAL NOT NULL);
+                CREATE TABLE IF NOT EXISTS feedback (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT, conversation TEXT, message TEXT,
+                    rating TEXT NOT NULL, created REAL NOT NULL);
+                CREATE TABLE IF NOT EXISTS documents (
+                    id TEXT PRIMARY KEY, name TEXT NOT NULL, content TEXT NOT NULL,
+                    created REAL NOT NULL, updated REAL NOT NULL);
+                CREATE TABLE IF NOT EXISTS task_meta (
+                    item_id TEXT PRIMARY KEY, priority TEXT NOT NULL DEFAULT 'normal',
+                    due REAL, recurrence TEXT, completed INTEGER NOT NULL DEFAULT 0,
+                    completed_at REAL);
+                CREATE TABLE IF NOT EXISTS research (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT, conversation TEXT NOT NULL,
+                    query TEXT NOT NULL, result TEXT NOT NULL, created REAL NOT NULL);
+                PRAGMA user_version=1;
+                CREATE TABLE IF NOT EXISTS turn_evidence (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT, conversation TEXT NOT NULL,
+                    tool TEXT NOT NULL, result TEXT NOT NULL, created REAL NOT NULL);
+                CREATE TABLE IF NOT EXISTS control (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS tool_modes (
+                    tool TEXT PRIMARY KEY, mode TEXT NOT NULL, updated REAL NOT NULL);
+            ''')
+            def add_columns(table, columns):
+                # Look first. A failure to add a column is an error, except "already there" (another JARVIS
+                # process added it between the look and the change).
+                have = {row[1] for row in db.execute(f'PRAGMA table_info({table})')}
+                for column, definition in columns:
+                    if column in have: continue
+                    try: db.execute(f'ALTER TABLE {table} ADD COLUMN {column} {definition}')
+                    except sqlite3.OperationalError as exc:
+                        if 'duplicate column' not in str(exc).lower(): raise
+            add_columns('items', [('item_key','TEXT'),('category','TEXT'),('source','TEXT'),('confidence','REAL NOT NULL DEFAULT 1.0'),
+                                  ('release','TEXT')])  # 1.0.17 item E: the release a thing was saved under; empty on older rows
+            # Which question and which device an activity row belongs to (1.0.15). Both stay empty on older rows,
+            # and an older JARVIS that writes only action and status still works on this database.
+            add_columns('audit', [('run_id','TEXT'),('device','TEXT')])
 
-    def close(self):
-        with self.lock:
-            self.conn.close()
-
-    def _tx(self, immediate=False):
-        return _Transaction(self, immediate)
-
-    # ----- tasks -----------------------------------------------------------------------------------------------
-
-    def create_task(self, kind, title, task_input, request_id=None, schedule_id=None):
-        """A queued task. With a request_id, asking twice gives back the same task (no duplicate)."""
-        with self._tx(immediate=True) as db:
-            if request_id:
-                found = db.execute('SELECT id FROM tasks WHERE request_id = ?', (request_id,)).fetchone()
-                if found:
-                    return self.get_task(found['id'])
-            task_id = uuid.uuid4().hex[:12]
-            stamp = now()
-            db.execute('INSERT INTO tasks (id, kind, title, input, thread_id, request_id, schedule_id, created_at, '
-                       'updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                       (task_id, kind, title, json.dumps(task_input), f'task-{task_id}', request_id, schedule_id,
-                        stamp, stamp))
-            db.execute('INSERT INTO task_events (task_id, at, kind, message) VALUES (?, ?, ?, ?)',
-                       (task_id, stamp, 'queued', f'Queued: {title}'))
-        return self.get_task(task_id)
-
-    def get_task(self, task_id):
-        with self.lock:
-            row = self.conn.execute('SELECT * FROM tasks WHERE id = ?', (task_id,)).fetchone()
-        return _row(row, 'input', 'progress', 'result')
-
-    def list_tasks(self, limit=20, status=None):
-        with self.lock:
-            if status:
-                rows = self.conn.execute('SELECT * FROM tasks WHERE status = ? ORDER BY created_at DESC LIMIT ?',
-                                         (status, limit)).fetchall()
-            else:
-                rows = self.conn.execute('SELECT * FROM tasks ORDER BY created_at DESC LIMIT ?', (limit,)).fetchall()
-        return [_row(r, 'input', 'progress', 'result') for r in rows]
-
-    def claim_task(self, worker_id, lease_seconds=120):
-        """The next task to run: a queued one, or a running one whose worker stopped renewing its lease (it crashed
-        or the PC restarted). Returns None when there is nothing to do."""
-        with self._tx(immediate=True) as db:
-            stamp = now()
-            row = db.execute("SELECT id FROM tasks WHERE status = 'queued' OR (status = 'running' AND "
-                             "(lease_until IS NULL OR lease_until < ?)) ORDER BY created_at LIMIT 1",
-                             (stamp,)).fetchone()
-            if row is None:
-                return None
-            db.execute("UPDATE tasks SET status = 'running', lease_owner = ?, lease_until = ?, attempts = attempts + 1, "
-                       "started_at = COALESCE(started_at, ?), updated_at = ? WHERE id = ?",
-                       (worker_id, stamp + lease_seconds, stamp, stamp, row['id']))
-        return self.get_task(row['id'])
-
-    def renew_lease(self, task_id, worker_id, lease_seconds=120):
-        with self._tx() as db:
-            changed = db.execute("UPDATE tasks SET lease_until = ?, updated_at = ? WHERE id = ? AND lease_owner = ? "
-                                 "AND status = 'running'", (now() + lease_seconds, now(), task_id, worker_id)).rowcount
-        return changed == 1
-
-    def update_progress(self, task_id, progress=None, tokens_in=0, tokens_out=0, cost_usd=0.0):
-        with self._tx() as db:
-            if progress is not None:
-                db.execute('UPDATE tasks SET progress = ?, updated_at = ? WHERE id = ?',
-                           (json.dumps(progress), now(), task_id))
-            if tokens_in or tokens_out or cost_usd:
-                db.execute('UPDATE tasks SET tokens_in = tokens_in + ?, tokens_out = tokens_out + ?, '
-                           'cost_usd = cost_usd + ?, updated_at = ? WHERE id = ?',
-                           (tokens_in, tokens_out, cost_usd, now(), task_id))
-
-    def add_event(self, task_id, kind, message):
-        with self._tx() as db:
-            db.execute('INSERT INTO task_events (task_id, at, kind, message) VALUES (?, ?, ?, ?)',
-                       (task_id, now(), kind, str(message)[:2000]))
-
-    def events(self, task_id, after_id=0, limit=200):
-        with self.lock:
-            rows = self.conn.execute('SELECT * FROM task_events WHERE task_id = ? AND id > ? ORDER BY id LIMIT ?',
-                                     (task_id, after_id, limit)).fetchall()
-        return [dict(r) for r in rows]
-
-    def finish_task(self, task_id, status, result=None, error=None, worker_id=None):
-        """Mark a task finished. With worker_id, only the worker that holds the task may finish it."""
-        assert status in FINISHED
-        with self._tx() as db:
-            query = ('UPDATE tasks SET status = ?, result = ?, error = ?, finished_at = ?, updated_at = ?, '
-                     'lease_owner = NULL, lease_until = NULL WHERE id = ?')
-            params = [status, json.dumps(result) if result is not None else None, error, now(), now(), task_id]
-            if worker_id is not None:
-                query += ' AND lease_owner = ?'
-                params.append(worker_id)
-            changed = db.execute(query, params).rowcount
-            if changed:
-                db.execute('INSERT INTO task_events (task_id, at, kind, message) VALUES (?, ?, ?, ?)',
-                           (task_id, now(), status, error or status.capitalize()))
-        return changed == 1
-
-    def request_cancel(self, task_id):
-        """Cancel a task: a queued one at once; a running one at its next step. Returns the task."""
-        with self._tx(immediate=True) as db:
-            row = db.execute('SELECT status FROM tasks WHERE id = ?', (task_id,)).fetchone()
-            if row is None:
-                return None
-            if row['status'] == 'queued':
-                db.execute("UPDATE tasks SET status = 'cancelled', cancel_requested = 1, finished_at = ?, "
-                           "updated_at = ? WHERE id = ?", (now(), now(), task_id))
-                db.execute('INSERT INTO task_events (task_id, at, kind, message) VALUES (?, ?, ?, ?)',
-                           (task_id, now(), 'cancelled', 'Cancelled before it started'))
-            elif row['status'] == 'running':
-                db.execute('UPDATE tasks SET cancel_requested = 1, updated_at = ? WHERE id = ?', (now(), task_id))
-                db.execute('INSERT INTO task_events (task_id, at, kind, message) VALUES (?, ?, ?, ?)',
-                           (task_id, now(), 'cancelling', 'Cancel requested; stopping at the next step'))
-        return self.get_task(task_id)
-
-    def cancel_requested(self, task_id):
-        with self.lock:
-            row = self.conn.execute('SELECT cancel_requested FROM tasks WHERE id = ?', (task_id,)).fetchone()
-        return bool(row and row['cancel_requested'])
-
-    # ----- schedules -------------------------------------------------------------------------------------------
-
-    def add_schedule(self, kind, title, task_input, every_seconds, first_run_at=None):
-        if every_seconds < 60:
-            raise ValueError('A schedule repeats at most once a minute.')
-        schedule_id = uuid.uuid4().hex[:10]
-        with self._tx() as db:
-            db.execute('INSERT INTO schedules (id, kind, title, input, every_seconds, next_run_at, created_at) '
-                       'VALUES (?, ?, ?, ?, ?, ?, ?)', (schedule_id, kind, title, json.dumps(task_input),
-                                                       int(every_seconds), first_run_at or now(), now()))
-        return self.get_schedule(schedule_id)
-
-    def get_schedule(self, schedule_id):
-        with self.lock:
-            row = self.conn.execute('SELECT * FROM schedules WHERE id = ?', (schedule_id,)).fetchone()
-        return _row(row, 'input')
-
-    def list_schedules(self):
-        with self.lock:
-            rows = self.conn.execute('SELECT * FROM schedules ORDER BY created_at').fetchall()
-        return [_row(r, 'input') for r in rows]
-
-    def set_schedule_enabled(self, schedule_id, enabled):
-        with self._tx() as db:
-            return db.execute('UPDATE schedules SET enabled = ? WHERE id = ?',
-                              (1 if enabled else 0, schedule_id)).rowcount == 1
-
-    def delete_schedule(self, schedule_id):
-        with self._tx() as db:
-            return db.execute('DELETE FROM schedules WHERE id = ?', (schedule_id,)).rowcount == 1
-
-    def enqueue_due(self, at=None):
-        """Queue one task for every schedule that is due. Each run has a request id made of the schedule and its
-        due time, so two workers (or a restart) never queue the same run twice. Missed runs are not piled up: the
-        next run moves past now."""
-        stamp = at or now()
-        queued = []
-        with self._tx(immediate=True) as db:
-            due = db.execute('SELECT * FROM schedules WHERE enabled = 1 AND next_run_at <= ?', (stamp,)).fetchall()
-            for schedule in due:
-                request_id = f'schedule:{schedule["id"]}:{int(schedule["next_run_at"])}'
-                if not db.execute('SELECT 1 FROM tasks WHERE request_id = ?', (request_id,)).fetchone():
-                    task_id = uuid.uuid4().hex[:12]
-                    db.execute('INSERT INTO tasks (id, kind, title, input, thread_id, request_id, schedule_id, '
-                               'created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                               (task_id, schedule['kind'], schedule['title'], schedule['input'], f'task-{task_id}',
-                                request_id, schedule['id'], stamp, stamp))
-                    db.execute('INSERT INTO task_events (task_id, at, kind, message) VALUES (?, ?, ?, ?)',
-                               (task_id, stamp, 'queued', f'Queued by schedule {schedule["id"]}'))
-                    queued.append(task_id)
-                every = schedule['every_seconds']
-                missed = int((stamp - schedule['next_run_at']) // every) + 1
-                db.execute('UPDATE schedules SET next_run_at = ? WHERE id = ?',
-                           (schedule['next_run_at'] + missed * every, schedule['id']))
-        return queued
-
-    # ----- operations (external actions, done once) -------------------------------------------------------------
-
-    def begin_operation(self, op_id, task_id, kind, target, intent):
-        """Record the intent to do an action before doing it. Returns (row, created): when the row already exists
-        (status pending, done, failed or uncertain) the caller must not simply do the action again."""
-        with self._tx(immediate=True) as db:
-            row = db.execute('SELECT * FROM operations WHERE op_id = ?', (op_id,)).fetchone()
-            if row is not None:
-                return _row(row, 'intent', 'result'), False
-            db.execute('INSERT INTO operations (op_id, task_id, kind, target, intent, status, created_at, updated_at) '
-                       "VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)",
-                       (op_id, task_id, kind, target, json.dumps(intent), now(), now()))
-        return self.get_operation(op_id), True
-
-    def finish_operation(self, op_id, status, result=None):
-        assert status in ('done', 'failed', 'uncertain', 'pending')
-        with self._tx() as db:
-            db.execute('UPDATE operations SET status = ?, result = ?, updated_at = ? WHERE op_id = ?',
-                       (status, json.dumps(result) if result is not None else None, now(), op_id))
-        return self.get_operation(op_id)
-
-    def operations(self, kind, statuses):
-        with self.lock:
-            rows = self.conn.execute(f'SELECT * FROM operations WHERE kind = ? AND status IN '
-                                     f'({",".join("?" * len(statuses))}) ORDER BY created_at',
-                                     (kind, *statuses)).fetchall()
-        return [_row(r, 'intent', 'result') for r in rows]
-
-    def get_operation(self, op_id):
-        with self.lock:
-            row = self.conn.execute('SELECT * FROM operations WHERE op_id = ?', (op_id,)).fetchone()
-        return _row(row, 'intent', 'result')
-
-    # ----- sources (what a research task retrieved) -------------------------------------------------------------
-
-    def add_source(self, task_id, url, title, text, content_hash):
-        """The source's number in this task. The same URL fetched twice keeps its first number."""
-        with self._tx(immediate=True) as db:
-            row = db.execute('SELECT n FROM sources WHERE task_id = ? AND url = ?', (task_id, url)).fetchone()
-            if row:
-                return row['n'], False
-            n = db.execute('SELECT COALESCE(MAX(n), 0) + 1 AS n FROM sources WHERE task_id = ?',
-                           (task_id,)).fetchone()['n']
-            db.execute('INSERT INTO sources (task_id, n, url, title, text, content_hash, fetched_at) '
-                       'VALUES (?, ?, ?, ?, ?, ?, ?)', (task_id, n, url, title, text, content_hash, now()))
-        return n, True
-
-    def sources(self, task_id):
-        with self.lock:
-            rows = self.conn.execute('SELECT * FROM sources WHERE task_id = ? ORDER BY n', (task_id,)).fetchall()
-        return [dict(r) for r in rows]
-
-    def source(self, task_id, n):
-        with self.lock:
-            row = self.conn.execute('SELECT * FROM sources WHERE task_id = ? AND n = ?', (task_id, n)).fetchone()
-        return dict(row) if row else None
-
-    # ----- memories --------------------------------------------------------------------------------------------
-
-    def remember(self, kind, content, provenance):
-        with self._tx() as db:
-            cursor = db.execute('INSERT INTO memories (kind, content, provenance, created_at, updated_at) '
-                                'VALUES (?, ?, ?, ?, ?)', (kind, content, provenance, now(), now()))
-        return self.memory(cursor.lastrowid)
-
-    def update_memory(self, memory_id, content, provenance):
-        with self._tx() as db:
-            changed = db.execute('UPDATE memories SET content = ?, provenance = ?, updated_at = ? WHERE id = ?',
-                                 (content, provenance, now(), memory_id)).rowcount
-        return self.memory(memory_id) if changed else None
-
-    def forget(self, memory_id):
-        with self._tx() as db:
-            return db.execute('DELETE FROM memories WHERE id = ?', (memory_id,)).rowcount == 1
-
-    def memory(self, memory_id):
-        with self.lock:
-            row = self.conn.execute('SELECT * FROM memories WHERE id = ?', (memory_id,)).fetchone()
-        return dict(row) if row else None
-
-    def memories(self):
-        with self.lock:
-            rows = self.conn.execute('SELECT * FROM memories ORDER BY id').fetchall()
-        return [dict(r) for r in rows]
-
-    # ----- workers ---------------------------------------------------------------------------------------------
-
-    def beat(self, worker_id, pid):
-        with self._tx() as db:
-            db.execute('INSERT INTO workers (id, pid, beat_at) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET '
-                       'beat_at = excluded.beat_at, pid = excluded.pid', (worker_id, pid, now()))
-
-    def worker_gone(self, worker_id):
-        with self._tx() as db:
-            db.execute('DELETE FROM workers WHERE id = ?', (worker_id,))
-
-    def live_workers(self, within=45):
-        with self.lock:
-            rows = self.conn.execute('SELECT * FROM workers WHERE beat_at > ?', (now() - within,)).fetchall()
-        return [dict(r) for r in rows]
-
-
-class _Transaction:
-    def __init__(self, store, immediate):
-        self.store, self.immediate = store, immediate
-
-    def __enter__(self):
-        self.store.lock.acquire()
-        self.store.conn.execute('BEGIN IMMEDIATE' if self.immediate else 'BEGIN')
-        return self.store.conn
-
-    def __exit__(self, kind, value, trace):
+    @contextmanager
+    def connect(self):
+        db = sqlite3.connect(self.path, timeout=10)
+        db.row_factory = sqlite3.Row
         try:
-            self.store.conn.execute('COMMIT' if kind is None else 'ROLLBACK')
+            with db:
+                yield db
         finally:
-            self.store.lock.release()
-        return False
+            db.close()
+
+    def items(self, kind):
+        with self.connect() as db:
+            return [dict(r) for r in db.execute('SELECT * FROM items WHERE kind=? ORDER BY updated DESC', (kind,))]
+
+    def tasks(self, include_completed=True):
+        with self.connect() as db:
+            rows = [dict(r) for r in db.execute('SELECT i.*, COALESCE(m.priority,\'normal\') AS priority, m.due, m.recurrence, COALESCE(m.completed,0) AS completed, m.completed_at FROM items i LEFT JOIN task_meta m ON m.item_id=i.id WHERE i.kind=\'task\' ORDER BY completed, CASE priority WHEN \'high\' THEN 0 WHEN \'normal\' THEN 1 ELSE 2 END, due IS NULL, due, updated DESC')]
+            return rows if include_completed else [r for r in rows if not r['completed']]
+
+    def task_put(self, body, item_id=None, priority='normal', due=None, recurrence=None):
+        if priority not in ('low', 'normal', 'high', 'urgent'):
+            raise ValueError('Invalid task priority.')
+        row = self.put('task', body, item_id)
+        with self.connect() as db:
+            db.execute('INSERT OR IGNORE INTO task_meta(item_id,priority,due,recurrence) VALUES (?,?,?,?)', (row['id'], priority, due, recurrence))
+            db.execute('UPDATE task_meta SET priority=?,due=?,recurrence=? WHERE item_id=?', (priority, due, recurrence, row['id']))
+        return next(t for t in self.tasks() if t['id'] == row['id'])
+
+    def complete_task(self, item_id, completed=True):
+        with self.connect() as db:
+            row = db.execute('SELECT recurrence,due FROM task_meta WHERE item_id=?', (item_id,)).fetchone()
+            if not row: db.execute('INSERT INTO task_meta(item_id,priority,completed,completed_at) VALUES (?,?,?,?)', (item_id,'normal',int(completed),time.time() if completed else None))
+            else:
+                db.execute('UPDATE task_meta SET completed=?,completed_at=? WHERE item_id=?', (int(completed), time.time() if completed else None, item_id))
+            return True
+
+    def put(self, kind, body, item_id=None, item_key=None, category=None, source='user', confidence=1.0, release=None):
+        if kind not in ('memory', 'note', 'task', 'project'):
+            raise ValueError('Unknown item type.')
+        if not isinstance(body, str) or not body.strip() or len(body) > 12000:
+            raise ValueError('Enter between 1 and 12,000 characters.')
+        now = time.time()
+        if kind == 'memory' and re.search(r'(?:api[_ -]?key|password|secret|bearer\s|gsk_|sk-fish-|sk-proj-)', body, re.I):
+            raise ValueError('Credentials cannot be saved as memory.')
+        with self.connect() as db:
+            if kind == 'memory' and not item_id:
+                rows = db.execute("SELECT id,body FROM items WHERE kind='memory'").fetchall()
+                same = next((r for r in rows if memory.key(r['body']) == memory.key(body)), None)
+                if same:
+                    item_id = same['id']
+            item_id = item_id or uuid.uuid4().hex
+            existing = db.execute('SELECT kind FROM items WHERE id=?', (item_id,)).fetchone()
+            if existing and existing['kind'] != kind:
+                raise ValueError('Item type mismatch.')
+            db.execute('INSERT INTO items(id,kind,body,created,updated,item_key,category,source,confidence,release) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET body=excluded.body, updated=excluded.updated, item_key=excluded.item_key, category=excluded.category, source=excluded.source, confidence=excluded.confidence, release=excluded.release', (item_id, kind, body.strip(), now, now, item_key or memory.key(body), category or ('project' if kind == 'project' else 'fact'), source, float(confidence), str(release or self.release)[:80]))
+            if kind == 'memory' and memory.key(body) == 'profile:name':
+                name = memory.name_from(body)[:100]   # one rule for names (1.0.18): key() just found it is one
+                db.execute('INSERT OR REPLACE INTO settings VALUES (?,?)', ('name', json.dumps(name)))
+        return {'id': item_id, 'kind': kind, 'body': body.strip()}
+
+    def delete(self, kind, item_id):
+        with self.connect() as db:
+            row = db.execute('SELECT body FROM items WHERE id=? AND kind=?', (item_id, kind)).fetchone()
+            if kind == 'memory' and row and memory.key(row['body']) == 'profile:name':
+                db.execute("DELETE FROM settings WHERE key='name'")
+            return db.execute('DELETE FROM items WHERE id=? AND kind=?', (item_id, kind)).rowcount > 0
+
+    def message(self, conversation, role, content, *, transaction=None):
+        if transaction is not None:
+            # Opt-in TEST transaction participation. The caller owns commit/rollback.
+            # Never open another database or silently fall back to a separate write.
+            if (not isinstance(transaction, sqlite3.Connection) or not transaction.in_transaction
+                    or transaction.execute('PRAGMA application_id').fetchone()[0] != 0x544934
+                    or Path(transaction.execute('PRAGMA database_list').fetchone()[2]).resolve() != self.path.resolve()):
+                raise ValueError('TEST_MESSAGE_TRANSACTION_REQUIRED')
+            return transaction.execute('INSERT INTO messages(conversation,role,content,created) VALUES (?,?,?,?)',
+                (conversation, role, content, time.time())).lastrowid
+        with self.connect() as db:
+            db.execute('INSERT INTO messages(conversation,role,content,created) VALUES (?,?,?,?)', (conversation, role, content, time.time()))
+
+    def history(self, conversation, limit=100):
+        with self.connect() as db:
+            return [dict(r) for r in db.execute('SELECT * FROM (SELECT * FROM messages WHERE conversation=? ORDER BY id DESC LIMIT ?) ORDER BY id', (conversation, limit))]
+
+    def record_evidence(self, conversation, tool, result):
+        # Only compact public/action results; never development file contents or keys.
+        if tool not in permissions.EVIDENCE_TOOLS or not isinstance(result, dict):
+            return
+        payload = json.dumps(result)
+        if len(payload) > 6000 or re.search(r'gsk_|sk-fish-|sk-proj-|api[_ -]?key|bearer\s', payload, re.I):
+            return
+        with self.connect() as db:
+            db.execute('INSERT INTO turn_evidence(conversation,tool,result,created) VALUES (?,?,?,?)', (conversation, tool, payload, time.time()))
+            db.execute('DELETE FROM turn_evidence WHERE conversation=? AND id NOT IN (SELECT id FROM turn_evidence WHERE conversation=? ORDER BY id DESC LIMIT 8)', (conversation, conversation))
+
+    def recent_evidence(self, conversation):
+        with self.connect() as db:
+            return [{'tool': r['tool'], 'result': json.loads(r['result']), 'created': r['created']} for r in db.execute('SELECT * FROM turn_evidence WHERE conversation=? ORDER BY id', (conversation,))]
+
+    def conversations(self):
+        with self.connect() as db:
+            return [dict(r) for r in db.execute("SELECT conversation AS id, MIN(created) AS created, MAX(created) AS updated, (SELECT substr(content,1,60) FROM messages m2 WHERE m2.conversation=m.conversation AND role='user' ORDER BY id LIMIT 1) AS title FROM messages m GROUP BY conversation ORDER BY updated DESC LIMIT 100")]
+
+    def conversations_for(self, prefix, limit=50):
+        """A device's own conversations (the ids that start with its prefix), newest first, with its first question,
+        the last line and the message count (1.0.16, for the phone's Chats screen)."""
+        pattern = prefix.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_') + '%'
+        with self.connect() as db:
+            return [dict(r) for r in db.execute(
+                "SELECT conversation AS id, MIN(created) AS created, MAX(created) AS updated, COUNT(*) AS messages, "
+                "(SELECT substr(content,1,80) FROM messages m2 WHERE m2.conversation=m.conversation AND role='user' ORDER BY id LIMIT 1) AS title, "
+                "(SELECT substr(content,1,160) FROM messages m3 WHERE m3.conversation=m.conversation ORDER BY id DESC LIMIT 1) AS last "
+                "FROM messages m WHERE conversation LIKE ? ESCAPE '\\' GROUP BY conversation ORDER BY updated DESC LIMIT ?", (pattern, limit))]
+
+    def clear_conversation(self, conversation):
+        with self.connect() as db:
+            db.execute('DELETE FROM messages WHERE conversation=?', (conversation,))
+            db.execute('DELETE FROM turn_evidence WHERE conversation=?', (conversation,))
+            db.execute('DELETE FROM research WHERE conversation=?', (conversation,))
+
+    def reminder(self, title, seconds):
+        if not isinstance(title, str) or not title.strip() or len(title) > 300:
+            raise ValueError('Reminder title must be 1–300 characters.')
+        if isinstance(seconds, bool) or not isinstance(seconds, (int, float)) or not 1 <= seconds <= 31536000:
+            raise ValueError('Timer must be between one second and one year.')
+        value = {'id': uuid.uuid4().hex, 'title': title, 'due': time.time() + seconds, 'fired': 0}
+        with self.connect() as db:
+            db.execute('INSERT INTO reminders VALUES (:id,:title,:due,:fired)', value)
+        return value
+
+    def reminders(self):
+        with self.connect() as db:
+            return [dict(r) for r in db.execute('SELECT * FROM reminders ORDER BY due')]
+
+    def due(self, now=None):
+        with self.connect() as db:
+            db.execute('UPDATE reminders SET fired=1 WHERE fired=0 AND due<=?', (time.time() if now is None else now,))
+            return [dict(r) for r in db.execute('SELECT * FROM reminders WHERE fired=1 ORDER BY due')]
+
+    def dismiss_reminder(self, item_id):
+        with self.connect() as db:
+            db.execute('DELETE FROM reminders WHERE id=?', (item_id,))
+
+    def settings(self):
+        result = {'name': '', 'voice': False, 'continuous': False, 'response_length': 'balanced', 'tone': 'cinematic', 'humor': True, 'speech_rate': 'natural', 'wake_sensitivity': 'normal', 'quiet_hours': False, 'briefing_time': '', 'proactive': False, 'answer_mode': DEFAULT_ANSWER_MODE, 'provider_backup': True, 'speech_recognition': 'local', 'offline_answers': True, 'reply_stream': False, 'music_volume': 80, 'music_startup': '', 'workshop_minutes': 15, 'workshop_folders': ''}
+        with self.connect() as db:
+            result.update({r['key']: json.loads(r['value']) for r in db.execute('SELECT * FROM settings')})
+        if result.get('voice_profile', 'auto') not in VOICE_PROFILES:  # e.g. an ElevenLabs choice saved before 1.0.15
+            result['voice_profile'] = 'auto'
+        if result.get('answer_mode') not in ANSWER_MODES:  # a value this version does not know
+            result['answer_mode'] = DEFAULT_ANSWER_MODE
+        if result.get('speech_recognition') not in ('local', 'cloud'):
+            result['speech_recognition'] = 'local'
+        return result
+
+    def save_settings(self, values):
+        permitted = {'voice_profile': str, 'name': str, 'voice': bool, 'continuous': bool, 'response_length': str, 'tone': str, 'humor': bool, 'speech_rate': str, 'wake_sensitivity': str, 'quiet_hours': bool, 'briefing_time': str, 'proactive': bool, 'answer_mode': str, 'provider_backup': bool, 'speech_recognition': str, 'offline_answers': bool, 'reply_stream': bool, 'music_volume': int, 'music_startup': str, 'workshop_minutes': int, 'workshop_folders': str}
+        with self.connect() as db:
+            for key, val in values.items():
+                if key not in permitted or not isinstance(val, permitted[key]):
+                    raise ValueError('Invalid setting.')
+                if isinstance(val, str) and len(val) > (2000 if key == 'workshop_folders' else 255 if key == 'music_startup' else 100):   # a file name may be long; folders are several paths
+                    raise ValueError('Setting too long.')
+                if key == 'voice_profile' and val not in VOICE_PROFILES: raise ValueError('Invalid voice profile.')
+                if key == 'music_volume' and (isinstance(val, bool) or not 0 <= val <= 100): raise ValueError('The music volume is a whole number from 0 to 100.')
+                if key == 'music_startup' and (val != val.strip() or any(c in val for c in '\\/') or val.startswith('.')): raise ValueError('The start-up song is a nickname or a file name from the music folder.')
+                if key == 'workshop_minutes' and (isinstance(val, bool) or not 1 <= val <= 180): raise ValueError('The mission time limit is a whole number of minutes from 1 to 180.')
+                if key == 'workshop_folders' and any(c in val for c in '\x00\n\r'): raise ValueError('The workshop folders are full paths separated by semicolons.')
+                if key == 'response_length' and val not in ('brief', 'balanced', 'detailed'):
+                    raise ValueError('Invalid response length.')
+                if key == 'tone' and val not in ('cinematic','professional','casual'): raise ValueError('Invalid tone.')
+                if key == 'answer_mode' and val not in ANSWER_MODES: raise ValueError('Invalid answer speed.')
+                if key == 'speech_recognition' and val not in ('local', 'cloud'): raise ValueError('Invalid speech recognition choice.')
+                if key == 'speech_rate' and val not in ('slow','natural','fast'): raise ValueError('Invalid speech rate.')
+                if key == 'wake_sensitivity' and val not in ('low','normal','high'): raise ValueError('Invalid wake sensitivity.')
+                if key == 'briefing_time' and val and not re.fullmatch(r'([01]\d|2[0-3]):[0-5]\d', val): raise ValueError('Briefing time must use HH:MM.')
+                db.execute('INSERT OR REPLACE INTO settings VALUES (?,?)', (key, json.dumps(val)))
+                if key == 'name':
+                    for row in db.execute("SELECT id,body FROM items WHERE kind='memory'").fetchall():
+                        if memory.key(row['body']) == 'profile:name':
+                            if val.strip():
+                                db.execute('UPDATE items SET body=?,updated=?,release=? WHERE id=?', ('Preferred name: '+val.strip(), time.time(), str(self.release)[:80], row['id']))
+                            else:
+                                db.execute('DELETE FROM items WHERE id=?', (row['id'],))
+        return self.settings()
+
+    def audit(self, action, status, run_id=None, device=None):
+        with self.connect() as db:
+            db.execute('INSERT INTO audit(action,status,created,run_id,device) VALUES (?,?,?,?,?)',
+                       (action[:80], status[:80], time.time(), run_id[:64] if isinstance(run_id, str) else None, device[:64] if isinstance(device, str) else None))
+
+    # The emergency stop and the owner's switch for each tool live outside `settings`: the settings page, the
+    # JSON export and a restored JSON backup cannot reach them.
+    def stop_state(self):
+        with self.connect() as db:
+            row = db.execute("SELECT value FROM control WHERE key='emergency_stop'").fetchone()
+        try:
+            value = json.loads(row['value']) if row else None
+        except ValueError:
+            value = {}  # unreadable: stay stopped until the owner resumes
+        return value if isinstance(value, dict) or value is None else {}
+
+    def set_stop(self, value):
+        with self.connect() as db:
+            if value is None:
+                db.execute("DELETE FROM control WHERE key='emergency_stop'")
+            else:
+                db.execute("INSERT OR REPLACE INTO control VALUES ('emergency_stop',?)", (json.dumps(value),))
+
+    # Automatic backups (auto_backup.py): the owner's folder and schedule and the record of what was made. Kept
+    # with the stop and the switches, out of reach of the settings page, the JSON export and a restored JSON backup.
+    def auto_backup_state(self):
+        with self.connect() as db:
+            row = db.execute("SELECT value FROM control WHERE key='auto_backup'").fetchone()
+        try:
+            value = json.loads(row['value']) if row else None
+        except ValueError:
+            value = None
+        return value if isinstance(value, dict) else None
+
+    def set_auto_backup_state(self, value):
+        with self.connect() as db:
+            db.execute("INSERT OR REPLACE INTO control VALUES ('auto_backup',?)", (json.dumps(value),))
+
+    # The private-network door for paired devices (remote_devices.py, 1.0.16): off by default. Kept with the stop
+    # and the switches, out of reach of the settings page, the JSON export and a restored JSON backup.
+    def remote_devices_state(self):
+        with self.connect() as db:
+            row = db.execute("SELECT value FROM control WHERE key='remote_devices'").fetchone()
+        try:
+            value = json.loads(row['value']) if row else None
+        except ValueError:
+            value = None
+        return value if isinstance(value, dict) else None
+
+    def set_remote_devices_state(self, value):
+        with self.connect() as db:
+            db.execute("INSERT OR REPLACE INTO control VALUES ('remote_devices',?)", (json.dumps(value),))
+
+    def tool_modes(self):
+        with self.connect() as db:
+            return {r['tool']: r['mode'] for r in db.execute('SELECT tool,mode FROM tool_modes')}
+
+    def set_tool_mode(self, tool, mode):
+        if tool not in permissions.TABLE or mode not in permissions.modes_for(tool):
+            raise ValueError('That switch position is not available for this tool.')
+        with self.connect() as db:
+            # No row means the position the tool ships with (permissions.Rule.shipped; "allowed" for all but the
+            # workshop's commands). A row is kept whenever the owner's choice differs from it, "default" included.
+            if mode == permissions.TABLE[tool].shipped:
+                db.execute('DELETE FROM tool_modes WHERE tool=?', (tool,))
+            else:
+                db.execute('INSERT OR REPLACE INTO tool_modes VALUES (?,?,?)', (tool, mode, time.time()))
+        return self.tool_modes()
+
+    def logs(self):
+        with self.connect() as db:
+            return [dict(r) for r in db.execute('SELECT * FROM audit ORDER BY id DESC LIMIT 40')]
+
+    def feedback(self, conversation, message, rating):
+        if rating not in ('helpful', 'not_helpful', 'style') or not isinstance(message, str) or len(message) > 12000:
+            raise ValueError('Invalid feedback.')
+        with self.connect() as db:
+            db.execute('INSERT INTO feedback(conversation,message,rating,created) VALUES (?,?,?,?)', (conversation, message, rating, time.time()))
+        return {'status': 'saved'}
+
+    def save_research(self, conversation, query, result):
+        with self.connect() as db:
+            db.execute('INSERT INTO research(conversation,query,result,created) VALUES (?,?,?,?)', (conversation, query[:500], json.dumps(result, ensure_ascii=False)[:30000], time.time()))
+
+    def recent_research(self, conversation, limit=3):
+        with self.connect() as db:
+            rows = db.execute('SELECT query,result,created FROM research WHERE conversation=? ORDER BY id DESC LIMIT ?', (conversation, limit)).fetchall()
+        return [{'query': r['query'], 'result': json.loads(r['result']), 'created': r['created']} for r in rows]
+
+    def import_data(self, payload):
+        if not isinstance(payload, dict): raise ValueError('Backup must be a JSON object.')
+        count = 0
+        for row in payload.get('items', []):
+            if row.get('kind') in ('memory','note','task','project'):
+                # 1.0.17 item E: a restored thing keeps the release it was saved under; a backup made before 1.0.17 has none.
+                stamp = row.get('release')
+                stamp = stamp.strip() if isinstance(stamp, str) and stamp.strip() else 'pre-1.0.17 backup'
+                self.put(row['kind'], row.get('body',''), row.get('id'), row.get('item_key'), row.get('category'), row.get('source','backup'), row.get('confidence',1.0), release=stamp); count += 1
+        with self.connect() as db:
+            for row in payload.get('settings', []):
+                if row.get('key') in ('name','voice','continuous','response_length') or (row.get('key') == 'answer_mode' and row.get('value') in [json.dumps(m) for m in ANSWER_MODES]):
+                    db.execute('INSERT OR REPLACE INTO settings VALUES (?,?)', (row['key'], row['value']))
+        return {'status':'restored','items':count}
+
+    def index_document(self, document_id, name, content):
+        if not isinstance(name, str) or not isinstance(content, str) or len(content) > 30000:
+            raise ValueError('Document is too large to index.')
+        now = time.time()
+        with self.connect() as db:
+            db.execute('INSERT OR REPLACE INTO documents VALUES (?,?,?,?,?)', (document_id, name[:250], content, now, now))
+        return {'id': document_id, 'name': name[:250], 'characters': len(content)}
+
+    def documents(self):
+        with self.connect() as db:
+            return [dict(r) for r in db.execute('SELECT id,name,created,updated,length(content) AS characters FROM documents ORDER BY updated DESC')]
+
+    def search_documents(self, query, limit=5):
+        terms = [w.casefold() for w in re.findall(r'\w{3,}', query)]
+        if not terms: return []
+        with self.connect() as db:
+            rows = [dict(r) for r in db.execute('SELECT * FROM documents')]
+        scored = []
+        for row in rows:
+            text = row['content'].casefold(); score = sum(text.count(term) for term in terms)
+            if score:
+                pos = min((text.find(term) for term in terms if text.find(term) >= 0), default=0)
+                start = max(0, pos - 180); end = min(len(row['content']), pos + 700)
+                scored.append((score, {'id': row['id'], 'name': row['name'], 'excerpt': row['content'][start:end].strip()}))
+        return [item for _, item in sorted(scored, key=lambda x: x[0], reverse=True)[:limit]]

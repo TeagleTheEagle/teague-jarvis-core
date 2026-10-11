@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 import citations
-import store as store_mod
+import veronica_store as store_mod
 import web
 
 

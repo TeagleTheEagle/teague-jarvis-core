@@ -10,7 +10,7 @@ import calendar_feed
 import changes
 import gmail
 import safety
-import store as store_mod
+import veronica_store as store_mod
 from agent import Veronica
 from test_app import FakeUI, FakeVoice, FakeMicrophone
 from test_gmail import ENV, FakeIMAP, FakeSMTP, INBOX, SECRET, mail

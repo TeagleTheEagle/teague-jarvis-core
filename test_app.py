@@ -177,7 +177,7 @@ def test_the_page_can_only_reach_the_bridge_methods():
 
 
 def test_the_page_starts_research_once_per_click_and_opens_only_veronicas_reports(tmp_path, monkeypatch):
-    import store as store_mod
+    import veronica_store as store_mod
     import tasks
     session, ui = make_session(tmp_path)
     session.veronica._store = store_mod.Store(tmp_path / 'veronica.db')

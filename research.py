@@ -31,7 +31,7 @@ import uuid
 
 import citations
 import safety
-import store as store_mod
+import veronica_store as store_mod
 import web
 
 logging.getLogger('deepagents.middleware._video').setLevel(logging.ERROR)  # a harmless optional-dependency probe
