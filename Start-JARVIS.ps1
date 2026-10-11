@@ -54,7 +54,46 @@ if (-not $jarvisAlreadyRunning) {
     }
     if (-not $jarvisReady) { throw 'JARVIS could not start. Run python server.py from this folder to see the error.' }
 }
-$jarvisEdge = Join-Path ${env:ProgramFiles(x86)} 'Microsoft/Edge/Application/msedge.exe'
-if (Test-Path -LiteralPath $jarvisEdge) {
+# Open the Core in a desktop-style window. Edge's --app= on its own is not enough: when Edge has
+# only background (startup-boost) processes and no window to hand off to, it exits showing nothing
+# and the owner is left thinking JARVIS failed to start even though the Core is serving fine. So a
+# window is verified to have really appeared, then --new-window is tried, then the default browser.
+$jarvisEdge = @(
+    (Join-Path ${env:ProgramFiles(x86)} 'Microsoft/Edge/Application/msedge.exe'),
+    (Join-Path $env:ProgramFiles 'Microsoft/Edge/Application/msedge.exe'),
+    (Join-Path $env:LOCALAPPDATA 'Microsoft/Edge/Application/msedge.exe')
+) | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+
+# Every Edge window title visible right now. Wrapped in @() at each use: a scriptblock that returns
+# an empty array hands back $null, which under $ErrorActionPreference = 'Stop' would abort this script.
+$jarvisEdgeTitles = {
+    @(Get-Process msedge -ErrorAction SilentlyContinue |
+        Where-Object { $_.MainWindowTitle } |
+        ForEach-Object { $_.MainWindowTitle })
+}
+# A new window is one whose title was not there before the launch, so an Edge window the owner
+# already had open is not mistaken for the window this launcher asked for.
+$jarvisWindowAppeared = {
+    param($jarvisKnown)
+    $jarvisKnown = @($jarvisKnown)
+    for ($jarvisTry = 0; $jarvisTry -lt 25; $jarvisTry++) {
+        Start-Sleep -Milliseconds 200
+        foreach ($jarvisTitle in @(& $jarvisEdgeTitles)) {
+            if ($jarvisKnown -notcontains $jarvisTitle) { return $true }
+        }
+    }
+    return $false
+}
+
+$jarvisBefore = @(& $jarvisEdgeTitles)
+$jarvisWindowShown = $false
+if ($jarvisEdge) {
     Start-Process -FilePath $jarvisEdge -ArgumentList @("--app=$jarvisUrl")
-} else { Start-Process $jarvisUrl }
+    $jarvisWindowShown = [bool](& $jarvisWindowAppeared $jarvisBefore)
+    if (-not $jarvisWindowShown) {
+        # --app= handed off to a windowless background instance and showed nothing.
+        Start-Process -FilePath $jarvisEdge -ArgumentList @('--new-window', $jarvisUrl)
+        $jarvisWindowShown = [bool](& $jarvisWindowAppeared $jarvisBefore)
+    }
+}
+if (-not $jarvisWindowShown) { Start-Process $jarvisUrl }
