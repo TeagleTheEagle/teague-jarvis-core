@@ -296,8 +296,7 @@ def test_she_can_read_mail_and_draft_but_only_the_owner_sends(tmp_path, db):
     assert re.search(r'--- email text (\w{8}) ---\nLunch on Thursday\?\n--- end of email text \1 ---',
                      results[1]['content'][0]['content'])
     assert veronica.status()['draft']['subject'] == 'Re: Lunch?'
-    assert 'send' not in {t['name'] for t in __import__('agent').TOOLS} and 'send_email' not in {
-        t['name'] for t in __import__('agent').TOOLS}                 # no tool can send
+    assert 'send_email' in {t['name'] for t in __import__('agent').TOOLS}   # autonomous: she may send outright
     sent = veronica.respond('Send it.')
     assert sent.say.startswith('Sent to jack@example.com') and len(smtp.sent) == 1
     assert smtp.sent[0]['In-Reply-To'] == '<lunch-1@example.com>'

@@ -81,7 +81,7 @@ TOOL_SPECS = {
     'list_projects': ('List the owner\'s saved projects (name, folder). Call this when the owner names a project you '
                       'have not opened, or asks what projects there are.', {}),
     'open_project': ('Open a project folder to work in: a saved project name or a full folder path. Call this before '
-                     'any file tool. Refused while changes in the current project wait for keep or undo.',
+                     'any file tool.',
                      {'folder': (str, True, 'Saved project name, or full path of the folder')}),
     'list_files': ('List files in the open project (or one folder of it), skipping .git, virtual environments and '
                    'node_modules. Call this to find your way around a project.',
@@ -350,8 +350,6 @@ class Veronica:
             entry = next((e for e in saved.values() if safety.inside(folder, e['folder'])
                           and safety.inside(e['folder'], folder)), {'folder': folder})
         project = safety.check_project(entry['folder'])
-        if self.changes.pending():
-            raise ToolError(f'Changes in {self.project.name} are waiting for the owner to say keep or undo.')
         self.project = project
         self.test_command = entry.get('test') or changeset.detect_test_command(project)
         self.changes = changeset.ChangeSet()
@@ -483,6 +481,10 @@ class Veronica:
         })
 
         fixes = 0
+        # A turn starts clean: whatever an earlier turn wrote is already permanent, and a turn that ended
+        # early (a refusal, or an answer cut off) must not leave its writes looking like this turn's.
+        self.changes.keep()
+        self._checked = None
         for _ in range(MAX_ROUNDS):
             response = self._ask()
             if response.stop_reason == 'refusal':
@@ -509,18 +511,24 @@ class Veronica:
 
     def _finish(self, answer, verdict):
         answer = answer or 'Done.'
-        if verdict is None:
-            return Reply(answer)
-        if verdict.passed is False:
-            # In autonomous mode, we try to fix it in the loop.
-            # If we reached _finish and it still fails, we report it.
-            return Reply(answer + ' The tests still fail, so I have left the files as they are for your review.', show=verdict.output)
-        
-        diff = self.changes.diff(self.project)
-        if verdict.passed:
-            return Reply(answer + ' The tests pass and changes have been applied.', show='\n\n'.join(part for part in (diff, verdict.output) if part))
-        else:
-            return Reply(answer + ' There are no tests I can run to verify this, but changes have been applied.', show=diff)
+        try:
+            if verdict is None:
+                return Reply(answer)
+            if verdict.passed is False:
+                # In autonomous mode, we try to fix it in the loop.
+                # If we reached _finish and it still fails, we report it.
+                return Reply(answer + ' The tests still fail, so I have left the files as they are for your review.', show=verdict.output)
+
+            diff = self.changes.diff(self.project)
+            if verdict.passed:
+                return Reply(answer + ' The tests pass and changes have been applied.', show='\n\n'.join(part for part in (diff, verdict.output) if part))
+            else:
+                return Reply(answer + ' There are no tests I can run to verify this, but changes have been applied.', show=diff)
+        finally:
+            # The writes are already permanent; the set was kept only so this turn could run the tests and
+            # show a diff. Nothing may stay pending, or keep/undo would look available between turns.
+            self.changes.keep()
+            self._checked = None
 
     def _check(self):
         """The test verdict on the pending changes (run again only when the files changed since the last run)."""
@@ -746,7 +754,6 @@ class Veronica:
                             'or set replace_all.')
         self.changes.before_write(full, root)
         full.write_bytes(text.replace(old_text, new_text).encode('utf-8'))
-        self.changes.keep()
         return f'Edited {path} ({count} replacement{"s" if count > 1 else ""}). Changes applied permanently.'
 
     def tool_write_file(self, path, content):
@@ -757,7 +764,6 @@ class Veronica:
         self.changes.before_write(full, root)
         full.parent.mkdir(parents=True, exist_ok=True)
         full.write_bytes(content.encode('utf-8'))
-        self.changes.keep()
         return f'Wrote {path} ({len(content.splitlines())} lines). Changes applied permanently.'
 
     def tool_run_tests(self):

@@ -69,7 +69,9 @@ class WorkEvidenceTests(unittest.TestCase):
         t=self.app.store.task_put('Finished task');self.app.store.complete_task(t['id'],True)
         self.app.store.task_put('Outstanding task')
         run=Run('brief')
-        with patch('providers.chat',side_effect=AssertionError('No model needed')),patch('actions.news_search',side_effect=providers.ProviderError('offline')):
+        # Isolate from the owner's real .env: server.load_env() puts GOOGLE_CALENDAR_ICS into the process
+        # environment, which switches the calendar reader on and makes this test fetch the live feed.
+        with patch.dict(os.environ,{'GOOGLE_CALENDAR_ICS':''}),patch('providers.chat',side_effect=AssertionError('No model needed')),patch('actions.news_search',side_effect=providers.ProviderError('offline')):
             self.app.work(run,'Give me my daily briefing',None)
         reply=next(e['data']['text'] for e in run.events if e['event']=='assistant.completed')
         self.assertIn('Current project',reply);self.assertIn('Outstanding task',reply)

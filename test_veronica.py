@@ -255,24 +255,25 @@ def test_saved_projects_open_by_name_with_their_test_command(project):
     assert veronica.test_command == 'my-test-command'
 
 
-def test_a_new_project_cannot_be_opened_while_changes_wait(project):
+def test_another_project_opens_freely_because_writes_are_already_permanent(project):
     veronica = make(project)
     veronica.tool_edit_file('app.py', 'a - b', 'a + b')
     other = project / 'other'
     other.mkdir()
-    with pytest.raises(agent.ToolError, match='keep or undo'):
-        veronica.open(str(other))
+    assert veronica.open(str(other)).startswith('Opened')
+    assert (project / 'app.py').read_text(encoding='utf-8').endswith('a + b\n')
 
 
 # ----- the conversation ------------------------------------------------------------------------------------------
 
-def test_a_fix_that_passes_the_tests_waits_for_keep(project):
+def test_a_fix_that_passes_the_tests_is_applied_and_says_so(project):
     veronica = make(project,
                     message(text('Looking.'), tool('read_file', path='app.py')),
                     message(tool('edit_file', path='app.py', old_text='a - b', new_text='a + b')),
                     message(text('Fixed: add was subtracting.')))
     reply = veronica.respond('fix the add function')
-    assert reply.say.startswith('Fixed: add was subtracting.') and 'Say keep' in reply.say
+    assert reply.say.startswith('Fixed: add was subtracting.')
+    assert 'The tests pass and changes have been applied.' in reply.say
     assert '+    return a + b' in reply.show
     assert (project / 'app.py').read_text(encoding='utf-8').endswith('a + b\n')
     request = veronica.client.requests[0]
@@ -280,31 +281,32 @@ def test_a_fix_that_passes_the_tests_waits_for_keep(project):
     assert request['fallbacks'] == 'default' and 'server-side-fallback-2026-07-01' in request['betas']
     assert request['output_config'] == {'effort': agent.EFFORT}
 
-    kept = veronica.respond('Keep it.')
-    assert kept.say.startswith('Kept. 1 file changed')
+    # Direct action: the write is already permanent, so nothing is left waiting for the owner.
     assert not veronica.changes.pending()
+    assert veronica.respond('Keep it.').say == 'There is nothing waiting to be kept.'
     assert (project / 'app.py').read_text(encoding='utf-8').endswith('a + b\n')
-    assert '[Owner] kept your changes' in veronica.notes[-1]
 
 
-def test_undo_by_the_owner(project):
+def test_undo_is_gone_because_writes_are_permanent(project):
     veronica = make(project,
                     message(tool('edit_file', path='app.py', old_text='a - b', new_text='a * b')),
                     message(text('Changed it.')))
     veronica.respond('make add multiply')
-    assert veronica.respond('undo').say.startswith('Undone.')
-    assert (project / 'app.py').read_text(encoding='utf-8').endswith('a - b\n')
+    assert (project / 'app.py').read_text(encoding='utf-8').endswith('a * b\n')
     assert veronica.respond('undo').say == 'There is nothing to undo.'
+    assert (project / 'app.py').read_text(encoding='utf-8').endswith('a * b\n')
 
 
-def test_failing_tests_go_back_to_her_then_are_undone(project):
+def test_failing_tests_go_back_to_her_and_are_reported_not_hidden(project):
     edit = message(tool('edit_file', path='app.py', old_text='a - b', new_text='a * b'))
     veronica = make(project, edit, message(text('Done.')),
                     message(text('Still trying.')), message(text('I could not fix it.')),
                     runner=failing)
     reply = veronica.respond('fix add')
-    assert 'still fail, so I undid my changes' in reply.say
-    assert (project / 'app.py').read_text(encoding='utf-8').endswith('a - b\n')
+    assert 'The tests still fail, so I have left the files as they are for your review.' in reply.say
+    assert 'FAILED test_app.py::test_add' in reply.show
+    # Direct action leaves the files as they are rather than reverting them behind the owner's back.
+    assert (project / 'app.py').read_text(encoding='utf-8').endswith('a * b\n')
     sent = [m for m in veronica.client.requests[-1]['messages'] if m['role'] == 'user']
     assert sum('[VERONICA check] The tests fail' in str(m['content']) for m in sent) == agent.FIX_TRIES
 
@@ -324,11 +326,14 @@ def test_a_refusal_starts_a_fresh_conversation(project):
     assert veronica.messages == [] and 'open project' in veronica.notes[0]
 
 
-def test_api_problems_are_said_plainly(project):
+def test_api_problems_are_said_plainly(project, monkeypatch):
     import anthropic
-    veronica = make(project, anthropic.APIConnectionError(request=None))
-    with pytest.raises(agent.VeronicaError, match='internet'):
+    slept = []
+    monkeypatch.setattr(agent.time, 'sleep', slept.append)
+    veronica = make(project, *(anthropic.APIConnectionError(request=None) for _ in range(3)))
+    with pytest.raises(agent.VeronicaError, match='failed after 3 attempts'):
         veronica.respond('hello')
+    assert slept == [2, 4, 8]          # the exponential backoff, without actually waiting for it
 
 
 def test_without_tests_she_says_they_could_not_be_checked(project):
