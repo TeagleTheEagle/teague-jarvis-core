@@ -336,6 +336,14 @@ def test_api_problems_are_said_plainly(project, monkeypatch):
     assert slept == [2, 4, 8]          # the exponential backoff, without actually waiting for it
 
 
+def test_an_unreadable_tool_request_is_said_plainly(project):
+    # Three unreadable streams and no provider error: the owner is told what actually went wrong,
+    # rather than "failed after 3 attempts. Last error: None".
+    veronica = make(project, *(ValueError('a streamed tool request that could not be read') for _ in range(3)))
+    with pytest.raises(agent.VeronicaError, match='could not read, three times running'):
+        veronica.respond('hello')
+
+
 def test_without_tests_she_says_they_could_not_be_checked(project):
     (project / 'test_app.py').unlink()
     veronica = make(project,

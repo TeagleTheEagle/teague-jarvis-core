@@ -433,7 +433,9 @@ class Veronica:
         return Reply('Discarded. The email was not sent.')
 
     def status(self):
-        """For the window: the open project, the changes waiting for keep or undo, and the email waiting to be sent."""
+        """For the window: the open project, the email waiting to be sent, and the files a turn still in
+        progress has written with their test verdict and diff. Writes are permanent, so between turns the
+        change list is empty and there is nothing to show."""
         files = self._names()
         verdict = self._checked[1] if self._checked and files else None
         draft = self.draft
@@ -546,12 +548,13 @@ class Veronica:
         return verdict
 
     def new_chat(self):
-        """A fresh conversation. The open project, and any changes waiting for keep or undo, stay."""
+        """A fresh conversation. The open project stays."""
         self._fresh_start()
         files = self._names()
         if files:
-            self.notes.append(f'[VERONICA] Your earlier changes to {", ".join(files)} still wait for the owner to '
-                              'say keep or undo.')
+            # Reachable only when a turn ended early (a refusal, or an answer cut off) before _finish
+            # cleared the set. Those writes are already permanent; there is nothing to keep or undo.
+            self.notes.append(f'[VERONICA] Your earlier changes to {", ".join(files)} are already applied.')
 
     def _fresh_start(self):
         self.messages, self.notes = [], []
@@ -566,6 +569,7 @@ class Veronica:
                       fallbacks='default')
         
         last_error = None
+        unreadable = 0
         for attempt in range(3):
             try:
                 with self.client.beta.messages.stream(**params) as stream:
@@ -587,11 +591,12 @@ class Veronica:
             except anthropic.AnthropicError as error:
                 raise VeronicaError(f"I can't reach Claude: {error}") from None
             except ValueError:
+                unreadable += 1
                 continue  # a streamed tool request that could not be read: ask again
-        
-        raise VeronicaError(f'Claude failed after 3 attempts. Last error: {last_error}')
 
-        raise VeronicaError('Claude sent a tool request I could not read, three times running. Try again.')
+        if unreadable and last_error is None:
+            raise VeronicaError('Claude sent a tool request I could not read, three times running. Try again.')
+        raise VeronicaError(f'Claude failed after 3 attempts. Last error: {last_error}')
 
     # ----- VERONICA's tools ----------------------------------------------------------------------------------------
 
