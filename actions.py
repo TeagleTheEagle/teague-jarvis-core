@@ -17,6 +17,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 from providers import ProviderError, request
+import providers
 
 _SEARCH_CACHE = {}
 _SEARCH_CACHE_TTL = 120
@@ -269,7 +270,10 @@ def search(query):
         result = dict(cached[1])
         result['cached'] = True
         return result
-    if os.getenv('SERPAPI_API_KEY'):
+    if providers.provider() == 'openrouter' and os.getenv('OPENROUTER_API_KEY'):
+        # OpenRouter's web search in place of Brave (docs/VERONICA-MERGE-PLAN.md, D6).
+        items = providers.openrouter_search(query)
+    elif os.getenv('SERPAPI_API_KEY'):
         params = {'engine': 'google', 'q': query, 'api_key': os.environ['SERPAPI_API_KEY'], 'hl': 'en', 'gl': 'au', 'num': 3}
         result = request('https://serpapi.com/search.json?' + urllib.parse.urlencode(params))
         if result.get('error'):
@@ -290,7 +294,8 @@ def search(query):
         parser.feed(body.decode('utf-8', errors='replace'))
         items = parser.items[:5]
     if not items:
-        raise ProviderError('Search returned no usable results. Try a different query; if using free search, configure SERPAPI_API_KEY or BRAVE_API_KEY locally.')
+        raise ProviderError('Search returned no usable results. Try a different query.' if providers.provider() == 'openrouter' and os.getenv('OPENROUTER_API_KEY')
+                            else 'Search returned no usable results. Try a different query; if using free search, configure SERPAPI_API_KEY or BRAVE_API_KEY locally.')
     result = {'results': items, 'retrieved_at': datetime.datetime.now(datetime.timezone.utc).isoformat(), 'cached': False}
     _SEARCH_CACHE[cache_key] = (datetime.datetime.now(datetime.timezone.utc).timestamp(), result)
     if len(_SEARCH_CACHE) > 100:

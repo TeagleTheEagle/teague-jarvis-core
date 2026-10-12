@@ -18,9 +18,11 @@ def check(service, mode=None, full=None):
         raise ValueError('Choose chat, full, voice, search, maps, mail or calendar.')
     start = time.perf_counter()
     result = {'service': service, 'checked_at': time.time()}
+    # With OpenRouter the test asks the chosen model only: a pass must not hide that its backup model answered instead.
+    only_chosen = {'fallback': False} if providers.provider() == 'openrouter' else {}
     try:
         if service == 'chat':
-            reply = providers.chat([{'role': 'user', 'content': 'Connection test. Reply with only READY.'}], [], lambda *args: None, threading.Event(), **providers.chat_options(mode, ''))
+            reply = providers.chat([{'role': 'user', 'content': 'Connection test. Reply with only READY.'}], [], lambda *args: None, threading.Event(), **providers.chat_options(mode, ''), **only_chosen)
             if not reply.get('content'):
                 raise ValueError('The model returned no text.')
             detail = 'The configured chat model generated text. This was a tiny request: use the full question test to check a real-size one. Tool use and vision were not tested.'
@@ -30,7 +32,7 @@ def check(service, mode=None, full=None):
             if full is None:
                 raise ValueError('The full question test is not available here.')
             messages, tools = full()
-            reply = providers.chat(messages, tools, lambda *args: None, threading.Event(), **providers.chat_options(mode, ''))
+            reply = providers.chat(messages, tools, lambda *args: None, threading.Event(), **providers.chat_options(mode, ''), **only_chosen)
             asked_tool = bool(reply and reply.get('tool_calls'))
             if not reply or not (reply.get('content') or asked_tool):
                 raise ValueError('The model returned neither text nor a tool request.')
@@ -45,6 +47,11 @@ def check(service, mode=None, full=None):
             if not isinstance(audio, bytes) or len(audio) < 100:
                 raise ValueError('No usable audio was returned.')
             detail = 'The configured voice provider returned audio. Speaker playback and voice quality were not tested.'
+        elif service == 'search' and providers.provider() == 'openrouter' and os.getenv('OPENROUTER_API_KEY'):
+            # OpenRouter's web search in place of Brave (docs/VERONICA-MERGE-PLAN.md, D6): one paid search, about US$0.007.
+            if not providers.openrouter_search('Sydney Opera House', 1):
+                raise ValueError('Search completed but returned no results.')
+            detail = 'OpenRouter web search returned a live result for a public test query (about US$0.007).'
         elif service == 'search':
             key = os.getenv('BRAVE_API_KEY')
             if not key:

@@ -23,7 +23,10 @@ class ProviderError(Exception):
     unreachable = False  # the provider could not be reached at all (network, DNS, timeout)
 
 
-AI_PROVIDERS = ('openai', 'qwen')  # Groq, Gemini and ElevenLabs were removed in 1.0.15 (owner decision 2026-10-05)
+AI_PROVIDERS = ('openai', 'qwen', 'openrouter')  # Groq, Gemini and ElevenLabs were removed in 1.0.15 (owner decision 2026-10-05);
+# OpenRouter added for the VERONICA merge (owner decision 2026-10-12, docs/VERONICA-MERGE-PLAN.md): one key for every AI job
+# except the voice, which stays on Fish Audio. OpenAI and Qwen stay until OpenRouter has passed its live test.
+AI_KEYS = {'openai': 'OPENAI_API_KEY', 'qwen': 'DASHSCOPE_API_KEY', 'openrouter': 'OPENROUTER_API_KEY'}
 VOICE_PROFILES = ('auto', 'fish', 'openai', 'qwen')
 ANSWER_MODES = ('auto', 'deep', 'economy')  # Settings > Answer speed; see qwen_plan()
 # What 1.0.14 did (Qwen thinks before every answer), until the owner chooses another default.
@@ -36,7 +39,18 @@ def provider():
 
 
 def unsupported_error():
-    return ProviderError(f'JARVIS_PROVIDER={provider()} is not supported. Set JARVIS_PROVIDER=openai or JARVIS_PROVIDER=qwen in your local .env and restart JARVIS.')
+    return ProviderError(f'JARVIS_PROVIDER={provider()} is not supported. Set JARVIS_PROVIDER=openrouter, openai or qwen in your local .env and restart JARVIS.')
+
+
+def any_ai_key():
+    """True when the key of any supported AI provider is in place; without one the Core answers in local command mode."""
+    return any(os.getenv(name) for name in AI_KEYS.values())
+
+
+def chosen_key():
+    """The chosen provider's key, or None."""
+    name = AI_KEYS.get(provider())
+    return (os.getenv(name) or None) if name else None
 
 
 _ERROR_CODE = re.compile(r'[A-Za-z0-9_.-]{1,64}')
@@ -78,9 +92,12 @@ _RATE_429 = {'OpenAI': {'rate_limit_exceeded', 'slow_down'},
              'Qwen': {'Throttling', 'Throttling.RateQuota', 'LimitRequests', 'limit_requests', 'Throttling.BurstRate',
                       'limit_burst_rate', 'Throttling.AllocationQuota', 'insufficient_quota',
                       'Throttling.ServiceOverloaded', 'Throttling.ResourceExhausted'}}
-_PLAN_SERVICES = ('OpenAI', 'Qwen', 'SerpApi', 'Brave Search', 'Fish Audio')
+_PLAN_SERVICES = ('OpenAI', 'Qwen', 'OpenRouter', 'SerpApi', 'Brave Search', 'Fish Audio')
 _STATUS_LABELS = {400: 'Request rejected. Check model and integration settings.', 401: 'Authentication failed. Check your local credentials.', 403: 'Access denied. Check account permissions and subscription.', 404: 'Resource or model not found.'}
 FISH_402 = 'Insufficient API credit. Fish Audio API credit is separate from website credit; add API credit in the Fish developer dashboard.'
+# OpenRouter answers 402 when the credit is used up, and for spoken requests below US$0.50 of credit (function test, 2026-10-12).
+OPENROUTER_402 = ('OpenRouter has no credit for this request: the credit left is less than this request could cost at most. '
+                  'Add credit at openrouter.ai (Settings > Credits); spoken requests need at least US$0.50 left.')
 
 
 def _http_error(prefix, service, exc):
@@ -116,7 +133,7 @@ def _http_error(prefix, service, exc):
                 label = 'Rate limit reached. Wait before retrying; no keys were rotated.'
     elif status == 402:
         limit = 'billing'
-        label = (FISH_402 if service == 'Fish Audio' else
+        label = (FISH_402 if service == 'Fish Audio' else OPENROUTER_402 if service == 'OpenRouter' else
                  'Payment required: the account has no credit for this request. Check its billing.')
     error = ProviderError(f'{prefix}{label} ({tail})')
     error.status, error.limit, error.service = status, limit, service
@@ -140,7 +157,8 @@ urllib.request.install_opener(urllib.request.build_opener(_KeysStayPut))
 
 def request(url, data=None, headers=None, method=None, raw=False, timeout=35, operation=None):
     host = urllib.parse.urlparse(url).hostname
-    service = {'api.openai.com': 'OpenAI', 'api.fish.audio': 'Fish Audio', 'serpapi.com': 'SerpApi', 'api.search.brave.com': 'Brave Search'}.get(host, 'External service')
+    service = {'api.openai.com': 'OpenAI', 'api.fish.audio': 'Fish Audio', 'serpapi.com': 'SerpApi', 'api.search.brave.com': 'Brave Search',
+               'openrouter.ai': 'OpenRouter'}.get(host, 'External service')
     if (host or '').endswith('.aliyuncs.com'):
         service = 'Qwen'
     path = urllib.parse.urlparse(url).path
@@ -191,15 +209,24 @@ def capabilities(mode=None):
         result.update(brain='Qwen configured' if configured else 'Qwen not configured',
                       model=qwen_plan(mode)[0],
                       vision_provider='Qwen', vision=configured and bool(os.getenv('QWEN_VISION_MODEL')))
+    elif provider() == 'openrouter':
+        configured = bool(os.getenv('OPENROUTER_API_KEY'))
+        # The main model takes pictures too (qwen/qwen3.8-max-0902: text, image and video in; model list of 2026-10-12).
+        result.update(brain='OpenRouter configured' if configured else 'OpenRouter not configured',
+                      model=openrouter_plan(mode)[0], vision_provider='OpenRouter', vision=configured)
     elif provider() == 'openai':
         configured = bool(os.getenv('OPENAI_API_KEY'))
         # No AI key at all: the server answers in local command mode (server.py).
-        result.update(brain='OpenAI configured' if configured else 'OpenAI not configured' if os.getenv('DASHSCOPE_API_KEY') else 'local commands',
+        result.update(brain='OpenAI configured' if configured else 'OpenAI not configured' if any_ai_key() else 'local commands',
                       model=os.getenv('OPENAI_MODEL', 'gpt-4o-mini'), vision_provider='OpenAI',
                       vision=configured and bool(os.getenv('OPENAI_VISION_MODEL', 'gpt-4o-mini')))
     else:
-        result.update(brain=f'Unsupported provider {provider()}: use openai or qwen', model=None, vision_provider=None, vision=False)
+        result.update(brain=f'Unsupported provider {provider()}: use openrouter, openai or qwen', model=None, vision_provider=None, vision=False)
     result['backup'] = PROVIDER_NAMES.get(backup_provider())  # which provider could stand in, or None
+    if provider() == 'openrouter' and os.getenv('OPENROUTER_API_KEY'):
+        # With OpenRouter the stand-in is its own backup model (plan D8), used only while Settings > AI > Backup is on.
+        fallback = openrouter_fallback(result['model'] or '')
+        result['backup'] = f"OpenRouter's backup model ({fallback})" if fallback else None
     return result
 
 
@@ -208,13 +235,14 @@ def _base_capabilities():
         # Speech recognition in the cloud is done by the chosen AI provider (cloud_speech below); the app's own
         # default is local recognition, which needs neither.
         'transcription': cloud_speech() is not None,
-        'transcription_provider': {'openai': 'OpenAI', 'qwen': 'Qwen'}.get(cloud_speech()),
+        'transcription_provider': PROVIDER_NAMES.get(cloud_speech()),
         'fish': bool(os.getenv('FISH_API_KEY') and os.getenv('FISH_VOICE_ID')),
         'qwen_voice': qwen_voice_configured(),
         # OpenAI speech needs only the OpenAI key, whichever provider does the thinking (speech() below).
         'openai_voice': bool(os.getenv('OPENAI_API_KEY')),
         'voice_provider': 'qwen' if qwen_voice_configured() else 'fish' if os.getenv('FISH_API_KEY') and os.getenv('FISH_VOICE_ID') else 'browser',
-        'search': 'SerpApi configured' if os.getenv('SERPAPI_API_KEY') else 'Brave configured' if os.getenv('BRAVE_API_KEY') else 'DuckDuckGo best effort',
+        'search': ('OpenRouter web search' if provider() == 'openrouter' and os.getenv('OPENROUTER_API_KEY') else  # plan D6
+                   'SerpApi configured' if os.getenv('SERPAPI_API_KEY') else 'Brave configured' if os.getenv('BRAVE_API_KEY') else 'DuckDuckGo best effort'),
         'youtube': bool(os.getenv('YOUTUBE_API_KEY')),
         'spotify': bool(os.getenv('SPOTIFY_CLIENT_ID')),
     }
@@ -224,9 +252,21 @@ def live_health(mode=None):
     targets = []
     caps = capabilities(mode)
     use_qwen = provider() == 'qwen'
-    key = os.getenv('DASHSCOPE_API_KEY') if use_qwen else os.getenv('OPENAI_API_KEY') if provider() == 'openai' else None
+    use_openrouter = provider() == 'openrouter'
+    key = chosen_key()
     if provider() not in AI_PROVIDERS:
         checks['Chat model access'] = {'status': 'not_configured', 'detail': str(unsupported_error())}
+    elif key and use_openrouter:
+        # OpenRouter's key route proves the key without paying for an answer.
+        started = time.perf_counter()
+        try:
+            data = request(OPENROUTER_BASE + '/key', headers={'Authorization': 'Bearer ' + key}, timeout=15)
+            valid = isinstance(data.get('data'), dict)
+            checks['Chat model access'] = {'status': 'reachable' if valid else 'unexpected_response',
+                                           'latency_ms': round((time.perf_counter()-started)*1000),
+                                           'detail': 'OpenRouter accepted the key; generation not tested.' if valid else 'OpenRouter returned an unexpected response.'}
+        except ProviderError as exc:
+            checks['Chat model access'] = {'status': 'unavailable', 'latency_ms': round((time.perf_counter()-started)*1000), 'detail': str(exc)}
     elif key and use_qwen:
         # Model Studio has no per-model lookup in compatible mode: a minimal real
         # completion proves key, region and model authorisation together.
@@ -246,7 +286,10 @@ def live_health(mode=None):
         targets.append(('Chat model access', 'https://api.openai.com/v1/models/' + urllib.parse.quote(caps['model'], safe=''), {'Authorization': 'Bearer ' + key}))
     else:
         checks['Chat model access'] = {'status':'not_configured','detail':'Add a chat provider key locally.'}
-    if os.getenv('BRAVE_API_KEY'):
+    if use_openrouter and key:
+        # Each search is paid for, so the health check does not run one (Settings > Connections > Search does).
+        checks['Web search'] = {'status': 'configured', 'detail': 'OpenRouter web search (about US$0.007 a search); not run by this check. Use the search connection test.'}
+    elif os.getenv('BRAVE_API_KEY'):
         targets.append(('Brave search', 'https://api.search.brave.com/res/v1/web/search?q=Sydney+Opera+House&count=1', {'X-Subscription-Token':os.environ['BRAVE_API_KEY']}))
     else:
         checks['Brave search'] = {'status':'not_configured','detail':'Add BRAVE_API_KEY locally.'}
@@ -263,11 +306,13 @@ def live_health(mode=None):
     return checks
 
 
-PROVIDER_NAMES = {'openai': 'OpenAI', 'qwen': 'Qwen'}
-# The line the Core adds to a reply written by the backup provider. The same pattern removes it from
-# what goes back to a model and from anything a model writes, so that only the Core can say it.
-BACKUP_OPENING = re.compile(r'\[\s*(?:OpenAI|Qwen)\s+answered\b', re.I)
-BACKUP_NOTE = re.compile(r'\s*\[\s*(?:OpenAI|Qwen)\s+answered\s+this\s+question\s+because\s+(?:OpenAI|Qwen)\s+could\s+not\b[^\]]{0,400}\]', re.I)
+PROVIDER_NAMES = {'openai': 'OpenAI', 'qwen': 'Qwen', 'openrouter': 'OpenRouter'}
+# The line the Core adds to a reply written by the backup provider, or by OpenRouter's backup model (fallback_note).
+# The same pattern removes it from what goes back to a model and from anything a model writes, so that only the Core
+# can say it.
+BACKUP_OPENING = re.compile(r'\[\s*(?:OpenAI|Qwen|OpenRouter)\s+answered\b', re.I)
+# Any bracketed line that starts like one of the Core's notes goes, however a model words the rest (review of 2026-10-12, L4).
+BACKUP_NOTE = re.compile(r'\s*\[\s*(?:OpenAI|Qwen|OpenRouter)\s+(?:answered|had\s+taken\s+over)\b[^\]]{0,400}\]', re.I)
 
 
 def backup_provider(vision=False):
@@ -300,22 +345,29 @@ def backup_note(backup, error):
     return f'[{PROVIDER_NAMES[backup]} answered this question because {chosen} could not. {first_sentence(error)}]'
 
 
-def chat(messages, tools, emit, cancel, vision=False, mode=None, text='', use=None, stream=False, max_tokens=None):
+def chat(messages, tools, emit, cancel, vision=False, mode=None, text='', use=None, stream=False, max_tokens=None, job='chat', fallback=False):
     """One model request. mode (Settings > Answer speed; None means the default) and text (the
-    user's own words) only steer Qwen today: see qwen_plan(). use names the provider for this one
-    request when it is not the chosen one (the backup, see backup_provider()). stream: ask for the
-    answer in pieces (Qwen only today; each piece is handed to emit as 'assistant.piece'). max_tokens: a larger
-    reply budget for the OpenAI chat path (a workshop mission writes whole files in one reply; docs/WORKSHOP.md)."""
+    user's own words) steer Qwen and OpenRouter: see qwen_plan() and openrouter_plan(). use names the provider for
+    this one request when it is not the chosen one (the backup, see backup_provider()). stream: ask for the
+    answer in pieces (Qwen and OpenRouter; each piece is handed to emit as 'assistant.piece'). max_tokens: a larger
+    reply budget for the OpenAI and OpenRouter paths (a workshop mission writes whole files in one reply; docs/WORKSHOP.md).
+    job: 'coding' for a workshop mission, which OpenRouter gives to the coding model (plan D2); the others ignore it.
+    fallback: True only when Settings > AI > Backup is on and OpenRouter is chosen, so that OpenRouter may try its backup
+    model (plan D8). It is off by default, so a caller that does not opt in never sends anything to the backup model's
+    company (App.fallback_option carries the owner's switch; others ignore the flag)."""
     if cancel.is_set():
         return None
     chosen = use or provider()
+    if chosen == 'openrouter':
+        return openrouter_chat(messages, tools, emit, cancel, vision, mode, text, stream, max_tokens, job, fallback)
     if chosen == 'qwen':
         return qwen_chat(messages, tools, emit, cancel, vision, mode, text, stream)
     if chosen != 'openai':
         raise unsupported_error()
     key = os.getenv('OPENAI_API_KEY')
     if not key:
-        raise ProviderError('OpenAI is selected. Add OPENAI_API_KEY locally and restart JARVIS.')
+        hint = ' Your key file has an OpenRouter key: set JARVIS_PROVIDER=openrouter to use it.' if os.getenv('OPENROUTER_API_KEY') else ''
+        raise ProviderError('OpenAI is selected. Add OPENAI_API_KEY locally and restart JARVIS.' + hint)
     model = os.getenv('OPENAI_VISION_MODEL', 'gpt-4o-mini') if vision else os.getenv('OPENAI_MODEL', 'gpt-4o-mini')
     if not model:
         raise ProviderError('Set a supported vision model before asking about images.')
@@ -470,7 +522,10 @@ def chat_options(mode, text):
     Empty when they would change nothing, so that the Core's everyday call to chat() keeps its
     five arguments (test doubles and the Stage 4 harness replace chat() with that shape)."""
     mode = mode if mode in ANSWER_MODES else DEFAULT_ANSWER_MODE
-    if mode == DEFAULT_ANSWER_MODE and (mode == 'deep' or not wants_depth(text)):
+    depth = wants_depth(text)
+    # With Qwen, Deep already thinks before every answer; with OpenRouter, "think hard" asks for more than Deep does
+    # (openrouter_plan), so the words must reach it (review of 2026-10-12, M1).
+    if mode == DEFAULT_ANSWER_MODE and (not depth or (mode == 'deep' and provider() != 'openrouter')):
         return {}
     return {'mode': mode, 'text': text}
 
@@ -484,6 +539,171 @@ def qwen_chat(messages, tools, emit, cancel, vision=False, mode=None, text='', s
     if not model:
         raise ProviderError('Image understanding needs a Qwen vision model. Authorise one for your key and set QWEN_VISION_MODEL.')
     return _compatible_chat('Qwen', qwen_base() + '/chat/completions', key, model, messages, tools, emit, cancel, vision, thinking, stream)
+
+
+# OpenRouter (owner decision 2026-10-12, docs/VERONICA-MERGE-PLAN.md): OpenAI-compatible, one key for every AI job except
+# the voice. The address is fixed, so the key is only ever sent to openrouter.ai. Model names as OpenRouter's model list
+# gave them on 2026-10-12; each can be changed in the key file.
+OPENROUTER_BASE = 'https://openrouter.ai/api/v1'
+OPENROUTER_DEFAULT_MODEL = 'qwen/qwen3.8-max-0902'             # everyday chat, tools, pictures (plan D2)
+OPENROUTER_DEFAULT_FAST_MODEL = 'qwen/qwen3.8-flash'           # Economy, and the small request behind a web search
+OPENROUTER_DEFAULT_CODING_MODEL = 'anthropic/claude-opus-5.5'  # coding and research jobs (plan D2)
+OPENROUTER_DEFAULT_FALLBACK_MODEL = 'anthropic/claude-sonnet-5.5'  # OpenRouter tries it when the first model fails (plan D8)
+OPENROUTER_DEFAULT_STT_MODEL = 'openai/whisper-1'              # the cloud option for hearing (plan D7)
+# Thinking counts against the reply limit on OpenRouter: with a small limit the owner's function test of 2026-10-12 got a
+# cut-off answer ("TEAG") and an empty one. The limit is a ceiling, not a charge, but OpenRouter refuses (402) when the credit
+# left could not pay for a reply that long: about US$0.10 with Qwen 3.8 Max, US$0.33 with Claude Opus (review of 2026-10-12, L1).
+OPENROUTER_REPLY_TOKENS = 16384
+# How hard the model thinks (OpenRouter's reasoning "effort"). Qwen 3.8 Max always thinks on OpenRouter ("mandatory",
+# default effort "xhigh", model list of 2026-10-12), so Auto asks for the least; "none" is sent only to the fast model,
+# whose thinking can be switched off.
+OPENROUTER_EFFORT = {'depth': 'high', 'deep': 'medium', 'auto': 'minimal', 'economy': 'none'}
+OPENROUTER_SEARCH_RESULTS = 5
+OPENROUTER_AUDIO_FORMATS = {'audio/wav': 'wav', 'audio/mpeg': 'mp3', 'audio/webm': 'webm', 'audio/ogg': 'ogg', 'audio/mp4': 'm4a'}
+OPENROUTER_AUDIO_LIMIT = 20 * 1024 * 1024
+_MODEL_NAME = re.compile(r'[A-Za-z0-9][A-Za-z0-9._:/-]{0,95}')
+
+
+def openrouter_plan(mode=None, text='', vision=False, job='chat'):
+    """Which model answers through OpenRouter and how hard it thinks: (model, effort or None).
+    coding: the coding model with its own default thinking.
+    Otherwise as qwen_plan(): a request for depth in the user's own words gets the main model thinking hard;
+    deep (the default): the main model, medium thinking; auto: the main model, minimal thinking;
+    economy: the fast model without thinking, for everything except pictures."""
+    if job == 'coding':
+        return os.getenv('OPENROUTER_CODING_MODEL') or OPENROUTER_DEFAULT_CODING_MODEL, None
+    main = os.getenv('OPENROUTER_MODEL') or OPENROUTER_DEFAULT_MODEL
+    if vision:
+        main = os.getenv('OPENROUTER_VISION_MODEL') or main
+    if mode not in ANSWER_MODES:
+        mode = DEFAULT_ANSWER_MODE
+    if wants_depth(text):
+        return main, OPENROUTER_EFFORT['depth']
+    if mode == 'economy' and not vision:
+        return os.getenv('OPENROUTER_FAST_MODEL') or OPENROUTER_DEFAULT_FAST_MODEL, OPENROUTER_EFFORT['economy']
+    return main, OPENROUTER_EFFORT['deep' if mode == 'deep' else 'auto']
+
+
+def openrouter_fallback(model):
+    """The model OpenRouter tries when the first one fails (plan D8), or None: OPENROUTER_FALLBACK_MODEL, empty to turn
+    it off. Never the same as the first."""
+    fallback = os.getenv('OPENROUTER_FALLBACK_MODEL', OPENROUTER_DEFAULT_FALLBACK_MODEL).strip()
+    return fallback if fallback and fallback != model else None
+
+
+def openrouter_chat(messages, tools, emit, cancel, vision=False, mode=None, text='', stream=False, max_tokens=None, job='chat', fallback=False):
+    """One request through OpenRouter; results still pass through the server's evidence and action guards. fallback is
+    off unless the caller opts in, so nothing goes to the backup model's company unless Settings > AI > Backup is on."""
+    key = os.getenv('OPENROUTER_API_KEY')
+    if not key:
+        raise ProviderError('OpenRouter is selected. Add OPENROUTER_API_KEY locally and restart JARVIS.')
+    model, effort = openrouter_plan(mode, text, vision, job)
+    extra = {'max_tokens': max(int(max_tokens or 0), OPENROUTER_REPLY_TOKENS)}
+    if effort:
+        extra['reasoning'] = {'effort': effort, 'exclude': True}  # the thinking itself is not sent back
+    second = openrouter_fallback(model) if fallback else None
+    if second:
+        extra['models'] = [model, second]
+    try:
+        return _compatible_chat('OpenRouter', OPENROUTER_BASE + '/chat/completions', key, model, messages, tools, emit, cancel,
+                                vision, stream=stream, dialect='openrouter', extra=extra)
+    except ProviderError as exc:
+        if exc.status == 429 and exc.limit != 'billing':  # a short rate limit: new voice commands pause, as with OpenAI
+            exc.retry_after = 30
+        raise
+
+
+def is_fallback(answered_by, asked, fallback):
+    """True when OpenRouter's answer names its backup model rather than the model asked for (plan D8). OpenRouter may name
+    a model by a longer or canonical slug (a date, a different word order), so: a name that starts with one of the two
+    belongs to it, the longer match winning when one name starts with the other; a name that starts with neither belongs
+    to the backup model when it comes from the backup model's maker and not the first model's (review of 2026-10-12, M2)."""
+    if not (isinstance(answered_by, str) and answered_by and fallback):
+        return False
+    of_asked, of_fallback = answered_by.startswith(asked), answered_by.startswith(fallback)
+    if of_asked and of_fallback:
+        return len(fallback) > len(asked)
+    if of_asked or of_fallback:
+        return of_fallback
+    maker = lambda name: name.split('/', 1)[0].lower()
+    return maker(answered_by) == maker(fallback) != maker(asked)
+
+
+def model_label(name):
+    """A model name from OpenRouter's answer, as text fit for a note (or 'another model')."""
+    return name if isinstance(name, str) and _MODEL_NAME.fullmatch(name) else 'another model'
+
+
+def fallback_note(response):
+    """The line the Core adds when OpenRouter's backup model wrote the answer (plan D8), or None."""
+    used = response.get('_fallback') if isinstance(response, dict) else None
+    if not isinstance(used, dict):
+        return None
+    return (f"[OpenRouter answered this question with its backup model ({model_label(used.get('used'))}) "
+            f"because {model_label(used.get('asked'))} could not answer it.]")
+
+
+def openrouter_search(query, count=OPENROUTER_SEARCH_RESULTS):
+    """Web search through OpenRouter's web plugin (plan D6, in place of Brave): one small request to the fast model with
+    the plugin on, its thinking off. The pages found come back as citations, which become the results (title, address,
+    excerpt). About US$0.007 a search (OpenRouter's price for its default engine, read 2026-10-12)."""
+    key = os.getenv('OPENROUTER_API_KEY')
+    if not key:
+        raise ProviderError('OpenRouter web search needs OPENROUTER_API_KEY.')
+    body = {'model': os.getenv('OPENROUTER_FAST_MODEL') or OPENROUTER_DEFAULT_FAST_MODEL,
+            'messages': [{'role': 'user', 'content': 'Search the web for: ' + query + '\nAnswer in one short sentence.'}],
+            'plugins': [{'id': 'web', 'max_results': count}], 'max_tokens': 600, 'reasoning': {'effort': 'none'}}
+    result = request(OPENROUTER_BASE + '/chat/completions', body, {'Authorization': 'Bearer ' + key}, timeout=60, operation='web search')
+    choices = result.get('choices') if isinstance(result, dict) else None
+    message = choices[0].get('message') if isinstance(choices, list) and choices and isinstance(choices[0], dict) else None
+    notes = message.get('annotations') if isinstance(message, dict) else None
+    items, seen = [], set()
+    for note in notes if isinstance(notes, list) else []:
+        cite = note.get('url_citation') if isinstance(note, dict) and note.get('type') == 'url_citation' else None
+        url = cite.get('url') if isinstance(cite, dict) else None
+        if not _web_address(url) or url in seen:
+            continue
+        seen.add(url)
+        title = cite.get('title') if isinstance(cite.get('title'), str) and cite['title'].strip() else url
+        content = cite.get('content') if isinstance(cite.get('content'), str) else ''
+        items.append({'title': ' '.join(title.split())[:300], 'url': url, 'description': ' '.join(content.split())[:500]})
+        if len(items) >= count:
+            break
+    return items
+
+
+def _web_address(url):
+    """A web page address fit to show and to open: http(s), a host, at most 2,048 characters, no spaces or control
+    characters (search results are other people's text; review of 2026-10-12, L2)."""
+    if not isinstance(url, str) or len(url) > 2048 or any(c.isspace() or ord(c) < 32 or ord(c) == 127 for c in url):
+        return False
+    try:
+        parsed = urllib.parse.urlparse(url)
+        return parsed.scheme in ('http', 'https') and bool(parsed.hostname)
+    except ValueError:
+        return False
+
+
+def openrouter_transcribe(audio, mime, timeout=60):
+    """Speech to text through OpenRouter (plan D7, the cloud option; the app's own default is local recognition). The
+    request is OpenRouter's documented one: base64 audio with its format in JSON, not a file upload."""
+    key = os.getenv('OPENROUTER_API_KEY')
+    if not key:
+        raise ProviderError('OpenRouter speech recognition needs OPENROUTER_API_KEY. Local recognition works without it.')
+    fmt = OPENROUTER_AUDIO_FORMATS.get(mime.split(';')[0])
+    if not fmt:
+        raise ValueError('Unsupported recording format.')
+    if len(audio) > OPENROUTER_AUDIO_LIMIT:
+        raise ValueError('The recording is too large for cloud speech recognition (20 MB).')
+    body = {'model': os.getenv('OPENROUTER_STT_MODEL') or OPENROUTER_DEFAULT_STT_MODEL,
+            'input_audio': {'data': base64.b64encode(audio).decode('ascii'), 'format': fmt}}
+    language = os.getenv('OPENROUTER_STT_LANGUAGE', 'en').strip()
+    if language:  # an empty OPENROUTER_STT_LANGUAGE line lets the model detect the language
+        body['language'] = language
+    result = request(OPENROUTER_BASE + '/audio/transcriptions', body, {'Authorization': f'Bearer {key}'}, timeout=timeout, operation='speech recognition')
+    if not isinstance(result, dict) or not isinstance(result.get('text'), str):
+        raise ProviderError('OpenRouter speech recognition: no text in the answer.')
+    return {'text': result['text'].strip()}
 
 
 STREAM_QUIET_SECONDS = 60   # a streamed answer that sends nothing for this long is given up
@@ -524,7 +744,7 @@ def _end_stream(response, cancel, deadline, done):
 def _compatible_stream(service, endpoint, key, body, emit, cancel):
     """The same request with "stream": true (OpenAI-compatible server-sent events). Each piece of the answer's
     text is handed to emit('assistant.piece', {'text': piece}) as it arrives; a model's thinking is not.
-    Returns (text, tool calls, finish reason), or None when cancelled. A stream that breaks raises a
+    Returns (text, tool calls, finish reason, the model that answered as the stream named it), or None when cancelled. A stream that breaks raises a
     ProviderError that says "stream failed": no partial answer is ever accepted, and the Core then asks again
     the old way, in one piece. A stream still going when the total time is up ends as the one-piece request
     does after that time ("timed out", could not be reached): asking again could not succeed either."""
@@ -539,7 +759,7 @@ def _compatible_stream(service, endpoint, key, body, emit, cancel):
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
         raise _unreachable(prefix, service, exc) from None
     broken = ProviderError(prefix + 'Stream failed before the answer was complete. No partial answer was accepted.')
-    text, calls, finish, size, deadline = [], {}, None, 0, time.monotonic() + STREAM_TOTAL_SECONDS
+    text, calls, finish, size, deadline, answered_by = [], {}, None, 0, time.monotonic() + STREAM_TOTAL_SECONDS, None
     done = threading.Event()
     threading.Thread(target=_end_stream, args=(response, cancel, deadline, done), name='reply-stream-watch', daemon=True).start()
     try:
@@ -564,6 +784,8 @@ def _compatible_stream(service, endpoint, key, body, emit, cancel):
                 chunk = json.loads(data)
                 if not isinstance(chunk, dict) or chunk.get('error'):
                     raise broken
+                if isinstance(chunk.get('model'), str):
+                    answered_by = chunk['model']  # OpenRouter names the model that answered (its backup model, if it took over)
                 for choice in chunk.get('choices') or []:
                     delta = choice.get('delta') or {}
                     piece = delta.get('content')
@@ -585,7 +807,7 @@ def _compatible_stream(service, endpoint, key, body, emit, cancel):
                             slot['function']['arguments'] += function['arguments']
                     if choice.get('finish_reason'):
                         finish = choice['finish_reason']
-        answer = ''.join(text), [calls[index] for index in sorted(calls)], finish
+        answer = ''.join(text), [calls[index] for index in sorted(calls)], finish, answered_by
     except ProviderError:
         if cancel.is_set():
             return None
@@ -605,18 +827,24 @@ def _compatible_stream(service, endpoint, key, body, emit, cancel):
     return answer
 
 
-def _compatible_chat(service, endpoint, key, model, messages, tools, emit, cancel, vision, thinking=False, stream=False):
-    """OpenAI-compatible adapter (Qwen): one complete answer, or (stream) the same answer received in pieces."""
+def _compatible_chat(service, endpoint, key, model, messages, tools, emit, cancel, vision, thinking=False, stream=False, dialect='qwen', extra=None):
+    """OpenAI-compatible adapter (Qwen, OpenRouter): one complete answer, or (stream) the same answer received in pieces.
+    dialect 'qwen' sends Alibaba's fields (max_completion_tokens, enable_thinking); 'openrouter' sends the fields in extra
+    (max_tokens, reasoning, the fallback list "models") and marks an answer written by the fallback model (_fallback)."""
     if cancel.is_set():
         return None
     # OpenAI Responses metadata is provider-specific; retain ordinary conversation
     # content and tool results when changing provider within an existing session.
     clean = [{k: v for k, v in m.items() if not k.startswith('_')} for m in messages]
-    body = {'model': model, 'messages': clean, 'stream': False, 'max_completion_tokens': 8192}
-    # "Off" is sent explicitly. "On" is left to Alibaba's default, so that a thinking request is
-    # exactly the request 1.0.14 sent (the shape proven on the owner's account).
-    if not thinking:
-        body['enable_thinking'] = False
+    body = {'model': model, 'messages': clean, 'stream': False}
+    if dialect == 'openrouter':
+        body.update(extra or {})
+    else:
+        body['max_completion_tokens'] = 8192
+        # "Off" is sent explicitly. "On" is left to Alibaba's default, so that a thinking request is
+        # exactly the request 1.0.14 sent (the shape proven on the owner's account).
+        if not thinking:
+            body['enable_thinking'] = False
     if tools and not vision:
         body.update(tools=tools, tool_choice='auto')
     if stream:
@@ -624,11 +852,16 @@ def _compatible_chat(service, endpoint, key, model, messages, tools, emit, cance
         if streamed is None:
             return None
         choice = {'finish_reason': streamed[2], 'message': {'content': streamed[0], 'tool_calls': streamed[1]}}
+        answered_by = streamed[3]
     else:
         result = request(endpoint, body, {'Authorization': f'Bearer {key}'}, timeout=120)
         if cancel.is_set():
             return None
+        if isinstance(result.get('error'), dict):
+            # OpenRouter can report a failure of the model behind it inside an ordinary answer.
+            raise ProviderError(f'{service} chat: the model reported an error. No partial answer was accepted.')
         choice = (result.get('choices') or [{}])[0]
+        answered_by = result.get('model')
     if choice.get('finish_reason') not in ('stop', 'tool_calls'):
         raise ProviderError(f'{service} did not return a complete response. No partial answer was accepted.')
     message = choice.get('message') or {}
@@ -639,6 +872,9 @@ def _compatible_chat(service, endpoint, key, model, messages, tools, emit, cance
     response = {'role': 'assistant', 'content': content or None}
     if calls:
         response['tool_calls'] = calls
+    fallback = (extra or {}).get('models', [None])[-1] if dialect == 'openrouter' and (extra or {}).get('models') else None
+    if fallback and is_fallback(answered_by, model, fallback):  # OpenRouter names the model that answered
+        response['_fallback'] = {'asked': model, 'used': answered_by}
     if content:
         emit('assistant.delta', {'text': content})
     return response
@@ -808,6 +1044,8 @@ def cloud_speech():
     """The provider that turns speech into text in the cloud: the chosen AI provider, when its key is in place.
     None otherwise. (The app's own default is local recognition with Whisper, which needs neither.)"""
     name = provider()
+    if name == 'openrouter' and os.getenv('OPENROUTER_API_KEY'):
+        return 'openrouter'
     if name == 'qwen' and os.getenv('DASHSCOPE_API_KEY'):
         return 'qwen'
     if name == 'openai' and os.getenv('OPENAI_API_KEY'):
@@ -847,13 +1085,15 @@ def qwen_transcribe(audio, mime, timeout=60):
 
 
 def transcribe(audio, mime, timeout=None):
-    """Speech to text in the cloud, by the chosen AI provider: Qwen (qwen3-asr-flash) or OpenAI. The app itself
-    transcribes locally with Whisper unless the owner chose the cloud in Settings > AI.
+    """Speech to text in the cloud, by the chosen AI provider: OpenRouter (whisper-1 by default), Qwen (qwen3-asr-flash)
+    or OpenAI. The app itself transcribes locally with Whisper unless the owner chose the cloud in Settings > AI.
     timeout: seconds for the one request; given, there is no second try (the microphone path cannot wait)."""
+    if provider() == 'openrouter':
+        return openrouter_transcribe(audio, mime, timeout or 60)
     if provider() == 'qwen':
         return qwen_transcribe(audio, mime, timeout or 60)
     if provider() != 'openai':
-        raise ProviderError('Cloud speech recognition is done by the chosen AI provider: set JARVIS_PROVIDER to openai or qwen. Local recognition works without it.')
+        raise ProviderError('Cloud speech recognition is done by the chosen AI provider: set JARVIS_PROVIDER to openrouter, openai or qwen. Local recognition works without it.')
     key = os.getenv('OPENAI_API_KEY')
     if not key:
         raise ProviderError('Cloud speech transcription needs OPENAI_API_KEY. Local transcription and browser recognition work without it.')
