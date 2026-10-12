@@ -76,6 +76,7 @@ import about_you
 import speaker
 import network_devices
 import providers
+import system_diagnostics
 import system_metrics
 from ollama_shadow import ShadowObserver, observe as observe_shadow
 import memory
@@ -1083,6 +1084,8 @@ class App:
                 result = conversation_context.read_saved(self.store, args['conversation'])
             elif name == 'computer_system_info':
                 result = computer_tools.system_info()
+            elif name == 'system_diagnostics':
+                result = system_diagnostics.reading()  # read only; the owner's request of 2026-10-12
             elif name == 'computer_files':
                 result = {'files': computer_tools.source_files(ROOT)}
             elif name == 'computer_read_file':

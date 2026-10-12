@@ -121,6 +121,8 @@ TABLE = {
         note='Your own music files in the music folder (Settings > Music), played on this PC\'s speakers; the Core answers "play <nickname>" itself.'),
     # ---- this PC ----
     'computer_system_info': _rule('Read this PC\'s hardware and Windows details', reach=PC),
+    'system_diagnostics': _rule('Read this PC\'s live load, memory, drives, battery and busiest programs', reach=PC,
+        note='Read only: nothing is changed, ended or started; graphics load, temperatures and network traffic are not measured.'),
     'computer_files': _rule('List JARVIS\'s own source files'),
     'computer_read_file': _rule('Read one of JARVIS\'s own source files'),
     'computer_run_tests': _rule('Run JARVIS\'s own tests', reach=PC, note='Runs the fixed test suite; nothing else can be run.'),

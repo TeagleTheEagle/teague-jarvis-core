@@ -20,7 +20,7 @@ class _MemoryStatus(ctypes.Structure):
                 ('total_virtual', ctypes.c_uint64), ('avail_virtual', ctypes.c_uint64), ('avail_extended', ctypes.c_uint64)]
 
 
-def _system_times():
+def system_times():
     """(idle, kernel, user) in 100-nanosecond units since boot; kernel time includes idle time."""
     if sys.platform != 'win32':
         return None
@@ -30,19 +30,24 @@ def _system_times():
     return tuple(t.high << 32 | t.low for t in (idle, kernel, user))
 
 
-def cpu_percent():
-    """Share of processor time spent busy since the previous call; None on the first call or when unreadable."""
-    global _previous
-    current = _system_times()
-    with _lock:
-        previous, _previous = _previous, current
-    if not current or not previous:
+def busy_percent(before, after):
+    """Share of processor time spent busy between two system_times() readings; None when either is missing."""
+    if not before or not after:
         return None
-    idle, kernel, user = (now - before for now, before in zip(current, previous))
+    idle, kernel, user = (now - then for now, then in zip(after, before))
     total = kernel + user
     if total <= 0:
         return None
     return round(max(0.0, min(100.0, (total - idle) * 100 / total)), 1)
+
+
+def cpu_percent():
+    """Share of processor time spent busy since the previous call; None on the first call or when unreadable."""
+    global _previous
+    current = system_times()
+    with _lock:
+        previous, _previous = _previous, current
+    return busy_percent(previous, current)
 
 
 def memory():
