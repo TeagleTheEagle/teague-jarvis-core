@@ -276,6 +276,17 @@ Claude Code session was involved):
    (it ran from the home folder, so a note inside a project would not reach it). Also recorded in the workspace
    `CLAUDE.md` and in `D:\VERONICA\CLAUDE.md` and `AGENTS.md`.
 
+**Later the same day: the merge plan.** The owner asked to make VERONICA and JARVIS one ("Veronica joins JARVIS"),
+with OpenRouter doing all the AI except voice ("OPENROUTER WILL DO EVERYTHING EXCEPT KEEP FISH AUDIO") and VERONICA
+kept autonomous ("keep it as it is"). The owner created an OpenRouter key and tested it with
+`..\owner-steps\Test-OpenRouter-Key.cmd` ("openrouter works") and `Test-OpenRouter-Functions.cmd`:
+- passed: tools on Qwen and Claude, web search, search by meaning;
+- picture reading: a test fault, since fixed;
+- speech-to-text: needs at least US$0.50 of credit; the owner adds credit on payday.
+
+**`docs/VERONICA-MERGE-PLAN.md` is written: DRAFT FOR THE OWNER'S APPROVAL** ("I approve the Veronica merge plan";
+decisions D1-D11). Nothing of it is built yet.
+
 **Found, for the owner**
 - `repo\.env` is VERONICA's keys file plus four JARVIS lines (names checked, values never read). In the repo the briefing
   test of `test_answer_evidence` fails because of the calendar address in it; the same test passes from the D:
