@@ -8,6 +8,10 @@ ARCHITECTURE (binding): ONE CORE, ONE JARVIS, ONE IDENTITY, ONE MEMORY, MANY
 DEVICES. The Core lives on the owner's PC. Never create a second production Core,
 Store or AI stack for any device. Devices are clients. Registering a device grants
 no authority. Never fall back silently from real services to mocks.
+Owner amendment of 2026-10-12 (docs/VERONICA-MERGE-PLAN.md, decision D1): the one Core
+carries two personas, JARVIS and VERONICA (two names, voices and personalities), with
+one memory, one set of tools and permissions, one emergency stop. VERONICA's code tools
+never reach JARVIS's own code, the installed JARVIS, or the release and test folders.
 
 STANDING AUTHORITY (no per-action approval needed):
 - read everything in the workspace;

@@ -284,8 +284,18 @@ kept autonomous ("keep it as it is"). The owner created an OpenRouter key and te
 - picture reading: a test fault, since fixed;
 - speech-to-text: needs at least US$0.50 of credit; the owner adds credit on payday.
 
-**`docs/VERONICA-MERGE-PLAN.md` is written: DRAFT FOR THE OWNER'S APPROVAL** ("I approve the Veronica merge plan";
-decisions D1-D11). Nothing of it is built yet.
+**`docs/VERONICA-MERGE-PLAN.md` APPROVED** (owner, 16:04 local: "i approve veronica merge plan", D1-D11 as
+recommended; record `../governance/VERONICA-MERGE-PLAN-APPROVAL-RECORD.json`). The D1 amendment (one Core, two personas)
+is in `CLAUDE.md`.
+
+**Phase 0 (one folder) DONE:**
+- VERONICA moved from `D:\VERONICA` to `C:\Users\jonny\JARVIS-claude-workspace\veronica` with her history, Python,
+  data and speech model (13,406 files, byte totals equal; her repo at 9f2dcc1).
+- Her Desktop shortcut, `CLAUDE.md`, README, the workspace guide and `~\.qwen\QWEN.md` now point there.
+- Her tests: 142 passed with the speech model.
+- Her memories stay in her `data\veronica.db` for phase 2 (not copied anywhere else).
+
+Next is phase 1 (OpenRouter in the Core), built and tested with stand-ins. The live test waits for the owner's credit.
 
 **Found, for the owner**
 - `repo\.env` is VERONICA's keys file plus four JARVIS lines (names checked, values never read). In the repo the briefing

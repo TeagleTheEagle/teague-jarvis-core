@@ -1,7 +1,8 @@
 # VERONICA joins JARVIS, and OpenRouter becomes the one AI connection: the plan
 
-**Status: DRAFT FOR THE OWNER'S APPROVAL** (written 2026-10-12 by Claude Code, on the owner's "go").
-Nothing in this plan is built until the owner types the approval sentence at the end.
+**Status: APPROVED by the owner on 2026-10-12, 16:04 local** ("i approve veronica merge plan": D1-D11 as recommended;
+record `../governance/VERONICA-MERGE-PLAN-APPROVAL-RECORD.json`). Written 2026-10-12 by Claude Code, on the owner's "go".
+Phase 0 done the same day (see `docs/CURRENT-STATUS.md`).
 
 ## 1. What the owner asked for (2026-10-12)
 
