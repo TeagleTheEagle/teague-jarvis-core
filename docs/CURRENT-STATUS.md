@@ -252,9 +252,9 @@ Claude Code session was involved):
    - Tests: 141 passed. The 1 failure needs the speech model, which is present in `D:\VERONICA`.
    - The OneDrive copy moved to `...\outside-repo\veronica-onedrive-original-20261012`. A Desktop shortcut
      `VERONICA.lnk` points at `D:\VERONICA\VERONICA.exe`, and the owner has started her from it.
-   - **Pending:** the owner's two memories of this morning are in the ULTIMATE copy's data (now
-     `...\outside-repo\VERONICA_JARVIS_ULTIMATE-20261012\Veronica\data`). Bring them into `D:\VERONICA\data` while she
-     is closed.
+   - The owner's two memories of this morning, which were only in the ULTIMATE copy's data, were added to
+     `D:\VERONICA\data\veronica.db` on the owner's "MOVE MEMORIES". The live database was backed up first to
+     `...\outside-repo\veronica-db-before-memory-merge-20261012.db`; integrity check ok.
 4. **Review of fbdc7eb (Start-JARVIS.ps1, the development launcher): KEEP with fixes before the next release.**
    - Medium: the window check compares Edge's top-window titles, so a second run or a window opening behind others
      can add duplicate windows, and a tab whose title changes counts as success.
