@@ -378,6 +378,7 @@ The owner's requests, in order:
 - Read VERONICA's current agent, app, safety, storage, task/research, email, calendar, code-change, voice and citation paths, plus her project guidance and README. She is still a separate application with a separate agent loop and SQLite databases. Her README describes email as draft-only and code changes as awaiting an explicit keep, but the current `agent.py` prompt/tools permit direct email sending and its code tools apply edits directly to disk; reconcile this documentation/behavior difference before carrying those capabilities into the shared Core.
 - JARVIS's current `mail_send` remains `ALWAYS` approval-gated in `permissions.py` and `server.App.tool`. Merge-plan decision D4 would change that shared policy, so review its effect on JARVIS before implementing it.
 - Inspection was read-only and excluded `.env`, runtime databases/data, logs, caches, virtual environments, binaries, historical copies and tests. The existing worktree changes (`server.py`, `.claude/settings.local.json`, and untracked `autonomous_core.py`) were left untouched.
+- The owner then asked to apply the missing code from a Copilot share link (`c26f1324-4aa4-8e35-9143-ae48241028d7`). This environment was redirected to GitHub sign-in and could not retrieve the shared conversation; no code was applied. Resume when the owner provides the proposed code/diff or an accessible share.
 
 ## 2026-10-12 (Opus 5.5; the owner: "look through all past chats", then "do only these two" and four more items)
 
