@@ -14,16 +14,16 @@ class SystemMetricsTests(unittest.TestCase):
 
     def test_processor_share_comes_from_two_readings(self):
         readings = iter([(100, 300, 100), (150, 450, 150)])  # idle +50 of kernel+user +200: 75% busy
-        with patch.object(system_metrics, '_system_times', side_effect=lambda: next(readings)):
+        with patch.object(system_metrics, 'system_times', side_effect=lambda: next(readings)):
             self.assertIsNone(system_metrics.cpu_percent())  # nothing to compare with yet
             self.assertEqual(system_metrics.cpu_percent(), 75.0)
 
     def test_unreadable_or_unchanged_times_give_none_not_a_guess(self):
-        with patch.object(system_metrics, '_system_times', return_value=None):
+        with patch.object(system_metrics, 'system_times', return_value=None):
             self.assertIsNone(system_metrics.cpu_percent())
             self.assertIsNone(system_metrics.cpu_percent())
         readings = iter([(1, 2, 3), (1, 2, 3)])
-        with patch.object(system_metrics, '_system_times', side_effect=lambda: next(readings)):
+        with patch.object(system_metrics, 'system_times', side_effect=lambda: next(readings)):
             system_metrics.cpu_percent()
             self.assertIsNone(system_metrics.cpu_percent())
 

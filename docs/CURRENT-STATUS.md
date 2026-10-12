@@ -1,7 +1,7 @@
 # JARVIS: current status (living document)
 
 **Read this first in every new Claude Code session, and update it at the end of each one.**
-Last updated: 2026-10-12 (the section "2026-10-12" below is the newest: what other AI tools did on 2026-10-11, the repo back on claude/main, the workspace back at its recorded path, VERONICA in her own repo D:\VERONICA, one AI tool per project; before it, 2026-10-11 morning: the section "2026-10-10 late night" runs into 2026-10-11: release 1.0.18 = THE TIME FIX ONLY (owner: "keep friday as he is, 1.0.18 time fix only"), built as 1.0.18-cffb826de043, every check on this PC passed, docs/STAGE7-CHECK-1.0.18.md READY FOR THE OWNER'S APPROVAL; it corrects the section "2026-10-10 night"; before it, "2026-10-10 night": FRIDAY started, the Mac's round 6 copy kept; before it, "2026-10-10 late evening": the You page built and reviewed, findings not yet applied; the memory roadmap for approval; voice recognition researched) (STAGE_6_COMPLETE, SWITCH-OVER COMPLETE, STAGE_7_COMPLETE for 1.0.14, 1.0.15 AND 1.0.16;
+Last updated: 2026-10-12 evening (the section "2026-10-12 evening" below is the newest: Serena fixed, no missing dependencies, VERONICA's five unlisted packages pinned, the new tool system_diagnostics, the ASI roadmap proposal, Phase 1 begun; before it, the section "2026-10-12": what other AI tools did on 2026-10-11, the repo back on claude/main, the workspace back at its recorded path, VERONICA in her own repo D:\VERONICA, one AI tool per project; before it, 2026-10-11 morning: the section "2026-10-10 late night" runs into 2026-10-11: release 1.0.18 = THE TIME FIX ONLY (owner: "keep friday as he is, 1.0.18 time fix only"), built as 1.0.18-cffb826de043, every check on this PC passed, docs/STAGE7-CHECK-1.0.18.md READY FOR THE OWNER'S APPROVAL; it corrects the section "2026-10-10 night"; before it, "2026-10-10 night": FRIDAY started, the Mac's round 6 copy kept; before it, "2026-10-10 late evening": the You page built and reviewed, findings not yet applied; the memory roadmap for approval; voice recognition researched) (STAGE_6_COMPLETE, SWITCH-OVER COMPLETE, STAGE_7_COMPLETE for 1.0.14, 1.0.15 AND 1.0.16;
 **the everyday JARVIS is 1.0.17-0d38218c4e1d (EVERYDAY_UPDATE_COMPLETE, 2026-10-07 evening, the first update made by the release's own Setup: JARVIS.exe, the Installed-apps entry, the shortcuts at JARVIS.exe); 1.0.16, 1.0.15, 1.0.14 and 1.0.11 stay installed as rollback copies.
 **CORE RELEASE 1.0.16 ("the phone release", now also with the Qwen voice link fix): BUILT AND CHECKED ON THIS PC as build 2 `1.0.16-fccde24e2cc6` (commit fccde24; comparison, release regression, zip install and sandbox Stage 7 all PASS; build 1 `1.0.16-4e54fc946bc3` superseded, never offered); `docs/STAGE7-CHECK-1.0.16.md` APPROVED BY THE OWNER ("I approve the Stage 7 check of 1.0.16", first clock reading 2026-10-06T06:50:25Z; record `../governance/STAGE7-1.0.16-APPROVAL-RECORD.json`, repo copy `docs/stage7-1.0.16-evidence/`); the tools are placed in `D:\JARVIS-S6-FRESHVM\tools\stage7-1.0.16\` and the record folders created; **THE VM CHECK OF 1.0.16 IS COMPLETE: `STAGE_7_COMPLETE`, 27 of 27 checks** (owner "stage 7 done" 2026-10-06 about 20:00 local; evaluation `docs/stage7-1.0.16-evidence/stage7-evaluation.json`, evaluated 09:02:54Z; snapshot STAGE7-PASS-1.0.16-fccde24e2cc6 c91c7f1a… taken 08:59:38Z after a clean shutdown, all eight snapshots kept; the first install's 646 s against the 600 s bound dispositioned as a VM limitation under the owner's rule of 2026-10-06, every update, rollback and stop inside the bound; no incident this time). **THE UPDATE OF THE EVERYDAY JARVIS TO 1.0.16 IS COMPLETE: `EVERYDAY_UPDATE_COMPLETE`** ("I approve the update of my everyday JARVIS to 1.0.16", 2026-10-06T09:11:04Z; record `../governance/UPDATE-1.0.16-APPROVAL-RECORD.json`; steps 1 to 5 run by the owner 20:16 to 20:40 local: check, backup 351 files with test restore, update 108.5 s with the database byte-for-byte unchanged, the owner's check, a PC restart with JARVIS 1.0.16 starting by itself 5.7 min after sign-in; evaluation and MANIFEST in `D:\JARVIS-update-1.0.16\evidence`, repo copy `docs/update-1.0.16-evidence/`; the Private network switch stays off until the owner sets up Tailscale). **THE PHONE IS PAIRED AND TALKING TO THE CORE OVER THE PRIVATE NETWORK (22:15 local):** Tailscale on the PC (`thegrizzlybear`, 100.103.95.28) and the phone (`iphone-15`), both set up by the owner; the Private network switch on; the door on 100.103.95.28:8790; PAIR with the address; the Ask screen ONLINE with Core 1.0.16, AI READY, link 22 ms; a conversation answered. Result record `docs/PHONE-V1-RESULT.md` (in progress: checks 1 and 2 DONE at 22:20 on cellular with Wi-Fi off, hold-to-speak heard, THINKING on the PC, SPEAKING in JARVIS's voice, link about 200 ms; checks 4, 5, 6 and 10 DONE at 22:23 to 22:24 (Chats with the conversation and its messages, Status with the readouts and the overview, STOP ALL from the phone and RESUME on the PC, the PC's Devices page showing the phone online with every tick); checks 7, 8 and 9 DONE at 22:28 to 22:31 (revoke then pair again, Tailscale off gives CORE NOT REACHED, "remember that" saved and shown on the PC's Memory page, though as the word "that"); check 3 FAILS (the owner: closing the app mid-conversation shows a fresh one; the id is kept but the lines are not reloaded); **VERSION 1: 9 of 10 checks met, the app's next round fixes check 3, the header at the phone's width, the stale stop note and the icon**; two fixes on the way: the phone had signed into a second Tailscale network, and the app crashed after pairing until the microphone usage entry was added to the Info list). **NEXT: the owner's remaining section 10 checks; a fix round for the header layout at the phone's width (ONLINE wraps, STOP ALL squeezed) and the icon; then release 1.0.17.** The check's course: step 1 done (disc `JARVIS-STAGE7-1.0.16-fccde24e2cc6.iso`, sha256 dd3a1abe…, built 06:55Z, checked by Claude), step 2 done (VM started on FRESH-PREREQ), step 3 PASS (the Install phase, all nine checks E0 and I1 to I8, 18:04:42 to 18:35:49 local; the install took 646 s against the 600 s Gate 20 bound, copy 301 s and verify 225 s, the VM's disk as in the 1.0.15 check, for the owner's disposition at the evaluation); step 4 (quit, restart, the second run of stage7, about 50 min) is the owner's next act; steps 5 to 7 pending ("stage 7 done" ends them), then the evaluation and the everyday-update plan. THE IPHONE APP (step 7 of the phone plan) IS WRITTEN under `phone/ios/`, independently reviewed with every finding applied (1 high, 5 medium, 19 low: `docs/PHONE-APP.md` section 5), and zipped for the Mac at `D:\JARVIS-release-work\phone\JARVIS-ios-v1-20261006-1810.zip` (sha256 62d873f1…); not built here (the owner builds it on the Mac, `phone/ios/README.md`, fix rounds expected). On the Mac the owner has created the Xcode project `JARVIS` (bundle id `com.teagueindustries.jarvis`, team Benjamin Teague, Display Name JARVIS, iOS 26 as the minimum by the owner's choice, the two Info keys, the three build settings); THE APP IS BUILT AND RUNNING ON THE OWNER'S IPHONE (19:00 local): the twelve files dragged in, Build Succeeded at the first attempt with no fix round (Xcode's bridging-header prompt answered Don't Create), installed by Product > Run after Xcode's one-time symbol copy, the pairing screen shown as designed (picture `docs/phone-evidence/phone-app-first-launch-20261006-1900.png`); not pairable until 1.0.16 is the everyday JARVIS and Tailscale is set up (plan steps 5 and 6). **`docs/OWN-APP-PLAN.md` IS APPROVED BY THE OWNER** ("I approve the own app plan can we make the app icon this image as well as the app icon for the ios app", then the exact "I approve the own-app plan"; first clock reading 2026-10-06T08:23:24Z; record `../governance/OWN-APP-PLAN-APPROVAL-RECORD.json`, repo copy `docs/own-app-evidence/`): release 1.0.17 after 1.0.16 and the phone: JARVIS.exe with the icon and name, no PowerShell step, JARVIS-Setup.exe built with Inno Setup (the owner installs it once), an Installed-apps entry, version 4 Stage 7 scripts; D1 to D4 and D6 as recommended; **D5 changed by the owner: the icon is the Teague Industries badge the owner supplied**, kept at `static/assets/branding/teague/teague-industries-badge.png` and rendered on approval into `desktop/jarvis.ico`, `desktop/tray.png` (the tray image the desktop code pointed at and the repo lacked) and `phone/ios/AppIcon-1024.png` (copy for the Mac `D:\JARVIS-release-work\phone\JARVIS-AppIcon-1024.png`; the owner drags it into Xcode's Assets > AppIcon). Nothing else of 1.0.17 is built. **THE LOOK APPLIED TO THE IPHONE APP** (owner: "apply the look", from a mock-up zip the owner supplied; `docs/PHONE-APP.md` section 6): the badge as the header logo, the space scene faint behind every screen, a turning orbital graphic on the pairing screen; `phone/ios/JARVIS/Theme.swift` and `PairingView.swift` changed, assets `phone/ios/assets/TeagueBadge.png` and `JARVISBackground.jpeg`, reviewed (no high or medium, 4 low, 2 applied); zip for the Mac `D:\JARVIS-release-work\phone\JARVIS-ios-look-20261006-1946.zip` (sha256 cc87bdab…), steps `phone/ios/README-look.md`; **BUILT AND SEEN ON THE PHONE at 21:12 local** (screenshot `docs/phone-evidence/phone-app-look-20261006-2112.png`; the home-screen icon needs one delete-and-reinstall of the app to refresh, told to the owner). The VM check's second run: AfterRestart, Uninstall and Update phases PASS (driver log 07:55, 08:07, 08:40Z), the interrupted-update phase started 19:40 local. Open for the owner: the voice tool run again after the fix (expected "qwen voice SPEAKS"), the approval, the C: cleanup steps (parked on the owner's word: "focus on the app"), later the Phone Link / contacts / Gmail idea**).
 
@@ -220,6 +220,156 @@ current record.
 
 Rules and authority are in `CLAUDE.md` and `../governance/OWNER-DELEGATION.md`; this file
 only records where the work stands. Historical handover context: `docs/PROJECT-CONTEXT.md`.
+
+## 2026-10-12 evening (Opus 5.5, from about 16:55 local; a new session)
+
+The owner's requests, in order:
+- "check usage";
+- Serena's MCP server failing to connect;
+- "Analyze JARVIS, VERONICA, JARVIS core tools, fix any missing dependencies, and build a system diagnostic tool in
+  src/tools/system_control.py". Asked, the owner chose "PC health, for JARVIS" at `repo\system_diagnostics.py`
+  rather than `src\tools\`, which would break the flat layout and which the dev copy's update watcher ignores;
+- "Inspect the entire JARVIS codebase ... ASI_ROADMAP.md";
+- "begin implementing the Phase 1 autonomous core tools".
+
+**Done**
+1. **Serena works.**
+   - The workspace `.mcp.json` passed `--context ide-assistant` (since renamed `claude-code`), and the first `uvx`
+     install took longer than Claude Code's 30 s. The install is cached now; a start takes about 4 s.
+   - Its command now reads `serena start-mcp-server --context claude-code --project
+     C:\Users\jonny\JARVIS-claude-workspace`, with the dashboard and log window off.
+   - `.serena\project.yml` (language python) has `line_ending: "lf"`: Serena had written CRLF into
+     `system_metrics.py`, whose committed copy is LF.
+   - Serena is a developer tool for Claude Code sessions, not JARVIS's memory.
+2. **Dependencies: nothing missing.**
+   - Repo `.venv` (Python 3.12.10): `pip check` clean, every line of the five requirements files satisfied, every
+     third-party import resolves. The names that do not resolve are evidence scripts' own neighbours under `docs\`,
+     tools reached through `sys.path`, and the optional `soundfile` in `wearables\verify_m4.py`.
+   - Desktop: pnpm, `electron` 44.2.0, `rcedit` 5.0.2; `npm ls` clean.
+   - VERONICA: `pip check` clean. Five packages her code imports directly were unlisted and came in only through
+     deepagents and pywebview. They are now pinned at the installed versions (her repo 445facc): langchain 1.4.4,
+     langchain-core 1.6.9, langgraph 1.2.14 (`tasks.py` imports the version-specific `GraphDrained` and
+     `RunControl`), pydantic 2.14.0, pythonnet 3.2.1.
+   - Her tests on a throwaway copy: 141 passed. The 1 failure is the git-ignored speech model, which is present in her
+     folder.
+3. **The tool `system_diagnostics` (59 tools).** It reads this PC's live condition:
+   - processor load (its own two readings, half a second apart, so the dashboard's shared reading is left alone);
+   - memory;
+   - free space on every fixed or removable drive with a letter (network drives not read; no "no disk" box);
+   - Windows uptime;
+   - battery and power;
+   - the programs holding the most memory, grouped by name;
+   - the network adapters (no hardware addresses);
+   - `attention` sentences past fixed thresholds (a drive under 10% free, memory or processor at 90% or more, a
+     battery at 20% or less off mains).
+
+   How it reads, and what it may do:
+   - Read only. The fast parts come through ctypes; programs and adapters come from one read-only PowerShell call,
+     each part inside its own try. A part Windows does not give is None and named in `unreadable`; ValueError comes
+     only when nothing at all was readable.
+   - Permission row: reads, this PC. A paired device needs the owner's tick, as for `computer_system_info`.
+
+   Files:
+   - `system_diagnostics.py` and `test_system_diagnostics.py` (new);
+   - `system_metrics.py`: `system_times` is public, and the busy-share arithmetic is shared as `busy_percent`, with
+     no change for the dashboard;
+   - `actions.py` (one schema line, original line endings kept), `permissions.py`, `server.py` (import and
+     dispatch);
+   - `conversation_context.py`: "for the AI and search connections use system_health, and for this PC's live load
+     ... use system_diagnostics";
+   - `personality.txt`: one clause, so its new hash `438631dc...` is added to `runtime_paths.SHIPPED_PERSONALITIES`
+     as that list's rule requires;
+   - `docs/PERMISSIONS.md`: 59 tools;
+   - the request templates, regenerated.
+
+   On this PC a real reading takes about 1.9 s: C: 39.0 GB free of 222 GB (17.5%), D: and E: fine, no battery,
+   nothing flagged.
+
+   Independent review: no high, no medium, 9 low, all applied:
+   - a part failing unexpectedly is now None and never ends the question;
+   - `SetThreadErrorMode` for empty card readers;
+   - per-part try in the script;
+   - its own `GetTickCount64` handle;
+   - the working-set note in the scope;
+   - threshold and cap tests at their exact limits;
+   - the ctypes size and a check of the real readers;
+   - the guidance wording;
+   - the `actions.py` line endings.
+
+   Tests:
+   - full Python suite 893 OK (330 s; data and config folders pointed at a throwaway folder);
+   - desktop `node --test` 60 pass, intelligence 18 pass, all 28 root `.cjs` scripts pass (bundled Electron as
+     Node).
+4. **`docs/ASI_ROADMAP.md`: a PROPOSAL for the owner's approval.**
+   - It is one ordered plan. The approved merge plan goes first. It updates and would replace
+     `docs/CAPABILITY-PLAN.md` (decision E1) and keeps `docs/MEMORY-ROADMAP.md` as the design of its memory phase.
+   - Said plainly: no application can be engineered into "ASI". JARVIS's reasoning is the model's. The plan improves
+     what the code controls: measurement, tools, memory, durable jobs, roles, bounded autonomy, and a measured
+     self-improvement loop with the owner's approval.
+   - The emergency stop, approvals for consequential actions and the owner-only list stay.
+   - Decisions E1 to E10. The top risk named is D4's `mail_send` Allowed combined with unattended jobs that read
+     outside text.
+
+5. **ASI roadmap Phase 1, item 2, begun on the owner's word: built and reviewed.** A tool failing in a way it did
+   not foresee no longer ends the whole answer with "The request failed internally".
+   - The model reads `server.tool_error_text`: the error's kind, never its text, which can hold paths and would go
+     to the provider. A read says "try another way"; a change says "it may or may not have taken effect: do not
+     repeat it". A tool's own `ValueError` and `ProviderError` sentences are unchanged.
+   - Workshop missions get the same words, wired through `workshop.connect(tool_error=...)`.
+   - The failure is still marked: `tool.failed` with the kind, with stage "before start" when it came before the
+     tool began. The activity log records "failed: <kind>" (a plain "failed" for a tool's own failures).
+   - A stop during the failure still ends the question. The Stage 4 harness re-raises, so its `Denied` still ends
+     the run.
+   - Independent review: no high; 1 medium (the kind in the activity log) and 4 low, all applied.
+   - Tests: `test_tool_errors.py`, 10 tests. Two fail without the change.
+
+**Found, for the owner**
+- **Merge plan phase 1 (OpenRouter in the Core) is now committed** on `claude/veronica-merge` (`1ad6044`), after the
+  earlier session left it uncommitted in `D:\JARVIS-release-work\src-merge`.
+  - Finished and reviewed this session: an independent review found 1 high and 2 medium, all fixed, and wrote the
+    record `docs/MERGE-PHASE1-REVIEW-20261012.md` (the code had cited a review with no record).
+    - High: the OpenRouter backup model (plan D8) is now off by default in `providers.chat`; `App.fallback_option`
+      opts in only when OpenRouter is chosen and Settings > AI > Backup is on, so a caller that forgets the option
+      (the interface inspection, and any future one) reaches no backup model.
+    - Medium: a picture description written by the backup model is surfaced to the owner (run note, activity log,
+      final reply) instead of being stripped; server-level tests that Backup off sends no backup list.
+  - Tests: `test_openrouter_provider.py` (34); full Python suite 915 OK (2 skipped); 28 cjs and 18 intelligence
+    tests pass. The desktop suite's failures in that worktree are only its missing Python runtime (59 of 60 with it
+    set), not this change.
+  - **Still to do before the merged release:** bring `claude/main` (today's `system_diagnostics` and the error-path
+    change) and `claude/veronica-merge` together — both touch `actions.py` and `server.py`, so expect conflicts
+    there — then merge plan phases 2 to 4 and the owner's live OpenRouter test (plan item 6). The old providers and
+    the offline path stay until that test (D8). Not started this session; the owner is asked first.
+- **Owner's Claude Code settings changed this session** (`~\.claude\settings.json`): `model` set to
+  `claude-opus-5-5`, `permissions.disableAutoMode` `"disable"`, and `permissions.defaultMode` `"bypassPermissions"`
+  (every session on this PC now starts with no permission prompts). The owner asked to "turn off the safeguards";
+  explained that approvals/the stop/the owner-only list are the project's own and only the owner can lift them in
+  `repo\CLAUDE.md`, and that Anthropic's safety system and what Claude will not do are not switchable.
+- **Asked for, not built: JARVIS reading phones on the wifi.** `network_devices` already lists devices passively.
+  Reaching into a device to read its contents is not possible for an unmodified phone and would be intrusion against
+  others on the network, so it was declined. The supported path is the phone as a paired client that shares what the
+  owner chooses (the device gateway and the iPhone app already do this); extending what the phone shares is a proper
+  feature and touches the Mac session.
+- **Deny rules not in force.** `repo\.claude\settings.json`'s deny rules (reading `.env`, `git push`) do not apply to
+  sessions that start at the workspace root, as sessions now do (ASI roadmap E10).
+- **New rules in the workspace `CLAUDE.md`.** It gained "Autonomous Execution Guidelines" at 16:46 today. They are
+  followed for build and test loops; the OWNER-ONLY list in `repo\CLAUDE.md` still stops and asks.
+- **VERONICA defects for merge phase 3**, beyond the known ones:
+  - context pruning (`agent.py` about line 475, `messages.pop(1)`) can leave a tool result without its tool call,
+    which the API rejects;
+  - tool results are cut at 10,000 characters, overriding `READ_LIMIT` 100,000;
+  - `_ask` retries a 400 error three times.
+- **The known test failure doesn't show in throwaway mode.** Run with the data and config folders pointed at a
+  throwaway folder, the full suite does not show the known `test_answer_evidence` briefing failure caused by
+  `repo\.env`.
+
+**Next (the owner is asked before each; none started).**
+- Bring `claude/main` and `claude/veronica-merge` together (both now change `actions.py` and `server.py`; expect
+  conflicts there), so the OpenRouter work and today's `claude/main` work are on one branch.
+- Then ASI roadmap Phase 1 items 1, 3 and 5 (item 1, the tool registry, touches those same two files, so it follows
+  the branch merge), the rest of the VERONICA merge (phases 2 to 4, the owner's live OpenRouter test), and 1.0.19's
+  open items.
+- The ASI roadmap's decisions E1 to E10 wait for the owner.
 
 ## 2026-10-12 (Opus 5.5; the owner: "look through all past chats", then "do only these two" and four more items)
 

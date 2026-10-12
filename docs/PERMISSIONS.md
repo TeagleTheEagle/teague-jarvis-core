@@ -15,7 +15,7 @@ wrote into the folder the program runs from, which in the installed JARVIS is th
 
 ## 1. The table: `permissions.py`
 
-One row for each of the 56 tools since the Workshop (51 in 1.0.17, 46 in 1.0.16) (`permissions.TABLE`). `test_permissions.py` holds the table equal to
+One row for each of the 59 tools since `system_diagnostics` (2026-10-12; 58 with the Workshop and the You page, 51 in 1.0.17, 46 in 1.0.16) (`permissions.TABLE`). `test_permissions.py` holds the table equal to
 `actions.TOOLS`; a tool without a row is refused. The five Workshop rows (`workshop_files`, `workshop_run`, `workshop_python`,
 `workshop_lessons`, `workshop_mission`; `docs/WORKSHOP.md`) are changes on this PC with the recycle folder, the stop and the lesson
 list as their undo; `workshop_run` has no undo and says so. Each can be set to "ask first" or "off" like any other change; a mission's

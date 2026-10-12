@@ -100,6 +100,7 @@ SHIPPED_PERSONALITIES = frozenset({
     '3edf45e42879411a65161564c11d6d7b08ad57f8c772ad311378ce2ab293f5d5',  # baseline; shipped in 1.0.7 to 1.0.14
     '762841ddbc68a0bee528b5f0faf697f0d24a4b1532ab9d6593bd7802e7c51a0b',  # 1.0.15: changes to itself ask first
     '91dfed8bb38d24da92c74456b9372b9eef12b8a3a2425097aadec96147fe5cca',  # 1.0.17: mail and the calendar (item G)
+    '438631dcdf07bf507ae69f85c8ca0bb48c8b1b21f3c8f202b2ee92e3f55d0737',  # system_diagnostics (the owner's request of 2026-10-12)
 })
 
 
