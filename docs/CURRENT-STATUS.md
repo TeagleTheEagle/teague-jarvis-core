@@ -324,14 +324,32 @@ The owner's requests, in order:
    - Tests: `test_tool_errors.py`, 10 tests. Two fail without the change.
 
 **Found, for the owner**
-- **Uncommitted phase 1 work of the merge plan** is in `D:\JARVIS-release-work\src-merge` (branch
-  `claude/veronica-merge`):
-  - `providers.py` +310 lines, plus `actions.py`, `server.py`, `connection_checks.py`, `env.template`, four
-    `static\` files, `wearables\service.py`, and a new `test_openrouter_provider.py`;
-  - last written 16:45 today by an earlier session, and not touched in this one.
-
-  The next session reviews, finishes and commits it. Bringing `claude/main` into it touches `actions.py` and
-  `server.py` on other lines.
+- **Merge plan phase 1 (OpenRouter in the Core) is now committed** on `claude/veronica-merge` (`1ad6044`), after the
+  earlier session left it uncommitted in `D:\JARVIS-release-work\src-merge`.
+  - Finished and reviewed this session: an independent review found 1 high and 2 medium, all fixed, and wrote the
+    record `docs/MERGE-PHASE1-REVIEW-20261012.md` (the code had cited a review with no record).
+    - High: the OpenRouter backup model (plan D8) is now off by default in `providers.chat`; `App.fallback_option`
+      opts in only when OpenRouter is chosen and Settings > AI > Backup is on, so a caller that forgets the option
+      (the interface inspection, and any future one) reaches no backup model.
+    - Medium: a picture description written by the backup model is surfaced to the owner (run note, activity log,
+      final reply) instead of being stripped; server-level tests that Backup off sends no backup list.
+  - Tests: `test_openrouter_provider.py` (34); full Python suite 915 OK (2 skipped); 28 cjs and 18 intelligence
+    tests pass. The desktop suite's failures in that worktree are only its missing Python runtime (59 of 60 with it
+    set), not this change.
+  - **Still to do before the merged release:** bring `claude/main` (today's `system_diagnostics` and the error-path
+    change) and `claude/veronica-merge` together — both touch `actions.py` and `server.py`, so expect conflicts
+    there — then merge plan phases 2 to 4 and the owner's live OpenRouter test (plan item 6). The old providers and
+    the offline path stay until that test (D8). Not started this session; the owner is asked first.
+- **Owner's Claude Code settings changed this session** (`~\.claude\settings.json`): `model` set to
+  `claude-opus-5-5`, `permissions.disableAutoMode` `"disable"`, and `permissions.defaultMode` `"bypassPermissions"`
+  (every session on this PC now starts with no permission prompts). The owner asked to "turn off the safeguards";
+  explained that approvals/the stop/the owner-only list are the project's own and only the owner can lift them in
+  `repo\CLAUDE.md`, and that Anthropic's safety system and what Claude will not do are not switchable.
+- **Asked for, not built: JARVIS reading phones on the wifi.** `network_devices` already lists devices passively.
+  Reaching into a device to read its contents is not possible for an unmodified phone and would be intrusion against
+  others on the network, so it was declined. The supported path is the phone as a paired client that shares what the
+  owner chooses (the device gateway and the iPhone app already do this); extending what the phone shares is a proper
+  feature and touches the Mac session.
 - **Deny rules not in force.** `repo\.claude\settings.json`'s deny rules (reading `.env`, `git push`) do not apply to
   sessions that start at the workspace root, as sessions now do (ASI roadmap E10).
 - **New rules in the workspace `CLAUDE.md`.** It gained "Autonomous Execution Guidelines" at 16:46 today. They are
@@ -345,10 +363,12 @@ The owner's requests, in order:
   throwaway folder, the full suite does not show the known `test_answer_evidence` briefing failure caused by
   `repo\.env`.
 
-**Next.**
-- Phase 1 items 1, 3 and 5. Item 1 (the tool registry) is best after the merge plan's uncommitted phase 1 work
-  (above) is committed, since both touch `server.py` and `actions.py`; the owner is asked first.
-- Unchanged: merge plan phase 1, and 1.0.19's open items.
+**Next (the owner is asked before each; none started).**
+- Bring `claude/main` and `claude/veronica-merge` together (both now change `actions.py` and `server.py`; expect
+  conflicts there), so the OpenRouter work and today's `claude/main` work are on one branch.
+- Then ASI roadmap Phase 1 items 1, 3 and 5 (item 1, the tool registry, touches those same two files, so it follows
+  the branch merge), the rest of the VERONICA merge (phases 2 to 4, the owner's live OpenRouter test), and 1.0.19's
+  open items.
 - The ASI roadmap's decisions E1 to E10 wait for the owner.
 
 ## 2026-10-12 (Opus 5.5; the owner: "look through all past chats", then "do only these two" and four more items)
