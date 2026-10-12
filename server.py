@@ -87,6 +87,28 @@ from wake import WakeDetector
 
 WEARABLE_READ_TOOLS = permissions.WEARABLE_TOOLS  # what a wearable may call: one table, permissions.py
 APPROVAL_SECONDS = 900  # how long an "ask first" call or a draft waits for the owner (1.0.17: fifteen minutes, five before)
+# What the AI model reads when a tool fails in a way the tool did not foresee (docs/ASI_ROADMAP.md, Phase 1 item 2): the
+# error's kind and plain words, never the exception's own text, which can hold paths or other detail and would go to the
+# AI provider. A tool that changes something may have done part of it before failing, so it is not to be repeated.
+UNEXPECTED_READ_ERROR = '{name} failed unexpectedly ({kind}); nothing was read. Say so plainly, and try another way only if there is one.'
+UNEXPECTED_CHANGE_ERROR = ('{name} failed unexpectedly ({kind}). It may or may not have taken effect: do not repeat it or do it '
+                           'another way; tell the owner it is unconfirmed.')
+
+
+def tool_error_text(name, exc):
+    """What the AI model reads for a failed tool call, in a question and in a mission: a tool's own refusals and
+    failures (ValueError, ProviderError) keep their sentences; anything unforeseen gives its kind only."""
+    if isinstance(exc, (ValueError, providers.ProviderError)):
+        return str(exc)
+    rule = permissions.TABLE.get(name)
+    reads = rule is not None and rule.effect == permissions.READS
+    return (UNEXPECTED_READ_ERROR if reads else UNEXPECTED_CHANGE_ERROR).format(name=name, kind=type(exc).__name__)
+
+
+def failure_status(exc):
+    """The activity log's status for a failed tool: the kind is kept when the failure was not the tool's own."""
+    return 'failed' if isinstance(exc, (ValueError, providers.ProviderError)) else 'failed: ' + type(exc).__name__
+
 # The window controls a paired device's question may ask for (1.0.17 item C): reads of the window's state, what switches
 # something off, and one capture to describe. Nothing that starts sharing, the microphone or the hologram from afar.
 DEVICE_CONTROLS = frozenset(('analyse_screen', 'hologram_status', 'screen_status', 'microphone_status', 'stop_sharing', 'stop_speaking', 'mute', 'hide_hologram'))
@@ -199,7 +221,7 @@ class App:
             # JARVIS's own folders: no command may name them and no owner setting may add them (docs/WORKSHOP.md).
             protected = [runtime_paths.config_dir(), runtime_paths.data_dir(), ROOT, runtime_paths.install_home(), self.store.root]
             self.workshop = workshop.Desk(self.store, workshop_home, settings=self.store.settings, protected=protected)
-            self.workshop.connect(ask_model=self.mission_model, call_tool=self.tool, instructions=self.instructions, make_run=Run,
+            self.workshop.connect(ask_model=self.mission_model, call_tool=self.tool, tool_error=tool_error_text, instructions=self.instructions, make_run=Run,
                                   notify=self.mission_notice, audit=self.audit, offered=self.offered_tools, ready=self.mission_blocked,
                                   forget=self.forget_run_approvals)
         self.session = secrets.token_urlsafe(32)
@@ -1276,7 +1298,7 @@ class App:
             return result
         except Exception as exc:
             if run:run.emit('tool.failed',{'name':name,'checked_at':time.time(),'error_code':type(exc).__name__})
-            self.audit(name, 'failed', run)
+            self.audit(name, failure_status(exc), run)
             raise
 
     def device_control(self, run, action):
@@ -1799,6 +1821,21 @@ class App:
                             result = self.tool(name, parsed_args, run)
                         except (ValueError, providers.ProviderError) as exc:
                             result = {'error': str(exc)}
+                        except Exception as exc:
+                            if self.stage4:
+                                raise  # the Stage 4 test harness keeps its own failures (stage4_sessions.Denied)
+                            # One tool failing unexpectedly no longer ends the whole answer: the model is told and can act
+                            # on it, as a mission's model is (workshop.py). App.tool marks and logs a failure inside the
+                            # tool; one before it started (the permission check, the database) is marked here, so the
+                            # receipts and the activity log never miss it.
+                            last = list(run.events)[-1:]
+                            if not (last and last[0]['event'] == 'tool.failed' and last[0]['data'].get('name') == name):
+                                run.emit('tool.failed', {'name': name, 'checked_at': time.time(), 'error_code': type(exc).__name__, 'stage': 'before start'})
+                                try:
+                                    self.audit(name, failure_status(exc), run)
+                                except Exception:
+                                    pass  # a failing database must not end the answer that is telling the owner
+                            result = {'error': tool_error_text(name, exc)}
                         # 1.0.19, the guard (content_guard.py, docs/GUARD.md): the AI model reads the result cleaned, and a
                         # result that held instructions or hidden text marks this question. Only here: the window, the
                         # owner's own clicks and the approval cards keep what the tool gave (review of 2026-10-10).

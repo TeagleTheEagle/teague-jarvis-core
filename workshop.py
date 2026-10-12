@@ -1021,7 +1021,7 @@ class Mission(threading.Thread):
                     try:
                         result = desk.call_tool(name, args, self.carrier)
                     except Exception as exc:  # a refusal, a tool's own error, a provider error inside a tool: data for the model
-                        result = {'error': str(exc)}
+                        result = {'error': desk.tool_error(name, exc)}
                     if isinstance(result, dict) and result.get('status') == 'awaiting approval':
                         waiting.add(name)
                     self.note('tool', self.describe(name, args, result), tool=name, outcome=str(result.get('status') or ('error' if 'error' in result else 'completed')))
@@ -1101,9 +1101,11 @@ class Desk:
         self.current = None
         # Wiring (connect): the model, the tool door, the instructions, a Run for the mission, the notice, the
         # activity row, the offered tools, the dropping of a run's approvals when its mission ends; and `ready`,
-        # the reason a mission cannot start or go on (the stop, no provider), if any.
+        # the reason a mission cannot start or go on (the stop, no provider), if any. `tool_error` words a failed tool
+        # call for the model as the Core's own question loop does (server.tool_error_text).
         self.ask_model = self.call_tool = self.instructions = self.make_run = self.notify = self.audit = self.offered = self.forget = None
         self.ready = lambda: None
+        self.tool_error = lambda name, exc: str(exc)
 
     def connect(self, **wiring):
         for key, value in wiring.items():

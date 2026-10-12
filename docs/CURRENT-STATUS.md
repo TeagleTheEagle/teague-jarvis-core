@@ -310,6 +310,19 @@ The owner's requests, in order:
    - Decisions E1 to E10. The top risk named is D4's `mail_send` Allowed combined with unattended jobs that read
      outside text.
 
+5. **ASI roadmap Phase 1, item 2, begun on the owner's word: built and reviewed.** A tool failing in a way it did
+   not foresee no longer ends the whole answer with "The request failed internally".
+   - The model reads `server.tool_error_text`: the error's kind, never its text, which can hold paths and would go
+     to the provider. A read says "try another way"; a change says "it may or may not have taken effect: do not
+     repeat it". A tool's own `ValueError` and `ProviderError` sentences are unchanged.
+   - Workshop missions get the same words, wired through `workshop.connect(tool_error=...)`.
+   - The failure is still marked: `tool.failed` with the kind, with stage "before start" when it came before the
+     tool began. The activity log records "failed: <kind>" (a plain "failed" for a tool's own failures).
+   - A stop during the failure still ends the question. The Stage 4 harness re-raises, so its `Denied` still ends
+     the run.
+   - Independent review: no high; 1 medium (the kind in the activity log) and 4 low, all applied.
+   - Tests: `test_tool_errors.py`, 10 tests. Two fail without the change.
+
 **Found, for the owner**
 - **Uncommitted phase 1 work of the merge plan** is in `D:\JARVIS-release-work\src-merge` (branch
   `claude/veronica-merge`):
@@ -332,9 +345,11 @@ The owner's requests, in order:
   throwaway folder, the full suite does not show the known `test_answer_evidence` briefing failure caused by
   `repo\.env`.
 
-**Next.** Phase 1 of the ASI roadmap, begun on the owner's word: first, every tool failure comes back to the model
-as a plain error. Then, unchanged: merge plan phase 1 (the uncommitted work above) and 1.0.19's open items. The ASI
-roadmap's decisions wait for the owner.
+**Next.**
+- Phase 1 items 1, 3 and 5. Item 1 (the tool registry) is best after the merge plan's uncommitted phase 1 work
+  (above) is committed, since both touch `server.py` and `actions.py`; the owner is asked first.
+- Unchanged: merge plan phase 1, and 1.0.19's open items.
+- The ASI roadmap's decisions E1 to E10 wait for the owner.
 
 ## 2026-10-12 (Opus 5.5; the owner: "look through all past chats", then "do only these two" and four more items)
 

@@ -227,6 +227,19 @@ From CAPABILITY-PLAN stage 1 and MEMORY-ROADMAP section 6, merged and brought up
 
 **Done when:** the tools and honesty groups are at or above the baseline, and no group is lower.
 
+**Progress (begun on the owner's word of 2026-10-12, before Phase 0 exists, so proven by tests only):**
+- **Item 2: built and reviewed 2026-10-12.** A tool failing unexpectedly no longer ends the answer.
+  - The model reads `server.tool_error_text`: the error's kind, never its text. A read says "try another way"; a change
+    says "it may or may not have taken effect: do not repeat it".
+  - Missions get the same words.
+  - The failure is still marked in the run, with "before start" when it came before the tool began. The activity log
+    records "failed: <kind>".
+  - The review found no high issue; 1 medium and 4 low were applied. Tests: `test_tool_errors.py` (10).
+- **Items 1, 3 and 5:** next. Item 1 (the registry) is best done after the merge plan's uncommitted phase 1 work is
+  committed, since both touch `server.py` and `actions.py`.
+- **Item 4:** its values wait for Phase 0's scores.
+- **Item 6:** waits for Phase 4.
+
 ### Phase 2: the merge's skills on the new tool layer (inside merge plan phase 3)
 
 No new work beyond the merge plan. Its checked research and project helper are built on the registry (Phase 1) and
