@@ -371,6 +371,14 @@ The owner's requests, in order:
   open items.
 - The ASI roadmap's decisions E1 to E10 wait for the owner.
 
+**Read-only JARVIS and VERONICA review (20:56 local).**
+- The owner chose to use the existing Workshop missions as-is, then asked for a read of the JARVIS Core/persona and VERONICA source. No application code was changed and no builds or tests were run.
+- Read the active JARVIS execution and identity paths: `server.py`, `permissions.py`, `actions.py`, `workshop.py`, `providers.py`, `store.py`, `memory.py`, `content_guard.py`, `conversation_context.py`, `runtime_paths.py`, and `personality.txt`, along with the current status, ASI roadmap, master architecture, and VERONICA merge plan.
+- Confirmed the existing Workshop runs inside `server.App`; mission tool calls use `App.tool` and the central `permissions.decide` gate. The untracked `autonomous_core.py` remains a separate prototype and was not wired in.
+- Read VERONICA's current agent, app, safety, storage, task/research, email, calendar, code-change, voice and citation paths, plus her project guidance and README. She is still a separate application with a separate agent loop and SQLite databases. Her README describes email as draft-only and code changes as awaiting an explicit keep, but the current `agent.py` prompt/tools permit direct email sending and its code tools apply edits directly to disk; reconcile this documentation/behavior difference before carrying those capabilities into the shared Core.
+- JARVIS's current `mail_send` remains `ALWAYS` approval-gated in `permissions.py` and `server.App.tool`. Merge-plan decision D4 would change that shared policy, so review its effect on JARVIS before implementing it.
+- Inspection was read-only and excluded `.env`, runtime databases/data, logs, caches, virtual environments, binaries, historical copies and tests. The existing worktree changes (`server.py`, `.claude/settings.local.json`, and untracked `autonomous_core.py`) were left untouched.
+
 ## 2026-10-12 (Opus 5.5; the owner: "look through all past chats", then "do only these two" and four more items)
 
 **What happened on 2026-10-11 after the last entry** (found today in Qwen Code's logs under `~\.qwen` and in git; no
