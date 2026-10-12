@@ -278,7 +278,7 @@ class App:
         return {'checked_at': time.time(), 'uptime_seconds': int(time.time()-self.started), 'live_checks': providers.live_health(mode),
                 'configuration': providers.capabilities(mode),
                 'recent_failures': failures[:10], 'records_examined': len(logs),
-                'limitations': 'Model access and Brave are checked live. Generation, voice synthesis and routes have separate Settings tests. Browser location and speaker playback need device checks. Historical failures may already be resolved.'}
+                'limitations': 'Model access (and Brave, when it is the search service) is checked live; a paid OpenRouter search is not. Generation, voice synthesis and routes have separate Settings tests. Browser location and speaker playback need device checks. Historical failures may already be resolved.'}
 
     def connection_test(self, service):
         if service not in connection_checks.SERVICES:
@@ -633,6 +633,13 @@ class App:
         if not isinstance(body, dict) or set(body) - {'enabled', 'port'} or 'enabled' not in body:
             raise ValueError('Supply on or off, and the port.')
         return self.remote_devices.configure(body['enabled'], body.get('port'))
+
+    @staticmethod
+    def fallback_option(settings):
+        """{'fallback': True} only when OpenRouter is chosen and Settings > AI > Backup is on, so that OpenRouter may try
+        its backup model (plan D8). Empty otherwise: providers.chat defaults to no backup model, so a call that forgets
+        this option is safe (nothing reaches the backup model's company) rather than exposed."""
+        return {'fallback': True} if providers.provider() == 'openrouter' and settings.get('provider_backup') else {}
 
     def music_command(self, text, run=None):
         """The Core's own music commands (music.py): "play <song>", "stop the music", "pause", "resume", "volume up",
@@ -1178,13 +1185,25 @@ class App:
 
     def describe_picture(self, run, attachment, question):
         """One model request with a picture and no tools; its words and nothing else (1.0.17 item C)."""
-        if not (os.getenv('OPENAI_API_KEY') or os.getenv('DASHSCOPE_API_KEY')):
+        if not providers.any_ai_key():
             raise ValueError('Image analysis needs a configured vision model.')
         messages = [{'role': 'system', 'content': self.instructions(wearable=True)},
                     {'role': 'user', 'content': [{'type': 'text', 'text': question}, {'type': 'image_url', 'image_url': {'url': attachment['data']}}]}]
-        depth = providers.chat_options(self.store.settings().get('answer_mode'), question)
+        settings = self.store.settings()
+        depth = {**providers.chat_options(settings.get('answer_mode'), question), **self.fallback_option(settings)}
         response = providers.chat(messages, [], lambda *_: None, run.cancel, True, **depth)
-        return str((response or {}).get('content') or '')
+        words = providers.BACKUP_NOTE.sub('', str((response or {}).get('content') or ''))
+        note = providers.fallback_note(response)
+        if note:
+            # This description is a tool result that goes back to the model, and claim_checks strips the note from the
+            # model's reply, so the note is kept off the tool data and stashed on the run: work() adds the Core's own
+            # note to the final reply, and the activity log records it now (review of 2026-10-12, M2).
+            run.nested_fallback_note = getattr(run, 'nested_fallback_note', None) or note
+            run.emit('provider.backup', {'from': providers.model_label(response['_fallback'].get('asked')),
+                                         'to': providers.model_label(response['_fallback'].get('used')),
+                                         'reason': 'OpenRouter switched to its backup model'})
+            self.audit('OpenRouter backup model described a picture: ' + providers.model_label(response['_fallback'].get('used')), 'used', run)
+        return words
 
     @staticmethod
     def speakable(text):
@@ -1406,6 +1425,7 @@ class App:
         context_ms=None
         run.user_text = text
         backup_used = None  # (provider, error) once the backup provider has taken over this question
+        fallback_used = None  # the note, once OpenRouter's backup model has written an answer in this question (plan D8)
         try:
             run.emit('run.started', {})
             self.wait_for_backup(run)
@@ -1427,7 +1447,7 @@ class App:
                 run.emit('assistant.delta', {'text': answer})
             elif not self.stage4 and providers.provider() not in providers.AI_PROVIDERS:
                 raise providers.unsupported_error()  # e.g. JARVIS_PROVIDER=groq after 1.0.15: say so; no local mode, no other provider
-            elif not self.stage4 and not (os.getenv('OPENAI_API_KEY') or os.getenv('DASHSCOPE_API_KEY')):
+            elif not self.stage4 and not providers.any_ai_key():
                 if attachment:
                     answer = 'File received. ' + ('Image analysis needs a configured vision model.' if attachment['type'] == 'image' else f'Extracted {len(attachment["text"]):,} characters. ' + ('This file has no readable text; scanned PDFs need OCR. ' if attachment.get('empty') else '')) + ' Add an AI provider key in .env and restart to ask AI questions about it.'
                 elif re.fullmatch(r'(hi|hey|hello|hello jarvis|hey jarvis)[!.]?', text, re.I):
@@ -1476,12 +1496,12 @@ class App:
                 # Qwen: which model answers and whether it thinks first (Settings > Answer speed, or the
                 # user's own "think hard about ..."; providers.qwen_plan). The same choice applies to
                 # every model request of this run. Empty when nothing differs from the default.
-                depth = {} if self.stage4 else providers.chat_options(settings.get('answer_mode'), text)
+                depth = {} if self.stage4 else {**providers.chat_options(settings.get('answer_mode'), text), **self.fallback_option(settings)}
                 # Settings > AI > "Show replies while they are written": with Qwen the answer is asked for in pieces
                 # and shown as it grows, as far as the claim checks have passed it. Since 1.0.17 also for another
                 # device's question: the phone reads the same assistant.draft events through its events route, in
                 # fewer steps (DEVICE_DRAFT_SECONDS; docs/PHONE-CORE-FIXES-20261007.md). Not in the Stage 4 harness.
-                streaming = bool(settings.get('reply_stream')) and not self.stage4 and providers.provider() == 'qwen'
+                streaming = bool(settings.get('reply_stream')) and not self.stage4 and providers.provider() in ('qwen', 'openrouter')
                 if streaming:
                     depth = {**depth, 'stream': True}
                 drafts = None
@@ -1582,6 +1602,14 @@ class App:
                     if run.cancel.is_set() or response is None:
                         if drafts: drafts.clear()  # stopped: nothing of an unfinished answer stays on screen
                         break
+                    if not (fallback_used or backup_used):
+                        # OpenRouter's own backup model wrote this answer (plan D8): said once, as the backup provider is.
+                        fallback_used = providers.fallback_note(response)
+                        if fallback_used:
+                            asked, used = (providers.model_label(response['_fallback'].get(k)) for k in ('asked', 'used'))
+                            run.measurements.append({'fallback_model': used})
+                            run.emit('provider.backup', {'from': asked, 'to': used, 'reason': 'OpenRouter switched to its backup model'})
+                            self.audit('OpenRouter backup model took over', 'used', run)
                     messages.append(response)
                     calls = response.get('tool_calls', [])
                     if calls and drafts: drafts.clear()  # words that came with a tool request are not part of the reply
@@ -1628,9 +1656,13 @@ class App:
                         messages.append({'role': 'tool', 'tool_call_id': call['id'], 'content': json.dumps(result)})
                 else:
                     raise ValueError('Tool iteration limit reached. Please narrow the request.')
-                if backup_used and answer and not run.cancel.is_set():
+                if not (fallback_used or backup_used):
+                    # A nested call this question made (describe_picture for "what's on my screen") may have used
+                    # OpenRouter's backup model; its note was stashed on the run so the Core says so here (review M2).
+                    fallback_used = getattr(run, 'nested_fallback_note', None)
+                if (backup_used or fallback_used) and answer and not run.cancel.is_set():
                     # The reply itself says who answered and why, on every client (screen, voice, wearable).
-                    note = '\n\n' + providers.backup_note(*backup_used)
+                    note = '\n\n' + (providers.backup_note(*backup_used) if backup_used else fallback_used)
                     answer += note
                     run.emit('assistant.delta', {'text': note})
             if self.stage4:
@@ -1654,7 +1686,8 @@ class App:
                 run.emit('run.completed', {})
         except (ValueError, providers.ProviderError) as exc:
             # A failure after the backup provider had taken over still says that it had, and why.
-            taken_over = f' {providers.backup_note(*backup_used)}'.replace('answered this question', 'had taken over this question') if backup_used else ''
+            taken_over = (f' {providers.backup_note(*backup_used)}'.replace('answered this question', 'had taken over this question') if backup_used else
+                          f' {fallback_used}'.replace('answered this question', 'had taken over this question') if fallback_used else '')
             if self.stage4:self.stage4.fail_response(run)
             else:run.emit('run.cancelled' if run.cancel.is_set() else 'run.failed', {'message': str(exc) + taken_over, 'retry_after': getattr(exc, 'retry_after', 0),
                                                                                       'provider': getattr(exc, 'service', None), 'limit': getattr(exc, 'limit', None)})

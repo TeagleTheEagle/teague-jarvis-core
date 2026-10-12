@@ -26,6 +26,11 @@ const full={capabilities:{brain:'Qwen configured',model:'qwen3.8-max',search:'Se
 let rows=m.systems('online',full);
 assert.deepEqual(rows,[['Core','ok','ONLINE'],['AI','ok','QWEN'],['Memory','ok','2 SAVED'],['Voice','ok','QWEN VOICE'],['Search','ok','SERPAPI'],['Devices','ok','1 ONLINE']]);
 assert.deepEqual(m.summary('online',rows),{ready:6,total:6,counted:true,warn:false,text:'ALL CONFIGURED'});
+// OpenRouter (docs/VERONICA-MERGE-PLAN.md): its brain and its web search are named as such, and both count as configured.
+rows=m.systems('online',{capabilities:{brain:'OpenRouter configured',search:'OpenRouter web search',fish:true,voice_provider:'fish'},
+  settings:{voice_profile:'auto'},memory:[],devices:[{device_id:'pc',connected:true}]});
+assert.deepEqual(rows.map(r=>r[1]+':'+r[2]),['ok:ONLINE','ok:OPENROUTER','ok:0 SAVED','ok:FISH AUDIO','ok:OPENROUTER','ok:1 ONLINE']);
+assert.equal(m.summary('online',rows).text,'ALL CONFIGURED');
 // Configured is checked, not assumed: no key, a chosen voice that is not set up, search without a key.
 rows=m.systems('online',{capabilities:{brain:'OpenAI not configured',search:'DuckDuckGo best effort',fish:false,qwen_voice:false,openai_voice:false,voice_provider:'browser'},
   settings:{voice_profile:'fish'},memory:[],devices:[{device_id:'pc',connected:true}]});

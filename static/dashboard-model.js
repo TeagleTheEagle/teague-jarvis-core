@@ -39,7 +39,7 @@ const JarvisDashboardModel = (() => {
     const voiceReady = {qwen: caps.qwen_voice, fish: caps.fish, openai: caps.openai_voice, browser: true}[profile];
     const voice = !voiceName || typeof voiceReady !== 'boolean' ? unknown('Voice') : voiceReady ? ['Voice', 'ok', voiceName]
       : ['Voice', 'warn', voiceName.split(' ')[0] + ' NOT SET UP'];
-    const search = typeof caps.search !== 'string' || !caps.search ? unknown('Search') : /serpapi/i.test(caps.search) ? ['Search', 'ok', 'SERPAPI']
+    const search = typeof caps.search !== 'string' || !caps.search ? unknown('Search') : /openrouter/i.test(caps.search) ? ['Search', 'ok', 'OPENROUTER'] : /serpapi/i.test(caps.search) ? ['Search', 'ok', 'SERPAPI']
       : /brave/i.test(caps.search) ? ['Search', 'ok', 'BRAVE'] : ['Search', 'basic', 'BEST EFFORT'];
     const online = Array.isArray(d.devices) ? d.devices.filter(x => x.connected && !x.simulated).length : null;  // a simulated device is never counted
     const devices = online === null ? unknown('Devices') : ['Devices', online ? 'ok' : 'off', online + ' ONLINE'];

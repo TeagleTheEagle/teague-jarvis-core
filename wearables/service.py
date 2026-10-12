@@ -5,7 +5,6 @@ One Service is one device's session: its questions, its limit of requests a minu
 import base64
 import io
 import json
-import os
 from pathlib import Path
 import re
 import unicodedata
@@ -230,8 +229,7 @@ class Service:
             import system_metrics,runtime_paths
             with self.app.lock: timings=list(self.app.timings)
             reading=system_metrics.snapshot(store.root,self.app.started,timings)
-            chosen=providers.provider()
-            key=os.getenv('DASHSCOPE_API_KEY') if chosen=='qwen' else os.getenv('OPENAI_API_KEY') if chosen=='openai' else None
+            key=providers.chosen_key()
             reading.update(core_version=runtime_paths.release_id() or 'development '+str(self.app.backend_revision)[:12],ai_ready=bool(key),stopped=self.app.stopped is not None)
             return reading
         if op=='overview':
