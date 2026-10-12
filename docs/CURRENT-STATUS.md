@@ -267,8 +267,11 @@ Claude Code session was involved):
 6. **C: went from 22.3 to 25.5 GB free.** `VERONICA_JARVIS_ULTIMATE` (Qwen's stale mirror, 3.1 GB) and Qwen's
    PyInstaller leftovers (`~\dist`, `~\build`, `~\VERONICA.spec`) moved to `D:\JARVIS-release-work\outside-repo\`. For
    the owner: `..\owner-steps\Free-C-Space.cmd` moves releases 1.0.11, 1.0.14 and 1.0.15 (not current, not previous)
-   to `D:\JARVIS-release-work\old-releases` and clears pip's cache, about 4 GB; not run yet. Claude's own changes
-   inside AppData are redirected and would free nothing.
+   to `D:\JARVIS-release-work\old-releases` and clears pip's cache, about 4 GB. Claude's own changes inside AppData
+   are redirected and would free nothing. **The owner ran it** (all three copies on D: with every file; current.json
+   still 1.0.17 / previous 1.0.16), ran `owner-steps\Remove-Hermes.cmd` (Hermes Agent, about 5 GB, to the Recycle
+   Bin, PATH entry removed) and emptied the bin: **C: 38.6 GB free (83% used)**. The next big item is the protected
+   Stage 6 VM `JARVIS-CLEAN-WIN11` (about 32 GB on C:), the owner's decision.
 7. **One AI tool per project (owner): Claude Code writes JARVIS and VERONICA.** `~\.qwen\QWEN.md` tells Qwen Code
    (it ran from the home folder, so a note inside a project would not reach it). Also recorded in the workspace
    `CLAUDE.md` and in `D:\VERONICA\CLAUDE.md` and `AGENTS.md`.
