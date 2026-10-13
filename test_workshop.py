@@ -289,7 +289,10 @@ class MissionTests(unittest.TestCase):
                      make_run=FakeRun, notify=notices.append, audit=lambda action, status, run=None: audits.append((action, status)), offered=lambda: list(actions.TOOLS))
         return desk, seen, notices, audits
 
-    def wait(self, desk, seconds=30):
+    def wait(self, desk, seconds=120):
+        # A mission thread opens with a lessons search, a folder listing and three database writes; on this PC's spinning
+        # disk under the release regression's load that once took longer than 30 s (build 2 of 1.0.20, 2026-10-14; the
+        # same test passed 11 of 11 alone). The wait is a bound on a hung mission, not a speed test: 120 s.
         mission = desk.current
         self.assertTrue(mission.finished.wait(seconds), 'the mission did not end')
         return desk.missions.get(mission.id)
