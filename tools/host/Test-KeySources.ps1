@@ -5,9 +5,8 @@ are the same. Run BY THE OWNER; Claude never reads key files. Values are never p
 words SAME or DIFFERENT. Changes nothing.
 
 Why it matters: JARVIS keeps a value that Windows already holds (server.load_env uses "set only if not set"). A
-Windows variable called DASHSCOPE_API_KEY therefore wins over the DASHSCOPE_API_KEY line in the key file, and editing
-that line changes nothing for JARVIS while the Windows variable exists. Test-AiKeys.ps1 and Test-AiSpeed.ps1 read the
-key file, so they test the file's key, which may not be the key JARVIS uses.
+Windows variable called OPENROUTER_API_KEY therefore wins over the OPENROUTER_API_KEY line in the key file, and editing
+that line changes nothing for JARVIS while the Windows variable exists.
 #>
 param(
     [string] $EnvFile = (Join-Path $env:LOCALAPPDATA 'JARVIS\config\.env')

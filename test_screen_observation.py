@@ -7,7 +7,7 @@ class ScreenObservationTests(unittest.TestCase):
             app=App(folder);run=Run('screen-test')
             attachment={'type':'image','name':'screen-capture.jpg','data':'data:image/jpeg;base64,test'}
             response={'role':'assistant','content':'','tool_calls':[{'id':'x','function':{'name':'navigate_panel','arguments':'{"panel":"projects"}'}}]}
-            with patch.dict('os.environ',{'OPENAI_API_KEY':'test-placeholder'}),patch('providers.chat',return_value=response) as chat,patch.object(app,'tool') as tool:
+            with patch.dict('os.environ',{'OPENROUTER_API_KEY':'test-placeholder'}),patch('providers.chat',return_value=response) as chat,patch.object(app,'tool') as tool:
                 app.work(run,'Review this screen',attachment)
             self.assertEqual(chat.call_args.args[1],[])
             tool.assert_not_called()
@@ -18,7 +18,7 @@ class ScreenObservationTests(unittest.TestCase):
             app=App(folder)
             app.attachments['shot']={'id':'shot','type':'image','name':'screen-capture.jpg','data':'data:image/jpeg;base64,c3ludGhldGlj'}
             response={'role':'assistant','content':'The test image is visible.'}
-            with patch.dict('os.environ',{'OPENAI_API_KEY':'test-placeholder'}),patch('providers.chat',return_value=response) as chat:
+            with patch.dict('os.environ',{'OPENROUTER_API_KEY':'test-placeholder'}),patch('providers.chat',return_value=response) as chat:
                 result=app.start_run({'conversation':'screen-test','text':'Review this screenshot','attachment':'shot'})
                 run=app.runs[result['run_id']]
                 with run.condition:

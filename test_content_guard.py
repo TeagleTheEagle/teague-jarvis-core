@@ -208,7 +208,7 @@ class CoreCase(unittest.TestCase):
     def setUp(self):
         folder = tempfile.TemporaryDirectory()
         self.addCleanup(folder.cleanup)
-        environment = patch.dict(os.environ, {'OPENAI_API_KEY': 'test-only-not-a-key'}, clear=True)
+        environment = patch.dict(os.environ, {'OPENROUTER_API_KEY': 'test-only-not-a-key'}, clear=True)
         environment.start()
         self.addCleanup(environment.stop)
         for target, replacement in (('providers.request', AssertionError('no network in these tests')), ('content_guard._lookup', lookup)):

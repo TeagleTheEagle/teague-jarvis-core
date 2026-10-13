@@ -2,8 +2,8 @@
   const box=document.createElement('fieldset');box.style.cssText='padding:18px;margin:18px 0;border:1px solid #285164';
   const title=document.createElement('legend');title.textContent='VOICE PREVIEW';
   const select=document.createElement('select');select.setAttribute('aria-label','Voice profile');
-  [['auto','Current automatic voice'],['qwen','Qwen — cloned JARVIS voice'],['fish','Fish — current voice'],['openai','OpenAI — Cedar']].forEach(([v,t])=>select.add(new Option(t,v)));
-  const info=document.createElement('p');info.textContent='Preview uses provider credits. OpenAI Cedar is an AI-generated voice. Qwen needs your cloned voice ID (QWEN_TTS_VOICE) in the local key file.';
+  [['auto','Current automatic voice'],['fish','Fish Audio — JARVIS voice']].forEach(([v,t])=>select.add(new Option(t,v)));
+  const info=document.createElement('p');info.textContent='Preview uses Fish Audio credits. It needs FISH_API_KEY and FISH_VOICE_ID in the local key file.';
   const preview=document.createElement('button');preview.type='button';preview.textContent='PREVIEW VOICE';
   const save=document.createElement('button');save.type='button';save.textContent='USE THIS VOICE';save.style.marginLeft='8px';
   const audio=document.createElement('audio');audio.controls=true;audio.style.cssText='width:100%;margin-top:12px';let url;

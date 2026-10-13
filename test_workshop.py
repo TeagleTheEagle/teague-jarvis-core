@@ -189,12 +189,12 @@ class RunnerTests(FolderCase):
         self.assertEqual(self.runner.processes, {})
 
     def test_keys_stay_out_of_the_command_and_its_output(self):
-        with patch.dict(os.environ, {'DASHSCOPE_API_KEY': 'sk-testsecretvalue12345678', 'MY_TOKEN': 'tok-abcdefghijkl', 'PLAIN_VALUE': 'visible'}):
-            shown = self.runner.run('echo [%DASHSCOPE_API_KEY%][%MY_TOKEN%][%PLAIN_VALUE%]')['output']
-        self.assertEqual(shown.strip(), '[%DASHSCOPE_API_KEY%][%MY_TOKEN%][visible]', 'the secret variables are not in the environment of the command')
+        with patch.dict(os.environ, {'OPENROUTER_API_KEY': 'sk-testsecretvalue12345678', 'MY_TOKEN': 'tok-abcdefghijkl', 'PLAIN_VALUE': 'visible'}):
+            shown = self.runner.run('echo [%OPENROUTER_API_KEY%][%MY_TOKEN%][%PLAIN_VALUE%]')['output']
+        self.assertEqual(shown.strip(), '[%OPENROUTER_API_KEY%][%MY_TOKEN%][visible]', 'the secret variables are not in the environment of the command')
         self.assertIn('[REDACTED]', self.runner.run('echo sk-proj-abcdefghijklmnopqrstuvwxyz')['output'])
         env = self.runner.environment()
-        self.assertNotIn('DASHSCOPE_API_KEY', env)
+        self.assertNotIn('OPENROUTER_API_KEY', env)
         self.assertEqual(env['JARVIS_PYTHON'], sys.executable)
 
     def test_what_is_refused(self):

@@ -9,7 +9,7 @@ import permissions
 from pathlib import Path
 from contextlib import contextmanager
 
-VOICE_PROFILES = ('auto', 'fish', 'openai', 'qwen')  # the same as providers.VOICE_PROFILES
+VOICE_PROFILES = ('auto', 'fish')  # the same as providers.VOICE_PROFILES (OpenAI and Qwen voices removed, owner 2026-10-13)
 ANSWER_MODES = ('auto', 'deep', 'economy')  # the same as providers.ANSWER_MODES
 DEFAULT_ANSWER_MODE = 'deep'  # the same as providers.DEFAULT_ANSWER_MODE
 
@@ -222,7 +222,7 @@ class Store:
         result = {'name': '', 'voice': False, 'continuous': False, 'response_length': 'balanced', 'tone': 'cinematic', 'humor': True, 'speech_rate': 'natural', 'wake_sensitivity': 'normal', 'quiet_hours': False, 'briefing_time': '', 'proactive': False, 'answer_mode': DEFAULT_ANSWER_MODE, 'provider_backup': True, 'speech_recognition': 'local', 'offline_answers': True, 'reply_stream': False, 'music_volume': 80, 'music_startup': '', 'workshop_minutes': 15, 'workshop_folders': ''}
         with self.connect() as db:
             result.update({r['key']: json.loads(r['value']) for r in db.execute('SELECT * FROM settings')})
-        if result.get('voice_profile', 'auto') not in VOICE_PROFILES:  # e.g. an ElevenLabs choice saved before 1.0.15
+        if result.get('voice_profile', 'auto') not in VOICE_PROFILES:  # e.g. an ElevenLabs (1.0.15) or OpenAI/Qwen (2026-10-13) choice saved before
             result['voice_profile'] = 'auto'
         if result.get('answer_mode') not in ANSWER_MODES:  # a value this version does not know
             result['answer_mode'] = DEFAULT_ANSWER_MODE

@@ -317,7 +317,7 @@ class StatisticsTests(unittest.TestCase):
 
 class ProviderCancellationTests(unittest.TestCase):
     def setUp(self):
-        self.env = patch.dict(os.environ, {'JARVIS_PROVIDER': 'openai', 'OPENAI_API_KEY': 'synthetic', 'OPENAI_MODEL': 'fixture'}, clear=True)
+        self.env = patch.dict(os.environ, {'JARVIS_PROVIDER': 'openrouter', 'OPENROUTER_API_KEY': 'synthetic'}, clear=True)
         self.env.start()
         self.addCleanup(self.env.stop)
 
@@ -327,52 +327,20 @@ class ProviderCancellationTests(unittest.TestCase):
             self.assertIsNone(providers.chat([], [], Mock(), cancel))
         request.assert_not_called()
 
-    def test_cancel_during_failure_does_not_retry(self):
-        cancel = threading.Event()
-        def fail(*args, **kwargs):
-            cancel.set()
-            raise providers.ProviderError('Connection failed')
-        with patch.object(providers, 'request', side_effect=fail) as request, patch.object(providers.time, 'sleep'):
-            self.assertIsNone(providers.chat([], [], Mock(), cancel))
-        self.assertEqual(request.call_count, 1)
-
     def test_cancelled_success_never_emitted(self):
-        for model in ('fixture', 'gpt-6-fixture'):
-            with self.subTest(model=model), patch.dict(os.environ, {'OPENAI_MODEL': model}):
-                cancel = threading.Event(); emit = Mock()
-                def result(*args, **kwargs):
-                    cancel.set()
-                    return {'choices': [{'message': {'content': 'late'}}], 'output': [{'type': 'message', 'content': [{'type': 'output_text', 'text': 'late'}]}]}
-                with patch.object(providers, 'request', side_effect=result):
-                    self.assertIsNone(providers.chat([], [], emit, cancel))
-                emit.assert_not_called()
-
-    def test_cancel_in_backoff_does_not_retry(self):
-        cancel = threading.Event()
-        def stop(timeout): cancel.set(); return True
-        with patch.object(cancel, 'wait', side_effect=stop), patch.object(providers, 'request', side_effect=providers.ProviderError('Connection failed')) as request:
-            self.assertIsNone(providers.chat([], [], Mock(), cancel))
-        self.assertEqual(request.call_count, 1)
-
-    def test_retry_uses_remaining_budget(self):
-        cancel = threading.Event()
-        result = {'choices': [{'message': {'content': 'ok'}, 'finish_reason': 'stop'}]}
-        with patch.object(cancel, 'wait', return_value=False), patch.object(providers.time, 'monotonic', side_effect=[0, 0, 50, 53]), patch.object(providers, 'request', side_effect=[providers.ProviderError('Connection failed'), result]) as request:
-            self.assertEqual(providers.chat([], [], Mock(), cancel)['content'], 'ok')
-        self.assertEqual([c.kwargs['timeout'] for c in request.call_args_list], [120, 67])
+        cancel = threading.Event(); emit = Mock()
+        def result(*args, **kwargs):
+            cancel.set()
+            return {'choices': [{'message': {'content': 'late'}, 'finish_reason': 'stop'}]}
+        with patch.object(providers, 'request', side_effect=result):
+            self.assertIsNone(providers.chat([], [], emit, cancel))
+        emit.assert_not_called()
 
     def test_expired_budget_never_retries(self):
         cancel = threading.Event()
         with patch.object(providers.time, 'monotonic', side_effect=[0, 0, 121]), patch.object(providers, 'request', side_effect=providers.ProviderError('Connection failed')) as request:
             with self.assertRaises(providers.ProviderError): providers.chat([], [], Mock(), cancel)
         self.assertEqual(request.call_count, 1)
-
-    def test_nonretryable_error_preserved(self):
-        with patch.object(providers, 'request', side_effect=providers.ProviderError('HTTP 429')) as request:
-            with self.assertRaises(providers.ProviderError) as caught:
-                providers.chat([], [], Mock(), threading.Event())
-        self.assertEqual(request.call_count, 1)
-        self.assertEqual(caught.exception.retry_after, 30)
 
 
 class PersistenceTests(unittest.TestCase):
@@ -431,7 +399,7 @@ class WorkerCancellationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             ns['ROOT'] = Path(folder)
             (ns['ROOT'] / 'personality.txt').write_text('Synthetic offline fixture.', encoding='utf-8')
-            with patch.dict(os.environ, {'OPENAI_API_KEY': 'synthetic', 'JARVIS_CONFIG_DIR': folder}, clear=True), patch.object(providers, 'chat', side_effect=response) as chat, patch.object(run.cancel, 'wait', side_effect=cancel_wait), patch.object(time, 'sleep'):
+            with patch.dict(os.environ, {'OPENROUTER_API_KEY': 'synthetic', 'JARVIS_CONFIG_DIR': folder}, clear=True), patch.object(providers, 'chat', side_effect=response) as chat, patch.object(run.cancel, 'wait', side_effect=cancel_wait), patch.object(time, 'sleep'):
                 app.work(run, 'fixture', None)
             self.assertEqual(chat.call_count, 1)
         self.assertTrue(run.done)

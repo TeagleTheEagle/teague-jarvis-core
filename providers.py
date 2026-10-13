@@ -23,23 +23,25 @@ class ProviderError(Exception):
     unreachable = False  # the provider could not be reached at all (network, DNS, timeout)
 
 
-AI_PROVIDERS = ('openai', 'qwen', 'openrouter')  # Groq, Gemini and ElevenLabs were removed in 1.0.15 (owner decision 2026-10-05);
-# OpenRouter added for the VERONICA merge (owner decision 2026-10-12, docs/VERONICA-MERGE-PLAN.md): one key for every AI job
-# except the voice, which stays on Fish Audio. OpenAI and Qwen stay until OpenRouter has passed its live test.
-AI_KEYS = {'openai': 'OPENAI_API_KEY', 'qwen': 'DASHSCOPE_API_KEY', 'openrouter': 'OPENROUTER_API_KEY'}
-VOICE_PROFILES = ('auto', 'fish', 'openai', 'qwen')
-ANSWER_MODES = ('auto', 'deep', 'economy')  # Settings > Answer speed; see qwen_plan()
+# OpenRouter is the one AI provider and Fish Audio the one voice (owner, 2026-10-13: "make it so the only api key jarvis
+# or veronica use are fish audio and open router"). OpenRouter passed its live test 6 of 6 the same morning; the OpenAI and
+# Alibaba (Qwen/DashScope) paths, their voices, their speech recognition and Brave search are removed with their tests
+# (merge plan phase 1, "the old providers removed with their tests"). SerpApi, YouTube and Spotify are not AI keys and stay.
+AI_PROVIDERS = ('openrouter',)
+AI_KEYS = {'openrouter': 'OPENROUTER_API_KEY'}
+VOICE_PROFILES = ('auto', 'fish')
+ANSWER_MODES = ('auto', 'deep', 'economy')  # Settings > Answer speed; see openrouter_plan()
 # What 1.0.14 did (Qwen thinks before every answer), until the owner chooses another default.
 DEFAULT_ANSWER_MODE = 'deep'
 
 
 def provider():
-    """The chat provider named by JARVIS_PROVIDER; OpenAI when the line is missing."""
-    return os.getenv('JARVIS_PROVIDER', '').strip().lower() or 'openai'
+    """The chat provider named by JARVIS_PROVIDER; OpenRouter, the only one, when the line is missing."""
+    return os.getenv('JARVIS_PROVIDER', '').strip().lower() or 'openrouter'
 
 
 def unsupported_error():
-    return ProviderError(f'JARVIS_PROVIDER={provider()} is not supported. Set JARVIS_PROVIDER=openrouter, openai or qwen in your local .env and restart JARVIS.')
+    return ProviderError(f'JARVIS_PROVIDER={provider()} is not supported. OpenRouter is the only AI provider: set JARVIS_PROVIDER=openrouter in your local .env and restart JARVIS.')
 
 
 def any_ai_key():
@@ -53,47 +55,10 @@ def chosen_key():
     return (os.getenv(name) or None) if name else None
 
 
-_ERROR_CODE = re.compile(r'[A-Za-z0-9_.-]{1,64}')
-
-
-def _error_fields(exc):
-    """The provider's machine-readable error code and type, if present: a bounded read, and only
-    values that look like codes. Best effort: a broken or cut-off body only loses the code."""
-    try:
-        body = json.loads(exc.read(4096) or b'{}')
-        if isinstance(body, list):
-            body = body[0] if body and isinstance(body[0], dict) else {}
-        error = body.get('error') if isinstance(body, dict) and isinstance(body.get('error'), dict) else body
-        if not isinstance(error, dict):
-            return None, None
-        return tuple(value if isinstance(value, str) and _ERROR_CODE.fullmatch(value) else None
-                     for value in (error.get('code'), error.get('type')))
-    except Exception:
-        return None, None
-
-
-# HTTP 429 codes the providers document as quota, credit or billing problems (checked 2026-10-04).
-# The same word differs per provider: OpenAI's insufficient_quota means no credits; Qwen's is a
-# per-minute throttle.
-_BILLING_429 = {
-    'OpenAI': {'insufficient_quota': 'The OpenAI account has no API credits left',
-               'credit_balance_exhausted': 'The OpenAI account has no API credits left',
-               'organization_spend_limit_exceeded': 'The OpenAI organisation reached its spend limit',
-               'project_spend_limit_exceeded': 'The OpenAI project reached its spend limit',
-               'organization_usage_limit_exceeded': 'The OpenAI organisation reached its usage limit'},
-    'Qwen': {'PrepaidBillOverdue': 'The Alibaba Cloud account has an overdue prepaid bill',
-             'PostpaidBillOverdue': 'The Alibaba Cloud account has an overdue bill',
-             'BudgetLimitExceeded': 'The Alibaba Cloud budget limit is used up',
-             'CommodityNotPurchased': 'The Alibaba Cloud workspace has not purchased this model'},
-}
-_BILLING_ACTION = {'OpenAI': 'add credits or raise the limit under Billing in the OpenAI dashboard, or choose another provider',
-                   'Qwen': 'resolve it in the Alibaba Cloud console, then retry'}
-_RATE_429 = {'OpenAI': {'rate_limit_exceeded', 'slow_down'},
-             'Qwen': {'Throttling', 'Throttling.RateQuota', 'LimitRequests', 'limit_requests', 'Throttling.BurstRate',
-                      'limit_burst_rate', 'Throttling.AllocationQuota', 'insufficient_quota',
-                      'Throttling.ServiceOverloaded', 'Throttling.ResourceExhausted'}}
-_PLAN_SERVICES = ('OpenAI', 'Qwen', 'OpenRouter', 'SerpApi', 'Brave Search', 'Fish Audio')
 _STATUS_LABELS = {400: 'Request rejected. Check model and integration settings.', 401: 'Authentication failed. Check your local credentials.', 403: 'Access denied. Check account permissions and subscription.', 404: 'Resource or model not found.'}
+# A rate limit (HTTP 429) from these names the plan to check. They are the paid services left after the owner removed
+# OpenAI, Qwen (Alibaba) and Brave on 2026-10-13; OpenRouter carries every AI job, Fish Audio the voice.
+_PLAN_SERVICES = ('OpenRouter', 'SerpApi', 'Fish Audio')
 FISH_402 = 'Insufficient API credit. Fish Audio API credit is separate from website credit; add API credit in the Fish developer dashboard.'
 # OpenRouter answers 402 when the credit is used up, and for spoken requests below US$0.50 of credit (function test, 2026-10-12).
 OPENROUTER_402 = ('OpenRouter has no credit for this request: the credit left is less than this request could cost at most. '
@@ -102,35 +67,19 @@ OPENROUTER_402 = ('OpenRouter has no credit for this request: the credit left is
 
 def _http_error(prefix, service, exc):
     """The provider's refusal in our own words. Never the raw upstream body (it can contain
-    sensitive data): only documented, allow-listed codes are used or shown."""
+    sensitive data): only the HTTP status is used."""
     status = exc.code
-    code, kind = _error_fields(exc) if service == 'Qwen' or (service == 'OpenAI' and status == 429) else (None, None)
     label, limit, tail = _STATUS_LABELS.get(status, 'The provider could not complete the request.'), None, f'HTTP {status}'
-    if service == 'Qwen' and code == 'Arrearage':
-        label, limit = 'Alibaba Cloud refused access: the account balance is overdue or empty. Top up in Alibaba Cloud Billing, then retry.', 'billing'
-    elif service == 'Qwen' and code == 'AccessDenied.Unpurchased':
-        # Seen on the owner's account on 2026-10-05; the cause there was an unpaid bill, not a missing purchase.
-        label, limit = ('Alibaba Cloud refused access to this model. Either the model is not activated for the account in Model Studio, '
-                        'or an unpaid bill blocks it. Waiting will not help: check Model Studio and Billing in the Alibaba Cloud console, then retry.'), 'billing'
-        tail = f'HTTP {status}, {code}'
-    elif status == 413:
+    if status == 413:
         # Seen on 2026-10-05 from a free plan whose limit per minute was smaller than one JARVIS question.
         label = ('The request is larger than this provider or plan accepts at once. Waiting will not help: '
                  'use a plan or model with a higher limit, or ask with a shorter question or a smaller attachment.')
     elif status == 429:
-        billing = _BILLING_429.get(service, {})
-        if code in billing or (service == 'OpenAI' and kind == 'insufficient_quota'):
-            reason = billing.get(code, 'OpenAI reports a billing or quota limit on this account')
-            label = f'{reason}. This is a billing limit, not a short rate limit, so waiting will not help: {_BILLING_ACTION[service]}. No keys were rotated.'
-            limit, tail = 'billing', f'HTTP 429, {code}' if code in billing else 'HTTP 429, type insufficient_quota'
+        limit = 'rate'
+        if service in _PLAN_SERVICES:
+            label = f'Rate limit or usage quota reached. Wait a little, then retry; if it keeps happening, check the {service} plan, usage limits and billing. No keys were rotated.'
         else:
-            limit = 'rate'
-            if code in _RATE_429.get(service, ()) or kind == 'rate_limit_error':
-                label = 'Rate limit reached (temporary). Wait a little, then retry. No keys were rotated.'
-            elif service in _PLAN_SERVICES:
-                label = f'Rate limit or usage quota reached. Wait a little, then retry; if it keeps happening, check the {service} plan, usage limits and billing. No keys were rotated.'
-            else:
-                label = 'Rate limit reached. Wait before retrying; no keys were rotated.'
+            label = 'Rate limit reached. Wait before retrying; no keys were rotated.'
     elif status == 402:
         limit = 'billing'
         label = (FISH_402 if service == 'Fish Audio' else OPENROUTER_402 if service == 'OpenRouter' else
@@ -157,10 +106,7 @@ urllib.request.install_opener(urllib.request.build_opener(_KeysStayPut))
 
 def request(url, data=None, headers=None, method=None, raw=False, timeout=35, operation=None):
     host = urllib.parse.urlparse(url).hostname
-    service = {'api.openai.com': 'OpenAI', 'api.fish.audio': 'Fish Audio', 'serpapi.com': 'SerpApi', 'api.search.brave.com': 'Brave Search',
-               'openrouter.ai': 'OpenRouter'}.get(host, 'External service')
-    if (host or '').endswith('.aliyuncs.com'):
-        service = 'Qwen'
+    service = {'api.fish.audio': 'Fish Audio', 'serpapi.com': 'SerpApi', 'openrouter.ai': 'OpenRouter'}.get(host, 'External service')
     path = urllib.parse.urlparse(url).path
     operation = operation or ('transcription' if 'transcriptions' in path else 'voice synthesis' if 'tts' in path else 'chat' if 'completions' in path or path.endswith('/responses') else 'request')
     prefix = f'{service} {operation}: '
@@ -201,27 +147,16 @@ def _unreachable(prefix, service, exc):
 
 
 def capabilities(mode=None):
-    """What is configured. mode is the saved answer mode (Settings > Answer speed): with Qwen the
-    model named here is the one that answers in that mode, so labels and checks match the answers."""
+    """What is configured. mode is the saved answer mode (Settings > Answer speed): the model named here
+    is the one OpenRouter answers with in that mode, so labels and checks match the answers."""
     result = _base_capabilities()
-    if provider() == 'qwen':
-        configured = bool(os.getenv('DASHSCOPE_API_KEY'))
-        result.update(brain='Qwen configured' if configured else 'Qwen not configured',
-                      model=qwen_plan(mode)[0],
-                      vision_provider='Qwen', vision=configured and bool(os.getenv('QWEN_VISION_MODEL')))
-    elif provider() == 'openrouter':
+    if provider() == 'openrouter':
         configured = bool(os.getenv('OPENROUTER_API_KEY'))
         # The main model takes pictures too (qwen/qwen3.8-max-0902: text, image and video in; model list of 2026-10-12).
         result.update(brain='OpenRouter configured' if configured else 'OpenRouter not configured',
                       model=openrouter_plan(mode)[0], vision_provider='OpenRouter', vision=configured)
-    elif provider() == 'openai':
-        configured = bool(os.getenv('OPENAI_API_KEY'))
-        # No AI key at all: the server answers in local command mode (server.py).
-        result.update(brain='OpenAI configured' if configured else 'OpenAI not configured' if any_ai_key() else 'local commands',
-                      model=os.getenv('OPENAI_MODEL', 'gpt-4o-mini'), vision_provider='OpenAI',
-                      vision=configured and bool(os.getenv('OPENAI_VISION_MODEL', 'gpt-4o-mini')))
     else:
-        result.update(brain=f'Unsupported provider {provider()}: use openrouter, openai or qwen', model=None, vision_provider=None, vision=False)
+        result.update(brain=f'Unsupported provider {provider()}: use openrouter' if any_ai_key() else 'local commands', model=None, vision_provider=None, vision=False)
     result['backup'] = PROVIDER_NAMES.get(backup_provider())  # which provider could stand in, or None
     if provider() == 'openrouter' and os.getenv('OPENROUTER_API_KEY'):
         # With OpenRouter the stand-in is its own backup model (plan D8), used only while Settings > AI > Backup is on.
@@ -237,12 +172,11 @@ def _base_capabilities():
         'transcription': cloud_speech() is not None,
         'transcription_provider': PROVIDER_NAMES.get(cloud_speech()),
         'fish': bool(os.getenv('FISH_API_KEY') and os.getenv('FISH_VOICE_ID')),
-        'qwen_voice': qwen_voice_configured(),
-        # OpenAI speech needs only the OpenAI key, whichever provider does the thinking (speech() below).
-        'openai_voice': bool(os.getenv('OPENAI_API_KEY')),
-        'voice_provider': 'qwen' if qwen_voice_configured() else 'fish' if os.getenv('FISH_API_KEY') and os.getenv('FISH_VOICE_ID') else 'browser',
+        'qwen_voice': False,    # the Qwen and OpenAI voices are removed (owner, 2026-10-13): Fish Audio is the voice;
+        'openai_voice': False,  # the two keys stay in this answer, always false, for the interface that reads them
+        'voice_provider': 'fish' if os.getenv('FISH_API_KEY') and os.getenv('FISH_VOICE_ID') else 'browser',
         'search': ('OpenRouter web search' if provider() == 'openrouter' and os.getenv('OPENROUTER_API_KEY') else  # plan D6
-                   'SerpApi configured' if os.getenv('SERPAPI_API_KEY') else 'Brave configured' if os.getenv('BRAVE_API_KEY') else 'DuckDuckGo best effort'),
+                   'SerpApi configured' if os.getenv('SERPAPI_API_KEY') else 'DuckDuckGo best effort'),
         'youtube': bool(os.getenv('YOUTUBE_API_KEY')),
         'spotify': bool(os.getenv('SPOTIFY_CLIENT_ID')),
     }
@@ -251,7 +185,6 @@ def live_health(mode=None):
     checks = {}
     targets = []
     caps = capabilities(mode)
-    use_qwen = provider() == 'qwen'
     use_openrouter = provider() == 'openrouter'
     key = chosen_key()
     if provider() not in AI_PROVIDERS:
@@ -267,32 +200,13 @@ def live_health(mode=None):
                                            'detail': 'OpenRouter accepted the key; generation not tested.' if valid else 'OpenRouter returned an unexpected response.'}
         except ProviderError as exc:
             checks['Chat model access'] = {'status': 'unavailable', 'latency_ms': round((time.perf_counter()-started)*1000), 'detail': str(exc)}
-    elif key and use_qwen:
-        # Model Studio has no per-model lookup in compatible mode: a minimal real
-        # completion proves key, region and model authorisation together.
-        started = time.perf_counter()
-        try:
-            data = request(qwen_base() + '/chat/completions',
-                           {'model': caps['model'], 'messages': [{'role': 'user', 'content': 'Reply with OK.'}],
-                            'max_completion_tokens': 8, 'enable_thinking': False},
-                           {'Authorization': 'Bearer ' + key}, timeout=15)
-            valid = bool(data.get('choices'))
-            checks['Chat model access'] = {'status': 'reachable' if valid else 'unexpected_response',
-                                           'latency_ms': round((time.perf_counter()-started)*1000),
-                                           'detail': 'Qwen answered a minimal test request.' if valid else 'Qwen returned an unexpected response.'}
-        except ProviderError as exc:
-            checks['Chat model access'] = {'status': 'unavailable', 'latency_ms': round((time.perf_counter()-started)*1000), 'detail': str(exc)}
-    elif key:
-        targets.append(('Chat model access', 'https://api.openai.com/v1/models/' + urllib.parse.quote(caps['model'], safe=''), {'Authorization': 'Bearer ' + key}))
     else:
-        checks['Chat model access'] = {'status':'not_configured','detail':'Add a chat provider key locally.'}
+        checks['Chat model access'] = {'status':'not_configured','detail':'Add OPENROUTER_API_KEY locally.'}
     if use_openrouter and key:
         # Each search is paid for, so the health check does not run one (Settings > Connections > Search does).
         checks['Web search'] = {'status': 'configured', 'detail': 'OpenRouter web search (about US$0.007 a search); not run by this check. Use the search connection test.'}
-    elif os.getenv('BRAVE_API_KEY'):
-        targets.append(('Brave search', 'https://api.search.brave.com/res/v1/web/search?q=Sydney+Opera+House&count=1', {'X-Subscription-Token':os.environ['BRAVE_API_KEY']}))
     else:
-        checks['Brave search'] = {'status':'not_configured','detail':'Add BRAVE_API_KEY locally.'}
+        checks['Web search'] = {'status':'not_configured','detail':'Add OPENROUTER_API_KEY locally for OpenRouter web search.'}
     for name, url, headers in targets:
         started = time.perf_counter()
         try:
@@ -306,7 +220,7 @@ def live_health(mode=None):
     return checks
 
 
-PROVIDER_NAMES = {'openai': 'OpenAI', 'qwen': 'Qwen', 'openrouter': 'OpenRouter'}
+PROVIDER_NAMES = {'openrouter': 'OpenRouter'}
 # The line the Core adds to a reply written by the backup provider, or by OpenRouter's backup model (fallback_note).
 # The same pattern removes it from what goes back to a model and from anything a model writes, so that only the Core
 # can say it.
@@ -319,11 +233,8 @@ def backup_provider(vision=False):
     """The other AI provider, when its key is in place and it can take this kind of request, else
     None. The Core uses it only when the owner has switched the backup on (Settings) and the
     chosen provider has failed on a question in which no tool has run yet."""
-    chosen = provider()
-    if chosen == 'qwen' and os.getenv('OPENAI_API_KEY') and (not vision or os.getenv('OPENAI_VISION_MODEL', 'gpt-4o-mini')):
-        return 'openai'
-    if chosen == 'openai' and os.getenv('DASHSCOPE_API_KEY') and (not vision or os.getenv('QWEN_VISION_MODEL')):
-        return 'qwen'
+    # OpenRouter is the only provider (owner, 2026-10-13), so there is no other provider to stand in; the backup is
+    # OpenRouter's own backup model (openrouter_fallback, plan D8). Kept so the Core's backup path stays one shape.
     return None
 
 
@@ -346,142 +257,25 @@ def backup_note(backup, error):
 
 
 def chat(messages, tools, emit, cancel, vision=False, mode=None, text='', use=None, stream=False, max_tokens=None, job='chat', fallback=False):
-    """One model request. mode (Settings > Answer speed; None means the default) and text (the
-    user's own words) steer Qwen and OpenRouter: see qwen_plan() and openrouter_plan(). use names the provider for
-    this one request when it is not the chosen one (the backup, see backup_provider()). stream: ask for the
-    answer in pieces (Qwen and OpenRouter; each piece is handed to emit as 'assistant.piece'). max_tokens: a larger
-    reply budget for the OpenAI and OpenRouter paths (a workshop mission writes whole files in one reply; docs/WORKSHOP.md).
-    job: 'coding' for a workshop mission, which OpenRouter gives to the coding model (plan D2); the others ignore it.
-    fallback: True only when Settings > AI > Backup is on and OpenRouter is chosen, so that OpenRouter may try its backup
-    model (plan D8). It is off by default, so a caller that does not opt in never sends anything to the backup model's
-    company (App.fallback_option carries the owner's switch; others ignore the flag)."""
+    """One model request, through OpenRouter (the only AI provider since the owner's decision of 2026-10-13).
+    mode (Settings > Answer speed; None means the default) and text (the user's own words) steer it: see
+    openrouter_plan(). use names the provider for this one request; only 'openrouter' is accepted (there is no
+    backup provider any more, see backup_provider()). stream: ask for the answer in pieces (each piece is handed to
+    emit as 'assistant.piece'). max_tokens: a larger reply budget (a workshop mission writes whole files in one reply;
+    docs/WORKSHOP.md). job: 'coding' for a workshop mission, which OpenRouter gives to the coding model (plan D2).
+    fallback: True only when Settings > AI > Backup is on, so that OpenRouter may try its backup model (plan D8). It is
+    off by default, so a caller that does not opt in never sends anything to the backup model's company
+    (App.fallback_option carries the owner's switch)."""
     if cancel.is_set():
         return None
     chosen = use or provider()
     if chosen == 'openrouter':
         return openrouter_chat(messages, tools, emit, cancel, vision, mode, text, stream, max_tokens, job, fallback)
-    if chosen == 'qwen':
-        return qwen_chat(messages, tools, emit, cancel, vision, mode, text, stream)
-    if chosen != 'openai':
-        raise unsupported_error()
-    key = os.getenv('OPENAI_API_KEY')
-    if not key:
-        hint = ' Your key file has an OpenRouter key: set JARVIS_PROVIDER=openrouter to use it.' if os.getenv('OPENROUTER_API_KEY') else ''
-        raise ProviderError('OpenAI is selected. Add OPENAI_API_KEY locally and restart JARVIS.' + hint)
-    model = os.getenv('OPENAI_VISION_MODEL', 'gpt-4o-mini') if vision else os.getenv('OPENAI_MODEL', 'gpt-4o-mini')
-    if not model:
-        raise ProviderError('Set a supported vision model before asking about images.')
-    if model.startswith('gpt-6'):
-        inputs=[]
-        for m in messages:
-            if m.get('_response_output'):
-                inputs.extend(m['_response_output'])
-            elif m.get('role') == 'tool':
-                inputs.append({'type':'function_call_output','call_id':m['tool_call_id'],'output':m['content']})
-            else:
-                content=m.get('content')
-                if isinstance(content,list):
-                    content=[{'type':'input_text','text':p['text']} if p['type']=='text' else {'type':'input_image','image_url':p['image_url']['url']} for p in content]
-                if content:
-                    inputs.append({'role':m['role'],'content':content})
-                for call in m.get('tool_calls',[]):
-                    inputs.append({'type':'function_call','call_id':call['id'],'name':call['function']['name'],'arguments':call['function']['arguments']})
-        payload={'model':model,'input':inputs,'reasoning':{'effort':'medium'},'max_output_tokens':8192,'store':False,'include':['reasoning.encrypted_content']}
-        if tools and not vision:
-            payload['tools']=[{'type':'function',**t['function'],'strict':False} for t in tools]
-            payload['parallel_tool_calls']=False
-        if cancel.is_set():
-            return None
-        result=request('https://api.openai.com/v1/responses',payload,{'Authorization':f'Bearer {key}'},timeout=120)
-        if cancel.is_set():
-            return None
-        if result.get('status') in ('incomplete','failed'):
-            raise ProviderError('OpenAI response did not complete. Please narrow the request and retry.')
-        output=result.get('output',[])
-        content=''.join(p.get('text','') for item in output if item.get('type')=='message' for p in item.get('content',[]) if p.get('type')=='output_text')
-        calls=[{'id':item['call_id'],'type':'function','function':{'name':item['name'],'arguments':item['arguments']}} for item in output if item.get('type')=='function_call']
-        if content: emit('assistant.delta',{'text':content})
-        response={'role':'assistant','content':content or None,'_response_output':output}
-        if calls: response['tool_calls']=calls
-        return response
-    body = {'model': model, 'messages': messages, 'stream': False, 'max_completion_tokens': int(max_tokens) if max_tokens else 1024}
-    if any(m.get('role') == 'tool' and '"path": "' in str(m.get('content', '')) and ('static/pro.css' in str(m.get('content', '')) or 'personality.txt' in str(m.get('content', ''))) for m in messages):
-        body['max_completion_tokens'] = 8192
-
-    if tools and not vision:
-        body.update(tools=tools, tool_choice='auto', parallel_tool_calls=False)
-    endpoint = 'https://api.openai.com/v1/chat/completions'
-    # OpenAI's non-streaming response is more resilient on restricted local networks;
-    # the completed answer is still emitted to the UI.
-    deadline = time.monotonic() + 120
-    def attempt():
-        if cancel.is_set():
-            return None
-        remaining = deadline - time.monotonic()
-        if remaining <= 0:
-            raise ProviderError('OpenAI request time limit exceeded.')
-        return request(endpoint, body, {'Authorization': f'Bearer {key}'}, timeout=remaining)
-    try:
-        try:
-            result = attempt()
-        except ProviderError as first:
-            if cancel.is_set():
-                return None
-            if 'connection failed' not in str(first).lower() and 'timed out' not in str(first).lower():
-                raise
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                # The time ran out on a provider that could not be reached: that is still "could not be reached"
-                # (the backup provider and the offline answer are for exactly this).
-                late = ProviderError('OpenAI request time limit exceeded.')
-                late.unreachable, late.service = bool(getattr(first, 'unreachable', False)), 'OpenAI'
-                raise late
-            if cancel.wait(min(3, remaining)):
-                return None
-            result = attempt()
-    except ProviderError as exc:
-        if 'HTTP 429' in str(exc) and exc.limit != 'billing':  # no credits: waiting will not help
-            exc.retry_after = 30
-        raise
-    if cancel.is_set():
-        return None
-    choice = (result.get('choices') or [{}])[0]
-    if choice.get('finish_reason') == 'length':
-        raise ProviderError('The response reached its token limit. Please narrow the request or split it into smaller steps.')
-    message = choice.get('message') or {}
-    content = message.get('content') or ''
-    if content:
-        emit('assistant.delta', {'text': content})
-    response = {'role': 'assistant', 'content': content or None}
-    if message.get('tool_calls'):
-        response['tool_calls'] = message['tool_calls']
-    return response
+    raise unsupported_error()
 
 
-# Alibaba Cloud Model Studio (DashScope), OpenAI-compatible mode. The address depends on
-# the account's region; the default is the international (Singapore) endpoint.
-QWEN_DEFAULT_BASE = 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1'
-QWEN_DEFAULT_MODEL = 'qwen3.8-max'
-
-
-def qwen_base():
-    """Validated DashScope base URL: the key is only ever sent to an Alibaba Cloud host."""
-    base = os.getenv('DASHSCOPE_BASE_URL', QWEN_DEFAULT_BASE).strip().rstrip('/')
-    parsed = urllib.parse.urlparse(base)
-    if parsed.scheme != 'https' or not (parsed.hostname or '').endswith('.aliyuncs.com'):
-        raise ProviderError('DASHSCOPE_BASE_URL must be an https://….aliyuncs.com Model Studio address.')
-    return base
-
-
-# Qwen 3.8 models think before every answer unless told not to (Alibaba's default). Measured on
-# the owner's account on 2026-10-05 with a full JARVIS request: a 150-word answer took 11.9 s with
-# thinking and 5.8 s without (docs/CAPABILITY-PLAN.md section 3). These words in the user's own
-# message ask for a considered answer; in every mode they get the main model with thinking on.
-QWEN_FAST_MODEL = 'qwen3.8-flash'
-# "enable_thinking": false together with an image was accepted on the owner's account on 2026-10-05
-# (Test-AiSpeed picture run, qwen3.8-max: 5.6 s against 7.1 s with thinking). False restores the
-# request 1.0.14 sent for pictures, should another vision model refuse the field; so does Deep.
-QWEN_PICTURES_WITHOUT_THINKING = True
+# These words in the user's own message ask for a considered answer ("think hard about ..."): OpenRouter's
+# main model then thinks hard (openrouter_plan).
 _DEPTH_REQUEST = re.compile(
     r'\b(?:think(?:ing)?\s+(?:(?:very|really|real|extra|more|long\s+and)\s+)?'
     r'(?:hard(?!\s+(?:drive|disk|work)s?\b)|harder|carefully|deeply|(?:it|this|that)\s+through|step[\s-]by[\s-]step)'
@@ -500,45 +294,17 @@ def wants_depth(text):
                for match in _DEPTH_REQUEST.finditer(text))
 
 
-def qwen_plan(mode=None, text='', vision=False):
-    """Which Qwen model answers and whether it thinks first: (model, thinking).
-    deep (the default, also for None or an unknown mode): the main model, thinking before every
-        answer, which is what 1.0.14 and older always did.
-    auto: the main model without thinking.
-    economy: the cheaper fast model without thinking, for everything except pictures.
-    A request for depth in the user's own words gets the main model with thinking in every mode."""
-    main = os.getenv('QWEN_VISION_MODEL') if vision else os.getenv('QWEN_MODEL', QWEN_DEFAULT_MODEL)
-    if mode not in ANSWER_MODES:
-        mode = DEFAULT_ANSWER_MODE
-    if mode == 'deep' or wants_depth(text) or (vision and not QWEN_PICTURES_WITHOUT_THINKING):
-        return main, True
-    if mode == 'economy' and not vision:
-        return os.getenv('QWEN_FAST_MODEL') or QWEN_FAST_MODEL, False
-    return main, False
-
-
 def chat_options(mode, text):
     """Keyword arguments for chat() that carry the saved answer mode and the user's own words.
     Empty when they would change nothing, so that the Core's everyday call to chat() keeps its
     five arguments (test doubles and the Stage 4 harness replace chat() with that shape)."""
     mode = mode if mode in ANSWER_MODES else DEFAULT_ANSWER_MODE
     depth = wants_depth(text)
-    # With Qwen, Deep already thinks before every answer; with OpenRouter, "think hard" asks for more than Deep does
-    # (openrouter_plan), so the words must reach it (review of 2026-10-12, M1).
-    if mode == DEFAULT_ANSWER_MODE and (not depth or (mode == 'deep' and provider() != 'openrouter')):
+    # "think hard" asks OpenRouter for more than Deep does (openrouter_plan), so the words must reach it even in Deep
+    # (review of 2026-10-12, M1).
+    if mode == DEFAULT_ANSWER_MODE and not depth:
         return {}
     return {'mode': mode, 'text': text}
-
-
-def qwen_chat(messages, tools, emit, cancel, vision=False, mode=None, text='', stream=False):
-    """Qwen through Model Studio; results still pass through server evidence/action guards."""
-    key = os.getenv('DASHSCOPE_API_KEY')
-    if not key:
-        raise ProviderError('Qwen is selected. Add DASHSCOPE_API_KEY locally and restart JARVIS.')
-    model, thinking = qwen_plan(mode, text, vision)
-    if not model:
-        raise ProviderError('Image understanding needs a Qwen vision model. Authorise one for your key and set QWEN_VISION_MODEL.')
-    return _compatible_chat('Qwen', qwen_base() + '/chat/completions', key, model, messages, tools, emit, cancel, vision, thinking, stream)
 
 
 # OpenRouter (owner decision 2026-10-12, docs/VERONICA-MERGE-PLAN.md): OpenAI-compatible, one key for every AI job except
@@ -593,7 +359,7 @@ def openrouter_qwen_only(model, where):
 def openrouter_plan(mode=None, text='', vision=False, job='chat'):
     """Which model answers through OpenRouter and how hard it thinks: (model, effort or None).
     coding: the coding model with its own default thinking.
-    Otherwise as qwen_plan(): a request for depth in the user's own words gets the main model thinking hard;
+    Otherwise: a request for depth in the user's own words gets the main model thinking hard;
     deep (the default): the main model, medium thinking; auto: the main model, minimal thinking;
     economy: the fast model without thinking, for everything except pictures."""
     if job == 'coding':
@@ -634,9 +400,9 @@ def openrouter_chat(messages, tools, emit, cancel, vision=False, mode=None, text
         extra['models'] = [model, second]
     try:
         return _compatible_chat('OpenRouter', OPENROUTER_BASE + '/chat/completions', key, model, messages, tools, emit, cancel,
-                                vision, stream=stream, dialect='openrouter', extra=extra)
+                                vision, stream=stream, extra=extra)
     except ProviderError as exc:
-        if exc.status == 429 and exc.limit != 'billing':  # a short rate limit: new voice commands pause, as with OpenAI
+        if exc.status == 429 and exc.limit != 'billing':  # a short rate limit: new voice commands pause for 30 seconds
             exc.retry_after = 30
         raise
 
@@ -864,24 +630,15 @@ def _compatible_stream(service, endpoint, key, body, emit, cancel):
     return answer
 
 
-def _compatible_chat(service, endpoint, key, model, messages, tools, emit, cancel, vision, thinking=False, stream=False, dialect='qwen', extra=None):
-    """OpenAI-compatible adapter (Qwen, OpenRouter): one complete answer, or (stream) the same answer received in pieces.
-    dialect 'qwen' sends Alibaba's fields (max_completion_tokens, enable_thinking); 'openrouter' sends the fields in extra
-    (max_tokens, reasoning, the fallback list "models") and marks an answer written by the fallback model (_fallback)."""
+def _compatible_chat(service, endpoint, key, model, messages, tools, emit, cancel, vision, stream=False, extra=None):
+    """OpenAI-compatible adapter for OpenRouter: one complete answer, or (stream) the same answer received in pieces.
+    extra carries OpenRouter's fields (max_tokens, reasoning, the fallback list "models"); an answer written by the
+    fallback model is marked (_fallback)."""
     if cancel.is_set():
         return None
-    # OpenAI Responses metadata is provider-specific; retain ordinary conversation
-    # content and tool results when changing provider within an existing session.
+    # Metadata kept in a message (keys starting with "_") is not sent; ordinary conversation content and tool results are.
     clean = [{k: v for k, v in m.items() if not k.startswith('_')} for m in messages]
-    body = {'model': model, 'messages': clean, 'stream': False}
-    if dialect == 'openrouter':
-        body.update(extra or {})
-    else:
-        body['max_completion_tokens'] = 8192
-        # "Off" is sent explicitly. "On" is left to Alibaba's default, so that a thinking request is
-        # exactly the request 1.0.14 sent (the shape proven on the owner's account).
-        if not thinking:
-            body['enable_thinking'] = False
+    body = {'model': model, 'messages': clean, 'stream': False, **(extra or {})}
     if tools and not vision:
         body.update(tools=tools, tool_choice='auto')
     if stream:
@@ -909,7 +666,7 @@ def _compatible_chat(service, endpoint, key, model, messages, tools, emit, cance
     response = {'role': 'assistant', 'content': content or None}
     if calls:
         response['tool_calls'] = calls
-    fallback = (extra or {}).get('models', [None])[-1] if dialect == 'openrouter' and (extra or {}).get('models') else None
+    fallback = (extra or {}).get('models', [None])[-1] if (extra or {}).get('models') else None
     if fallback and is_fallback(answered_by, model, fallback):  # OpenRouter names the model that answered
         response['_fallback'] = {'asked': model, 'used': answered_by}
     if content:
@@ -938,121 +695,8 @@ def speech_text(text):
     return re.sub(r'\s+', ' ', text).strip().replace(' :', ':').replace(' ,', ',')
 
 
-QWEN_TTS_DEFAULT_MODEL = 'qwen3-tts-vc-2026-01-22'  # must match the model the voice was enrolled for
-QWEN_TTS_CHUNK = 500  # Model Studio accepts about 600 characters per synthesis request
-
-
-def qwen_voice_configured():
-    return bool(os.getenv('DASHSCOPE_API_KEY') and os.getenv('QWEN_TTS_VOICE'))
-
-
-def speech_chunks(text, limit=QWEN_TTS_CHUNK):
-    """Split at sentence ends (then spaces) into pieces of at most `limit` characters."""
-    chunks, current = [], ''
-    for sentence in re.split(r'(?<=[.!?])\s+', text.strip()):
-        while len(sentence) > limit:
-            cut = sentence.rfind(' ', 0, limit)
-            cut = cut if cut > limit // 2 else limit
-            if current:
-                chunks.append(current)
-                current = ''
-            chunks.append(sentence[:cut].strip())
-            sentence = sentence[cut:].strip()
-        if current and len(current) + 1 + len(sentence) > limit:
-            chunks.append(current)
-            current = sentence
-        else:
-            current = (current + ' ' + sentence).strip()
-    if current:
-        chunks.append(current)
-    return [c for c in chunks if c]
-
-
-def join_audio(clips):
-    """Join synthesized clips into one playable file (WAV frames merged; MP3 frames concatenated)."""
-    if len(clips) == 1:
-        return clips[0]
-    if all(c[:4] == b'RIFF' for c in clips):
-        import io, wave
-        frames, params = [], None
-        for clip in clips:
-            with wave.open(io.BytesIO(clip), 'rb') as part:
-                if params is None:
-                    params = part.getparams()
-                elif part.getparams()[:3] != params[:3]:
-                    raise ProviderError('Qwen voice returned clips in different audio formats.')
-                frames.append(part.readframes(part.getnframes()))
-        out = io.BytesIO()
-        with wave.open(out, 'wb') as whole:
-            whole.setnchannels(params.nchannels)
-            whole.setsampwidth(params.sampwidth)
-            whole.setframerate(params.framerate)
-            whole.writeframes(b''.join(frames))
-        return out.getvalue()
-    if any(c[:4] == b'RIFF' for c in clips):
-        raise ProviderError('Qwen voice returned clips in different audio formats.')
-    return b''.join(clips)
-
-
 def audio_mime(audio):
     return 'audio/wav' if audio[:4] == b'RIFF' else 'audio/mpeg'
-
-
-def qwen_tts_url():
-    """Qwen-TTS endpoint: DASHSCOPE_TTS_URL if set (for workspace-style accounts whose
-    synthesis address differs), otherwise derived from the chat base URL. Alibaba hosts only."""
-    explicit = os.getenv('DASHSCOPE_TTS_URL', '').strip()
-    if explicit:
-        parsed = urllib.parse.urlparse(explicit)
-        if parsed.scheme != 'https' or not (parsed.hostname or '').endswith('.aliyuncs.com'):
-            raise ProviderError('DASHSCOPE_TTS_URL must be an https://….aliyuncs.com Model Studio address.')
-        return explicit
-    base = qwen_base()
-    if not base.endswith('/compatible-mode/v1'):
-        raise ProviderError('DASHSCOPE_BASE_URL must end with /compatible-mode/v1, or set DASHSCOPE_TTS_URL.')
-    return base[:-len('/compatible-mode/v1')] + '/api/v1/services/aigc/multimodal-generation/generation'
-
-
-def qwen_result_link(url):
-    """The link in Alibaba's answer to a finished sound, as JARVIS fetches it: an Alibaba file server
-    (*.aliyuncs.com) over https. Alibaba's Beijing result server hands out plain http links (seen on
-    2026-10-06); its file servers answer at the same name over https, and the link's signature does not
-    depend on the scheme, so the sound is fetched over https either way. Anything else is refused."""
-    if not isinstance(url, str):
-        return None
-    try:
-        parsed = urllib.parse.urlparse(url)
-        host = (parsed.hostname or '').lower()
-        port = parsed.port
-    except ValueError:
-        return None
-    if parsed.scheme not in ('http', 'https') or not host.endswith('.aliyuncs.com') or port not in (None, 80, 443):
-        return None
-    return urllib.parse.urlunparse(('https', host, parsed.path, parsed.params, parsed.query, ''))
-
-
-def qwen_speech(text):
-    """Cloned JARVIS voice through Model Studio non-real-time Qwen-TTS."""
-    key, voice = os.getenv('DASHSCOPE_API_KEY'), os.getenv('QWEN_TTS_VOICE')
-    if not (key and voice):
-        raise ProviderError('Qwen voice needs DASHSCOPE_API_KEY and QWEN_TTS_VOICE (your cloned voice ID).')
-    endpoint = qwen_tts_url()
-    model = os.getenv('QWEN_TTS_MODEL', QWEN_TTS_DEFAULT_MODEL)
-    clips = []
-    for chunk in speech_chunks(text):
-        result = request(endpoint, {'model': model, 'input': {'text': chunk, 'voice': voice, 'language_type': 'English'}},
-                         {'Authorization': f'Bearer {key}'}, timeout=60)
-        audio = ((result.get('output') or {}).get('audio') or {})
-        if audio.get('data'):
-            clips.append(base64.b64decode(audio['data']))
-            continue
-        link = qwen_result_link(audio.get('url'))
-        if not link:
-            raise ProviderError('Qwen voice returned no usable audio link.')
-        clips.append(request(link, raw=True, timeout=60))  # presigned link: no credentials sent
-    if not clips:
-        raise ValueError('No spoken text remains after formatting cleanup.')
-    return join_audio(clips)
 
 
 def speech(text, profile='auto'):
@@ -1061,20 +705,11 @@ def speech(text, profile='auto'):
     text = speech_text(text)
     if not text:
         raise ValueError('No spoken text remains after formatting cleanup.')
-    if profile == 'qwen' or (profile == 'auto' and qwen_voice_configured()):
-        return qwen_speech(text)
-    if profile == 'openai':
-        if not os.getenv('OPENAI_API_KEY'): raise ProviderError('OpenAI speech is not configured.')
-        return request('https://api.openai.com/v1/audio/speech', {'model':'gpt-4o-mini-tts','voice':'cedar','input':text[:4000],'response_format':'mp3','instructions':'Speak with a composed British accent, warm understated wit, flowing sentences and natural pauses. Avoid a robotic or theatrical delivery.'}, {'Authorization':'Bearer '+os.environ['OPENAI_API_KEY']},raw=True)
     if profile == 'fish' and not (os.getenv('FISH_API_KEY') and os.getenv('FISH_VOICE_ID')):
         raise ProviderError('Fish Audio key and voice ID are required.')
     if profile in ('auto','fish') and os.getenv('FISH_API_KEY') and os.getenv('FISH_VOICE_ID'):
         return request('https://api.fish.audio/v1/tts', {'text': text[:5000], 'reference_id': os.environ['FISH_VOICE_ID'], 'format': 'mp3', 'mp3_bitrate': 192, 'sample_rate': 44100, 'latency': 'normal', 'normalize': True, 'prosody': {'speed': 1.0, 'volume': 0, 'normalize_loudness': True}, 'chunk_length': 300, 'condition_on_previous_chunks': True}, {'Authorization': 'Bearer ' + os.environ['FISH_API_KEY'], 'model': os.getenv('FISH_MODEL', 's2-pro')}, raw=True)
-    raise ProviderError('No voice provider is configured. Add the Fish Audio or Qwen voice settings locally, or use the browser voice.')
-
-
-QWEN_ASR_MODEL = 'qwen3-asr-flash'  # Alibaba Model Studio, speech recognition for a finished recording
-QWEN_ASR_LIMIT = 10 * 1024 * 1024   # Alibaba's limit for one recording once it is written out as text (base64)
+    raise ProviderError('No voice provider is configured. Add FISH_API_KEY and FISH_VOICE_ID locally, or use the browser voice.')
 
 
 def cloud_speech():
@@ -1085,75 +720,16 @@ def cloud_speech():
     name = provider()
     if name == 'openrouter' and os.getenv('OPENROUTER_API_KEY') and _is_qwen_model(openrouter_stt_model()):
         return 'openrouter'
-    if name == 'qwen' and os.getenv('DASHSCOPE_API_KEY'):
-        return 'qwen'
-    if name == 'openai' and os.getenv('OPENAI_API_KEY'):
-        return 'openai'
     return None
 
 
-def qwen_transcribe(audio, mime, timeout=60):
-    """Speech to text through Alibaba Model Studio (qwen3-asr-flash, the OpenAI-compatible route). The request
-    and the answer are as Alibaba's API reference gives them (read 2026-10-06). Anything else than text in the
-    answer is an error, never "nothing was said"."""
-    key = os.getenv('DASHSCOPE_API_KEY')
-    if not key:
-        raise ProviderError('Qwen speech recognition needs DASHSCOPE_API_KEY. Local recognition works without it.')
-    kind = mime.split(';')[0]
-    if kind not in ('audio/wav', 'audio/mpeg'):
-        raise ValueError('Qwen speech recognition takes WAV or MP3 recordings.')
-    data = 'data:' + kind + ';base64,' + base64.b64encode(audio).decode('ascii')
-    if len(data) > QWEN_ASR_LIMIT:
-        raise ValueError('The recording is too large for Qwen speech recognition (10 MB).')
-    options = {'enable_itn': True}  # numbers as digits ("5 minutes"), as the local recognition writes them
-    language = os.getenv('QWEN_ASR_LANGUAGE', 'en').strip()
-    if language:  # an empty QWEN_ASR_LANGUAGE line lets Alibaba detect the language
-        options['language'] = language
-    body = {'model': os.getenv('QWEN_ASR_MODEL', QWEN_ASR_MODEL), 'stream': False, 'asr_options': options,
-            'messages': [{'role': 'user', 'content': [{'type': 'input_audio', 'input_audio': {'data': data}}]}]}
-    result = request(qwen_base() + '/chat/completions', body, {'Authorization': f'Bearer {key}'}, timeout=timeout, operation='speech recognition')
-    try:
-        text = result['choices'][0]['message']['content']
-    except (KeyError, IndexError, TypeError):
-        raise ProviderError('Qwen speech recognition: no text in the answer.') from None
-    if isinstance(text, list) and all(isinstance(part, dict) and isinstance(part.get('text'), str) for part in text):
-        text = ' '.join(part['text'] for part in text)  # Alibaba's other answer shape: [{"text": "..."}]
-    if not isinstance(text, str):
-        raise ProviderError('Qwen speech recognition: no text in the answer.')
-    return {'text': text.strip()}
-
-
 def transcribe(audio, mime, timeout=None):
-    """Speech to text in the cloud, by the chosen AI provider: OpenRouter (the OPENROUTER_STT_MODEL), Qwen (qwen3-asr-flash)
-    or OpenAI. The app itself transcribes locally with Whisper unless the owner chose the cloud in Settings > AI.
+    """Speech to text in the cloud, by OpenRouter (the OPENROUTER_STT_MODEL, Qwen only). The app itself transcribes locally
+    with Whisper unless the owner chose the cloud in Settings > AI.
     timeout: seconds for the one request; given, there is no second try (the microphone path cannot wait)."""
     if provider() == 'openrouter':
         return openrouter_transcribe(audio, mime, timeout or 60)
-    if provider() == 'qwen':
-        return qwen_transcribe(audio, mime, timeout or 60)
-    if provider() != 'openai':
-        raise ProviderError('Cloud speech recognition is done by the chosen AI provider: set JARVIS_PROVIDER to openrouter, openai or qwen. Local recognition works without it.')
-    key = os.getenv('OPENAI_API_KEY')
-    if not key:
-        raise ProviderError('Cloud speech transcription needs OPENAI_API_KEY. Local transcription and browser recognition work without it.')
-    suffix = {'audio/webm': 'webm', 'audio/ogg': 'ogg', 'audio/mp4': 'mp4', 'audio/wav': 'wav', 'audio/mpeg': 'mp3'}.get(mime.split(';')[0])
-    if not suffix:
-        raise ValueError('Unsupported recording format.')
-    boundary = secrets.token_hex(20)
-    model = 'gpt-4o-mini-transcribe'
-    data = (f'--{boundary}\r\nContent-Disposition: form-data; name="model"\r\n\r\n{model}\r\n--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="recording.{suffix}"\r\nContent-Type: {mime}\r\n\r\n').encode() + audio + f'\r\n--{boundary}--\r\n'.encode()
-    headers = {'Authorization': f'Bearer {key}', 'Content-Type': 'multipart/form-data; boundary=' + boundary}
-    endpoint = 'https://api.openai.com/v1/audio/transcriptions'
-    try:
-        result = request(endpoint, data, headers, timeout=timeout or 60)
-    except ProviderError as first:
-        if timeout or ('timed out' not in str(first).lower() and 'connection failed' not in str(first).lower()):
-            raise
-        time.sleep(2)
-        result = request(endpoint, data, headers, timeout=60)
-    if not isinstance(result, dict) or not isinstance(result.get('text'), str):
-        raise ProviderError('OpenAI transcription: no text in the answer.')
-    return result
+    raise ProviderError('Cloud speech recognition is done by OpenRouter: set JARVIS_PROVIDER=openrouter. Local recognition works without it.')
 
 
 class Spotify:

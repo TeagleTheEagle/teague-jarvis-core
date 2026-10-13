@@ -37,8 +37,8 @@ class SandboxTests(unittest.TestCase):
                     r._execute_probe('pass', seconds=budget)
 
     def test_environment_does_not_forward_secrets(self):
-        with patch.dict(r.os.environ, {'OPENAI_API_KEY': 'fake', 'WSLENV': 'OPENAI_API_KEY',
+        with patch.dict(r.os.environ, {'OPENROUTER_API_KEY': 'fake', 'WSLENV': 'OPENROUTER_API_KEY',
                                       'HTTP_PROXY': 'fake'}):
-            self.assertNotIn('OPENAI_API_KEY', r.environment())
+            self.assertNotIn('OPENROUTER_API_KEY', r.environment())
             self.assertNotIn('WSLENV', r.environment())
             self.assertNotIn('HTTP_PROXY', r.environment())

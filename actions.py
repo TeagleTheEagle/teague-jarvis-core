@@ -60,7 +60,7 @@ TOOLS = [
     schema('research_report', 'Gather recent web and news sources, matching local documents, and saved notes for a cited research report.', {'query': STR}, ['query']),
     schema('calculate', 'Safely evaluate arithmetic, percentages, unit conversions, or basic statistics. Never execute code.', {'expression': STR, 'mode': {'type':'string','enum':['arithmetic','percent','convert','statistics']}}, ['expression','mode']),
     schema('service_status', 'Read actual service check results from this session. Missing means not checked. Historical success does not prove current service health.', {}),
-    schema('system_health', 'Check chat model access and Brave connectivity, and read configuration plus historical failures. Voice synthesis and route generation are only tested using Settings connection tests. Model access alone does not prove generation works.', {}),
+    schema('system_health', 'Check chat model access, and read configuration plus historical failures. Voice synthesis and route generation are only tested using Settings connection tests. Model access alone does not prove generation works.', {}),
     schema('development_history', 'Read saved development change history and previews.', {}),
     schema('development_rollback', 'Prepare the undo of an applied change. It waits for the owner\'s approval in the interface; never claim it is undone yet.', {'proposal':STR}, ['proposal']),
     schema('development_read', 'Read an allowed file before proposing a change. personality.txt is the personality in use. owner-style.css is the owner\'s own style sheet (it may be empty) and is loaded after every other style. static/pro.css and the other files are the program.', {'path': {'type':'string','enum':list(development.ALLOWED)}}, ['path']),
@@ -286,9 +286,6 @@ def search(query):
                 items.append({'title': row['title'], 'url': url, 'description': row.get('snippet', '')})
             if len(items) == 5:
                 break
-    elif os.getenv('BRAVE_API_KEY'):
-        result = request('https://api.search.brave.com/res/v1/web/search?' + urllib.parse.urlencode({'q': query, 'count': 5}), headers={'X-Subscription-Token': os.environ['BRAVE_API_KEY']})
-        items = [{'title': r['title'], 'url': r['url'], 'description': r.get('description', '')} for r in result.get('web', {}).get('results', [])[:5]]
     else:
         body = request('https://html.duckduckgo.com/html/?' + urllib.parse.urlencode({'q': query}), raw=True)
         parser = SearchParser()
@@ -296,7 +293,7 @@ def search(query):
         items = parser.items[:5]
     if not items:
         raise ProviderError('Search returned no usable results. Try a different query.' if providers.provider() == 'openrouter' and os.getenv('OPENROUTER_API_KEY')
-                            else 'Search returned no usable results. Try a different query; if using free search, configure SERPAPI_API_KEY or BRAVE_API_KEY locally.')
+                            else 'Search returned no usable results. Try a different query; if using free search, add OPENROUTER_API_KEY (OpenRouter web search) or SERPAPI_API_KEY locally.')
     result = {'results': items, 'retrieved_at': datetime.datetime.now(datetime.timezone.utc).isoformat(), 'cached': False}
     _SEARCH_CACHE[cache_key] = (datetime.datetime.now(datetime.timezone.utc).timestamp(), result)
     if len(_SEARCH_CACHE) > 100:

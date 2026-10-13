@@ -17,7 +17,7 @@ import answer_evidence
 import providers
 from server import App, Run
 
-QWEN = {'JARVIS_PROVIDER': 'qwen', 'DASHSCOPE_API_KEY': 'qwen-test-key'}
+QWEN = {'JARVIS_PROVIDER': 'openrouter', 'OPENROUTER_API_KEY': 'qwen-test-key'}
 ANSWER = 'A transistor is a semiconductor switch. It amplifies or switches signals. Billions sit in one chip.'
 
 
@@ -212,13 +212,6 @@ class ProviderTests(unittest.TestCase):
         self.assertTrue(failed.exception.unreachable)
         self.assertIn('Connection failed', str(failed.exception))
 
-    def test_openai_answers_in_one_piece_as_before(self):
-        provider = Provider(Connection(body=json.dumps({'choices': [{'finish_reason': 'stop', 'message': {'content': 'Hello.'}}]}).encode()))
-        with patch.dict(os.environ, {'JARVIS_PROVIDER': 'openai', 'OPENAI_API_KEY': 'k', 'OPENAI_MODEL': 'gpt-4o-mini'}, clear=True), patch('urllib.request.urlopen', provider):
-            reply = providers.chat([{'role': 'user', 'content': 'hello'}], [], lambda *_: None, threading.Event(), stream=True)
-        self.assertEqual(reply['content'], 'Hello.')
-        self.assertIs(provider.requests[0]['stream'], False)
-
 
 class CoreTests(unittest.TestCase):
     def setUp(self):
@@ -332,11 +325,13 @@ class CoreTests(unittest.TestCase):
         self.assertIn('Authentication failed', self.of(events, 'run.failed')[0]['message'])
 
     def test_an_unpaid_bill_is_not_asked_twice(self):
-        """Review finding 2: every HTTP 400 was asked again, also Alibaba's "account overdue" (which is a 400)."""
-        overdue = urllib.error.HTTPError('https://dashscope-intl.aliyuncs.com/x', 400, 'Bad Request', {}, io.BytesIO(b'{"error":{"code":"Arrearage","message":"UPSTREAM-DETAIL-NOT-SHOWN"}}'))
-        _, events = self.ask('What is a transistor?', overdue)
+        """Review finding 2: every HTTP 400 was asked again, also a refusal for an unpaid bill. OpenRouter's is a 402."""
+        unpaid = urllib.error.HTTPError('https://openrouter.ai/api/v1/chat/completions', 402, 'Payment Required', {}, io.BytesIO(b'{"error":{"message":"UPSTREAM-DETAIL-NOT-SHOWN"}}'))
+        _, events = self.ask('What is a transistor?', unpaid)
         self.assertEqual([request['stream'] for request in self.provider.requests], [True])
-        self.assertIn('overdue', self.of(events, 'run.failed')[0]['message'])
+        message = self.of(events, 'run.failed')[0]['message']
+        self.assertIn('no credit', message)
+        self.assertNotIn('UPSTREAM-DETAIL-NOT-SHOWN', message)
 
     def test_time_that_is_up_is_not_followed_by_a_second_attempt(self):
         """Review finding 3, in the Core: after the full time the question fails as it does without the setting."""
@@ -355,17 +350,6 @@ class CoreTests(unittest.TestCase):
         self.assertEqual([kind for kind, _ in events].count('tool.completed'), 1)
         self.assertEqual(self.of(events, 'assistant.completed')[0]['text'], 'It is late. Go to bed.')
         self.assertEqual([request['stream'] for request in self.provider.requests], [True, True, False])
-
-    def test_a_broken_stream_then_no_connection_then_the_backup_provider(self):
-        self.app.store.save_settings({'provider_backup': True})
-        broken = written(ANSWER)[:6] + [ConnectionResetError('reset')]
-        gone = urllib.error.URLError(ConnectionRefusedError('refused'))
-        with patch.object(threading.Event, 'wait', return_value=False):
-            _, events = self.ask('What is a transistor?', broken, gone, whole('From the backup.'), env={**QWEN, 'OPENAI_API_KEY': 'openai-test-key', 'OPENAI_MODEL': 'gpt-4o-mini'})
-        final = self.of(events, 'assistant.completed')[0]['text']
-        self.assertTrue(final.startswith('From the backup.\n\n[OpenAI answered this question because Qwen could not.'), final)
-        self.assertEqual([d['text'] for d in self.of(events, 'assistant.draft')][-1], '')
-        self.assertEqual([request['stream'] for request in self.provider.requests], [True, False, False])
 
     def test_stop_takes_the_unfinished_reply_off_the_screen(self):
         run = Run('stream-test')
