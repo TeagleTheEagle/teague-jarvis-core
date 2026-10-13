@@ -152,7 +152,7 @@ def capabilities(mode=None):
     result = _base_capabilities()
     if provider() == 'openrouter':
         configured = bool(os.getenv('OPENROUTER_API_KEY'))
-        # The main model takes pictures too (qwen/qwen3.8-max-0902: text, image and video in; model list of 2026-10-12).
+        # The main model takes pictures too (anthropic/claude-sonnet-5.5: text and images in; model list of 2026-10-13).
         result.update(brain='OpenRouter configured' if configured else 'OpenRouter not configured',
                       model=openrouter_plan(mode)[0], vision_provider='OpenRouter', vision=configured)
     else:
@@ -308,79 +308,101 @@ def chat_options(mode, text):
 
 
 # OpenRouter (owner decision 2026-10-12, docs/VERONICA-MERGE-PLAN.md): OpenAI-compatible, one key for every AI job except
-# the voice. The address is fixed, so the key is only ever sent to openrouter.ai. Model names as OpenRouter's model list
-# gave them on 2026-10-12; each can be changed in the key file. Qwen only (owner, 2026-10-13: "can we make it only use
-# qwen models for all the functions?"), to match a Qwen-only guardrail on the key.
+# the voice. The address is fixed, so the key is only ever sent to openrouter.ai.
+#
+# THE MODELS ARE FIXED IN THE PROGRAM (owner, 2026-10-13 evening: "allocate the best performance : cheapest ratio to each
+# aspect for jarvis and lock in so that's the only model it can use"). Chosen from a read of OpenRouter's whole model
+# list with that day's prices, by performance for the money, one model per job; a key-file line that tries to change one
+# is refused (openrouter_locked below), so these are the only models JARVIS can use until the next release changes
+# them. Prices in US$ per million tokens, in / out, OpenRouter's list of 2026-10-13.
 OPENROUTER_BASE = 'https://openrouter.ai/api/v1'
-OPENROUTER_DEFAULT_MODEL = 'qwen/qwen3.8-max-0902'             # everyday chat, tools, pictures (plan D2)
-OPENROUTER_DEFAULT_FAST_MODEL = 'qwen/qwen3.8-flash'           # Economy, and the small request behind a web search
-OPENROUTER_DEFAULT_CODING_MODEL = 'qwen/qwen3.8-max-0902'      # coding and research jobs (plan D2, Qwen since 2026-10-13)
-OPENROUTER_DEFAULT_FALLBACK_MODEL = 'qwen/qwen3.8-flash'       # OpenRouter tries it when the first model fails (plan D8)
-# The cloud option for hearing (plan D7): none by default, as OpenRouter's speech-to-text models are not Qwen; this PC's
-# own recognition does the hearing. An OPENROUTER_STT_MODEL line turns the cloud option on only when it names a Qwen
-# model (the owner's Qwen-only rule of 2026-10-13 below; OpenRouter listed no Qwen speech model on 2026-10-13, so in
-# practice the cloud option stays off and this PC does the hearing).
+OPENROUTER_DEFAULT_MODEL = 'anthropic/claude-haiku-5.5'        # everyday chat, tools, pictures: 0.10 / 0.50; sees pictures, 1M context
+OPENROUTER_DEFAULT_FAST_MODEL = 'anthropic/claude-haiku-5.5'   # Economy (no thinking), and the small request behind a web search
+OPENROUTER_DEFAULT_CODING_MODEL = 'anthropic/claude-sonnet-5.5'  # coding and research jobs: 2 / 10 (Opus 5.5 is twice the price for a little more)
+OPENROUTER_DEFAULT_FALLBACK_MODEL = 'qwen/qwen3.7-plus'        # the backup when the first model fails (plan D8): 0.32 / 1.28, from ANOTHER
+                                                               # maker on purpose, so one maker's outage does not take the backup with it
+OPENROUTER_MODELS = {'chat': OPENROUTER_DEFAULT_MODEL, 'fast': OPENROUTER_DEFAULT_FAST_MODEL,
+                     'coding': OPENROUTER_DEFAULT_CODING_MODEL, 'fallback': OPENROUTER_DEFAULT_FALLBACK_MODEL}
+# The key-file lines that used to change a model, each refused now (the lock).
+OPENROUTER_MODEL_LINES = ('OPENROUTER_MODEL', 'OPENROUTER_VISION_MODEL', 'OPENROUTER_FAST_MODEL', 'OPENROUTER_CODING_MODEL',
+                          'OPENROUTER_FALLBACK_MODEL', 'OPENROUTER_MAKERS')
+# The cloud option for hearing (plan D7): none by default; this PC's own recognition (Whisper) does the hearing, which
+# is good and free. The one model line the key file may still carry: OPENROUTER_STT_MODEL naming one of OpenRouter's
+# speech-to-text models from an allowed maker (on 2026-10-13: qwen/qwen3-asr-1.7b, google/gemini-3.5-transcribe) offers
+# the cloud choice in Settings > AI > Speech recognition; the owner still picks it there.
 OPENROUTER_DEFAULT_STT_MODEL = ''
 # Thinking counts against the reply limit on OpenRouter: with a small limit the owner's function test of 2026-10-12 got a
 # cut-off answer ("TEAG") and an empty one. The limit is a ceiling, not a charge, but OpenRouter refuses (402) when the credit
-# left could not pay for a reply that long: about US$0.10 with Qwen 3.8 Max, US$0.33 with Claude Opus (review of 2026-10-12, L1).
+# left could not pay for a reply that long: about US$0.01 with Haiku 5.5, US$0.16 with Sonnet 5.5 (review of 2026-10-12, L1).
 OPENROUTER_REPLY_TOKENS = 16384
-# How hard the model thinks (OpenRouter's reasoning "effort"). Qwen 3.8 Max always thinks on OpenRouter ("mandatory",
-# default effort "xhigh", model list of 2026-10-12), so Auto asks for the least; "none" is sent only to the fast model,
-# whose thinking can be switched off.
+# How hard the model thinks (OpenRouter's reasoning "effort"): Auto asks for the least, Deep for medium, a request for depth
+# in the owner's own words for high; "none" is sent only in Economy, where thinking is off.
 OPENROUTER_EFFORT = {'depth': 'high', 'deep': 'medium', 'auto': 'minimal', 'economy': 'none'}
 OPENROUTER_SEARCH_RESULTS = 5
 OPENROUTER_AUDIO_FORMATS = {'audio/wav': 'wav', 'audio/mpeg': 'mp3', 'audio/webm': 'webm', 'audio/ogg': 'ogg', 'audio/mp4': 'm4a'}
 OPENROUTER_AUDIO_LIMIT = 20 * 1024 * 1024
 _MODEL_NAME = re.compile(r'[A-Za-z0-9][A-Za-z0-9._:/-]{0,95}')
 
-# The owner's rule (2026-10-13, "he is only allowed qwen models"): through OpenRouter, every job runs on a Qwen model.
-# The defaults above already are Qwen; this guard refuses a key-file line that names another maker's model at the point
-# a request would be built, so a non-Qwen model can never be sent whatever the key file says. It makes the Qwen-only
-# choice of 2026-10-13 a rule in code, not a convention in the defaults.
-OPENROUTER_MAKER = 'qwen/'
+# The owner's rule on makers (2026-10-13 morning "he is only allowed qwen models"; the same evening replaced by the fixed
+# models above, from Anthropic and Qwen, with Google allowed for a speech-to-text line; matched by the guardrail on the
+# owner's OpenRouter key): a model from any other maker is refused at the point a request would be built, so it can
+# never be sent. With the models fixed this guard matters for the one line the key file may still carry (hearing) and
+# as a second check on the fixed models themselves.
+OPENROUTER_MAKERS = ('anthropic', 'qwen', 'google')
 
 
-def _is_qwen_model(name):
-    return isinstance(name, str) and name.strip().lower().startswith(OPENROUTER_MAKER)
+def _allowed_maker(name):
+    if not isinstance(name, str) or '/' not in name:
+        return False
+    return name.strip().lower().split('/', 1)[0] in OPENROUTER_MAKERS
 
 
-def openrouter_qwen_only(model, where):
-    """One OpenRouter model under the owner's Qwen-only rule: the trimmed name, or a ProviderError that says the rule
+def openrouter_allowed_model(model, where):
+    """One OpenRouter model under the owner's rule on makers: the trimmed name, or a ProviderError that says the rule
     and names the job, for the owner to fix the key-file line. Every request path calls this before anything is sent."""
-    if not _is_qwen_model(model):
+    if not _allowed_maker(model):
         name = model.strip() if isinstance(model, str) else ''
-        raise ProviderError(f'Only Qwen models may answer through OpenRouter (the owner\'s rule), and the {where} is '
-                            f'{name or "not a model name"}: not a Qwen model. Fix that OPENROUTER line in the key file, '
-                            f'or remove it to use the Qwen default, and restart JARVIS.')
+        allowed = ', '.join(OPENROUTER_MAKERS)
+        raise ProviderError(f'Only models from the makers the owner allows ({allowed}) may answer through OpenRouter, '
+                            f'and the {where} is {name or "not a model name"}: not one of them. Fix that OPENROUTER line '
+                            f'in the key file, or remove it, and restart JARVIS.')
     return model.strip()
 
 
+def openrouter_locked():
+    """The lock on the models (owner, 2026-10-13): a key-file line that would change a model is refused plainly, before any
+    request, naming the line to remove. Settings reads (capabilities) never call this, so they still show the fixed models."""
+    for line in OPENROUTER_MODEL_LINES:
+        if os.getenv(line, '').strip():
+            raise ProviderError(f"JARVIS's AI models are fixed in his program (the owner's choice of 2026-10-13: one model per job, "
+                                f"by performance for the money), so the {line} line in the key file is refused. Remove it and "
+                                f"restart JARVIS.")
+
+
 def openrouter_plan(mode=None, text='', vision=False, job='chat'):
-    """Which model answers through OpenRouter and how hard it thinks: (model, effort or None).
+    """Which model answers through OpenRouter and how hard it thinks: (model, effort or None). The models are fixed
+    (OPENROUTER_MODELS); vision uses the main model, which sees pictures.
     coding: the coding model with its own default thinking.
     Otherwise: a request for depth in the user's own words gets the main model thinking hard;
     deep (the default): the main model, medium thinking; auto: the main model, minimal thinking;
     economy: the fast model without thinking, for everything except pictures."""
     if job == 'coding':
-        return os.getenv('OPENROUTER_CODING_MODEL') or OPENROUTER_DEFAULT_CODING_MODEL, None
-    main = os.getenv('OPENROUTER_MODEL') or OPENROUTER_DEFAULT_MODEL
-    if vision:
-        main = os.getenv('OPENROUTER_VISION_MODEL') or main
+        return OPENROUTER_MODELS['coding'], None
+    main = OPENROUTER_MODELS['chat']
     if mode not in ANSWER_MODES:
         mode = DEFAULT_ANSWER_MODE
     if wants_depth(text):
         return main, OPENROUTER_EFFORT['depth']
     if mode == 'economy' and not vision:
-        return os.getenv('OPENROUTER_FAST_MODEL') or OPENROUTER_DEFAULT_FAST_MODEL, OPENROUTER_EFFORT['economy']
+        return OPENROUTER_MODELS['fast'], OPENROUTER_EFFORT['economy']
     return main, OPENROUTER_EFFORT['deep' if mode == 'deep' else 'auto']
 
 
 def openrouter_fallback(model):
-    """The model OpenRouter tries when the first one fails (plan D8), or None: OPENROUTER_FALLBACK_MODEL, empty to turn
-    it off. Never the same as the first."""
-    fallback = os.getenv('OPENROUTER_FALLBACK_MODEL', OPENROUTER_DEFAULT_FALLBACK_MODEL).strip()
-    return fallback if fallback and fallback != model else None
+    """The model OpenRouter tries when the first one fails (plan D8), or None: the fixed backup model, never the same as
+    the first. Settings > AI > Backup (not the key file) is what turns the backup off."""
+    fallback = OPENROUTER_MODELS['fallback']
+    return fallback if fallback != model else None
 
 
 def openrouter_chat(messages, tools, emit, cancel, vision=False, mode=None, text='', stream=False, max_tokens=None, job='chat', fallback=False):
@@ -389,14 +411,15 @@ def openrouter_chat(messages, tools, emit, cancel, vision=False, mode=None, text
     key = os.getenv('OPENROUTER_API_KEY')
     if not key:
         raise ProviderError('OpenRouter is selected. Add OPENROUTER_API_KEY locally and restart JARVIS.')
+    openrouter_locked()  # the owner's lock on the models
     model, effort = openrouter_plan(mode, text, vision, job)
-    model = openrouter_qwen_only(model, 'coding model' if job == 'coding' else 'model')  # the owner's Qwen-only rule
+    model = openrouter_allowed_model(model, 'coding model' if job == 'coding' else 'model')  # the owner's rule on makers
     extra = {'max_tokens': max(int(max_tokens or 0), OPENROUTER_REPLY_TOKENS)}
     if effort:
         extra['reasoning'] = {'effort': effort, 'exclude': True}  # the thinking itself is not sent back
     second = openrouter_fallback(model) if fallback else None
     if second:
-        openrouter_qwen_only(second, 'backup model')
+        openrouter_allowed_model(second, 'backup model')
         extra['models'] = [model, second]
     try:
         return _compatible_chat('OpenRouter', OPENROUTER_BASE + '/chat/completions', key, model, messages, tools, emit, cancel,
@@ -444,8 +467,8 @@ def openrouter_search(query, count=OPENROUTER_SEARCH_RESULTS):
     key = os.getenv('OPENROUTER_API_KEY')
     if not key:
         raise ProviderError('OpenRouter web search needs OPENROUTER_API_KEY.')
-    body = {'model': openrouter_qwen_only(os.getenv('OPENROUTER_FAST_MODEL') or OPENROUTER_DEFAULT_FAST_MODEL,
-                                          'web search model'),  # the owner's Qwen-only rule
+    openrouter_locked()  # the owner's lock on the models
+    body = {'model': openrouter_allowed_model(OPENROUTER_MODELS['fast'], 'web search model'),  # the owner's rule on makers
             'messages': [{'role': 'user', 'content': 'Search the web for: ' + query + '\nAnswer in one short sentence.'}],
             'plugins': [{'id': 'web', 'max_results': count}], 'max_tokens': 600, 'reasoning': {'effort': 'none'}}
     result = request(OPENROUTER_BASE + '/chat/completions', body, {'Authorization': 'Bearer ' + key}, timeout=60, operation='web search')
@@ -493,7 +516,7 @@ def openrouter_transcribe(audio, mime, timeout=60):
     model = openrouter_stt_model()
     if not model:
         raise ProviderError('OpenRouter speech recognition has no model: add an OPENROUTER_STT_MODEL line to use it. Local recognition works without it.')
-    model = openrouter_qwen_only(model, 'speech recognition model')  # the owner's Qwen-only rule
+    model = openrouter_allowed_model(model, 'speech recognition model')  # the owner's rule on makers
     fmt = OPENROUTER_AUDIO_FORMATS.get(mime.split(';')[0])
     if not fmt:
         raise ValueError('Unsupported recording format.')
@@ -714,17 +737,17 @@ def speech(text, profile='auto'):
 
 def cloud_speech():
     """The provider that turns speech into text in the cloud: the chosen AI provider, when its key is in place
-    (and, for OpenRouter, a Qwen speech model is named — the owner's Qwen-only rule of 2026-10-13; another maker's
+    (and, for OpenRouter, a speech model from an allowed maker is named — the owner's rule on makers; any other
     OPENROUTER_STT_MODEL line leaves the cloud option off and this PC hearing). None otherwise. (The app's own default
     is local recognition with Whisper, which needs neither.)"""
     name = provider()
-    if name == 'openrouter' and os.getenv('OPENROUTER_API_KEY') and _is_qwen_model(openrouter_stt_model()):
+    if name == 'openrouter' and os.getenv('OPENROUTER_API_KEY') and _allowed_maker(openrouter_stt_model()):
         return 'openrouter'
     return None
 
 
 def transcribe(audio, mime, timeout=None):
-    """Speech to text in the cloud, by OpenRouter (the OPENROUTER_STT_MODEL, Qwen only). The app itself transcribes locally
+    """Speech to text in the cloud, by OpenRouter (the OPENROUTER_STT_MODEL, an allowed maker). The app itself transcribes locally
     with Whisper unless the owner chose the cloud in Settings > AI.
     timeout: seconds for the one request; given, there is no second try (the microphone path cannot wait)."""
     if provider() == 'openrouter':

@@ -221,6 +221,28 @@ current record.
 Rules and authority are in `CLAUDE.md` and `../governance/OWNER-DELEGATION.md`; this file
 only records where the work stands. Historical handover context: `docs/PROJECT-CONTEXT.md`.
 
+## 2026-10-13, about 22:40 local (Hermes Agent, a second chat; owner: "start this" on the best-model table, then "allocate the best performance : cheapest ratio to each aspect for jarvis and lock in so that's the only model it can use")
+
+**One AI model per job, by performance for the money, fixed in the program: BUILT AND TESTED on branch `claude/best-models`**
+(worktree `D:\JARVIS-release-work\src-models`, branched from `claude/veronica-merge` at `0434340`; to be merged into it by
+the active chat, or by this one when that chat is quiet). Replaces the morning's Qwen-only rule. `providers.OPENROUTER_MODELS`:
+chat, pictures, Economy and the web search's request `anthropic/claude-haiku-5.5` (US$0.10 / 0.50 per million tokens);
+coding and research jobs `anthropic/claude-sonnet-5.5` (2 / 10); backup `qwen/qwen3.7-plus` (0.32 / 1.28; another maker on
+purpose). **The lock:** `openrouter_locked()` refuses, before any request and naming the line, a key-file line that would
+change a model (`OPENROUTER_MODEL`, `_VISION_MODEL`, `_FAST_MODEL`, `_CODING_MODEL`, `_FALLBACK_MODEL`, `_MAKERS`); Settings
+reads never fail and always show the fixed models. **The maker rule** stays as a second check: `OPENROUTER_MAKERS` =
+anthropic, qwen, google in code (`openrouter_allowed_model`, the morning's `openrouter_qwen_only` renamed); it also governs
+the one model line the key file may still carry, `OPENROUTER_STT_MODEL` (hearing stays on this PC unless the owner names a
+cloud model there and picks it in Settings; OpenRouter now lists `qwen/qwen3-asr-1.7b` and `google/gemini-3.5-transcribe`).
+Fish Audio and every safety rule untouched. Records: `docs/VERONICA-MERGE-PLAN.md`, the evening amendment at the top (the
+table with prices of 2026-10-13); `.env.example` keeps only the key and the two hearing lines. Tests: `test_openrouter_provider.py`
+(the lock on every line, the maker rule on the fixed models and on a replaced one, the cross-maker backup end to end),
+`test_answer_mode.py` (no vision line; the main model sees pictures); full suite on this branch: see the commit message.
+**Owner's steps:** (1) on openrouter.ai, widen the key's guardrail to allow `anthropic/*` beside `qwen/*` (and `google/*`
+if cloud hearing is ever wanted); (2) `..\owner-steps\Test-OpenRouter-BestModels.cmd` proves the four models and the
+picture on the key (about ten US cents). The live 1.0.19 is unchanged until the merged release. Not changed: thinking
+effort (Auto still asks for minimal thinking); raising it is a one-line follow-up once the yardstick exists.
+
 ## 2026-10-13, about 21:30 local (Hermes Agent, same session; owner: "stage 7 done", "write the 1.0.19 update plan", "I approve the update of my everyday JARVIS to 1.0.19")
 
 **The everyday JARVIS is 1.0.19-629bb5621d34** (`EVERYDAY_UPDATE_COMPLETE`, 21:15; on `claude/release-1.0.19`:

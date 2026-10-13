@@ -17,8 +17,9 @@ from server import App, Run
 
 KEY = 'or-test-key'
 ENV = {'JARVIS_PROVIDER': 'openrouter', 'OPENROUTER_API_KEY': KEY}
-MAIN, FAST = 'qwen/qwen3.8-max-0902', 'qwen/qwen3.8-flash'
-CODING, FALLBACK = MAIN, FAST  # Qwen only (owner, 2026-10-13): coding on the main model, the fast model as backup
+MAIN, FAST = 'anthropic/claude-haiku-5.5', 'anthropic/claude-haiku-5.5'
+CODING, FALLBACK = 'anthropic/claude-sonnet-5.5', 'qwen/qwen3.7-plus'  # fixed in the program (owner, 2026-10-13 evening: performance for
+# the money, locked); the backup from another maker on purpose
 ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions'
 
 
@@ -99,8 +100,6 @@ class OpenRouterChatTests(unittest.TestCase):
         body = ask(vision=True, mode='economy', text='x', tools=tools)[2]
         self.assertEqual((body['model'], body['reasoning']['effort']), (MAIN, 'minimal'))
         self.assertNotIn('tools', body)
-        body = ask(env={**ENV, 'OPENROUTER_VISION_MODEL': 'qwen/qwen3.8-vl'}, vision=True)[2]
-        self.assertEqual(body['model'], 'qwen/qwen3.8-vl')  # a key-file vision model, within the owner's Qwen-only rule
 
     def test_a_mission_is_a_coding_job_for_the_coding_model_with_its_larger_budget(self):
         body = ask(job='coding', max_tokens=40000)[2]
@@ -110,40 +109,63 @@ class OpenRouterChatTests(unittest.TestCase):
         self.assertEqual(body['models'], [CODING, FALLBACK])
         self.assertEqual(ask(job='coding', max_tokens=8192)[2]['max_tokens'], providers.OPENROUTER_REPLY_TOKENS)
 
-    def test_models_come_from_the_key_file_and_the_fallback_can_be_turned_off(self):
-        env = {**ENV, 'OPENROUTER_MODEL': 'qwen/qwen3.7-plus', 'OPENROUTER_FAST_MODEL': 'qwen/qwen3.7-flash',
-               'OPENROUTER_CODING_MODEL': 'qwen/qwen3.7-coder', 'OPENROUTER_FALLBACK_MODEL': ''}
-        body = ask(env=env)[2]
-        self.assertEqual(body['model'], 'qwen/qwen3.7-plus')
-        self.assertNotIn('models', body)
-        self.assertEqual(ask(env=env, mode='economy', text='x')[2]['model'], 'qwen/qwen3.7-flash')
-        self.assertEqual(ask(env=env, job='coding')[2]['model'], 'qwen/qwen3.7-coder')
-        self.assertNotIn('models', ask(env={**ENV, 'OPENROUTER_FALLBACK_MODEL': MAIN})[2])  # never the same model twice
-
-    def test_only_qwen_models_may_answer_the_owners_rule_of_2026_10_13(self):
-        # Every model line of the key file is refused the moment it names another maker's model, before any request.
-        cases = (('OPENROUTER_MODEL', 'anthropic/claude-sonnet-5.5', {}),
-                 ('OPENROUTER_VISION_MODEL', 'openai/gpt-4o', {'vision': True}),
-                 ('OPENROUTER_FAST_MODEL', 'google/gemini-2.5-flash', {'mode': 'economy', 'text': 'x'}),
-                 ('OPENROUTER_CODING_MODEL', 'anthropic/claude-opus-5.5', {'job': 'coding'}),
-                 ('OPENROUTER_FALLBACK_MODEL', 'anthropic/claude-sonnet-5.5', {'fallback': True}))
-        for line, other, kwargs in cases:
+    def test_the_models_are_fixed_and_a_key_file_line_that_would_change_one_is_refused(self):
+        # The lock (owner, 2026-10-13 evening): one model per job, chosen by performance for the money, and no key-file
+        # line can change it. Each old model line is refused plainly before any request, naming the line to remove; an
+        # allowed maker's model on such a line is refused all the same.
+        self.assertEqual(providers.OPENROUTER_MODELS, {'chat': MAIN, 'fast': FAST, 'coding': CODING, 'fallback': FALLBACK})
+        for line in providers.OPENROUTER_MODEL_LINES:
             with self.subTest(line=line):
-                with patch.dict(os.environ, {**ENV, line: other}, clear=True), patch.object(providers, 'request') as request, \
+                with patch.dict(os.environ, {**ENV, line: 'qwen/qwen3.8-max-0902'}, clear=True), patch.object(providers, 'request') as request, \
                         self.assertRaises(providers.ProviderError) as raised:
-                    providers.chat([{'role': 'user', 'content': 'Hello'}], [], lambda *args: None, threading.Event(), **kwargs)
-                self.assertIn('Qwen', str(raised.exception))
-                self.assertIn(other, str(raised.exception))
+                    providers.chat([{'role': 'user', 'content': 'Hello'}], [], lambda *args: None, threading.Event())
+                self.assertIn('fixed in his program', str(raised.exception))
+                self.assertIn(line, str(raised.exception))
                 request.assert_not_called()
+                with patch.dict(os.environ, {**ENV, line: 'x'}, clear=True), patch.object(providers, 'request') as request, \
+                        self.assertRaises(providers.ProviderError):
+                    providers.openrouter_search('the news')
+                request.assert_not_called()
+        # A blank line is no line.
+        self.assertEqual(ask(env={**ENV, 'OPENROUTER_MODEL': '  '})[2]['model'], MAIN)
+        # The fallback is the fixed backup and never the same model twice.
+        self.assertEqual(providers.openrouter_fallback(MAIN), FALLBACK)
+        self.assertIsNone(providers.openrouter_fallback(FALLBACK))
 
-    def test_settings_still_report_a_model_of_another_maker_instead_of_failing(self):
-        # capabilities() is the Settings page's own read: it shows what the key file says (so the owner can see the
-        # wrong line) and never raises; only the request paths refuse.
-        with patch.dict(os.environ, {**ENV, 'OPENROUTER_MODEL': 'anthropic/claude-sonnet-5.5',
+    def test_only_models_of_the_allowed_makers_may_answer_the_owners_rule_of_2026_10_13(self):
+        # The fixed models are from the allowed makers (Anthropic, Qwen; Google for a hearing line); any other maker's
+        # model is refused before a request. With the models fixed, the guard is reached by the hearing line (tested in
+        # OpenRouterSpeechTests) and as a second check on the fixed models themselves.
+        for model in providers.OPENROUTER_MODELS.values():
+            self.assertTrue(providers._allowed_maker(model), model)
+            self.assertEqual(providers.openrouter_allowed_model(' ' + model + ' ', 'model'), model)
+        for model in ('google/gemini-3.1-pro-preview', 'ANTHROPIC/claude-haiku-5.5'):
+            self.assertTrue(providers._allowed_maker(model), model)
+        for other in ('openai/gpt-5.5', 'x-ai/grok-4.3', 'deepseek/deepseek-v4-pro', 'claude-sonnet-5.5', '', None):
+            self.assertFalse(providers._allowed_maker(other), other)
+            with self.assertRaises(providers.ProviderError) as raised:
+                providers.openrouter_allowed_model(other, 'backup model')
+            self.assertIn('anthropic, qwen, google', str(raised.exception))
+            self.assertIn('backup model', str(raised.exception))
+        # The request path checks every model it sends: a fixed model replaced by another maker's (as a later edit of the
+        # program might) is refused before any request.
+        with patch.dict(providers.OPENROUTER_MODELS, {'chat': 'openai/gpt-5.5'}), patch.object(providers, 'request') as request, \
+                self.assertRaises(providers.ProviderError):
+            ask()
+        request.assert_not_called()
+        with patch.dict(providers.OPENROUTER_MODELS, {'fallback': 'openai/gpt-5-mini'}), patch.object(providers, 'request') as request, \
+                self.assertRaises(providers.ProviderError):
+            ask(fallback=True)
+        request.assert_not_called()
+
+    def test_settings_show_the_fixed_models_whatever_the_key_file_says_and_never_fail(self):
+        # capabilities() is the Settings page's own read: it shows the fixed models and never raises; only the request
+        # paths refuse a stray model line.
+        with patch.dict(os.environ, {**ENV, 'OPENROUTER_MODEL': 'openai/gpt-5.5',
                                      'OPENROUTER_FALLBACK_MODEL': 'openai/gpt-4o'}, clear=True):
             caps = providers.capabilities()
-        self.assertEqual(caps['model'], 'anthropic/claude-sonnet-5.5')
-        self.assertIn('openai/gpt-4o', caps['backup'] or '')
+        self.assertEqual(caps['model'], MAIN)
+        self.assertEqual(caps['backup'], f"OpenRouter's backup model ({FALLBACK})")
 
     def test_no_key_is_said_plainly_and_nothing_is_sent(self):
         with patch.dict(os.environ, {'JARVIS_PROVIDER': 'openrouter'}, clear=True), patch.object(providers, 'request') as request, \
@@ -164,27 +186,26 @@ class OpenRouterChatTests(unittest.TestCase):
                          f'[OpenRouter answered this question with its backup model (another model) because {MAIN} could not answer it.]')
 
     def test_the_main_model_under_a_dated_name_or_no_name_is_not_a_fallback(self):
-        for model in (MAIN, MAIN + '-20261001', None, '', 'someone/else', 'qwen/qwen3.8-max-canonical'):
+        for model in (MAIN, MAIN + '-20261001', None, '', 'someone/else', 'anthropic/claude-5.5-sonnet-canonical'):
             result = ask(reply=answer('Hi', model=model))[0]
             self.assertNotIn('_fallback', result, model)
             self.assertIsNone(providers.fallback_note(result))
-        self.assertNotIn('_fallback', ask(env={**ENV, 'OPENROUTER_FALLBACK_MODEL': ''}, reply=answer('Hi', model=FALLBACK))[0])
 
     def test_the_backup_model_is_recognised_under_another_name_of_its_maker(self):
         # OpenRouter may answer with a canonical slug (review of 2026-10-12, M2): the maker decides, when the backup is
-        # from another maker than the main model. The owner's Qwen-only rule (2026-10-13) means the key file can no
-        # longer name such a backup, so that case is tested on is_fallback directly; it stays defensive about names.
-        # The default backup (Qwen's own fast model) under a dated name, end to end.
+        # from another maker than the main model, as the shipped backup (Qwen) is from the main model's (Anthropic).
+        # The shipped backup under a dated name, end to end.
         self.assertEqual(ask(reply=answer('Hi', model=FALLBACK + '-20260101'))[0]['_fallback'], {'asked': MAIN, 'used': FALLBACK + '-20260101'})
-        # A cross-maker answer under a canonical slug, on the function itself.
+        # A cross-maker answer under a canonical slug, end to end and on the function itself.
+        self.assertEqual(ask(reply=answer('Hi', model='qwen/qwen3.7-plus-2026'))[0]['_fallback'], {'asked': MAIN, 'used': 'qwen/qwen3.7-plus-2026'})
         for model in ('anthropic/claude-sonnet-5.5-20260101', 'anthropic/claude-5.5-sonnet-20260101'):
-            self.assertTrue(providers.is_fallback(model, MAIN, 'anthropic/claude-sonnet-5.5'), model)
+            self.assertTrue(providers.is_fallback(model, 'qwen/qwen3.8-max-0902', 'anthropic/claude-sonnet-5.5'), model)
         # One name starting with the other: the longer match wins.
         self.assertTrue(providers.is_fallback('x/m-fast', 'x/m', 'x/m-fast'))
         self.assertTrue(providers.is_fallback('x/m-fast-2026', 'x/m', 'x/m-fast'))
         self.assertFalse(providers.is_fallback('x/m-2026', 'x/m', 'x/m-fast'))
         self.assertTrue(providers.is_fallback('x/m', 'x/m-fast', 'x/m'))   # the backup model's own name exactly: it answered
-        self.assertFalse(providers.is_fallback('qwen/qwen-x', MAIN, FALLBACK))  # same maker: not decidable, not marked
+        self.assertFalse(providers.is_fallback('anthropic/claude-x', MAIN, FAST))  # same maker: not decidable, not marked
         self.assertFalse(providers.is_fallback(None, MAIN, FALLBACK))
         self.assertFalse(providers.is_fallback(FALLBACK, MAIN, None))
 
@@ -275,11 +296,11 @@ class OpenRouterSearchTests(unittest.TestCase):
         self.addCleanup(actions._SEARCH_CACHE.clear)
 
     def test_a_search_model_of_another_maker_is_refused(self):
-        # The owner's Qwen-only rule (2026-10-13) covers the web search's small request too.
-        with patch.dict(os.environ, {**ENV, 'OPENROUTER_FAST_MODEL': 'openai/gpt-4o'}, clear=True), \
+        # The owner's rule on makers (2026-10-13) covers the web search's small request too.
+        with patch.dict(os.environ, ENV, clear=True), patch.dict(providers.OPENROUTER_MODELS, {'fast': 'openai/gpt-4o'}), \
                 patch.object(providers, 'request') as request, self.assertRaises(providers.ProviderError) as raised:
             providers.openrouter_search('the news')
-        self.assertIn('Qwen', str(raised.exception))
+        self.assertIn('anthropic, qwen, google', str(raised.exception))
         request.assert_not_called()
 
     def test_results_are_the_pages_it_cited(self):
@@ -334,14 +355,14 @@ class OpenRouterSearchTests(unittest.TestCase):
             self.assertEqual(connection_checks.check('search')['status'], 'failed')
 
 
-STT = {**ENV, 'OPENROUTER_STT_MODEL': 'qwen/qwen3-asr-flash'}  # the cloud option for hearing, named in the key file; a stand-in
-# Qwen name (OpenRouter listed no Qwen speech model on 2026-10-13) so the documented request shape stays covered;
-# another maker's line is refused, as the refusal test below checks.
+STT = {**ENV, 'OPENROUTER_STT_MODEL': 'google/gemini-3.5-transcribe'}  # the cloud option for hearing, named in the key file
+# (one of OpenRouter's speech-to-text models from an allowed maker, listed 2026-10-13); a line from any other maker is
+# refused, as the refusal test below checks.
 
 
 class OpenRouterSpeechTests(unittest.TestCase):
     def test_without_a_speech_model_the_cloud_option_is_off_and_this_pc_hears(self):
-        # Qwen only (owner, 2026-10-13): OpenRouter's speech-to-text models are not Qwen, so none is named by default.
+        # No speech model is named by default: this PC's own recognition does the hearing (good and free).
         with patch.dict(os.environ, ENV, clear=True), patch.object(providers, 'request') as request:
             self.assertIsNone(providers.cloud_speech())
             caps = providers.capabilities()
@@ -368,13 +389,13 @@ class OpenRouterSpeechTests(unittest.TestCase):
             self.assertEqual(providers.transcribe(b'RIFFdata', 'audio/wav', timeout=7), {'text': 'set a timer'})
         url, body, headers = request.call_args.args[:3]
         self.assertEqual(url, 'https://openrouter.ai/api/v1/audio/transcriptions')
-        self.assertEqual(body, {'model': 'qwen/qwen3-asr-flash', 'language': 'en',
+        self.assertEqual(body, {'model': 'google/gemini-3.5-transcribe', 'language': 'en',
                                 'input_audio': {'data': base64.b64encode(b'RIFFdata').decode(), 'format': 'wav'}})
         self.assertEqual(request.call_args.kwargs['timeout'], 7)
 
     def test_a_speech_model_of_another_maker_leaves_the_cloud_option_off_and_is_refused(self):
-        # The owner's Qwen-only rule (2026-10-13) covers hearing too: a whisper line turns the cloud option off (this
-        # PC keeps hearing) and a direct cloud call is refused before any request.
+        # The owner's rule on makers (2026-10-13) covers hearing too: an OpenAI whisper line turns the cloud option off
+        # (this PC keeps hearing) and a direct cloud call is refused before any request.
         env = {**ENV, 'OPENROUTER_STT_MODEL': 'openai/whisper-1'}
         with patch.dict(os.environ, env, clear=True), patch.object(providers, 'request') as request:
             self.assertIsNone(providers.cloud_speech())
@@ -382,7 +403,7 @@ class OpenRouterSpeechTests(unittest.TestCase):
             self.assertEqual((caps['transcription'], caps['transcription_provider']), (False, None))
             with self.assertRaises(providers.ProviderError) as raised:
                 providers.transcribe(b'RIFFdata', 'audio/wav')
-        self.assertIn('Qwen', str(raised.exception))
+        self.assertIn('anthropic, qwen, google', str(raised.exception))
         self.assertIn('openai/whisper-1', str(raised.exception))
         request.assert_not_called()
 
@@ -410,8 +431,6 @@ class OpenRouterStatusTests(unittest.TestCase):
         self.assertEqual((caps['brain'], caps['model'], caps['vision_provider'], caps['vision']), ('OpenRouter configured', MAIN, 'OpenRouter', True))
         self.assertEqual(caps['search'], 'OpenRouter web search')
         self.assertEqual(caps['backup'], f"OpenRouter's backup model ({FALLBACK})")  # the fallback is OpenRouter's own (plan D8)
-        with patch.dict(os.environ, {**ENV, 'OPENROUTER_FALLBACK_MODEL': ''}, clear=True):
-            self.assertIsNone(providers.capabilities()['backup'])   # turned off in the key file: none
         with patch.dict(os.environ, {'JARVIS_PROVIDER': 'openrouter', 'BRAVE_API_KEY': 'b'}, clear=True):
             caps = providers.capabilities()
         # The Brave key no longer counts: its search branch is removed (owner, 2026-10-13).

@@ -15,7 +15,7 @@ from server import App, Run
 STOP = {'choices': [{'finish_reason': 'stop', 'message': {'content': 'Hi'}}]}
 TOOL = {'choices': [{'finish_reason': 'tool_calls', 'message': {'tool_calls': [
     {'id': 'c1', 'type': 'function', 'function': {'name': 'time_now', 'arguments': '{}'}}]}}]}
-OPENROUTER = {'JARVIS_PROVIDER': 'openrouter', 'OPENROUTER_API_KEY': 'test-key', 'OPENROUTER_VISION_MODEL': 'qwen/qwen-vision-test'}
+OPENROUTER = {'JARVIS_PROVIDER': 'openrouter', 'OPENROUTER_API_KEY': 'test-key'}  # the models are fixed in the program (2026-10-13): no model lines
 
 
 def ask(**kwargs):
@@ -145,7 +145,7 @@ class AnswerModeSettingTests(unittest.TestCase):
         self.app.store.save_settings({'answer_mode': 'economy'})
         shot = {'type': 'image', 'name': 'screen-capture.jpg', 'data': 'data:image/jpeg;base64,c3ludGhldGlj'}
         bodies = self.openrouter_bodies('Review this screen', [STOP], shot)
-        self.assertEqual([body['model'] for body in bodies], ['qwen/qwen-vision-test'])
+        self.assertEqual([body['model'] for body in bodies], [providers.OPENROUTER_DEFAULT_MODEL])  # the main model sees pictures
         self.assertEqual(bodies[0]['reasoning']['effort'], 'minimal')  # pictures keep the main path's thinking, not Economy's
         self.assertNotIn('tools', bodies[0])
 

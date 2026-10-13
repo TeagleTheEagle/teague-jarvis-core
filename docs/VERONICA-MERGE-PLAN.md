@@ -15,6 +15,30 @@ and D8 where they name other makers:
 - both voices stay on **Fish Audio**; no safety rule changes, for JARVIS or VERONICA.
 Each model can still be changed in the key file. Done in `providers.py` on `claude/veronica-merge`, 2026-10-13.
 
+**Owner amendment of 2026-10-13 evening: one model per job, by performance for the money, locked (replaces the
+morning's Qwen only).** After a read of OpenRouter's whole model list with that day's prices (459 chat models, 33
+search-by-meaning models, 25 speech-to-text models), the owner first chose the "best overall" column ("start this"), then
+amended it: "allocate the best performance : cheapest ratio to each aspect for jarvis and lock in so that's the only
+model it can use". So the models are fixed in `providers.py` (`OPENROUTER_MODELS`); a key-file line that would change one
+(`OPENROUTER_MODEL`, `_VISION_MODEL`, `_FAST_MODEL`, `_CODING_MODEL`, `_FALLBACK_MODEL`, `_MAKERS`) is refused plainly
+before any request, naming the line to remove. The allowed makers are **Anthropic, Qwen and Google** (`OPENROUTER_MAKERS`
+in code; the owner widens the guardrail on the key to match). The fixed models:
+
+| Job | Model | Price per million tokens (in / out) | Why this one |
+|---|---|---|---|
+| Everyday chat, tools, pictures | `anthropic/claude-haiku-5.5` | US$0.10 / 0.50 | Sees pictures, 1M context; 20× cheaper than Qwen 3.8 Max and judged at least its equal on everyday work |
+| Economy, and the web search's small request | `anthropic/claude-haiku-5.5` | US$0.10 / 0.50 | The same model with thinking off |
+| Coding and research jobs (missions) | `anthropic/claude-sonnet-5.5` | US$2 / 10 | Opus 5.5 is twice the price for a little more |
+| Backup when the first model fails | `qwen/qwen3.7-plus` | US$0.32 / 1.28 | Another maker on purpose, so one outage does not take both |
+| Hearing | this PC (Whisper), as before | free | `OPENROUTER_STT_MODEL=qwen/qwen3-asr-1.7b` (or `google/gemini-3.5-transcribe`) offers the cloud choice in Settings |
+| Voice | Fish Audio, unchanged | | OpenRouter's two speaking models do no voice cloning |
+| Search by meaning (memory, roadmap phase 3; not built) | `qwen/qwen3-embedding-8b` when it comes | US$0.01 | Among the best open embedding models, and the cheapest |
+
+Roughly: 100 plain questions cost about US$0.25 (about US$4.40 before, on Qwen 3.8 Max); a question that uses tools runs
+several rounds, so count two to three times that. The quality rankings are Hermes's judgement from general knowledge;
+the yardstick (ASI roadmap phase 0) is what would measure them on the owner's own questions. Fish Audio and every safety
+rule unchanged. Built on `claude/best-models` (a worktree beside `claude/veronica-merge`), 2026-10-13.
+
 ## 1. What the owner asked for (2026-10-12)
 
 - "can you make veronica and jarvis one. add veroinca to jarvis's core and make one folder that has all the files of
