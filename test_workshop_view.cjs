@@ -7,6 +7,11 @@ assert.equal(w.stateText('failed'),'Not completed','a mission that did not reach
 assert.equal(w.stateText('stopped'),'Stopped');
 assert.equal(w.stateText('planning'),'Planning');
 assert.equal(w.missionLine({state:'running',goal:'List the largest files'}),'Running: List the largest files');
+assert.equal(w.goalState('proposed'),'Waiting for your answer');
+assert.equal(w.goalState('adopted'),'Approved');
+assert.equal(w.goalState('declined'),'Declined');
+assert.equal(w.goalState('expired'),'Lapsed unanswered','a suggestion nobody answered is never shown as approved');
+assert.equal(w.goalState('failed'),'Approved, but could not start');
 assert.equal(w.minutesText(15),'A mission may run for up to 15 minutes and 60 tool calls; then it stops and reports.');
 assert.equal(w.minutesText(1),'A mission may run for up to 1 minute and 60 tool calls; then it stops and reports.');
 assert.equal(w.foldersText([]),'No other folder: JARVIS may use the workshop folder only.');

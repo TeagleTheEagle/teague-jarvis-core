@@ -131,6 +131,41 @@ stop ends a mission and its running command at once.
 The lessons and the mission records live in JARVIS's database (`jarvis.sqlite3`), so the automatic backups carry
 them; only the workshop folder itself (the files, the environment, the recycle folder) is outside the backups.
 
+## Goals JARVIS suggests (`goals.py`; owner's decision of 2026-10-13)
+
+The owner asked that JARVIS and VERONICA "work and adopt goals on their own, just they have to ask". Built as:
+
+- **`goal_propose` (goal, why)**: the model may suggest a goal it thinks worth doing (a job that keeps coming up, a
+  problem it saw, an improvement to a project in the workshop). The Core keeps the suggestion as `proposed` and
+  raises an **approval card**, the same card as every other approval: on the PC (Reliability > waiting approvals, and
+  in the chat), and on a paired device the owner lets approve. The card and the suggestion wait a day
+  (`goals.ANSWER_SECONDS`). Nothing starts before the owner answers; the tool's result tells the model so.
+- **Yes** (`server.App.adopt_goal`): the goal is marked `adopted` and becomes a workshop mission, under everything a
+  mission runs under: its time limit, its tool-call limit, the owner's switch for every tool it uses, the content
+  guard and the emergency stop. A mission that cannot start (another runs, the stop holds) leaves the goal `failed`
+  with the reason; JARVIS may suggest it again.
+- **No**: the goal is kept as `declined`; the same goal is not accepted again for a week.
+- **Caps, counted from the record** (not from the model's word): at most 3 suggestions wait at a time, at most 5 goals
+  are adopted a day, never the same goal twice while it waits or within a week of a no.
+- **No recursion**: a mission's tool set has no `goal_propose`, and a call from a mission is refused (work cannot
+  propose more work). **Taint**: a question in which outside text tried to instruct the AI cannot suggest a goal at
+  all. **Off**: the owner can switch "Suggest a goal of his own" off in Settings > Permissions.
+- **At a Core start every waiting suggestion lapses** (the cards live in the Core's memory and did not survive it).
+- The record (who suggested it, why, the owner's answer, the mission it became) is shown in Settings > Workshop under
+  the missions. Tests: `test_goals.py`.
+
+## Changes JARVIS proposes to his own program (`development.py`, widened the same day)
+
+The owner also asked that they "have the ability to edit, improve, fix the core and themselves; they'll propose a
+change but need my approval". The `development_read/propose/edit` tools, which asked first for every change already,
+now reach **any Python module of the Core, any file of the window under `static/` and the companion's files**
+(`development.allowed`). Protected, and refused by name: the action gateway and the approvals (`server.py`,
+`actions.py`), the permission table, the guard (`content_guard.py`), `development.py` itself, the lock, the paths,
+the database (`store.py`), `goals.py`, the tests, the launchers and the updater (`desktop/*.cjs`), and the tools.
+An installed JARVIS applies none of them: a program-file change is saved as a **proposal only**, for the engineer and
+the next release, which the owner approves as every release (ONE CORE, ONE JARVIS). Running from the source folder a
+change applies after approval, with the difference shown, as before.
+
 ## Tests (`test_workshop.py`, 32; `test_workshop_view.cjs`)
 
 The files (the recycle folder, nothing outside, an added folder, a binary file, the tool arguments); the runner (a

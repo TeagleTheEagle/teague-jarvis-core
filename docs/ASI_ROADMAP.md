@@ -363,7 +363,11 @@ From CAPABILITY-PLAN stage 5, made concrete:
    consequential action in that job without the owner, whatever the level. This extends the existing rule that
    tainted questions change nothing.
 4. **Daily caps** on actions and spend. Every step is in the activity log. JARVIS may *suggest* a goal and never
-   *adopts* one by himself.
+   *adopts* one by himself. **Built 2026-10-13** (`goals.py`, `goal_propose`, docs/WORKSHOP.md): a suggestion is an
+   approval card; yes makes a workshop mission; caps of 3 waiting and 5 adopted a day; no recursion, no taint.
+   The same day `development.py` was widened: JARVIS may propose a change to any Core module, window or companion
+   file (never the gateway, the permission table, the guard, the tests or the launchers); installed, it is a
+   proposal for the engineer and the next release.
 
 **Done when:**
 - the injection group passes 100%;

@@ -7,6 +7,9 @@ const JarvisWorkshop = {
     return {planning: 'Planning', running: 'Running', finished: 'Done', failed: 'Not completed', stopped: 'Stopped'}[state] || String(state || '');
   },
   missionLine(mission) { return JarvisWorkshop.stateText(mission.state) + ': ' + (mission.goal || ''); },
+  goalState(state) {
+    return {proposed: 'Waiting for your answer', adopted: 'Approved', declined: 'Declined', expired: 'Lapsed unanswered', failed: 'Approved, but could not start'}[state] || String(state || '');
+  },
   minutesText(minutes) { return 'A mission may run for up to ' + minutes + ' minute' + (minutes === 1 ? '' : 's') + ' and ' + 60 + ' tool calls; then it stops and reports.'; },
   foldersText(folders) {
     if (!folders || !folders.length) return 'No other folder: JARVIS may use the workshop folder only.';
@@ -110,7 +113,19 @@ if (typeof document !== 'undefined') (() => {
       node.append(el('small', '', 'Chat: ' + m.chat + ' · ' + m.tool_calls + ' tool calls'));
       return node;
     });
-    missionBox.replaceChildren(el('h3', '', 'Missions'), goal, controls, ...(rows.length ? rows : [el('p', 'workshop-note', 'No mission has run yet.')]));
+    // Goals JARVIS suggested on his own (goals.py): the owner answers on the approval card (Reliability > waiting
+    // approvals, or the chat); this is the record. Nothing starts from here.
+    const goalRows = (data.goals || []).map(g => {
+      const node = el('article', 'workshop-mission ' + (g.state === 'adopted' ? 'ok' : g.state === 'proposed' ? '' : 'warn'));
+      node.append(el('b', '', JarvisWorkshop.goalState(g.state) + ': ' + (g.goal || '')));
+      if (g.why) node.append(el('p', 'workshop-result', 'Why: ' + g.why));
+      node.append(el('small', '', 'Suggested by ' + (g.by || 'JARVIS') + ' ' + new Date(g.created * 1000).toLocaleString() + (g.mission && g.state === 'adopted' ? ' · mission ' + g.mission : '')));
+      return node;
+    });
+    missionBox.replaceChildren(el('h3', '', 'Missions'), goal, controls, ...(rows.length ? rows : [el('p', 'workshop-note', 'No mission has run yet.')]),
+      el('h3', '', 'Goals JARVIS suggested'),
+      el('p', 'workshop-note', 'JARVIS may suggest a goal he thinks worth doing. Each waits for your answer on screen for a day, like any approval; a goal you approve runs as a mission above, under every mission limit. Nothing starts until you say yes.'),
+      ...(goalRows.length ? goalRows : [el('p', 'workshop-note', 'No goal has been suggested yet.')]));
   }
 
   function renderLessons(data) {

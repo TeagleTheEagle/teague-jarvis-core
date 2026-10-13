@@ -25,10 +25,37 @@ import content_guard
 import runtime_paths
 
 OWNER_FILES = ('personality.txt', 'owner-style.css')
+# The program files JARVIS may propose a change to (owner, 2026-10-13: "edit, improve, fix the core and themselves;
+# they'll propose a change but need my approval"): every Python module of the Core, the window's files and the
+# companion's, EXCEPT what decides whether a change or a tool call happens at all. Those stay the engineer's:
+# the action gateway and the approvals (server.py, actions.py), the permission table, the guard against outside
+# text, this module, the lock, the paths, the database, the goals, the tests JARVIS is graded against, the
+# launchers and the updater (desktop/*.cjs), and the build and release tools. An installed JARVIS applies none of
+# them anyway: a program-file change is a proposal for the engineer and the next release (ONE CORE, ONE JARVIS).
+PROTECTED_FILES = frozenset(('server.py', 'actions.py', 'permissions.py', 'content_guard.py', 'development.py',
+                             'core_lock.py', 'runtime_paths.py', 'store.py', 'goals.py', 'desktop_launcher.py',
+                             'switch_over.py', 'update_history.py', 'recovery.py', 'auto_backup.py'))
+_PROGRAM_PATH = re.compile(r'^(?:[a-z][a-z0-9_]*\.py|static/[a-z0-9_.-]+\.(?:js|css|html)|desktop/companion(?:-preload)?\.(?:js|css|html))$')
 PROGRAM_FILES = ('static/pro.css', 'static/app.js', 'static/voice.js', 'static/index.html', 'static/mic-worklet.js',
                  'desktop/companion.js', 'desktop/companion.html', 'desktop/companion.css',
-                 'wake.py', 'local_stt.py', 'voice_engine.py', 'maps.py')
+                 'wake.py', 'local_stt.py', 'voice_engine.py', 'maps.py')   # the examples the tools name
 ALLOWED = OWNER_FILES + PROGRAM_FILES
+EXCLUDED_NOTE = ('Choose an allowed development source: the personality, the owner\'s style sheet, or a program file '
+                 '(a Python module of the Core, a file of the window under static/, or the companion\'s). Credentials, '
+                 'the permission table, the approvals and the action gateway, the guard, the launchers, the updater, '
+                 'the database and the tests are excluded.')
+
+
+def allowed(path):
+    """May JARVIS read and propose a change to this file? The owner's two files, or a program file that is not
+    protected and not a test (the pattern admits no '..', no absolute path and nothing outside the two folders)."""
+    if not isinstance(path, str):
+        return False
+    if path in OWNER_FILES:
+        return True
+    if path in PROTECTED_FILES or path.startswith('test_'):
+        return False
+    return bool(_PROGRAM_PATH.match(path))
 
 PROPOSAL_ONLY = 'proposal only'
 PROPOSAL_ONLY_NOTE = ('Saved as a proposal only. An installed JARVIS never changes its own program files; '
@@ -156,10 +183,11 @@ def _check_css(path, content):
 
 def guidance(installed):
     """What the AI model is told about changing JARVIS itself (added to the instructions of every question)."""
-    program = ('This JARVIS is installed: its program files are never changed from here. A change to any other allowlisted file is saved as a proposal only, for the engineer and a later release; say so plainly. '
+    program = ('This JARVIS is installed: its program files are never changed from here. A change to a program file is saved as a proposal only, for the engineer and a later release (the owner approves the release); say so plainly. '
                if installed else
                'Changes to the other allowlisted source files also wait for approval; syntax checks do not prove runtime correctness. Offer computer_run_tests and explain restart requirements after approval. ')
     return ('\nYou have real development_read, development_propose, development_edit and development_rollback tools. For a request to change your interface text size, colours or spacing, use them now rather than referring the user to device settings: read static/pro.css to find the rule, then put an overriding rule in owner-style.css (the owner\'s own style sheet, loaded last; it accepts only colours, fonts, text size in px, pt or rem, spacing, borders and shadows, in plain rules without attribute selectors, @-rules, positions, sizes or hidden elements). For a request to change your personality, edit personality.txt. '
+            'You may also propose an improvement or a fix to your own program when you notice a fault or the owner asks: any Python module of the Core (computer_files lists them), any file of the window under static/ and the companion\'s files, read with development_read first and changed with development_edit, with the reason. Not the permission table, the approvals and the action gateway (server.py, actions.py, permissions.py), the guard, the launchers, the updater, the database or the tests: those are the engineer\'s. '
             'Every change waits for the owner\'s approval in the interface, with the difference shown: say that it is waiting, never that it is applied. This replaces any earlier wording about applying style or personality changes directly. '
             + program + 'Credentials, launchers, permission enforcement and arbitrary files cannot be changed by these tools. A missing provider integration still needs an implementation and the user must complete that provider\'s consent flow.')
 
@@ -174,16 +202,16 @@ def layout(root, data=None, config=None, installed=False):
 
 def _target(where, path):
     """The file a change to `path` would write."""
-    if path not in ALLOWED:
-        raise ValueError('Choose an allowed development source. Credentials, permissions, launchers and the action gateway are excluded.')
+    if not allowed(path):
+        raise ValueError(EXCLUDED_NOTE)
     if path in OWNER_FILES:
         target = where.config / path
         if target.is_symlink():
             raise ValueError('Unsafe development target.')
         return target
     target = where.root / path
-    if target.is_symlink() or target.resolve() != where.root.resolve() / path:
-        raise ValueError('Unsafe development target.')
+    if not target.is_file() or target.is_symlink() or target.resolve() != where.root.resolve() / path:
+        raise ValueError('Unsafe development target.' if target.exists() else 'No such program file: ' + path)
     return target
 
 

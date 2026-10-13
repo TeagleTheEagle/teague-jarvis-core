@@ -221,6 +221,22 @@ current record.
 Rules and authority are in `CLAUDE.md` and `../governance/OWNER-DELEGATION.md`; this file
 only records where the work stands. Historical handover context: `docs/PROJECT-CONTEXT.md`.
 
+## 2026-10-13, about 16:40 local (Hermes Agent, same chat resumed; owner: "give them those abilities", then "dont restore her limits and dont move anything", "go")
+
+**Goals JARVIS suggests, and changes he proposes to his own program: BUILT AND TESTED on `claude/veronica-merge`
+(the branch of the next release), NOT YET COMMITTED, NOT in 1.0.19.** The owner asked (Characteristics.pdf, then in
+his own words) that JARVIS and VERONICA "have the ability to edit, improve, fix the core and themselves; they'll
+propose a change but need my approval" and "work and adopt goals on their own, just they have to ask". Built as
+`goals.py` + `goal_propose` (a suggestion is an approval card; yes makes a workshop mission under every mission limit;
+caps 3 waiting / 5 adopted a day; no recursion from a mission; no taint; lapses after a day and at a Core start) and a
+widened `development.allowed` (any Core module, window or companion file; never `server.py`, `actions.py`,
+`permissions.py`, `content_guard.py`, `development.py`, `core_lock.py`, `runtime_paths.py`, `store.py`, `goals.py`, the
+tests, `desktop/*.cjs`; installed, a program-file change stays a proposal for the engineer and the next release).
+Record: `docs/WORKSHOP.md`, two new sections; `docs/ASI_ROADMAP.md` phase 6 item 4. Tests: `test_goals.py` (14),
+`test_permissions.py` and `test_workshop_view.cjs` extended. Owner's standing decisions the same afternoon: VERONICA's
+stripped `safety.py`/`agent.py` and the untracked `repo\autonomous_core.py` are NOT restored and NOT moved. The 1.0.19
+release regression (OpenRouter-only build `1.0.19-629bb5621d34`) was restarted at 16:12 after two interrupted runs.
+
 ## 2026-10-13 afternoon (Hermes Agent, from about 12:25 local; a new session in the Hermes desktop app on the PC)
 
 **Owner decision: Hermes replaces Claude Code as the one AI tool.** "I WANT TO REPLACE CLAUDE AND MAKE YOU THE ONLY
