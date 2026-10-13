@@ -221,6 +221,22 @@ current record.
 Rules and authority are in `CLAUDE.md` and `../governance/OWNER-DELEGATION.md`; this file
 only records where the work stands. Historical handover context: `docs/PROJECT-CONTEXT.md`.
 
+## 2026-10-13, about 23:20 local (Hermes Agent, now the only chat; owner: "start 1.0.20")
+
+**Release 1.0.20 begun on `claude/veronica-merge`.** The best-models branch is merged (`55e2853`, fast-forward). Built first:
+**the window's patience after a login launch** (the "self restart" the owner saw after the 1.0.19 reboot: `desktop/backend.cjs
+watchCore` gains `patienceMs`/`patientMs`; for 10 minutes after a login launch (`desktop/main.cjs`, `--login-launch`) a Core
+that is alive but silent gets 60 s instead of 15 before "not responding"; a crash is still reported at once; a requested
+stop still closes quietly; `core-watch.test.cjs` 14 pass). **Release notes:** the 1.0.20 entry at the top of
+`release-notes.json` (the fixed models, the Workshop, goals, the standing purpose, skills, standing responsibilities,
+changes to himself, the guard, the You page, PC health, tool failures, resumed missions, the window's patience); the
+never-shipped "Release 1.0.18: the Workshop" entry renamed to say it ships in 1.0.20. **Acceptance:** 1.0.20 changes
+`desktop/main.cjs` and `desktop/backend.cjs` (the launcher side), so the VM check applies under the tiered rule proposed
+to the owner; the owner has not yet chosen sandbox-only or VM for this release. **Next:** the full suite at this commit,
+then the pipeline (build, compare with 1.0.19, regression, Setup, zip and Setup rehearsals, pkg folder, sandbox Stage 7),
+one step at a time, then `docs/STAGE7-CHECK-1.0.20.md` for the owner's approval sentence. VM note: the owner's E: backup
+of `D:\JARVIS-S6-FRESHVM` is complete and verified (680 of 680 identical, the other chat, 22:50); the VM may be used again.
+
 ## 2026-10-13, about 22:40 local (Hermes Agent, a second chat; owner: "start this" on the best-model table, then "allocate the best performance : cheapest ratio to each aspect for jarvis and lock in so that's the only model it can use")
 
 **One AI model per job, by performance for the money, fixed in the program: BUILT AND TESTED on branch `claude/best-models`**

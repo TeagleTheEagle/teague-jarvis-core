@@ -95,6 +95,24 @@ test('hung Core: alive but not answering is reported only after the unresponsive
  assert.ok(Date.now()-started>=300);
 });
 
+test('after a login launch the window is patient with a slow Core, and still reports a crash at once',async()=>{
+ // Within patienceMs of the start, a Core that is alive but silent gets patientMs instead of unresponsiveMs (2026-10-13:
+ // the window closed on "not responding" 7.5 minutes after sign-in while the Core was only loading).
+ const file=path.join(folder(),'core-connection.json');write(file,link);
+ const started=Date.now();
+ const result=await within(5000,watch(file,{probe:async()=>false,alive:()=>true,unresponsiveMs:100,patienceMs:100000,patientMs:600}));
+ assert.equal(result.reason,'unresponsive');
+ assert.ok(Date.now()-started>=600,'waited the patient time, not the short one: '+(Date.now()-started));
+ // Once the patience window has passed, the short time applies again.
+ const later=Date.now();
+ const quick=await within(3000,watch(file,{probe:async()=>false,alive:()=>true,unresponsiveMs:100,patienceMs:1,patientMs:600}));
+ assert.equal(quick.reason,'unresponsive');
+ assert.ok(Date.now()-later<550,'the short time applied after the patience window: '+(Date.now()-later));
+ // A crash (the process gone) is never waited for.
+ const crash=await within(3000,watch(file,{probe:async()=>false,alive:()=>false,patienceMs:100000,patientMs:600}));
+ assert.equal(crash.reason,'crashed');
+});
+
 test('reports at most once, and nothing after unwatch',async()=>{
  const file=path.join(folder(),'core-connection.json');write(file,link);
  const calls=[];

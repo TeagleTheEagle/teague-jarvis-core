@@ -108,8 +108,14 @@ function connectionState(file,link){
  return current&&current.origin===link.origin&&current.token===link.token?'ours':'replaced';
 }
 function processAlive(pid){if(!Number.isInteger(pid)||pid<=0)return null;try{process.kill(pid,0);return true;}catch(e){return e.code==='EPERM';}}
-function watchCore(link,file,onEnd,{intervalMs=500,probeMs=5000,recheckMs=1000,crashMisses=2,unresponsiveMs=15000,probe=coreAlive,alive=processAlive}={}){
+// A Core that is alive but not answering is reported after unresponsiveMs. Right after sign-in the PC is busy (Windows,
+// OneDrive, the Core itself loading) and a healthy Core can miss probes for longer than that: on 2026-10-13 the window
+// closed on "not responding" 7.5 minutes after sign-in while the Core ran on, and the owner saw a "self restart". So for
+// patienceMs after the watch starts (the app passes 10 minutes on a login launch, 0 otherwise) the window waits
+// patientMs (60 s) instead; a crash is still reported at once, and a requested stop still closes quietly.
+function watchCore(link,file,onEnd,{intervalMs=500,probeMs=5000,recheckMs=1000,crashMisses=2,unresponsiveMs=15000,patienceMs=0,patientMs=60000,probe=coreAlive,alive=processAlive}={}){
  const now=()=>performance.now();  // a steady clock: the wall clock can jump (time sync, a VM)
+ const started=now();
  let done=false,probing=false,lastProbe=now(),misses=0,firstMiss=0,answeredWith='ours';
  const timer=setInterval(tick,intervalMs);timer.unref?.();
  function end(reason){if(done)return;done=true;clearInterval(timer);onEnd(reason);}
@@ -124,7 +130,8 @@ function watchCore(link,file,onEnd,{intervalMs=500,probeMs=5000,recheckMs=1000,c
    if(current==='replaced')return end('replaced');
    const exists=alive(link.pid);
    if(exists===false&&misses>=crashMisses)return end('crashed');
-   if(misses>=3&&now()-firstMiss>=unresponsiveMs)end(exists===false?'crashed':'unresponsive');
+   const allowed=now()-started<patienceMs?Math.max(patientMs,unresponsiveMs):unresponsiveMs;
+   if(misses>=3&&now()-firstMiss>=allowed)end(exists===false?'crashed':'unresponsive');
   }finally{probing=false;}
  }
  function tick(){

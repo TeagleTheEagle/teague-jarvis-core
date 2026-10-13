@@ -143,7 +143,7 @@ async function start(){
  win.webContents.on('render-process-gone',()=>{capture?.stop();backend.stop();dialog.showErrorBox('JARVIS desktop','The interface stopped. Voice requests were cancelled. Quit and relaunch JARVIS Desktop.');});
  win.on('close',event=>{if(!quitting){event.preventDefault();stopLocal();resumeMicOnShow=!!preferences.micOnLaunch;win.hide();}});
  win.on('show',()=>win.webContents.setAudioMuted(false));
- unwatchCore=backend.watch(onCoreEnd);
+ unwatchCore=backend.watch(onCoreEnd,loginLaunch?{patienceMs:600000}:undefined);  // a slow Core after sign-in is not a hung one (2026-10-13)
  tray=new Tray(nativeImage.createFromPath(path.join(__dirname,'tray.png')));
  tray.setToolTip('JARVIS · closing this window keeps JARVIS running');
  tray.setContextMenu(Menu.buildFromTemplate([{label:'Show JARVIS',click:show},{label:'Floating JARVIS',click:showCompanion},{label:'Emergency stop (JARVIS stays stopped)',click:emergencyStop},{label:'Resume JARVIS',click:resumeCore},{type:'separator'},{label:'Close desktop app (JARVIS keeps running)',click:()=>void quit()},{label:'Quit JARVIS completely',click:()=>void quit(true)}]));tray.on('double-click',show);
