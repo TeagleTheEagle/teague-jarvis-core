@@ -23,8 +23,14 @@ ICS = {'GOOGLE_CALENDAR_ICS': 'https://calendar.google.com/calendar/ical/x/priva
 
 
 def feed(now=None):
-    """A calendar with one timed event two hours from now and an all-day event tomorrow (times in UTC)."""
+    """A calendar with one timed event two hours from now and an all-day event tomorrow (times in UTC). The timed event is
+    kept on today's local date: run after 22:00 local, "two hours from now" would fall on tomorrow and sort after the all-day
+    event, which failed two tests at 23:20 on 2026-10-13. So the event is at most 23:30 local today."""
     now = now or datetime.datetime.now(datetime.timezone.utc)
+    local = now.astimezone()
+    cap = local.replace(hour=21, minute=0, second=0, microsecond=0)
+    if local > cap:
+        now = cap.astimezone(datetime.timezone.utc)
     soon = (now + datetime.timedelta(hours=2)).strftime('%Y%m%dT%H%M%SZ')
     later = (now + datetime.timedelta(hours=2, minutes=30)).strftime('%Y%m%dT%H%M%SZ')
     tomorrow = (now.astimezone() + datetime.timedelta(days=1)).strftime('%Y%m%d')
