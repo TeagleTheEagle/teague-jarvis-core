@@ -1,0 +1,161 @@
+{
+  "schema": "jarvis-stage7-evaluation-v2",
+  "check": "1.0.19-629bb5621d34",
+  "verdict": "STAGE_7_COMPLETE",
+  "verdict_basis": "every check named in docs/STAGE7-CHECK-1.0.19.md ('What is checked': exactly the 29 of docs/STAGE7-CHECK-1.0.17.md) is met: 28 check records say PASS across the five phases and the restart check decided 'restarted: yes' from Windows' own boot id (29 checks), the final snapshot was taken after a clean shutdown, and nothing was repeated. Every measurement is inside the Gate 20 timing bound (the first install 539.6 s on the installer's own laps, the update 537.7 s, the rollback 119.4 s, every stop under 8 s); no disposition was needed.",
+  "evaluated_utc": "2026-10-13T08:49:46Z",
+  "builds": {
+    "final": "1.0.19-629bb5621d34",
+    "final_commit": "629bb5621d3428572094d0cd8f8b5f6bd0908d2a",
+    "final_zip_sha256": "838371836d31758082d191738ebc3b41d0e34fe4b6598af6153d970ab8b21541",
+    "final_setup_sha256": "8e5bb3dceef85fc486f3d03b3864dfa3479c8833ffe471646cdd33dbcc36092f",
+    "previous": "1.0.17-0d38218c4e1d",
+    "previous_disc_sha256": "519c0257e32127f87b46e6658bac5b5f5d418cff16238e90e056a23d8ab16a19",
+    "note": "1.0.19 (OpenRouter only, Fish Audio for the voice) built on 1.0.18 (the time fix), which was approved for a Stage 7 check but never run in the VM nor installed; this check replaces it (the approval record says so). The update path tested is the owner's: 1.0.17-0d38218c4e1d, the installed everyday JARVIS, to 1.0.19.",
+    "rehashed_at_evaluation": {
+      "pkg-1.0.19/JARVIS-1.0.19-629bb5621d34.zip": true,
+      "release/JARVIS-1.0.19-629bb5621d34.zip": true,
+      "pkg-1.0.19/JARVIS-Setup-1.0.19-629bb5621d34.exe": true,
+      "release/JARVIS-Setup-1.0.19-629bb5621d34.exe": true
+    }
+  },
+  "approval": {
+    "owner_text": "I approve the Stage 7 check of 1.0.19",
+    "issued_utc": "2026-10-13T06:20:11Z",
+    "record": "C:\\Users\\jonny\\JARVIS-claude-workspace\\governance\\STAGE7-1.0.19-APPROVAL-RECORD.json",
+    "plan": "docs/STAGE7-CHECK-1.0.19.md (worktree D:\\JARVIS-release-work\\src-1.0.18, branch claude/release-1.0.19)",
+    "plan_sha256": "56dc401c1fc866353eb25cd50d5b6f25ed4c77810ba6396e12e4891834c9238c",
+    "plan_unchanged_at_evaluation": true,
+    "tools": "D:\\JARVIS-S6-FRESHVM\\tools\\stage7-1.0.19 (version 4; all eight files hash-equal to the approval record at this evaluation; stage7-authorized.json schema jarvis-stage7-authorized-v4)"
+  },
+  "disc": {
+    "iso": "D:\\JARVIS-S6-FRESHVM\\media\\JARVIS-STAGE7-1.0.19-629bb5621d34.iso",
+    "sha256": "2fc442f91ce4504a03f06b1ac2e5d28149a5829c3171ec7c0d7c4237981d3bca",
+    "bytes": 941621248,
+    "built_by": "the owner (jonny), 2026-10-13T06:26:02Z (record stage7-disc-1.0.19-629bb5621d34.json, schema v4)",
+    "payload": "9 files: the zip and its record, the Setup and its record (hashes equal to the approval), stage7-target.json, the three version 4 guest files (hashes equal to the approval) and the payload manifest; every file read back from the mounted image with its recorded hash; the copy in media hash-equal to the record at the disc build and again at this evaluation",
+    "rehashed_at_evaluation": true
+  },
+  "vm": {
+    "start": "vm\\stage7-start-20261013-062956.json (2026-10-13T06:29:56Z, jarvis-s6-val): the VM was on STAGE7-PASS-1.0.17-0d38218c4e1d with currentStateModified false; FRESH-PREREQ restored, all nine snapshots kept, the 1.0.17 Stage 7 disc on port 1 and this check's disc on port 2, both hash-checked. vm\\start-20261013-062956.json: the start script's own record (the owner left the launcher window open).",
+    "final_snapshot": {
+      "name": "STAGE7-PASS-1.0.19-629bb5621d34",
+      "uuid": "9c81ad38-310e-46f1-b79a-a99de5934ca6",
+      "taken_utc": "2026-10-13T08:41:44Z",
+      "record": "vm\\snapshot-STAGE7-PASS-1.0.19-629bb5621d34-20261013-084144.json",
+      "taken_after_clean_shutdown": true,
+      "vm_state_at_snapshot": "poweroff",
+      "vbox_sha256_after": "40eefbb7f34b9a001488a6a481c61fd48e7ebceeab4e33f00c1c63091b34ab27",
+      "vbox_copy": "vm\\JARVIS-S6-FRESH.vbox.STAGE7-PASS-1.0.19-629bb5621d34-copy",
+      "snapshots_kept": [
+        "FRESH-CLEAN-BASELINE",
+        "FRESH-PREREQ",
+        "GATE17-19-PASS",
+        "GATE18-PASS",
+        "STAGE7-PASS",
+        "STAGE7-PASS-1.0.14-e03872680e1d",
+        "STAGE7-PASS-1.0.15-63362929d7ad",
+        "STAGE7-PASS-1.0.16-fccde24e2cc6",
+        "STAGE7-PASS-1.0.17-0d38218c4e1d"
+      ],
+      "current_after": "STAGE7-PASS-1.0.19-629bb5621d34 (the snapshot record: current_snapshot_uuid 9c81ad38-310e-46f1-b79a-a99de5934ca6; ten snapshots now)",
+      "vbox_read_at_evaluation": "currentSnapshot {9c81ad38-310e-46f1-b79a-a99de5934ca6}, currentStateModified false, lastStateChange 2026-10-13T08:41:44Z; sha256 equal to vbox_sha256_after"
+    },
+    "guest": "jarvis-s6-guest, not elevated in every phase (E0), member of Administrators as recorded since Gate 16R",
+    "windows_update_pause_ends_utc": "2026-11-06T05:27:32Z"
+  },
+  "phases": [
+    {
+      "phase": "Install",
+      "run": "stage7-20261013-063448",
+      "started_utc": "2026-10-13T06:34:48Z",
+      "finished_utc": "2026-10-13T07:01:47Z",
+      "overall": "PASS",
+      "checks": 9,
+      "notes": "the zip (533398008 bytes) and the Setup on the disc hash-equal to their records, the Setup built from this package, 9 payload files, no mismatch (I1); the Setup run silently with the owner's defaults (/VERYSILENT /SUPPRESSMSGBOXES /NORESTART): 753.9 s wall for the unpack and the installer inside it, the installer's own laps verify package 58.307 s, copy 221.031 s, verify copy 260.117 s, switch 0.116 s (539.6 s, inside the 600 s bound), status installed, previous none, shortcuts 'written', 10773 files in the package (I2); the Installed-apps entry 'JARVIS 1.0.19, Teague Industries' under HKCU with the package folder's uninstaller (I3); the files verified, both shortcuts at releases\\1.0.19-629bb5621d34\\electron\\JARVIS.exe (I4); the first launch from the desktop shortcut, Core ready in 47.8 s, identity matches the package, a memory saved, 8 processes, none outside the install (I5); a second launch joins the first (same Core pid, origin unchanged, I6); offline speech recognition transcribed the test sentence twice (32.4 s with the model load, I7); the Core stopped on request, the install verified after use, started again in 77.2 s with the memory kept, the boot record written and the driver asked for the restart (I8)"
+    },
+    {
+      "phase": "AfterRestart",
+      "run": "stage7-20261013-071550",
+      "started_utc": "2026-10-13T07:15:50Z",
+      "finished_utc": "2026-10-13T07:17:22Z",
+      "overall": "PASS",
+      "checks": 2,
+      "notes": "the restart check decided 'restarted: yes' from Windows' own boot id (7 -> 10; last boot 2026-10-13T07:12:11Z, after the Install phase's 2026-10-13T06:30:39Z); JARVIS started by the login launch, 1.0.19 installed, the memory kept, 4 processes after 95.9 s (R1)"
+    },
+    {
+      "phase": "Uninstall",
+      "run": "stage7-20261013-071726",
+      "started_utc": "2026-10-13T07:17:26Z",
+      "finished_utc": "2026-10-13T07:25:58Z",
+      "overall": "PASS",
+      "checks": 4,
+      "notes": "the uninstall through the Installed-apps entry: exit 0, 94 s (stop 6.25 s, shortcuts 3.122 s, remove program 52.162 s), 10766 program files removed, 0 left, data, config and profile kept, both shortcuts, the entry, the package folder, current.json and the launcher script gone, 0 processes (U1); the reinstall from the Setup: exit 0, 311 s wall, the installer's laps 179.8 s, the entry back, the Core ready, the memory restored, verified (U2); the final stop: Core stopped on request, 0 processes (U3)"
+    },
+    {
+      "phase": "Update",
+      "run": "stage7-20261013-072601",
+      "started_utc": "2026-10-13T07:26:01Z",
+      "finished_utc": "2026-10-13T08:18:12Z",
+      "overall": "PASS",
+      "checks": 8,
+      "notes": "the previous build's zip (1.0.17-0d38218c4e1d) hash-equal to its record, 1.0.19 installed before, 0 processes (G1); the previous package extracted: 10771 files in 788.4 s (G2); 1.0.19 uninstalled and 1.0.17 installed and running (laps 382.5 s; Core ready in 12.7 s, identity and both memories match, 8 processes, none from another release) (G3); the update while 1.0.17 ran: installed, laps verify package 147.454 s, copy 158.302 s, verify copy 224.123 s, stop 7.814 s, switch 0.01 s (537.7 s, inside the bound; wall 541.7 s), 0 processes left, verified, current 1.0.19 with previous 1.0.17, both releases present, the Core ready in 10.3 s with both memories (G4); the rollback: rolled back to 1.0.17 in 119.4 s wall, verified, running with both memories (G5); the update again: installed in 300.9 s on the laps (the copy skipped: verify installed 115.455 s), verified, running, then stopped cleanly (G6); the update through the Setup: rolled back to 1.0.17 first and running, then the Setup silently, exit 0, 569.4 s wall, laps 162.0 s, installed, verified, running with both memories, stopped cleanly (G7)"
+    },
+    {
+      "phase": "Interrupt",
+      "run": "stage7-20261013-081814",
+      "started_utc": "2026-10-13T08:18:14Z",
+      "finished_utc": "2026-10-13T08:38:15Z",
+      "overall": "PASS",
+      "checks": 5,
+      "notes": "the starting point: 1.0.19 installed, both packages extracted, 10766 release files, 0 processes (X0); 1.0.17 reinstalled and running, the new release folder absent (X1); the installer killed mid-copy after 203.7 s at 3328 of 10766 files (threshold 3230): the incoming folder left behind, no new release folder, current still 1.0.17, verified, the running 1.0.17 answering with both memories (X2); the update run again after the interruption: installed, laps 401.8 s (verify package 96.908 s, copy 128.941 s, verify copy 171.193 s), the incoming folder gone, verified, running with both memories, stopped cleanly (X3)"
+    }
+  ],
+  "checks_total": 29,
+  "checks_passed": 29,
+  "driver": {
+    "version": 4,
+    "log": "guest stage7-driver-log.jsonl: every phase 'phase passed' (Install 07:01:47Z, AfterRestart 07:17:23Z, Uninstall 07:25:58Z, Update 08:18:12Z, Interrupt 08:38:15Z), the restart decision recorded with both sets of values ('by': 'boot_id'), then 'all phases passed' with the four phases run on the second start; stage7-cycle.json names the release and the guest account; package E:\\ in every record (the owner used drive E:, as the plan said)"
+  },
+  "timing_bounds": {
+    "source": "Gate 20 owner decision for Stage 6 ('accept all', 2026-10-04): install, update and rollback each within 600 s, stopping JARVIS within 120 s; applied to Stage 7 checks by the owner's decision of 2026-10-06 ('accept the VM time'); measured on the installer's own seconds inside the Setup (verify package, copy, verify copy, switch), not on the Setup's unpacking",
+    "install_seconds": 539.6,
+    "install_setup_wall_seconds": 753.9,
+    "reinstall_seconds": 179.8,
+    "update_seconds": 537.7,
+    "rollback_seconds": 119.4,
+    "update_again_seconds": 300.9,
+    "update_through_setup_seconds": 162.0,
+    "update_through_setup_wall_seconds": 569.4,
+    "update_after_interruption_seconds": 401.8,
+    "previous_install_seconds": 382.5,
+    "extract_previous_seconds": 788.4,
+    "uninstall_seconds": 94,
+    "max_stop_seconds": 7.814,
+    "within": true,
+    "outside": "none",
+    "note": "the VM's disk was slower than the PC's throughout (the previous package took 788 s to extract; the first install's Setup wall time 753.9 s against 539.6 s of installer laps), inside every bound"
+  },
+  "deviations": [
+    {
+      "id": "process-count-login",
+      "what": "R1 recorded 4 processes at the login launch (8 at every other launch in this check, as on the PC)",
+      "disposition": "the same as in the 1.0.17 check: no check depends on the count; the Core answered, the release and the memory were right; noted for the record"
+    }
+  ],
+  "incidents": "none: both discs carry the label JARVIS_S7 and the owner used drive E: (every guest record says package E:\\); the launcher's start record was written; the owner left the launcher window open as asked; the check ran from 06:34Z to 08:38Z and the snapshot was taken at 08:41Z",
+  "not_covered": [
+    "an AI conversation (no keys in the VM; the OpenRouter switch itself was tested on this PC: the live test 6 of 6 and the release regression)",
+    "a real microphone (no audio device in the VM; speech recognition checked offline)",
+    "install under a non-administrator Windows account",
+    "a rollback to 1.0.17 on the real PC after the key file lost its OpenAI/Qwen lines (1.0.17 needs them; said in the release notes)"
+  ],
+  "follow_up": [
+    "the version 4 scripts ran as designed, unchanged since 1.0.17; no new launcher follow-up from this check",
+    "before the everyday update: check the owner's key file holds what both 1.0.17 and 1.0.19 need (OPENROUTER_API_KEY for 1.0.19; the old provider lines kept until a rollback is no longer wanted)",
+    "no owner decision is pending from this check"
+  ],
+  "live_jarvis": "the owner's installed JARVIS (%LOCALAPPDATA%\\JARVIS, 1.0.17-0d38218c4e1d per current.json) was not addressed by this check and kept running throughout (8 JARVIS processes at Hermes's read-only count at the evaluation)",
+  "next": "updating the everyday JARVIS from 1.0.17 to 1.0.19 is a separate owner decision: Hermes writes docs/UPDATE-EVERYDAY-1.0.19.md for approval (as for 1.0.15, 1.0.16 and 1.0.17), through the Setup",
+  "evaluated_by": "Hermes Agent (Claude Fable 5.1), from the records on D: only; no VirtualBox command run by Hermes"
+}

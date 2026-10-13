@@ -1,0 +1,13 @@
+{
+    "schema": "jarvis-stage7-authorized-v4",
+    "final": "1.0.19-629bb5621d34",
+    "previous": "1.0.17-0d38218c4e1d",
+    "label": "1.0.19-629bb5621d34",
+    "expected_current_snapshot": "STAGE7-PASS-1.0.17-0d38218c4e1d",
+    "owner_text": "I approve the Stage 7 check of 1.0.19",
+    "issued_utc": "2026-10-13T06:20:11Z",
+    "recorded_utc": "2026-10-13T06:21:33Z",
+    "record": "C:\\Users\\jonny\\JARVIS-claude-workspace\\governance\\STAGE7-1.0.19-APPROVAL-RECORD.json",
+    "plan_sha256": "56dc401c1fc866353eb25cd50d5b6f25ed4c77810ba6396e12e4891834c9238c",
+    "written_by": "Hermes Agent (Claude) on the owner's approval"
+}

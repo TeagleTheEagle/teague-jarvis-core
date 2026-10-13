@@ -1,0 +1,24 @@
+{
+    "status":  "PASS",
+    "release_id":  "1.0.19-629bb5621d34",
+    "commit":  "629bb5621d3428572094d0cd8f8b5f6bd0908d2a",
+    "zip":  "JARVIS-1.0.19-629bb5621d34.zip",
+    "zip_bytes":  533398008,
+    "zip_sha256":  "838371836d31758082d191738ebc3b41d0e34fe4b6598af6153d970ab8b21541",
+    "zip_matches_record":  true,
+    "hash_seconds":  36.9,
+    "setup":  "JARVIS-Setup-1.0.19-629bb5621d34.exe",
+    "setup_bytes":  406914757,
+    "setup_sha256":  "8e5bb3dceef85fc486f3d03b3864dfa3479c8833ffe471646cdd33dbcc36092f",
+    "setup_matches_record":  true,
+    "setup_hash_seconds":  0.7,
+    "setup_record_release":  "1.0.19-629bb5621d34",
+    "setup_version":  "1.0.19",
+    "setup_built_from_this_package":  true,
+    "entry_key":  "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{DC2C8033-1BBF-5E1C-99A0-BE0E70DC9937}_is1",
+    "sandbox":  false,
+    "payload_manifest_files":  9,
+    "payload_mismatches":  [
+
+                           ]
+}

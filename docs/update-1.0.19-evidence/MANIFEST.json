@@ -1,0 +1,47 @@
+{
+  "schema": "jarvis-evidence-manifest-v1",
+  "utc": "2026-10-13T10:12:21Z",
+  "source": "D:\\JARVIS-update-1.0.19\\evidence",
+  "files": {
+    "UPDATE-1.0.19-APPROVAL-RECORD.json": {
+      "sha256": "e573bf976de8a9b2edbdd5979aaed5b1dd7884e8c27dff89371c93f46ca595bc",
+      "bytes": 12281
+    },
+    "backup.json": {
+      "sha256": "375fa1318c957333c4a95036fd64ad96504504952a9940632c0a4ac594aa10e8",
+      "bytes": 5967
+    },
+    "check.json": {
+      "sha256": "eac028eb7d422ad432549d8d206a624115407646646b1ab4509e20c632bbed5c",
+      "bytes": 3445
+    },
+    "owner-check.json": {
+      "sha256": "f34115b5ec1704ecb5309be5c43cc0d5ca89ccd86a54d13cb7a7a3ab6d62a4f0",
+      "bytes": 1638
+    },
+    "prep-tools-hashes.txt": {
+      "sha256": "3d0a6e1573d785d15680795a5f7b9fe6b38080be0a10957146ce8e86809aca61",
+      "bytes": 266
+    },
+    "restart-check.json": {
+      "sha256": "9a629d42748191aba2cf90285611785d5b7aeaf42fe9c9601b0a382c2e95ac36",
+      "bytes": 2191
+    },
+    "setup-update-20261013-094444.log": {
+      "sha256": "cdefef8fcc7ad26a09e8b0cc9f414955a68baf728410387bf5c51ec8b8999547",
+      "bytes": 4380609
+    },
+    "update-authorized.json": {
+      "sha256": "fc830fb860032844e5b41f1b26ca1efe6670a34d1fd4302470fd3f13987ec66f",
+      "bytes": 1343
+    },
+    "update-evaluation.json": {
+      "sha256": "3f4cf3d324c9b0199a6d80b78d5435c5daa113fb37294528c369b1bb73ee3192",
+      "bytes": 6755
+    },
+    "update.json": {
+      "sha256": "620c43171b2ecb459b67fab0928baadda129dc2fc8c2c1a4ef7d018903734b7f",
+      "bytes": 4181
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "schema": "jarvis-everyday-update-authorized-v3",
+  "final": "1.0.19-629bb5621d34",
+  "previous": "1.0.17-0d38218c4e1d",
+  "final_zip": "D:\\JARVIS-release-work\\pkg-1.0.19\\JARVIS-1.0.19-629bb5621d34.zip",
+  "final_zip_sha256": "838371836d31758082d191738ebc3b41d0e34fe4b6598af6153d970ab8b21541",
+  "final_setup": "D:\\JARVIS-release-work\\pkg-1.0.19\\JARVIS-Setup-1.0.19-629bb5621d34.exe",
+  "final_setup_sha256": "8e5bb3dceef85fc486f3d03b3864dfa3479c8833ffe471646cdd33dbcc36092f",
+  "approval": {
+    "owner_statement": "I approve the update of my everyday JARVIS to 1.0.19",
+    "issued_utc": "2026-10-13T09:20:02Z",
+    "plan_change_accepted": "rollback change accepted (the rollback restores the step 1 key file; the owner sets JARVIS_PROVIDER=qwen or openai himself), 2026-10-13T09:39:47Z",
+    "record": "C:\\Users\\jonny\\JARVIS-claude-workspace\\governance\\UPDATE-1.0.19-APPROVAL-RECORD.json",
+    "plan_sha256": "b8020cbadbe9d6031b8641609f63c1a45c3a3ca539857d3f9b3c75dad3378ad2",
+    "plan_commit": "2fcc6a0"
+  },
+  "launcher_sha256": {
+    "Invoke-EverydayUpdate.ps1": "f022a4ab82622ca098d37086c25b3cf5d7bd58e7bd66de6e2a0970a9a0fceca2",
+    "update-step.cmd": "b2e18b0459a59849743255adeefe755b4ed45ab6f66bd28b3521eba6f59c049e"
+  },
+  "placed_utc": "2026-10-13T09:40:00Z",
+  "placed_by": "Hermes Agent"
+}
