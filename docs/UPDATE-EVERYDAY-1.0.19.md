@@ -1,6 +1,13 @@
 # Updating your everyday JARVIS to 1.0.19 (plan for your approval)
 
-Status: **APPROVED BY THE OWNER 2026-10-13 20:20 local ("I approve the update of my everyday JARVIS to 1.0.19",
+Status: **DONE: `EVERYDAY_UPDATE_COMPLETE` (2026-10-13, about 21:15 local; `docs/update-1.0.19-evidence/update-evaluation.json`).
+The everyday JARVIS is 1.0.19-629bb5621d34.** Steps run by the owner 20:41 to 21:09 local: step 1 twice (the first
+attempt stopped as designed on a key file still saying `qwen`; the owner edited it), check 20:43, backup
+`feac7d96…` (383 files, test restore passed), the Setup silently in 217.8 s (the installer inside it 163 s; the
+1.0.17 package folder renamed aside; shortcuts at 1.0.19's `JARVIS.exe`; the entry JARVIS 1.0.19; the database and
+the key file unchanged), the owner's check with screenshots ("all working as perfect": AI OpenRouter with the Qwen
+model, voice Fish Audio, memories present), the PC restart with JARVIS starting by itself 7.5 minutes after sign-in.
+1.0.17 and 1.0.16 stay installed as rollback copies; the rollback was not needed. Before that: **APPROVED BY THE OWNER 2026-10-13 20:20 local ("I approve the update of my everyday JARVIS to 1.0.19",
 first clock reading 2026-10-13T09:20:02Z; record `../governance/UPDATE-1.0.19-APPROVAL-RECORD.json`), given while
 the launcher's independent review was still running (the plan as committed then: `f3b0e29`). The review (2 high, 6
 medium, 8 low, section below) was applied in full and the reviewed launcher rehearsed again, run 3, 37 of 37. One

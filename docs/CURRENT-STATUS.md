@@ -220,6 +220,16 @@ current record.
 Rules and authority are in `CLAUDE.md` and `../governance/OWNER-DELEGATION.md`; this file
 only records where the work stands. Historical handover context: `docs/PROJECT-CONTEXT.md`.
 
+## 2026-10-13, about 21:15 local (Hermes Agent): the everyday JARVIS is 1.0.19
+
+`EVERYDAY_UPDATE_COMPLETE`: the owner's everyday JARVIS (%LOCALAPPDATA%\JARVIS) was updated from 1.0.17 to
+1.0.19-629bb5621d34 by its own Setup, on the owner's approval of 20:20 (`docs/UPDATE-EVERYDAY-1.0.19.md`, the record
+`governance/UPDATE-1.0.19-APPROVAL-RECORD.json`, the evidence `docs/update-1.0.19-evidence/`). The launcher (version 3,
+`tools/host/update-1.0.19/`) had its independent review (2 high, 6 medium, 8 low, all applied) and a sandbox rehearsal
+of 37 of 37 before placement. Open after it: the "Private network door: could not open port 8790" lines in Recent
+activity (the 1.0.16 door; not changed by 1.0.19), the C: cleanup on the owner's word (1.0.16, the renamed
+`JARVIS-package-before-1.0.19-629bb5621d34`, the key-file copy `config\.env.before-1.0.19-629bb5621d34`).
+
 ## 2026-10-13, about 19:50 local (Hermes Agent): STAGE_7_COMPLETE for 1.0.19 in the test VM, 29 of 29
 
 Release `1.0.19-629bb5621d34` (OpenRouter only, Fish Audio for the voice, on 1.0.18's time fix) passed the Stage 7 check

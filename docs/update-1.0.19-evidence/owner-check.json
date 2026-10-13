@@ -1,0 +1,22 @@
+{
+  "schema": "jarvis-everyday-update-owner-check-v1",
+  "utc": "2026-10-13T09:55:52Z",
+  "release": "1.0.19-629bb5621d34",
+  "owner_words": "all working as perfect",
+  "screenshots": [
+    {
+      "file": "Screenshot 2026-10-13 205156.png",
+      "shows": "the JARVIS dashboard, v1.0.19, Teague Industries, Core online; Systems: AI OpenRouter, Voice Fish Audio, Search OpenRouter, Memory 8 saved, Devices 1 online; 8 memories, 8 documents, 7 notes, 100+ conversations; status bar names the model qwen/qwen3.5-max-0902; Recent activity shows four 'Private network door: could not open port 8790' lines at 20:50-20:51 (noted, not part of the check)"
+    },
+    {
+      "file": "Screenshot 2026-10-13 205201.png",
+      "shows": "Settings > General (System preferences), v1.0.19"
+    },
+    {
+      "file": "Screenshot 2026-10-13 205446.png",
+      "shows": "Windows Settings > Apps > Installed apps: JARVIS 1.0.19, Teague Industries, 13/10/2026, 1.11 GB"
+    }
+  ],
+  "ten_point_check": "reported by the owner as all working; items seen in the screenshots: 1 (window says JARVIS), 2 (v1.0.19 shown on the dashboard; About page not pictured), 3 (AI OpenRouter, the Qwen model named), 4 (memories and conversations counted), 7 (Voice Fish Audio), 9 (Settings > Apps JARVIS 1.0.19). Items 5, 6, 8, 10 on the owner's word.",
+  "noted": "'Private network door could not open port 8790' four times in Recent activity: the private-network switch (1.0.16) could not open its port; to be looked at after step 5, not a condition of this update (the door is off until the owner turns it on and 1.0.19 changed nothing in it)."
+}

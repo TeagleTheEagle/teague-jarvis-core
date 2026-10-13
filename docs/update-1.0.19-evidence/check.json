@@ -1,0 +1,63 @@
+{
+    "schema":  "jarvis-everyday-update-check-v3",
+    "utc":  "2026-10-13T09:43:25.8523392Z",
+    "final":  "1.0.19-629bb5621d34",
+    "previous":  "1.0.17-0d38218c4e1d",
+    "key_file":  {
+                     "present":  true,
+                     "sha256":  "a838ed3a359618b6d9273b798f09a84aa566a6f2ef78ebba364fe43c33b8dacc",
+                     "bytes":  1049,
+                     "provider":  "openrouter",
+                     "has_openrouter_key":  true,
+                     "names":  [
+                                   "ELEVENLABS_MODEL",
+                                   "FISH_API_KEY",
+                                   "FISH_MODEL",
+                                   "GOOGLE_MAPS_EMBED_KEY",
+                                   "GOOGLE_MAPS_ROUTES_KEY",
+                                   "GROQ_MODEL",
+                                   "GROQ_VISION_MODEL",
+                                   "JARVIS_PORT",
+                                   "OPENROUTER_API_KEY"
+                               ],
+                     "copy":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS\\config\\.env.before-1.0.19-629bb5621d34"
+                 },
+    "zip":  "D:\\JARVIS-release-work\\pkg-1.0.19\\JARVIS-1.0.19-629bb5621d34.zip",
+    "zip_sha256":  "838371836d31758082d191738ebc3b41d0e34fe4b6598af6153d970ab8b21541",
+    "setup":  "D:\\JARVIS-release-work\\pkg-1.0.19\\JARVIS-Setup-1.0.19-629bb5621d34.exe",
+    "setup_sha256":  "8e5bb3dceef85fc486f3d03b3864dfa3479c8833ffe471646cdd33dbcc36092f",
+    "app_id":  "{DC2C8033-1BBF-5E1C-99A0-BE0E70DC9937}",
+    "sandbox":  false,
+    "package_unpacked_to":  "D:\\JARVIS-update-1.0.19\\package\\JARVIS-1.0.19-629bb5621d34",
+    "package_release":  "1.0.19-629bb5621d34",
+    "package_files":  10766,
+    "install_home":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS",
+    "current":  {
+                    "release":  "1.0.17-0d38218c4e1d",
+                    "previous":  "1.0.16-fccde24e2cc6",
+                    "switched_at":  1791361044.9781623
+                },
+    "installed_verified":  "verified",
+    "free_bytes":  19602153472,
+    "jarvis_processes":  0,
+    "staging":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS-package",
+    "staging_before":  {
+                           "present":  true,
+                           "uninstaller_present":  true,
+                           "uninstaller_sha256":  "dee09a79616bd94ea71632414531dffa4403fe3c50bce42c6785c16b7e9785bc",
+                           "answer_release":  "1.0.17-0d38218c4e1d"
+                       },
+    "staging_to_be_moved_aside":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS-package-before-1.0.19-629bb5621d34",
+    "entry_before":  {
+                         "present":  true,
+                         "name":  "JARVIS",
+                         "version":  "1.0.17",
+                         "publisher":  "Teague Industries",
+                         "uninstall":  "\"C:\\Users\\jonny\\AppData\\Local\\JARVIS-package\\unins000.exe\"",
+                         "location":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS-package\\"
+                     },
+    "shortcuts":  {
+                      "desktop":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS\\releases\\1.0.17-0d38218c4e1d\\electron\\JARVIS.exe",
+                      "startup":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS\\releases\\1.0.17-0d38218c4e1d\\electron\\JARVIS.exe"
+                  }
+}
