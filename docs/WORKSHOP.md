@@ -166,6 +166,17 @@ An installed JARVIS applies none of them: a program-file change is saved as a **
 the next release, which the owner approves as every release (ONE CORE, ONE JARVIS). Running from the source folder a
 change applies after approval, with the difference shown, as before.
 
+## Switch positions as shipped (owner's decision of 2026-10-13)
+
+The owner: "Open a web page in your browser, Make the workshop's own Python environment, Run a mission on his own in
+the workshop, Read, write and delete files in the workshop, Open Calculator, Notepad or Paint = change to can do but
+needs to ask". These five now ship as **"ask first"** (`permissions.py`, `shipped=ASK`), as the workshop's commands
+have since 2026-10-07: JARVIS can do them, and the owner approves each one on the PC (or a device that may approve)
+before it happens. The owner moves any switch in Settings > Permissions; a saved choice wins over the shipped position.
+Consequence, said plainly: a mission's file writes now wait for the owner too, and a mission cannot wait, so a mission
+run with the shipped positions ends at its first write with "awaiting approval" and says what waits; for missions to
+work unattended the owner sets "Read, write and delete files in the workshop" (and "Run commands") to Allowed.
+
 ## Skills (`skills.py`; owner's decision of 2026-10-13)
 
 The owner asked, with a screenshot of Hermes Agent's skills, to "add to jarvis and veronica a skill thing like this and

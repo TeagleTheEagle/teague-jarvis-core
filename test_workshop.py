@@ -485,6 +485,12 @@ class CoreTests(DeviceCase):
             events = self.ask('run echo first')
             self.assertEqual(events['tool.completed']['result']['status'], 'awaiting approval')
             self.assertEqual(self.owner('/api/permissions', {'tool': 'workshop_run', 'mode': 'default'})[0], 200)
+            # Files ship as "ask first" too (owner, 2026-10-13): a write waits until the owner sets Allowed.
+            replies = [calls('workshop_files', action='write', path='note.txt', content='from a question'), DONE]
+            events = self.ask('write note.txt')
+            self.assertEqual(events['tool.completed']['result']['status'], 'awaiting approval')
+            self.assertFalse((Path(self.app.workshop.home) / 'note.txt').exists())
+            self.assertEqual(self.owner('/api/permissions', {'tool': 'workshop_files', 'mode': 'default'})[0], 200)
             replies = [calls('workshop_files', action='write', path='note.txt', content='from a question'), calls('workshop_run', command='type note.txt'), DONE]
             events = self.ask('write note.txt and show it')
             self.assertEqual(events['assistant.completed']['text'], 'Done.')

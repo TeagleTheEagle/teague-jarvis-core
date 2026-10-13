@@ -149,7 +149,10 @@ class TableTests(unittest.TestCase):
         self.assertEqual((rows['workshop_run']['mode'], rows['workshop_run']['shipped'], rows['set_timer']['shipped']), ('ask', 'ask', 'default'))
         self.assertEqual(permissions.effective({})['workshop_run'], 'ask')
         self.assertEqual(permissions.effective({'workshop_run': 'default'})['workshop_run'], 'default')
-        self.assertEqual({n for n, r in permissions.TABLE.items() if r.shipped != permissions.DEFAULT}, {'workshop_run'})
+        self.assertEqual({n for n, r in permissions.TABLE.items() if r.shipped != permissions.DEFAULT},
+                         {'workshop_run', 'workshop_files', 'workshop_python', 'workshop_mission', 'computer_open_page', 'open_app'})  # owner, 2026-10-13
+        for name in ('workshop_files', 'workshop_python', 'workshop_mission', 'computer_open_page', 'open_app'):
+            self.assertIn(permissions.ASK, permissions.modes_for(name), name)   # a shipped position the owner can choose
         self.assertEqual(rows['development_edit']['asks'], permissions.ALWAYS)
         self.assertEqual(rows['manage_timer']['reads_for'], ['list'])
         json.dumps(list(rows.values()))

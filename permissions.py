@@ -126,22 +126,23 @@ TABLE = {
     'computer_files': _rule('List JARVIS\'s own source files'),
     'computer_read_file': _rule('Read one of JARVIS\'s own source files'),
     'computer_run_tests': _rule('Run JARVIS\'s own tests', reach=PC, note='Runs the fixed test suite; nothing else can be run.'),
-    'computer_open_page': _rule('Open a web page in your browser', CHANGES, PC, 'Yes: close the tab.', repeat_adds=True),
-    'open_app': _rule('Open Calculator, Notepad or Paint', CHANGES, PC, 'Yes: close the program.', repeat_adds=True, receipt=True),
+    # The owner's decision of 2026-10-13: these five, like the workshop's commands, ship as "ask first" (shipped=ASK).
+    'computer_open_page': _rule('Open a web page in your browser', CHANGES, PC, 'Yes: close the tab.', repeat_adds=True, shipped=ASK),
+    'open_app': _rule('Open Calculator, Notepad or Paint', CHANGES, PC, 'Yes: close the program.', repeat_adds=True, receipt=True, shipped=ASK),
     # ---- the Workshop (docs/WORKSHOP.md): JARVIS's own folder, commands, his Python environment, lessons, missions ----
     'workshop_files': _rule('Read, write and delete files in the workshop', CHANGES, PC,
-        'Yes: a replaced or deleted file is kept in the workshop\'s recycle folder.', receipt=True, read_actions=('list', 'read'),
+        'Yes: a replaced or deleted file is kept in the workshop\'s recycle folder.', receipt=True, read_actions=('list', 'read'), shipped=ASK,
         note='Only inside the workshop folder and the folders you add in Settings > Workshop.'),
     'workshop_run': _rule('Run commands on this PC in the workshop', CHANGES, PC,
         'No: what a command did is done; the files it changed inside the workshop are not kept automatically.', receipt=True, shipped=ASK,
         note='One command line at a time, started in a workshop folder, with a time limit; it can reach what your account can on this PC; keys and passwords are kept out of its environment and its output, and JARVIS\'s own folders and key file are refused by name. Ships as "ask first": you approve each command on the PC before it runs. Set it to "allowed" for a mission to run commands unattended.'),
     'workshop_python': _rule('Make the workshop\'s own Python environment', CHANGES, PC,
-        'Yes: delete the .venv folder in the workshop.', read_actions=('status',),
+        'Yes: delete the .venv folder in the workshop.', read_actions=('status',), shipped=ASK,
         note='Packages go into this environment, never into JARVIS\'s own Python.'),
     'workshop_lessons': _rule('Keep lessons from earlier work', CHANGES, LOCAL, 'Yes: delete the lesson in Settings > Workshop.',
         read_actions=('search', 'list')),
     'workshop_mission': _rule('Run a mission on his own in the workshop', CHANGES, PC,
-        'Yes: stop the mission; the files it changed are in the workshop.', receipt=True, read_actions=('status', 'list', 'progress', 'finish'),
+        'Yes: stop the mission; the files it changed are in the workshop.', receipt=True, read_actions=('status', 'list', 'progress', 'finish'), shipped=ASK,
         note='A mission uses the tools above under their own switches, in the background, within the time limit of Settings > Workshop; the emergency stop ends it.'),
     'goal_propose': _rule('Suggest a goal of his own', CHANGES, PC,
         'Yes: decline it, or stop the mission it became.', asks=ALWAYS, receipt=True,
@@ -281,7 +282,8 @@ def offered(tool, mode):
 
 def effective(stored=None):
     """Every tool's switch position as it stands: the owner's saved choice where there is one, else the position
-    the tool ships with (DEFAULT for all but the workshop's commands, which ship as "ask first")."""
+    the tool ships with (DEFAULT for all but six that ship as "ask first": the workshop's commands, files, environment
+    and missions, the page opener and the app opener; the owner's decisions of 2026-10-07 and 2026-10-13)."""
     stored = stored or {}
     return {name: (stored[name] if stored.get(name) in modes_for(name) else rule.shipped) for name, rule in TABLE.items()}
 

@@ -235,7 +235,11 @@ whole. Caps 3 waiting / 40 kept; no suggestion from a mission or after taint; a 
 did not complete is paused and the owner told. Settings > Workshop > Skills: turn off, on, delete. `skills.py` added to
 `development.PROTECTED_FILES`. Record: `docs/WORKSHOP.md` "Skills"; `docs/CAPABILITY-SOURCES-20261007.md` proposal 1
 marked built. Tests: `test_skills.py` (20), `test_permissions.py`, `test_workshop_view.cjs`. VERONICA gets it as a
-persona of this Core after the merge; her separate program in `veronica\` was not touched.
+persona of this Core after the merge; her separate program in `veronica\` was not touched. **Then (about 19:15), the
+owner's switch decision:** the page opener, the app opener, workshop files, the workshop's Python environment and
+missions ship as "ask first" like the workshop's commands (`permissions.py` `shipped=ASK`; `test_permissions.py`,
+`test_workshop.py`; docs/WORKSHOP.md "Switch positions as shipped"). Consequence noted there: with the shipped positions
+a mission stops at its first file write; the owner sets files (and commands) to Allowed for unattended missions.
 
 ## 2026-10-13, about 16:40 local (Hermes Agent, same chat resumed; owner: "give them those abilities", then "dont restore her limits and dont move anything", "go")
 
