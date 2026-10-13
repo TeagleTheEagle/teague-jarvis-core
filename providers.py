@@ -543,13 +543,16 @@ def qwen_chat(messages, tools, emit, cancel, vision=False, mode=None, text='', s
 
 # OpenRouter (owner decision 2026-10-12, docs/VERONICA-MERGE-PLAN.md): OpenAI-compatible, one key for every AI job except
 # the voice. The address is fixed, so the key is only ever sent to openrouter.ai. Model names as OpenRouter's model list
-# gave them on 2026-10-12; each can be changed in the key file.
+# gave them on 2026-10-12; each can be changed in the key file. Qwen only (owner, 2026-10-13: "can we make it only use
+# qwen models for all the functions?"), to match a Qwen-only guardrail on the key.
 OPENROUTER_BASE = 'https://openrouter.ai/api/v1'
 OPENROUTER_DEFAULT_MODEL = 'qwen/qwen3.8-max-0902'             # everyday chat, tools, pictures (plan D2)
 OPENROUTER_DEFAULT_FAST_MODEL = 'qwen/qwen3.8-flash'           # Economy, and the small request behind a web search
-OPENROUTER_DEFAULT_CODING_MODEL = 'anthropic/claude-opus-5.5'  # coding and research jobs (plan D2)
-OPENROUTER_DEFAULT_FALLBACK_MODEL = 'anthropic/claude-sonnet-5.5'  # OpenRouter tries it when the first model fails (plan D8)
-OPENROUTER_DEFAULT_STT_MODEL = 'openai/whisper-1'              # the cloud option for hearing (plan D7)
+OPENROUTER_DEFAULT_CODING_MODEL = 'qwen/qwen3.8-max-0902'      # coding and research jobs (plan D2, Qwen since 2026-10-13)
+OPENROUTER_DEFAULT_FALLBACK_MODEL = 'qwen/qwen3.8-flash'       # OpenRouter tries it when the first model fails (plan D8)
+# The cloud option for hearing (plan D7): none by default, as OpenRouter's speech-to-text models are not Qwen; this PC's
+# own recognition does the hearing. An OPENROUTER_STT_MODEL line (e.g. openai/whisper-1) turns the cloud option on.
+OPENROUTER_DEFAULT_STT_MODEL = ''
 # Thinking counts against the reply limit on OpenRouter: with a small limit the owner's function test of 2026-10-12 got a
 # cut-off answer ("TEAG") and an empty one. The limit is a ceiling, not a charge, but OpenRouter refuses (402) when the credit
 # left could not pay for a reply that long: about US$0.10 with Qwen 3.8 Max, US$0.33 with Claude Opus (review of 2026-10-12, L1).
@@ -684,19 +687,26 @@ def _web_address(url):
         return False
 
 
+def openrouter_stt_model():
+    """The model for OpenRouter's speech-to-text, or '' when the cloud option for hearing is off (the default)."""
+    return (os.getenv('OPENROUTER_STT_MODEL') or OPENROUTER_DEFAULT_STT_MODEL).strip()
+
+
 def openrouter_transcribe(audio, mime, timeout=60):
     """Speech to text through OpenRouter (plan D7, the cloud option; the app's own default is local recognition). The
     request is OpenRouter's documented one: base64 audio with its format in JSON, not a file upload."""
     key = os.getenv('OPENROUTER_API_KEY')
     if not key:
         raise ProviderError('OpenRouter speech recognition needs OPENROUTER_API_KEY. Local recognition works without it.')
+    model = openrouter_stt_model()
+    if not model:
+        raise ProviderError('OpenRouter speech recognition has no model: add an OPENROUTER_STT_MODEL line to use it. Local recognition works without it.')
     fmt = OPENROUTER_AUDIO_FORMATS.get(mime.split(';')[0])
     if not fmt:
         raise ValueError('Unsupported recording format.')
     if len(audio) > OPENROUTER_AUDIO_LIMIT:
         raise ValueError('The recording is too large for cloud speech recognition (20 MB).')
-    body = {'model': os.getenv('OPENROUTER_STT_MODEL') or OPENROUTER_DEFAULT_STT_MODEL,
-            'input_audio': {'data': base64.b64encode(audio).decode('ascii'), 'format': fmt}}
+    body = {'model': model, 'input_audio': {'data': base64.b64encode(audio).decode('ascii'), 'format': fmt}}
     language = os.getenv('OPENROUTER_STT_LANGUAGE', 'en').strip()
     if language:  # an empty OPENROUTER_STT_LANGUAGE line lets the model detect the language
         body['language'] = language
@@ -1041,10 +1051,11 @@ QWEN_ASR_LIMIT = 10 * 1024 * 1024   # Alibaba's limit for one recording once it 
 
 
 def cloud_speech():
-    """The provider that turns speech into text in the cloud: the chosen AI provider, when its key is in place.
-    None otherwise. (The app's own default is local recognition with Whisper, which needs neither.)"""
+    """The provider that turns speech into text in the cloud: the chosen AI provider, when its key is in place
+    (and, for OpenRouter, a speech model is named). None otherwise. (The app's own default is local recognition with
+    Whisper, which needs neither.)"""
     name = provider()
-    if name == 'openrouter' and os.getenv('OPENROUTER_API_KEY'):
+    if name == 'openrouter' and os.getenv('OPENROUTER_API_KEY') and openrouter_stt_model():
         return 'openrouter'
     if name == 'qwen' and os.getenv('DASHSCOPE_API_KEY'):
         return 'qwen'
@@ -1085,7 +1096,7 @@ def qwen_transcribe(audio, mime, timeout=60):
 
 
 def transcribe(audio, mime, timeout=None):
-    """Speech to text in the cloud, by the chosen AI provider: OpenRouter (whisper-1 by default), Qwen (qwen3-asr-flash)
+    """Speech to text in the cloud, by the chosen AI provider: OpenRouter (the OPENROUTER_STT_MODEL), Qwen (qwen3-asr-flash)
     or OpenAI. The app itself transcribes locally with Whisper unless the owner chose the cloud in Settings > AI.
     timeout: seconds for the one request; given, there is no second try (the microphone path cannot wait)."""
     if provider() == 'openrouter':
