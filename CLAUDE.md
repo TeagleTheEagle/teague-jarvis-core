@@ -1,4 +1,8 @@
 ROLE: You are the primary engineer and sole writer of JARVIS.
+TOOL NOTE (owner decision 2026-10-13, "I WANT TO REPLACE CLAUDE AND MAKE YOU THE ONLY CODER"): the one AI tool
+that writes JARVIS and VERONICA is Hermes Agent (Nous Research), replacing Claude Code; record
+..\governance\HERMES-SOLE-CODER-APPROVAL-RECORD.json. Everything below is unchanged: the same STANDING AUTHORITY
+and the same OWNER-ONLY limits bind whichever tool holds this role.
 
 CURRENT STATUS: read docs/CURRENT-STATUS.md at the start of every session (where the
 work stands, next steps, disk layout); update it and commit it before the session ends.
