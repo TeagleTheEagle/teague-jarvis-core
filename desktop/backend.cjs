@@ -140,10 +140,24 @@ const NOT_RESPONDING='The JARVIS Core is not responding, so this window will clo
 // A requested stop closes this app quietly; only a crash or a Core that stopped answering is
 // reported. Never stops the Core: it is gone, it is a new one that must keep running, or it is
 // not responding (and could not be reached to stop it anyway).
-function coreEnded(reason,{quitting,showErrorBox,quit}){
+// Emergency authority (standing.py, owner 2026-10-13): after a crash the app starts the Core again, once. The owner's
+// switch is read from standing.json beside the Core's data (the Core writes it); a second crash inside the window is
+// reported as before. `state` remembers the last automatic restart for the life of this app.
+function restartAllowed(root,dataDir,state={},now=Date.now){
+ let allowed=false,window=600000;
+ try{const s=JSON.parse(fs.readFileSync(path.join(dataDir||defaultDataDir(root),'standing.json'),'utf8'));allowed=s.emergency_restart===true;if(Number.isFinite(s.restart_window_seconds)&&s.restart_window_seconds>0)window=s.restart_window_seconds*1000;}catch{}
+ if(!allowed)return false;
+ if(state.last&&now()-state.last<window)return false;
+ state.last=now();return true;
+}
+function coreEnded(reason,{quitting,showErrorBox,quit,restart,mayRestart}){
  if(quitting())return;
+ if(reason==='crashed'&&restart&&mayRestart&&mayRestart()){
+  // The restart is the app's (main.cjs restartCore); when it fails, the box and the quit as before.
+  return Promise.resolve().then(restart).catch(()=>{if(quitting())return;showErrorBox(UNEXPECTED_STOP);quit();});
+ }
  if(reason==='crashed')showErrorBox(UNEXPECTED_STOP);
  else if(reason==='unresponsive')showErrorBox(NOT_RESPONDING);
  quit();
 }
-module.exports={startBackend,connectCore,readConnection,connectionState,processAlive,watchCore,coreEnded};
+module.exports={startBackend,connectCore,readConnection,connectionState,processAlive,watchCore,coreEnded,restartAllowed};

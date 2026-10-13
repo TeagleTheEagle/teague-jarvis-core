@@ -4,7 +4,7 @@ if (process.argv.includes('--stage4-test')) {
 const {app,BrowserWindow,Tray,Menu,nativeImage,dialog,shell,session,ipcMain,desktopCapturer,screen,globalShortcut}=require('electron');
 const path=require('node:path');
 const {trusted,external,desktopHeaders}=require('./policy.cjs');
-const {connectCore,coreEnded}=require('./backend.cjs');
+const {connectCore,coreEnded,restartAllowed}=require('./backend.cjs');
 const {ScreenCapture}=require('./capture.cjs');
 const {watchUpdates}=require('./local-updates.cjs');
 const installPaths=require('./install-paths.cjs');
@@ -25,7 +25,8 @@ if(layout){
 }
 let updates;
 let companionWanted=false;
-let unwatchCore,win,tray,backend,quitting=false,origin='',capture,companion,lastCompanionState,resumeMicOnShow=false,liveGrantUntil=0;
+let unwatchCore,win,tray,backend,quitting=false,origin='',token='',capture,companion,lastCompanionState,resumeMicOnShow=false,liveGrantUntil=0;
+const restartState={};  // the last automatic restart of the Core after a crash (backend.restartAllowed; standing.py)
 // Installed releases keep owner files outside the read-only program folder.
 const configDir=process.env.JARVIS_CONFIG_DIR||__dirname;
 const sessionFile=path.join(process.env.JARVIS_DATA_DIR||__dirname,'.jarvis-session.json');
@@ -59,13 +60,25 @@ async function resumeCore(){
  tell('JARVIS was not resumed.','JARVIS stays stopped. Press RESUME JARVIS in the JARVIS window, or try again.'+(result?.error?'\n\n'+result.error:''));
 }
 async function quit(stopCore=false){if(quitting)return;quitting=true;updates?.close();liveGrantUntil=0;capture?.stop();unwatchCore?.();if(stopCore)await backend?.shutdown();else await backend?.quit();try{require('node:fs').unlinkSync(sessionFile);}catch{}globalShortcut.unregisterAll();companion?.destroy();tray?.destroy();app.quit();}
+// Emergency authority (standing.py C, owner 2026-10-13): after a crash, the Core is started again once (the owner's
+// switch, read by backend.restartAllowed from standing.json) and the window reconnects to it; a failure shows the box as before.
+const onCoreEnd=reason=>coreEnded(reason,{quitting:()=>quitting,showErrorBox:text=>dialog.showErrorBox('JARVIS desktop',text),quit:()=>void quit(),
+ restart:restartCore,mayRestart:()=>restartAllowed(path.resolve(__dirname,'..'),undefined,restartState)});
+async function restartCore(){
+ unwatchCore?.();capture?.stop();
+ backend=await connectCore(path.resolve(__dirname,'..'));
+ const ready=await backend.ready;origin=ready.origin;token=ready.token;
+ require('node:fs').writeFileSync(sessionFile,JSON.stringify({origin,token,created:new Date().toISOString()}),'utf8');
+ unwatchCore=backend.watch(onCoreEnd);
+ if(win&&!win.isDestroyed())await win.loadURL(origin+'/');
+}
 async function start(){
  app.setAppUserModelId('local.jarvis.desktop');
  backend=await connectCore(path.resolve(__dirname,'..'));
- const ready=await backend.ready;origin=ready.origin;
- require('node:fs').writeFileSync(sessionFile,JSON.stringify({origin,token:ready.token,created:new Date().toISOString()}),'utf8');
+ const ready=await backend.ready;origin=ready.origin;token=ready.token;
+ require('node:fs').writeFileSync(sessionFile,JSON.stringify({origin,token,created:new Date().toISOString()}),'utf8');
  const ses=session.fromPartition('jarvis-desktop'); // memory-only session
- ses.webRequest.onBeforeSendHeaders((details,callback)=>callback({requestHeaders:desktopHeaders(details.requestHeaders,details.url,origin,ready.token)}));
+ ses.webRequest.onBeforeSendHeaders((details,callback)=>callback({requestHeaders:desktopHeaders(details.requestHeaders,details.url,origin,token)}));
  let micApproved=Boolean(preferences.microphoneAllowed);
  ses.setPermissionCheckHandler((contents,permission,requestingOrigin,details)=>((permission==='media'&&micApproved&&details.mediaType!=='video')||(permission==='display-capture'&&capture?.source&&Date.now()<liveGrantUntil))&&contents===win?.webContents&&trusted(requestingOrigin,origin));
  ses.setPermissionRequestHandler(async(contents,permission,callback,details)=>{
@@ -130,7 +143,7 @@ async function start(){
  win.webContents.on('render-process-gone',()=>{capture?.stop();backend.stop();dialog.showErrorBox('JARVIS desktop','The interface stopped. Voice requests were cancelled. Quit and relaunch JARVIS Desktop.');});
  win.on('close',event=>{if(!quitting){event.preventDefault();stopLocal();resumeMicOnShow=!!preferences.micOnLaunch;win.hide();}});
  win.on('show',()=>win.webContents.setAudioMuted(false));
- unwatchCore=backend.watch(reason=>coreEnded(reason,{quitting:()=>quitting,showErrorBox:text=>dialog.showErrorBox('JARVIS desktop',text),quit:()=>void quit()}));
+ unwatchCore=backend.watch(onCoreEnd);
  tray=new Tray(nativeImage.createFromPath(path.join(__dirname,'tray.png')));
  tray.setToolTip('JARVIS · closing this window keeps JARVIS running');
  tray.setContextMenu(Menu.buildFromTemplate([{label:'Show JARVIS',click:show},{label:'Floating JARVIS',click:showCompanion},{label:'Emergency stop (JARVIS stays stopped)',click:emergencyStop},{label:'Resume JARVIS',click:resumeCore},{type:'separator'},{label:'Close desktop app (JARVIS keeps running)',click:()=>void quit()},{label:'Quit JARVIS completely',click:()=>void quit(true)}]));tray.on('double-click',show);

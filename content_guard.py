@@ -256,12 +256,21 @@ def taints(findings):
     return any(kind in ('instruction', 'hidden') for kind, _ in findings)
 
 
+ON_TAINT = None   # the Core's own hook (standing.Lockdown.tainted): told once per question the guard marks
+
+
 def mark(run, found, what, audit=None):
     """A question whose reading held instructions or hidden text is marked; every change the guard made is a row in
     the Activity log ("guard: <what>")."""
     if found:
         if run is not None and taints(found):
+            first = not getattr(run, 'tainted', False)
             run.tainted = True
+            if first and ON_TAINT is not None:
+                try:
+                    ON_TAINT(run)
+                except Exception:
+                    pass
         if audit:
             audit('guard: ' + what, summary(found), run)
 

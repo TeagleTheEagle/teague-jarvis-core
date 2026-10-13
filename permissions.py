@@ -143,7 +143,7 @@ TABLE = {
         read_actions=('search', 'list')),
     'workshop_mission': _rule('Run a mission on his own in the workshop', CHANGES, PC,
         'Yes: stop the mission; the files it changed are in the workshop.', receipt=True, read_actions=('status', 'list', 'progress', 'finish'), shipped=ASK,
-        note='A mission uses the tools above under their own switches, in the background, within the time limit of Settings > Workshop; the emergency stop ends it.'),
+        note='A mission uses the tools above under their own switches, in the background, within the time limit of Settings > Workshop; the emergency stop ends it. Your approval of a mission covers its files and commands inside the workshop (the switch "Your approval of a mission covers its workshop work" below).'),
     'goal_propose': _rule('Suggest a goal of his own', CHANGES, PC,
         'Yes: decline it, or stop the mission it became.', asks=ALWAYS, receipt=True,
         note='Always asks first: JARVIS may suggest a goal he thinks worth doing; you see it and the reason on screen and answer. Approved, it runs as a workshop mission under every mission limit; nothing starts before you say yes. A few may wait at a time (goals.py).'),

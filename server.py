@@ -75,6 +75,7 @@ import nudges
 import about_you
 import goals
 import skills
+import standing
 import speaker
 import network_devices
 import providers
@@ -251,6 +252,13 @@ class App:
         self.goals = None if self.stage4 else goals.Goals(self.store)
         # Skills (skills.py, owner 2026-10-13): know-how JARVIS keeps for jobs that come up again; each one approved on screen.
         self.skills = None if self.stage4 else skills.Skills(self.store)
+        # Standing responsibilities and emergency authority (standing.py, owner 2026-10-13): the lockdown counts the
+        # questions the guard marks; the watch is started by main() like the backups' clock.
+        self.lockdown = None if self.stage4 else standing.Lockdown(self.store.settings, self.store.save_settings, self.standing_notice)
+        if self.lockdown is not None:
+            content_guard.ON_TAINT = self.lockdown.tainted
+            standing.write_file(self.store.root, self.store.settings())
+        self.watch = None
         self.session = secrets.token_urlsafe(32)
         workspaces.setup(self.store)
         self.runs = {}
@@ -385,7 +393,7 @@ class App:
     def offered_tools(self):
         """The tools a question offers the AI model: none the owner switched off (Settings > Permissions), and
         one set to "ask first" says so, so the model says "waiting", not "done"."""
-        modes = {} if self.stage4 else permissions.effective(self.store.tool_modes())  # the shipped positions where the owner has not moved a switch
+        modes = {} if self.stage4 else self.tool_modes()  # the shipped positions where the owner has not moved a switch; the lockdown
         return [permissions.offered(t, modes.get(t['function']['name'])) for t in actions.TOOLS
                 if modes.get(t['function']['name']) != permissions.OFF]
 
@@ -614,7 +622,16 @@ class App:
             raise ValueError(permissions.STOPPED_MESSAGE)
 
     def tool_mode(self, name):
-        return permissions.effective(self.store.tool_modes()).get(name, permissions.DEFAULT)
+        return self.tool_modes().get(name, permissions.DEFAULT)
+
+    def tool_modes(self):
+        """Every switch as it stands; under the lockdown (standing.py) every tool that can ask asks first, whatever its
+        switch, and a tool switched Off stays off."""
+        modes = permissions.effective(self.store.tool_modes())
+        if getattr(self, 'lockdown', None) is not None and self.store.settings().get('lockdown'):
+            modes = {name: (permissions.ASK if mode != permissions.OFF and permissions.ASK in permissions.modes_for(name) else mode)
+                     for name, mode in modes.items()}
+        return modes
 
     def device_name(self, device_id):
         """A paired device's name for the screen; None for this PC, an unknown id or no id."""
@@ -785,7 +802,7 @@ class App:
         action = body.get('action')
         if action == 'start':
             self.require_running()
-            return {**self.workshop.start_mission(body.get('goal', '')), 'message': 'Mission started.'}
+            return {**self.workshop.start_mission(body.get('goal', ''), covered=True), 'message': 'Mission started.'}
         if action == 'stop':
             return {**self.workshop.stop_mission('Stopped by the owner in Settings > Workshop.'), 'message': 'Stopping the mission.'}
         if action == 'delete_lesson':
@@ -833,7 +850,7 @@ class App:
             raise ValueError('Goals are not available here.')
         row = self.goals.answer(args['id'], True)
         try:
-            started = self.workshop.start_mission(row['goal'])
+            started = self.workshop.start_mission(row['goal'], covered=True)   # the owner's yes covers its workshop work (standing.py B)
         except Exception as exc:
             self.goals.failed(row['id'], str(exc))
             raise ValueError('The goal was approved but its mission could not start: ' + str(exc)) from None
@@ -971,7 +988,38 @@ class App:
 
     def permissions_listing(self):
         return {'tools': permissions.listing(self.store.tool_modes()), 'control': self.control(),
+                'standing': standing.panel(self.store.settings()) if self.lockdown is not None else None,
                 'explained': {'ask': 'JARVIS asks you on screen before it does this.', 'off': 'JARVIS cannot do this when answering. Your own buttons in the interface still work.'}}
+
+    def save_settings(self, values):
+        """The owner's settings (Settings pages): saved, and what the desktop app needs of them written beside the data
+        (standing.py). Ending the lockdown is the owner's click here too (`lockdown: false`)."""
+        values = values if isinstance(values, dict) else {}
+        ending = values.get('lockdown') is False and bool(self.store.settings().get('lockdown'))
+        result = self.store.save_settings(values)
+        if self.lockdown is not None:
+            if ending:
+                self.lockdown.end()
+                self.audit('lockdown', 'ended by the owner')
+            standing.write_file(self.store.root, self.store.settings())
+            for name in standing.SWITCHES:
+                if name in values:
+                    self.audit('standing: ' + name, 'on' if values[name] else 'off')
+        return result
+
+    def standing_notice(self, text, key=None):
+        """A notice JARVIS raises on his own (standing.py: the watch, the lockdown): kept for the PC and the devices, and
+        spoken as a nudge is (the owner's "proactive" setting and quiet hours). True when it was new."""
+        if not self.notices:
+            return False
+        notice = self.notices.add('system', text, key=key)
+        if notice is None:
+            return False
+        try:
+            self.notify(notice)
+        except Exception:
+            pass
+        return True
 
     def set_permission(self, tool, mode):
         modes = self.store.set_tool_mode(tool, mode)
@@ -1018,8 +1066,9 @@ class App:
             except Exception:
                 pass
 
-    def ask_first(self, name, args, run, memory_command=None, memory_line=None):
-        """The owner set this tool to "ask first": keep the exact call for the owner's approval on screen."""
+    def ask_first(self, name, args, run, memory_command=None, memory_line=None, warning=None):
+        """The owner set this tool to "ask first": keep the exact call for the owner's approval on screen. `warning`
+        (standing.risk): what JARVIS says about the risk of this call, on the card and in the reply, once."""
         # Fifteen minutes (1.0.17; five before): an answer from the owner's pocket (docs/PHONE-ACCESS-1.0.17.md) takes longer
         # than a glance at the PC. Still single use, still dropped by the emergency stop.
         approval = {'id': uuid.uuid4().hex, 'tool': name, 'args': args, 'generic': True, 'label': permissions.TABLE[name].label,
@@ -1029,9 +1078,13 @@ class App:
             approval['memory_command'] = memory_command
         if memory_line:
             approval['memory_line'] = list(memory_line)   # "remember that": the line resolved now, saved on approval
+        if warning:
+            approval['warning'] = 'JARVIS warns: ' + warning + ' Still go ahead?'
+            self.audit('warning: ' + name, warning[:120], run)
         self.keep_approval(approval)
         # One sentence for both readers: the AI model (as the tool's result) and the owner (as the reply to a command).
-        return {'approval': approval, 'status': 'awaiting approval', 'summary': 'Waiting for approval on screen: ' + approval['label'] + '. Nothing has happened yet.'}
+        return {'approval': approval, 'status': 'awaiting approval', 'summary': (approval['warning'] + ' ' if warning else '')
+                + 'Waiting for approval on screen: ' + approval['label'] + '. Nothing has happened yet.'}
 
     def memory_command(self, run, text):
         """The owner's exact memory commands (memory.py: "remember that I prefer ...", "forget memory: ...") are
@@ -1178,14 +1231,28 @@ class App:
         # text that tried to instruct the AI, and the approval opens it (review of 2026-10-10, findings 6 and 7).
         unnamed_local = (name == 'computer_open_page' and run is not None and not approved
                          and content_guard.local_address(args['url']) and not content_guard.owner_named(args['url'], run.user_text))
+        mode = self.tool_mode(name) if run is not None and not self.stage4 else permissions.DEFAULT
+        # Standing responsibilities (standing.py, owner 2026-10-13). B: the owner's approval of a mission covers its file
+        # and command work inside the workshop (a switch at "ask first" reads as Allowed for that mission; Off stays off,
+        # taint still asks, the stop still refuses).
+        if (mode == permissions.ASK and run is not None and getattr(run, 'mission', None) and getattr(run, 'covered', False)
+                and name in standing.COVERED_TOOLS and self.store.settings().get('mission_covers', True)):
+            mode = permissions.DEFAULT
         verdict, refusal = permissions.decide(name, args, stopped=self.stopped is not None, by_jarvis=run is not None,
             wearable=bool(run and getattr(run, 'wearable', False)), writes=self.device_writes(run), tools=self.device_tools(run), approved=approved,
             tainted=bool(run is not None and getattr(run, 'tainted', False)) or unnamed_local,   # 1.0.19: outside text tried to instruct the AI
-            mode=self.tool_mode(name) if run is not None and not self.stage4 else permissions.DEFAULT)
+            mode=mode)
         if verdict == 'refuse':
             self.audit(name, 'refused', run)
             if run:run.emit('tool.failed',{'name':name,'checked_at':time.time(),'error_code':'PermissionRefused','stage':'permission'})
             raise ValueError(refusal)
+        # D: a risky action the owner asked for is said and asked once, on the card; the owner's yes runs it. Not from a
+        # mission (it cannot wait; it ends with "awaiting approval" and says what waits, as for any card).
+        warning = None
+        if run is not None and not approved and self.store.settings().get('warn_risky', True) and not self.stage4:
+            warning = standing.risk(name, args)
+            if warning and verdict == 'run' and permissions.TABLE[name].asks == permissions.NEVER:
+                verdict = 'ask'
         tool_started = time.perf_counter()
         self.audit(name, 'started', run)
         if run:
@@ -1195,7 +1262,7 @@ class App:
             if name == 'save_item' and args['kind'] == 'memory' and run and not re.search(r'\b(remember|memorize|memorise|save.{0,30}(?:memory|preference|fact))\b', run.user_text, re.I):
                 raise ValueError('Durable memory requires an explicit request to remember or save a fact. Ask the user first.')
             if verdict == 'ask':
-                result = self.ask_first(name, args, run)
+                result = self.ask_first(name, args, run, warning=warning)
             elif name == 'device_registry':
                 result = {'devices':self.device_rows(), 'interaction_device':self.devices.interaction(run.id) if run else None, 'limits':'Capabilities describe adapters; actions require separate authorization. Simulated devices are not physical hardware.'}
             elif name == 'assistant_control':
@@ -1371,7 +1438,8 @@ class App:
             elif name in workshop.TOOLS:
                 if self.workshop is None:
                     raise ValueError('The workshop is not available here.')
-                result = self.workshop.act(name, args, run)
+                # A mission the owner approved on its card, or started himself (run is None), is covered (standing.py B).
+                result = self.workshop.act(name, args, run, covered=bool(approved or run is None))
             elif name == 'goal_propose':
                 result = self.adopt_goal(args, run) if approved else self.propose_goal(args, run)
             elif name == 'skill_propose':
@@ -1646,6 +1714,8 @@ class App:
                 kind, label = 'tool', permissions.TABLE[tool].label if tool in permissions.TABLE else str(tool)
                 detail = '\n'.join(f'{k}: {v}' for k, v in args.items())
             device = item.get('device') or 'pc'
+            if item.get('warning'):
+                detail = str(item['warning']) + '\n\n' + detail
             rows.append({'id': item['id'], 'kind': kind, 'tool': tool, 'label': label, 'detail': detail.strip()[:20000],
                          'created': item.get('created', item['expires'] - APPROVAL_SECONDS), 'expires': item['expires'],
                          'run_id': item.get('run_id'), 'conversation': item.get('conversation'),
@@ -2472,7 +2542,7 @@ class Handler(BaseHTTPRequestHandler):
             elif path == '/api/auto-backup':
                 result = self.app.auto_backup_action(body)
             elif path == '/api/settings':
-                result = self.app.store.save_settings(body)
+                result = self.app.save_settings(body)
             elif path == '/api/item':
                 kind = body.get('kind')
                 if kind == 'memory' and re.search(r'(?:api[_ -]?key|password|secret|gsk_|sk-proj-)', str(body.get('body', '')), re.I):
@@ -2670,6 +2740,11 @@ def main():
     wearable_connection = publish_connection(server)
     start_auto_backups(server.app)
     nudges.start_nudges(server.app.nudge_clock)   # the routine's nudges, once a minute (1.0.17 item F)
+    # The standing watch (standing.py A and C): the drives, the battery, the backups, every few minutes.
+    if server.app.lockdown is not None:
+        server.app.watch = standing.Watch(server.app.store.settings, server.app.standing_notice,
+                                          lambda key: server.app.notices and server.app.notices.drop(key), backup=server.app.auto_backup)
+        nudges.start_nudges(server.app.watch, first=180, every=standing.WATCH_SECONDS)
     if os.getenv('JARVIS_DESKTOP_TOKEN'):
         # Windows native numeric imports must precede the blocking stdin reader.
         try:

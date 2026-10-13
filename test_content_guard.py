@@ -273,6 +273,7 @@ class CoreTests(CoreCase):
         home.mkdir(parents=True, exist_ok=True)
         (home / 'settings.env').write_text('NAME=jarvis\nSERVICE_TOKEN=real-value\n', encoding='utf-8')
         run = self.run_for('tidy settings.env')
+        self.app.set_permission('workshop_files', permissions.DEFAULT)   # files ship as "ask first" (owner, 2026-10-13); the refusal is tested here
         for content in ('NAME=jarvis\nSERVICE_TOKEN=' + guard.SECRET + '\n', 'NAME=jarvis\n' + guard.MARKER + '\n'):
             with self.assertRaises(ValueError) as refused:
                 self.app.tool('workshop_files', {'action': 'write', 'path': 'settings.env', 'content': content}, run)
@@ -286,6 +287,7 @@ class CoreTests(CoreCase):
                                                   'reason': 'test'}, run)
 
     def test_a_local_address_opens_on_the_owners_words_or_approval(self):
+        self.app.set_permission('computer_open_page', permissions.DEFAULT)   # the opener ships as "ask first" (owner, 2026-10-13); the guard's own asking is tested here
         with patch('computer_tools.webbrowser.open', return_value=True) as browser:
             # finding 7: not named, so the owner is asked; the approval opens it.
             waiting = self.app.tool('computer_open_page', {'url': 'http://192.168.1.1/admin'}, self.run_for('open my router page'))

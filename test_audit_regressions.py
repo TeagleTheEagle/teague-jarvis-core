@@ -20,6 +20,7 @@ from unittest.mock import Mock, patch
 import uuid
 
 import about_you
+import standing
 import content_guard
 import development
 import permissions
@@ -48,6 +49,7 @@ def app_fixture():
         providers=providers, permissions=permissions, development=development, companion_tools=types.SimpleNamespace(stamp=lambda: {'at': 0}),
         content_guard=content_guard,   # 1.0.19: a question's context and tool results pass the guard (docs/GUARD.md)
         about_you=about_you,           # 1.0.19: the You page's guidance in the instructions (about_you.py)
+        standing=standing,             # the warning before a risky action (standing.py) is asked on the tool path
     ))
     app = ns['App'].__new__(ns['App'])
     app.stage4 = None

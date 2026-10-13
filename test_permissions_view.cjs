@@ -48,4 +48,7 @@ assert.match(p.stopText({stopped:true,since:new Date(2026,9,6,14,2).getTime()/10
 // A stop record that could not be read has no time: say only what is known.
 assert.equal(p.stopText({stopped:true,since:null,device:null},now),'JARVIS answers nothing and does nothing until you resume.');
 assert.match(p.stopText({stopped:true,since:now.getTime()/1000,device:'pc',saved:false},now),/could not be saved to disk: it holds until JARVIS is restarted\.$/);
+assert.equal(p.lockdownText(null),'');
+assert.match(p.lockdownText({lockdown:true,switches:[]}),/^LOCKDOWN IS ON: every action asks you first/);
+assert.match(p.lockdownText({lockdown:false,switches:[]}),/^No lockdown\./);
 console.log('permissions view: ok');

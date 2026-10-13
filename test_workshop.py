@@ -731,6 +731,8 @@ class ReviewFixTests(unittest.TestCase):
 class ApprovalTests(DeviceCase):
     def test_an_ask_first_tool_in_a_mission_waits_once_and_its_approval_goes_with_the_mission(self):
         self.assertEqual(self.owner('/api/permissions', {'tool': 'workshop_run', 'mode': 'ask'})[0], 200)
+        # The owner's own start covers the mission's commands (standing.py B); that switch off, a command waits as tested here.
+        self.assertEqual(self.owner('/api/settings', {'mission_covers': False})[0], 200)
         with patch.dict(os.environ, WORK_ENV, clear=True), patch.object(providers, 'request', side_effect=lambda *a, **k: replies.pop(0)):
             replies = [plan_reply('Run it'), calls('workshop_run', command='echo one'), calls('workshop_run', command='echo two'),
                        calls('workshop_mission', action='finish', outcome='failed', text='The command waits for your approval on the PC.')]

@@ -177,6 +177,50 @@ Consequence, said plainly: a mission's file writes now wait for the owner too, a
 run with the shipped positions ends at its first write with "awaiting approval" and says what waits; for missions to
 work unattended the owner sets "Read, write and delete files in the workshop" (and "Run commands") to Allowed.
 
+## Standing responsibilities and emergency authority (`standing.py`; owner's decision of 2026-10-13, "all four")
+
+The owner pasted a breakdown of the film JARVIS's permissions and asked for them; the faithful model there is "broad
+standing access, independent execution within assigned goals, explicit authorization for major consequential
+actions, and narrowly defined emergency authority". Translated to a PC and built as four things, each a switch in
+Settings > Permissions > Standing responsibilities (on as shipped; `store.settings`), none of which spends, sends,
+deletes or changes JARVIS himself:
+
+- **A. The standing watch (`Watch`, "Warn you about problems on his own")**: every five minutes (started by
+  `server.main` like the backups' clock) the Core looks at the drives, the battery and the automatic backups and
+  raises a `system` notice, once per condition while it lasts (a keyed notice; the key is dropped when it clears, so
+  it can be said again later). Spoken as a nudge is (the "proactive" setting, quiet hours), shown on the PC and the
+  devices. Warnings only: the watch fixes nothing.
+- **B. An assigned goal ("Your approval of a mission covers its workshop work")**: a mission the owner approved on its
+  card, a goal he adopted, or a mission he started himself in Settings > Workshop is `covered`
+  (`workshop.Desk.start_mission(covered=True)`, `run.covered`): in that mission, a switch at "ask first" for
+  `workshop_files`, `workshop_run` and `workshop_python` is read as Allowed (`server.App.tool`). Never outside the
+  workshop (the page and app openers, the mail, JARVIS himself still ask), never a tool switched Off, never after
+  taint, and the emergency stop still refuses. A mission the model started by itself with the missions switch at
+  Allowed showed the owner no card, so it is not covered.
+- **C. Emergency authority, three switches, written down:**
+  - *"Start himself again after a crash"*: the desktop app starts the Core again once after a crash and the window
+    reconnects (`desktop/backend.cjs restartAllowed/coreEnded`, `desktop/main.cjs restartCore`). The switch reaches the
+    app through `standing.json` beside the Core's data, which the Core writes at start and at every settings save. A
+    second crash within ten minutes shows the box as before. The launcher part is unit-tested
+    (`desktop/test/core-watch.test.cjs`) and gets its real test in the next release's regression and Stage 7.
+  - *"Make a backup when backups keep failing"*: when the automatic backups are overdue (two periods) or have never
+    worked, the watch tries one at once and tells the owner, once per streak; the result is in Settings > Backups.
+  - *"Lock himself down under attack"* (`Lockdown`): the guard tells the Core of every question it marks
+    (`content_guard.ON_TAINT`); three in ten minutes set the `lockdown` setting, and from then every tool that can
+    ask asks first whatever its switch (`App.tool_modes`; Off stays off, reads are unchanged), the model is told so in
+    its tool list, and the owner hears why. The owner ends it with END LOCKDOWN in Settings > Permissions.
+- **D. "Warn you before a risky action"** (`risk`): a command that wipes, removes, shuts down or forces (`rmdir /s`,
+  `rm -rf`, `format`, `shutdown`, `git push --force`, ...; at the start of a command or after `&&`/`|`/`;`), deleting a
+  folder or the whole workshop, a web address that is a program to download. JARVIS says the risk and asks once, on
+  the approval card ("JARVIS warns: ... Still go ahead?"; a device sees it first in the card's detail); the owner's yes
+  runs it. Not a veto, not remembered: the same call asks again. Only tools that would otherwise run at once; a tool
+  that always asks shows its whole call already. A mission cannot wait, so it ends as for any card.
+
+Not built, said plainly: home and building systems (no smart-home connection exists; its own release when there are
+devices), and anything with no PC counterpart (flight, suits, combat). Tests: `test_standing.py` (14);
+`test_workshop.py`, `test_goals.py`, `test_content_guard.py`, `test_audit_regressions.py`, `test_permissions_view.cjs`
+and `desktop/test/core-watch.test.cjs` extended or adjusted.
+
 ## Skills (`skills.py`; owner's decision of 2026-10-13)
 
 The owner asked, with a screenshot of Hermes Agent's skills, to "add to jarvis and veronica a skill thing like this and

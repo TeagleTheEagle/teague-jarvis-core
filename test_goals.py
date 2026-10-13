@@ -124,14 +124,14 @@ class GoalsInTheCoreTests(unittest.TestCase):
     def test_yes_adopts_it_and_starts_a_mission(self):
         result = self.suggest()
         started = {}
-        def start_mission(goal):
-            started['goal'] = goal
+        def start_mission(goal, covered=False):
+            started['goal'], started['covered'] = goal, covered
             return {'status': 'started', 'id': 'm-1', 'chat': 'mission-chat', 'minutes': 15, 'note': 'runs'}
         with patch.object(self.app.workshop, 'start_mission', start_mission):
             done = self.app.approve(result['approval']['id'], True)
         self.assertEqual(done['status'], 'applied')
         self.assertEqual(done['result']['status'], 'started')
-        self.assertEqual(started['goal'], 'Sort the photo folder by year and month')
+        self.assertEqual((started['goal'], started['covered']), ('Sort the photo folder by year and month', True), 'the owner\'s yes covers its workshop work (standing.py)')
         row = self.app.goals.list()[0]
         self.assertEqual((row['state'], row['mission']), ('adopted', 'm-1'))
         with self.assertRaises(ValueError):

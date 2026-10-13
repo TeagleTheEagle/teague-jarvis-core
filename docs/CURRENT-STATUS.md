@@ -240,6 +240,14 @@ owner's switch decision:** the page opener, the app opener, workshop files, the 
 missions ship as "ask first" like the workshop's commands (`permissions.py` `shipped=ASK`; `test_permissions.py`,
 `test_workshop.py`; docs/WORKSHOP.md "Switch positions as shipped"). Consequence noted there: with the shipped positions
 a mission stops at its first file write; the owner sets files (and commands) to Allowed for unattended missions.
+**Then (about 19:35), "all four" of the film-JARVIS permissions, as `standing.py`** (docs/WORKSHOP.md "Standing
+responsibilities and emergency authority"): the standing watch (drives, battery, backups: warnings on his own), a
+mission's approval covering its workshop work (which answers the consequence above: an approved mission no longer
+stops at its first write), the emergency authority (a restart after a crash through the desktop app and
+`standing.json`, a backup when backups keep failing, a lockdown after three guard-marked questions in ten minutes),
+and the warning before a risky action, asked once on the card. Six switches in Settings > Permissions, on as shipped.
+Tests: `test_standing.py` (14), `desktop/test/core-watch.test.cjs`; the launcher's restart gets its real test in the
+next release's regression and Stage 7.
 
 ## 2026-10-13, about 16:40 local (Hermes Agent, same chat resumed; owner: "give them those abilities", then "dont restore her limits and dont move anything", "go")
 

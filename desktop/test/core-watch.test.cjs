@@ -2,7 +2,7 @@
 // stopped" box after a requested shutdown). Fake probes and temporary files only: no Core, no windows.
 const {test}=require('node:test'),assert=require('node:assert/strict'),path=require('node:path'),fs=require('node:fs'),os=require('node:os');
 const {spawn}=require('node:child_process');
-const {connectionState,processAlive,watchCore,coreEnded}=require('../backend.cjs');
+const {connectionState,processAlive,watchCore,coreEnded,restartAllowed}=require('../backend.cjs');
 
 const link={origin:'http://127.0.0.1:50000',token:'a'.repeat(64),pid:4242};
 function folder(){return fs.mkdtempSync(path.join(os.tmpdir(),'jarvis-core-watch-'));}
@@ -118,4 +118,32 @@ test('the app quits quietly after a requested stop and shows the box only for a 
  const shown=[],quits=[];
  coreEnded('crashed',{quitting:()=>true,showErrorBox:text=>shown.push(text),quit:()=>quits.push(1)});
  assert.deepEqual([shown,quits],[[],[]],'nothing while the app is already quitting');
+});
+
+// Emergency authority (standing.py C, owner 2026-10-13): one automatic restart after a crash, on the owner's switch.
+test('after a crash the Core is started again once when standing.json allows it; otherwise the box as before',async()=>{
+ const dir=folder();
+ assert.equal(restartAllowed('C:/none',dir),false,'no standing.json: no automatic restart');
+ fs.writeFileSync(path.join(dir,'standing.json'),JSON.stringify({emergency_restart:false}));
+ assert.equal(restartAllowed('C:/none',dir),false,'the switch off');
+ fs.writeFileSync(path.join(dir,'standing.json'),JSON.stringify({emergency_restart:true,restart_window_seconds:600}));
+ let clock=1000000;const state={};
+ assert.equal(restartAllowed('C:/none',dir,state,()=>clock),true,'the switch on: once');
+ clock+=5*60*1000;
+ assert.equal(restartAllowed('C:/none',dir,state,()=>clock),false,'a second crash inside the window is not restarted');
+ clock+=6*60*1000;
+ assert.equal(restartAllowed('C:/none',dir,state,()=>clock),true,'after the window, again');
+ fs.writeFileSync(path.join(dir,'standing.json'),'not json');
+ assert.equal(restartAllowed('C:/none',dir,{},()=>clock),false,'an unreadable file means no restart');
+ const shown=[],quits=[],restarts=[];
+ await coreEnded('crashed',{quitting:()=>false,showErrorBox:t=>shown.push(t),quit:()=>quits.push(1),restart:async()=>restarts.push(1),mayRestart:()=>true});
+ assert.deepEqual([shown,quits,restarts],[[],[],[1]],'a crash with the switch on: restarted, no box, no quit');
+ await coreEnded('crashed',{quitting:()=>false,showErrorBox:t=>shown.push(t),quit:()=>quits.push(1),restart:async()=>{throw new Error('no');},mayRestart:()=>true});
+ assert.deepEqual([shown.length,quits],[1,[1]],'a restart that fails: the box and the quit as before');
+ const shown2=[],quits2=[],restarts2=[];
+ coreEnded('crashed',{quitting:()=>false,showErrorBox:t=>shown2.push(t),quit:()=>quits2.push(1),restart:async()=>restarts2.push(1),mayRestart:()=>false});
+ assert.deepEqual([shown2.length,quits2,restarts2],[1,[1],[]],'not allowed: as before');
+ coreEnded('unresponsive',{quitting:()=>false,showErrorBox:t=>shown2.push(t),quit:()=>quits2.push(1),restart:async()=>restarts2.push(1),mayRestart:()=>true});
+ assert.deepEqual([shown2.length,restarts2],[2,[]],'only a crash is restarted; a Core that stopped answering is reported');
+ fs.rmSync(dir,{recursive:true,force:true});
 });

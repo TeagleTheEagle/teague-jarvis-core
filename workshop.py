@@ -84,7 +84,7 @@ You are carrying out a mission in your workshop on this PC on your own: the owne
 4. Packages: never install anything into JARVIS's own Python (%JARVIS_PYTHON% runs a script with the shipped packages only). For a package: workshop_python make_venv once, then "pip install <name>" with workshop_run; after that "python script.py" uses the workshop's own environment.
 5. Report progress with workshop_mission progress after each finished step (the step number and one line). End with workshop_mission finish: outcome "done" or "failed", and a plain report of what exists now (files and how to run them) and what you verified by running it. Never claim what you did not see in a result.
 6. Save one lesson with workshop_lessons save when you learned something that saves time next time: a package that does not work, a command that does, a fix that was needed. Lessons from earlier work are listed below; use them. A skill the owner approved (listed above, if any) that matches the goal is read with skill_read before you plan around it.
-7. Stay inside the workshop and the folders the owner added; JARVIS's own config, data and program folders and its key file are refused by name. Never read, print or write keys or passwords. If a tool answers "awaiting approval", the owner must approve it on the PC and a mission cannot wait: finish with outcome "failed" and say exactly what waits. If a step needs the owner (a decision, a sign-in, something outside the workshop), the same.'''
+7. Stay inside the workshop and the folders the owner added; JARVIS's own config, data and program folders and its key file are refused by name. Never read, print or write keys or passwords. If a tool answers "awaiting approval", the owner must approve it on the PC and a mission cannot wait: finish with outcome "failed" and say exactly what waits. (The owner's approval of this mission covers its files and commands inside the workshop; what reaches outside still asks.) If a step needs the owner (a decision, a sign-in, something outside the workshop), the same.'''
 PLAN_REQUEST = ('Write the plan now and nothing else: answer with JSON only, {"steps": ["...", "..."]}, two to twelve concrete steps in '
                 'order, each one thing you can do with the workshop tools and check. No tool calls yet.')
 ACT_REQUEST = 'Carry out the mission now, step by step, with the tools. Begin with step 1.'
@@ -1148,7 +1148,7 @@ class Desk:
         return [t for t in offered if t['function']['name'] in TOOLS or t['function']['name'] in MISSION_EXTRA_TOOLS]
 
     # ---- the tools ----
-    def act(self, name, args, run=None):
+    def act(self, name, args, run=None, covered=False):
         if name == 'workshop_files':
             return self.files.act(args)
         if name == 'workshop_run':
@@ -1165,13 +1165,13 @@ class Desk:
         if name == 'workshop_lessons':
             return self.lessons.act(args)
         if name == 'workshop_mission':
-            return self.mission_act(args, run)
+            return self.mission_act(args, run, covered)
         raise WorkshopError('Unknown workshop tool.')
 
-    def mission_act(self, args, run=None):
+    def mission_act(self, args, run=None, covered=False):
         action = args.get('action')
         if action == 'start':
-            return self.start_mission(args.get('goal', ''))
+            return self.start_mission(args.get('goal', ''), covered=covered)
         if action == 'status':
             row = self.missions.get(args['id']) if args.get('id') else self.missions.latest()
             if not row:
@@ -1195,7 +1195,9 @@ class Desk:
             out['log'] = row['log'][-40:]
         return out
 
-    def start_mission(self, goal):
+    def start_mission(self, goal, covered=False):
+        """`covered` (standing.py B, owner 2026-10-13): the owner approved this mission (its card, a goal he adopted, his
+        own click), so that approval covers the mission's file and command work inside the workshop (server.App.tool)."""
         goal = ' '.join(str(goal or '').split())
         if len(goal) < 5:
             raise WorkshopError('Give the mission a goal in a sentence or two.')
@@ -1212,6 +1214,7 @@ class Desk:
             row = self.missions.create(goal)
             run = self.make_run(row['conversation'])
             run.mission = row['id']
+            run.covered = bool(covered)
             try:
                 self.store.message(row['conversation'], 'user', 'Mission: ' + goal)
             except Exception:
