@@ -221,6 +221,22 @@ current record.
 Rules and authority are in `CLAUDE.md` and `../governance/OWNER-DELEGATION.md`; this file
 only records where the work stands. Historical handover context: `docs/PROJECT-CONTEXT.md`.
 
+## 2026-10-13, about 21:30 local (Hermes Agent, same session; owner: "stage 7 done", "write the 1.0.19 update plan", "I approve the update of my everyday JARVIS to 1.0.19")
+
+**The everyday JARVIS is 1.0.19-629bb5621d34** (`EVERYDAY_UPDATE_COMPLETE`, 21:15; on `claude/release-1.0.19`:
+`docs/UPDATE-EVERYDAY-1.0.19.md`, `docs/update-1.0.19-evidence/`, `tools/host/update-1.0.19/` version 3 of the launcher,
+its sandbox harness and rehearsal 37 of 37, its independent review with 2 high findings inherited from the 1.0.17
+launcher and fixed: failure messages lost their state line, a second rollback would have switched forward). Stage 7
+for 1.0.19 in the VM: 29 of 29 (`90f7f83`). **On this branch:** autonomy items 1 and 3 committed (`fb5fd0a`): the
+standing purpose, goals with success condition / priority / cost limit / stopping condition, `finish` with `verified`,
+an interrupted mission taken up again once; full suite 931 passed. **Open, seen tonight:** (a) after the restart the
+window closed on "Core not responding" while the Core was still loading on a busy PC (15 s patience in
+`desktop/backend.cjs watchCore`): give the window more patience after a login launch, next release; (b) "Private
+network door: could not open port 8790" in Recent activity (the 1.0.16 door; not changed by 1.0.19); (c) the C: cleanup
+on the owner's word (1.0.16, `JARVIS-package-before-1.0.19-629bb5621d34`, `config\.env.before-1.0.19-629bb5621d34`).
+**Not started:** autonomy items 2, 4, 5; the changed-files-only updater (owner's point 1); VERONICA as a persona (merge
+plan phase 2) and her skills (phase 3).
+
 ## 2026-10-13, about 18:50 local (Hermes Agent, new session; owner: "build skills", then "do this")
 
 **Skills: BUILT AND TESTED on `claude/veronica-merge` (the branch of the next release), on top of the goals commit
