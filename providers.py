@@ -551,7 +551,9 @@ OPENROUTER_DEFAULT_FAST_MODEL = 'qwen/qwen3.8-flash'           # Economy, and th
 OPENROUTER_DEFAULT_CODING_MODEL = 'qwen/qwen3.8-max-0902'      # coding and research jobs (plan D2, Qwen since 2026-10-13)
 OPENROUTER_DEFAULT_FALLBACK_MODEL = 'qwen/qwen3.8-flash'       # OpenRouter tries it when the first model fails (plan D8)
 # The cloud option for hearing (plan D7): none by default, as OpenRouter's speech-to-text models are not Qwen; this PC's
-# own recognition does the hearing. An OPENROUTER_STT_MODEL line (e.g. openai/whisper-1) turns the cloud option on.
+# own recognition does the hearing. An OPENROUTER_STT_MODEL line turns the cloud option on only when it names a Qwen
+# model (the owner's Qwen-only rule of 2026-10-13 below; OpenRouter listed no Qwen speech model on 2026-10-13, so in
+# practice the cloud option stays off and this PC does the hearing).
 OPENROUTER_DEFAULT_STT_MODEL = ''
 # Thinking counts against the reply limit on OpenRouter: with a small limit the owner's function test of 2026-10-12 got a
 # cut-off answer ("TEAG") and an empty one. The limit is a ceiling, not a charge, but OpenRouter refuses (402) when the credit
@@ -565,6 +567,27 @@ OPENROUTER_SEARCH_RESULTS = 5
 OPENROUTER_AUDIO_FORMATS = {'audio/wav': 'wav', 'audio/mpeg': 'mp3', 'audio/webm': 'webm', 'audio/ogg': 'ogg', 'audio/mp4': 'm4a'}
 OPENROUTER_AUDIO_LIMIT = 20 * 1024 * 1024
 _MODEL_NAME = re.compile(r'[A-Za-z0-9][A-Za-z0-9._:/-]{0,95}')
+
+# The owner's rule (2026-10-13, "he is only allowed qwen models"): through OpenRouter, every job runs on a Qwen model.
+# The defaults above already are Qwen; this guard refuses a key-file line that names another maker's model at the point
+# a request would be built, so a non-Qwen model can never be sent whatever the key file says. It makes the Qwen-only
+# choice of 2026-10-13 a rule in code, not a convention in the defaults.
+OPENROUTER_MAKER = 'qwen/'
+
+
+def _is_qwen_model(name):
+    return isinstance(name, str) and name.strip().lower().startswith(OPENROUTER_MAKER)
+
+
+def openrouter_qwen_only(model, where):
+    """One OpenRouter model under the owner's Qwen-only rule: the trimmed name, or a ProviderError that says the rule
+    and names the job, for the owner to fix the key-file line. Every request path calls this before anything is sent."""
+    if not _is_qwen_model(model):
+        name = model.strip() if isinstance(model, str) else ''
+        raise ProviderError(f'Only Qwen models may answer through OpenRouter (the owner\'s rule), and the {where} is '
+                            f'{name or "not a model name"}: not a Qwen model. Fix that OPENROUTER line in the key file, '
+                            f'or remove it to use the Qwen default, and restart JARVIS.')
+    return model.strip()
 
 
 def openrouter_plan(mode=None, text='', vision=False, job='chat'):
@@ -601,11 +624,13 @@ def openrouter_chat(messages, tools, emit, cancel, vision=False, mode=None, text
     if not key:
         raise ProviderError('OpenRouter is selected. Add OPENROUTER_API_KEY locally and restart JARVIS.')
     model, effort = openrouter_plan(mode, text, vision, job)
+    model = openrouter_qwen_only(model, 'coding model' if job == 'coding' else 'model')  # the owner's Qwen-only rule
     extra = {'max_tokens': max(int(max_tokens or 0), OPENROUTER_REPLY_TOKENS)}
     if effort:
         extra['reasoning'] = {'effort': effort, 'exclude': True}  # the thinking itself is not sent back
     second = openrouter_fallback(model) if fallback else None
     if second:
+        openrouter_qwen_only(second, 'backup model')
         extra['models'] = [model, second]
     try:
         return _compatible_chat('OpenRouter', OPENROUTER_BASE + '/chat/completions', key, model, messages, tools, emit, cancel,
@@ -653,7 +678,8 @@ def openrouter_search(query, count=OPENROUTER_SEARCH_RESULTS):
     key = os.getenv('OPENROUTER_API_KEY')
     if not key:
         raise ProviderError('OpenRouter web search needs OPENROUTER_API_KEY.')
-    body = {'model': os.getenv('OPENROUTER_FAST_MODEL') or OPENROUTER_DEFAULT_FAST_MODEL,
+    body = {'model': openrouter_qwen_only(os.getenv('OPENROUTER_FAST_MODEL') or OPENROUTER_DEFAULT_FAST_MODEL,
+                                          'web search model'),  # the owner's Qwen-only rule
             'messages': [{'role': 'user', 'content': 'Search the web for: ' + query + '\nAnswer in one short sentence.'}],
             'plugins': [{'id': 'web', 'max_results': count}], 'max_tokens': 600, 'reasoning': {'effort': 'none'}}
     result = request(OPENROUTER_BASE + '/chat/completions', body, {'Authorization': 'Bearer ' + key}, timeout=60, operation='web search')
@@ -701,6 +727,7 @@ def openrouter_transcribe(audio, mime, timeout=60):
     model = openrouter_stt_model()
     if not model:
         raise ProviderError('OpenRouter speech recognition has no model: add an OPENROUTER_STT_MODEL line to use it. Local recognition works without it.')
+    model = openrouter_qwen_only(model, 'speech recognition model')  # the owner's Qwen-only rule
     fmt = OPENROUTER_AUDIO_FORMATS.get(mime.split(';')[0])
     if not fmt:
         raise ValueError('Unsupported recording format.')
@@ -1052,10 +1079,11 @@ QWEN_ASR_LIMIT = 10 * 1024 * 1024   # Alibaba's limit for one recording once it 
 
 def cloud_speech():
     """The provider that turns speech into text in the cloud: the chosen AI provider, when its key is in place
-    (and, for OpenRouter, a speech model is named). None otherwise. (The app's own default is local recognition with
-    Whisper, which needs neither.)"""
+    (and, for OpenRouter, a Qwen speech model is named — the owner's Qwen-only rule of 2026-10-13; another maker's
+    OPENROUTER_STT_MODEL line leaves the cloud option off and this PC hearing). None otherwise. (The app's own default
+    is local recognition with Whisper, which needs neither.)"""
     name = provider()
-    if name == 'openrouter' and os.getenv('OPENROUTER_API_KEY') and openrouter_stt_model():
+    if name == 'openrouter' and os.getenv('OPENROUTER_API_KEY') and _is_qwen_model(openrouter_stt_model()):
         return 'openrouter'
     if name == 'qwen' and os.getenv('DASHSCOPE_API_KEY'):
         return 'qwen'
