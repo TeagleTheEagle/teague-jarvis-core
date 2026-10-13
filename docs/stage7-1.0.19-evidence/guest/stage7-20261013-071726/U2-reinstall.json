@@ -1,0 +1,23 @@
+{
+    "status":  "PASS",
+    "setup_exit":  0,
+    "seconds":  311,
+    "setup_log":  "setup-reinstall.log",
+    "reinstall":  "installed",
+    "release":  "1.0.19-629bb5621d34",
+    "installer_seconds":  {
+                              "verify_package":  14.405,
+                              "copy":  50.318,
+                              "verify_copy":  114.966,
+                              "switch":  0.082
+                          },
+    "output":  null,
+    "entry_present":  true,
+    "entry_name":  "JARVIS",
+    "entry_version":  "1.0.19",
+    "core_ready":  true,
+    "memory_restored":  true,
+    "verify":  "verified",
+    "shortcuts_word":  "written",
+    "shortcuts_expected":  "written"
+}

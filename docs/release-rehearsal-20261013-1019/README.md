@@ -78,7 +78,26 @@ updated to 1.0.19 while running 73.2 s wall, rollback 13 s, update again 33.8 s 
 wall; the interrupted update's rerun 34.1 s wall. Every lap far inside the Gate 20 bound. The driver needed no change;
 the owner's real shortcuts and his running JARVIS untouched (`rehearsal-summary.json`).
 
+## Stage 7 check in the test VM: STAGE_7_COMPLETE, 29 of 29 (2026-10-13, 17:34 to 19:41 local)
+
+The owner approved the check at 17:20 ("I approve the Stage 7 check of 1.0.19";
+`governance/STAGE7-1.0.19-APPROVAL-RECORD.json`), built the disc at 17:26 (`stage7-disc-1.0.19-629bb5621d34.json`: zip,
+Setup and the three guest files hash-equal to the approval, every payload file read back, the copy in media hash-equal),
+started the VM at 17:29 from FRESH-PREREQ with both discs, and ran `stage7` twice. Every phase passed in the VM
+(guest `stage7-driver-log.jsonl`: Install 18:01, AfterRestart 18:17, Uninstall 18:25, Update 19:18, Interrupt 19:38, then
+"all phases passed"); 28 PASS records plus the restart decided from Windows' own boot id (7 -> 10). The snapshot
+**STAGE7-PASS-1.0.19-629bb5621d34** (`9c81ad38-310e-46f1-b79a-a99de5934ca6`) was taken at 19:41 after a clean shutdown,
+all nine earlier snapshots kept; the `.vbox` file read at the evaluation: that snapshot current, `currentStateModified`
+false. Timings on the installer's own laps, all inside the Gate 20 bound: first install 539.6 s (Setup wall 753.9 s),
+reinstall 179.8 s, update 537.7 s, rollback 119.4 s wall, update again 300.9 s, update through the Setup 162.0 s,
+update after the interruption 401.8 s, every stop under 8 s; no disposition needed (1.0.17's check needed one). One
+note, as in 1.0.17's check: 4 processes at the login launch, 8 at every other. The evaluation
+`docs/stage7-1.0.19-evidence/stage7-evaluation.json` (schema v2), the host and guest manifests and the records are
+copied under `docs/stage7-1.0.19-evidence/` (the Inno Setup logs stay on D:). Evaluated from the records on D: only; no
+VirtualBox command run by Hermes.
+
 ## Not yet
 
-The VM check (`docs/STAGE7-CHECK-1.0.19.md`, for the owner's approval) and, after it, the update of the owner's everyday
-JARVIS (his separate decision).
+The update of the owner's everyday JARVIS from 1.0.17 to 1.0.19 (his separate decision; `docs/UPDATE-EVERYDAY-1.0.19.md`
+for approval, through the Setup). Before it: his key file must hold `OPENROUTER_API_KEY` (1.0.19) and keep the old
+provider lines while a rollback to 1.0.17 is still wanted.

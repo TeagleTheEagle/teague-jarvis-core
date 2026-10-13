@@ -220,6 +220,17 @@ current record.
 Rules and authority are in `CLAUDE.md` and `../governance/OWNER-DELEGATION.md`; this file
 only records where the work stands. Historical handover context: `docs/PROJECT-CONTEXT.md`.
 
+## 2026-10-13, about 19:50 local (Hermes Agent): STAGE_7_COMPLETE for 1.0.19 in the test VM, 29 of 29
+
+Release `1.0.19-629bb5621d34` (OpenRouter only, Fish Audio for the voice, on 1.0.18's time fix) passed the Stage 7 check
+in the VM `JARVIS-S6-FRESH` on the owner's approval of 17:20: install from the Setup, restart, uninstall through
+Installed apps, reinstall, the update from the installed 1.0.17-0d38218c4e1d while running, rollback, update again,
+update through the Setup, and the update killed mid-copy and run again; every timing inside the Gate 20 bound, no
+disposition. Snapshot STAGE7-PASS-1.0.19-629bb5621d34 taken after a clean shutdown. Record:
+`docs/release-rehearsal-20261013-1019/README.md` (the section "Stage 7 check in the test VM") and
+`docs/stage7-1.0.19-evidence/`. **Next, on the owner's word only:** the update of the everyday JARVIS (1.0.17) to 1.0.19
+through the Setup (`docs/UPDATE-EVERYDAY-1.0.19.md` for approval).
+
 ## Where we are
 
 - **SWITCH-OVER COMPLETE (2026-10-04T08:45Z).** (Since 2026-10-05 the everyday JARVIS is 1.0.14, see the first

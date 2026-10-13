@@ -1,0 +1,31 @@
+{
+    "schema":  "jarvis-stage7-run-v1",
+    "overall":  "PASS",
+    "phase":  "Uninstall",
+    "home":  "C:\\Users\\jarvis-s6-guest\\AppData\\Local\\JARVIS",
+    "package":  "E:\\",
+    "started_utc":  "2026-10-13T07:17:26.1098299Z",
+    "finished_utc":  "2026-10-13T07:25:58.3131877Z",
+    "steps":  [
+                  {
+                      "step":  "E0-not-elevated",
+                      "status":  "PASS",
+                      "at":  "2026-10-13T07:17:26.5198598Z"
+                  },
+                  {
+                      "step":  "U1-uninstall",
+                      "status":  "PASS",
+                      "at":  "2026-10-13T07:19:03.2714544Z"
+                  },
+                  {
+                      "step":  "U2-reinstall",
+                      "status":  "PASS",
+                      "at":  "2026-10-13T07:25:50.5577651Z"
+                  },
+                  {
+                      "step":  "U3-final-stop",
+                      "status":  "PASS",
+                      "at":  "2026-10-13T07:25:58.2767600Z"
+                  }
+              ]
+}
