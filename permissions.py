@@ -146,6 +146,10 @@ TABLE = {
     'goal_propose': _rule('Suggest a goal of his own', CHANGES, PC,
         'Yes: decline it, or stop the mission it became.', asks=ALWAYS, receipt=True,
         note='Always asks first: JARVIS may suggest a goal he thinks worth doing; you see it and the reason on screen and answer. Approved, it runs as a workshop mission under every mission limit; nothing starts before you say yes. A few may wait at a time (goals.py).'),
+    'skill_read': _rule('Read his skills', reach=LOCAL),
+    'skill_propose': _rule('Keep a new skill', CHANGES, LOCAL,
+        'Yes: turn the skill off or delete it in Settings > Workshop.', asks=ALWAYS, receipt=True,
+        note='Always asks first: JARVIS may suggest keeping know-how for a job that comes up again (the steps, and at most one script for the workshop); you read the whole text on screen and answer. A skill gives him no new tool and no permission. You turn any skill off, on or delete it in Settings > Workshop (skills.py).'),
     # ---- answers about itself ----
     'time_now': _rule('Read the time', wearable=True),
     'calculate': _rule('Calculate', evidence=True),

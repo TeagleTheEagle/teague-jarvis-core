@@ -10,6 +10,17 @@ const JarvisWorkshop = {
   goalState(state) {
     return {proposed: 'Waiting for your answer', adopted: 'Approved', declined: 'Declined', expired: 'Lapsed unanswered', failed: 'Approved, but could not start'}[state] || String(state || '');
   },
+  // A skill (skills.py): know-how JARVIS keeps for a job that comes up again, each one approved by the owner.
+  skillState(state) {
+    return {proposed: 'Waiting for your answer', active: 'On', off: 'Off', paused: 'Paused', declined: 'Declined',
+            expired: 'Lapsed unanswered', replaced: 'Replaced by a newer version'}[state] || String(state || '');
+  },
+  skillLine(skill) { return JarvisWorkshop.skillState(skill.state) + ': ' + (skill.name || '') + (skill.description ? ' (' + skill.description + ')' : ''); },
+  skillUse(skill) {
+    const used = Number(skill.used) || 0;
+    return 'Read ' + (used === 0 ? 'not yet' : used === 1 ? 'once' : used + ' times') + (skill.script_name ? ' · script ' + skill.script_name : ' · no script') +
+      (skill.source ? ' · taken from ' + skill.source : '');
+  },
   minutesText(minutes) { return 'A mission may run for up to ' + minutes + ' minute' + (minutes === 1 ? '' : 's') + ' and ' + 60 + ' tool calls; then it stops and reports.'; },
   foldersText(folders) {
     if (!folders || !folders.length) return 'No other folder: JARVIS may use the workshop folder only.';
@@ -53,9 +64,10 @@ if (typeof document !== 'undefined') (() => {
     'checks and corrects on his own, then reports. Say "Jarvis, start a mission: ..." or type a goal below. Every tool a mission uses ' +
     'obeys its switch in Settings > Permissions; the emergency stop ends a mission at once.');
   const folderLine = el('p', 'workshop-folder'), foldersBox = el('div', 'workshop-folders'), minutesBox = el('div', 'workshop-minutes'),
-        pythonLine = el('p', 'workshop-python'), missionBox = el('div', 'workshop-missions'), lessonBox = el('div', 'workshop-lessons');
+        pythonLine = el('p', 'workshop-python'), missionBox = el('div', 'workshop-missions'), lessonBox = el('div', 'workshop-lessons'),
+        skillBox = el('div', 'workshop-skills');
   missionBox.setAttribute('aria-live', 'polite');
-  panel.append(intro, folderLine, pythonLine, foldersBox, minutesBox, missionBox, lessonBox);
+  panel.append(intro, folderLine, pythonLine, foldersBox, minutesBox, missionBox, skillBox, lessonBox);
   const category = q('.ti-settings-group[data-setting="Workshop"]'), settingsView = q('#settingsView');
   if (category) category.append(panel); else if (settingsView) { panel.prepend(el('h2', '', 'Workshop')); settingsView.prepend(panel); }
 
@@ -137,11 +149,42 @@ if (typeof document !== 'undefined') (() => {
     }) : [el('p', 'workshop-note', 'Nothing yet. JARVIS saves a lesson when a job taught him something worth keeping.')]));
   }
 
+  // Skills (skills.py): the owner answers a suggestion on its approval card (Reliability > waiting approvals, or the
+  // chat); here he reads every skill and turns it off, on, or deletes it. JARVIS reads the steps from his database,
+  // so nothing typed into the files in the workshop changes a skill.
+  const openSkills = new Set();
+  function renderSkills(data) {
+    const rows = (data.skills || []).map(s => {
+      const kept = s.state === 'active' || s.state === 'off' || s.state === 'paused';
+      const node = el('article', 'workshop-mission workshop-skill ' + (s.state === 'active' ? 'ok' : s.state === 'proposed' ? '' : 'warn'));
+      node.append(el('b', '', JarvisWorkshop.skillLine(s)));
+      if (s.note) node.append(el('p', 'workshop-note warn', s.note));
+      const steps = el('details'); steps.open = openSkills.has(s.id);
+      steps.ontoggle = () => { if (steps.open) openSkills.add(s.id); else openSkills.delete(s.id); };
+      steps.append(el('summary', '', 'Steps' + (s.script_name ? ' and script' : '')), el('pre', 'workshop-result', s.instructions || ''));
+      if (s.script_name) steps.append(el('p', 'workshop-note', s.script_name + ' (in the workshop: skills/' + s.name + '/)'), el('pre', 'workshop-result', s.script || ''));
+      node.append(steps, el('small', '', JarvisWorkshop.skillUse(s) + ' · suggested by ' + (s.by || 'JARVIS') + ' ' + new Date(s.created * 1000).toLocaleString()));
+      if (kept) {
+        const controls = el('div', 'workshop-controls');
+        controls.append(s.state === 'active' ? button('TURN OFF', 'text-button', () => act({action: 'skill_off', id: s.id}))
+                                             : button('TURN ON', 'text-button', () => act({action: 'skill_on', id: s.id})),
+          button('DELETE', 'text-button', () => { if (window.confirm('Delete the skill "' + s.name + '"? Its files go to the workshop\'s recycle folder.')) act({action: 'delete_skill', id: s.id}); }));
+        node.append(controls);
+      } else if (s.state !== 'proposed') {
+        node.append(button('DELETE', 'text-button', () => act({action: 'delete_skill', id: s.id})));
+      }
+      return node;
+    });
+    skillBox.replaceChildren(el('h3', '', 'Skills'),
+      el('p', 'workshop-note', 'Know-how JARVIS keeps for jobs that come up again: the steps, and at most one script. He suggests one when he has worked out a job, or when you show him one; you read the whole text on the approval card and it is kept only if you say yes. A skill gives him no new tool and no permission.'),
+      ...(rows.length ? rows : [el('p', 'workshop-note', 'No skill yet.')]));
+  }
+
   function render(data) {
     folderLine.replaceChildren(el('span', '', 'Folder: '), el('code', '', data.folder || ''), button('REFRESH', 'text-button', load),
       el('span', 'workshop-note', ' Replaced and deleted files are kept in ' + (data.recycle || '') + '.'));
     pythonLine.textContent = JarvisWorkshop.interpreterText(data.interpreters);
-    renderFolders(data); renderMinutes(data); renderMissions(data); renderLessons(data);
+    renderFolders(data); renderMinutes(data); renderMissions(data); renderSkills(data); renderLessons(data);
   }
   async function load() {
     if (inspecting()) { missionBox.textContent = 'Not shown during an inspection.'; return; }

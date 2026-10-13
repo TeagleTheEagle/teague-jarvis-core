@@ -33,7 +33,7 @@ OWNER_FILES = ('personality.txt', 'owner-style.css')
 # launchers and the updater (desktop/*.cjs), and the build and release tools. An installed JARVIS applies none of
 # them anyway: a program-file change is a proposal for the engineer and the next release (ONE CORE, ONE JARVIS).
 PROTECTED_FILES = frozenset(('server.py', 'actions.py', 'permissions.py', 'content_guard.py', 'development.py',
-                             'core_lock.py', 'runtime_paths.py', 'store.py', 'goals.py', 'desktop_launcher.py',
+                             'core_lock.py', 'runtime_paths.py', 'store.py', 'goals.py', 'skills.py', 'desktop_launcher.py',
                              'switch_over.py', 'update_history.py', 'recovery.py', 'auto_backup.py'))
 _PROGRAM_PATH = re.compile(r'^(?:[a-z][a-z0-9_]*\.py|static/[a-z0-9_.-]+\.(?:js|css|html)|desktop/companion(?:-preload)?\.(?:js|css|html))$')
 PROGRAM_FILES = ('static/pro.css', 'static/app.js', 'static/voice.js', 'static/index.html', 'static/mic-worklet.js',

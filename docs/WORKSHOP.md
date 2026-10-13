@@ -166,6 +166,42 @@ An installed JARVIS applies none of them: a program-file change is saved as a **
 the next release, which the owner approves as every release (ONE CORE, ONE JARVIS). Running from the source folder a
 change applies after approval, with the difference shown, as before.
 
+## Skills (`skills.py`; owner's decision of 2026-10-13)
+
+The owner asked, with a screenshot of Hermes Agent's skills, to "add to jarvis and veronica a skill thing like this and
+they get the skill's ability", then "build skills". Built in the Core, so VERONICA has it too once she is a persona of
+this Core (the merge plan); her separate program in `veronica\` was not touched. A skill is **know-how, not a power**:
+the steps for a job that comes up again, and at most one script for the workshop. It gives no new tool and no
+permission; every step still goes through JARVIS's own tools under the owner's switches, the guard, the time limits and
+the emergency stop.
+
+- **What the model sees:** every question's instructions (and so every mission's) list the skills that are on, one line
+  each (name and what it is for, at most about 4,000 characters). When a job matches, the model reads the skill with
+  **`skill_read` (name)** for that question only; without a name it lists them. A mission is offered `skill_read`.
+- **`skill_propose` (name, description, instructions, script_name, script, source)**: JARVIS suggests keeping a skill
+  he worked out, or one the owner showed him from a page or a catalog (rewritten for his own tools, the address as
+  source). The text is checked first: a sentence the guard would cut (instructions to the AI, a fake turn, a request
+  to hide something from the owner), hidden characters, or any key, token or password refuses the suggestion whole,
+  so what the owner approves is exactly what JARVIS reads later. Then an **approval card** shows the whole text and
+  the script, on the PC and on a device that may approve; it waits a day (`skills.ANSWER_SECONDS`).
+- **Yes** (`server.App.adopt_skill`): the skill is on, listed from the next question, and its files are put in the
+  workshop under `skills/<name>/` (`SKILL.md` for the owner to read, and the script). Under the name of a skill he
+  has, it is a new version: the card says "Replace the skill ...", and yes marks the old one `replaced`.
+  **No**: kept as `declined`; the same text is not accepted again under that name for a week.
+- **The record decides, not the file:** JARVIS reads a skill's steps from his database, never from `SKILL.md` (a
+  workshop command could change that file). A script on disk that differs from the approved one is put back as
+  approved (the changed copy goes to the recycle folder) before `skill_read` says it is there.
+- **Caps, counted from the record:** 3 suggestions waiting at a time, 40 skills kept, one skill per name.
+- **No recursion, taint, off:** a mission may read skills and never suggest one (refused; its card would end with it).
+  A question in which outside text tried to instruct the AI cannot suggest one. "Keep a new skill" and "Read his
+  skills" are switches in Settings > Permissions. At a Core start every waiting suggestion lapses.
+- **A skill that keeps failing pauses:** a skill read by 2 missions in a row that did not complete is `paused` (not
+  listed, not readable) and the owner is told; a mission that finished clears the count, a stopped one says nothing.
+- **Settings > Workshop > Skills:** every skill with its state, its steps and script (folded), how often it was read,
+  who suggested it and where it came from; TURN OFF, TURN ON (a paused one too) and DELETE (its files go to the
+  recycle folder). `skills.py` is protected from JARVIS's own change proposals, like `goals.py`. Tests:
+  `test_skills.py` (20), `test_permissions.py` and `test_workshop_view.cjs` extended.
+
 ## Tests (`test_workshop.py`, 32; `test_workshop_view.cjs`)
 
 The files (the recycle folder, nothing outside, an added folder, a binary file, the tool arguments); the runner (a

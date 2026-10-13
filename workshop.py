@@ -46,7 +46,8 @@ import content_guard
 TOOLS = ('workshop_files', 'workshop_run', 'workshop_python', 'workshop_lessons', 'workshop_mission')
 # The tools a mission is offered besides the workshop's own: reads that help a job along. Nothing that changes
 # the owner's saved things, mail, music or the window (a mission is unattended).
-MISSION_EXTRA_TOOLS = ('web_search', 'time_now', 'calculate', 'computer_system_info')
+# skill_read (skills.py): a mission reads the owner's approved know-how; it never suggests a skill.
+MISSION_EXTRA_TOOLS = ('web_search', 'time_now', 'calculate', 'computer_system_info', 'skill_read')
 RECYCLE = '.recycle'
 VENV = '.venv'
 SKIPPED = frozenset(('.venv', '__pycache__', 'node_modules', '.git', RECYCLE))   # listed as folders, never entered
@@ -82,7 +83,7 @@ You are carrying out a mission in your workshop on this PC on your own: the owne
 3. Self-correction: an exit code other than 0, a traceback, "ModuleNotFoundError", "SyntaxError" or any error in the output means the step is not done. Read the errors, change the file or the command, run again, until the exit code is 0 and the output is what the goal needs. After two failures of the same kind try a different approach; the same command line failing five times running without a file changing is refused.
 4. Packages: never install anything into JARVIS's own Python (%JARVIS_PYTHON% runs a script with the shipped packages only). For a package: workshop_python make_venv once, then "pip install <name>" with workshop_run; after that "python script.py" uses the workshop's own environment.
 5. Report progress with workshop_mission progress after each finished step (the step number and one line). End with workshop_mission finish: outcome "done" or "failed", and a plain report of what exists now (files and how to run them) and what you verified by running it. Never claim what you did not see in a result.
-6. Save one lesson with workshop_lessons save when you learned something that saves time next time: a package that does not work, a command that does, a fix that was needed. Lessons from earlier work are listed below; use them.
+6. Save one lesson with workshop_lessons save when you learned something that saves time next time: a package that does not work, a command that does, a fix that was needed. Lessons from earlier work are listed below; use them. A skill the owner approved (listed above, if any) that matches the goal is read with skill_read before you plan around it.
 7. Stay inside the workshop and the folders the owner added; JARVIS's own config, data and program folders and its key file are refused by name. Never read, print or write keys or passwords. If a tool answers "awaiting approval", the owner must approve it on the PC and a mission cannot wait: finish with outcome "failed" and say exactly what waits. If a step needs the owner (a decision, a sign-in, something outside the workshop), the same.'''
 PLAN_REQUEST = ('Write the plan now and nothing else: answer with JSON only, {"steps": ["...", "..."]}, two to twelve concrete steps in '
                 'order, each one thing you can do with the workshop tools and check. No tool calls yet.')
@@ -1104,6 +1105,7 @@ class Desk:
         # the reason a mission cannot start or go on (the stop, no provider), if any. `tool_error` words a failed tool
         # call for the model as the Core's own question loop does (server.tool_error_text).
         self.ask_model = self.call_tool = self.instructions = self.make_run = self.notify = self.audit = self.offered = self.forget = None
+        self.ended = None   # told of every mission's end, after it ended (the skills it read: skills.Skills.outcome)
         self.ready = lambda: None
         self.tool_error = lambda name, exc: str(exc)
 
@@ -1248,6 +1250,11 @@ class Desk:
         if self.forget:
             try:
                 self.forget(mission.carrier.id)
+            except Exception:
+                pass
+        if self.ended:
+            try:
+                self.ended(mission)
             except Exception:
                 pass
 

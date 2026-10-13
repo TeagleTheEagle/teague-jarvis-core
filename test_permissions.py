@@ -49,7 +49,8 @@ class TableTests(unittest.TestCase):
             'inspect_interface', 'create_file', 'project_save_document', 'project_link_chat', 'open_app', 'spotify', 'play_music', 'mail_send',
             'workshop_files', 'workshop_run', 'workshop_mission',  # the Workshop (docs/WORKSHOP.md): its changes are receipts too
             'remember_about_you',  # 1.0.19: an offer kept on the You page
-            'goal_propose'})  # a goal JARVIS suggests (goals.py; owner, 2026-10-13)
+            'goal_propose',  # a goal JARVIS suggests (goals.py; owner, 2026-10-13)
+            'skill_propose'})  # a skill JARVIS suggests keeping (skills.py; owner, 2026-10-13)
         self.assertEqual(permissions.EVIDENCE_TOOLS, {'calculate', 'create_file', 'save_item', 'set_timer', 'suit_diagram',
             'project_link_chat', 'project_save_document'})
         self.assertEqual(permissions.PREVIEW_TOOLS, ('save_item', 'set_timer', 'create_file'))

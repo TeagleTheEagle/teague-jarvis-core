@@ -16,4 +16,7 @@
 .workshop-log{margin:4px 0 4px 18px;padding:0;opacity:.75;font-size:.85rem;list-style:none}
 .workshop-result{margin:6px 0;white-space:pre-wrap;font-size:.9rem}
 .workshop-mission small{opacity:.65}
+.workshop-skill details{margin:4px 0}
+.workshop-skill summary{cursor:pointer;opacity:.85;font-size:.9rem}
+.workshop-skill pre{max-height:320px;overflow:auto;padding:6px 8px;background:rgba(0,0,0,.2)}
 .workshop-lesson{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.08);font-size:.9rem}
