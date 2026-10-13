@@ -53,13 +53,8 @@ def check(service, mode=None, full=None):
                 raise ValueError('Search completed but returned no results.')
             detail = 'OpenRouter web search returned a live result for a public test query (about US$0.007).'
         elif service == 'search':
-            key = os.getenv('BRAVE_API_KEY')
-            if not key:
-                return {**result, 'status': 'not_configured', 'detail': 'Add BRAVE_API_KEY locally and restart JARVIS.', 'latency_ms': 0}
-            data = providers.request('https://api.search.brave.com/res/v1/web/search?q=Sydney+Opera+House&count=1', headers={'X-Subscription-Token': key}, timeout=15)
-            if not data.get('web', {}).get('results'):
-                raise ValueError('Search completed but returned no results.')
-            detail = 'Brave returned a live result for a public test query.'
+            # Brave is removed (owner, 2026-10-13: only the Fish Audio and OpenRouter keys): search is OpenRouter's.
+            return {**result, 'status': 'not_configured', 'detail': 'Add OPENROUTER_API_KEY locally (with JARVIS_PROVIDER=openrouter) and restart JARVIS.', 'latency_ms': 0}
         elif service == 'mail':
             # 1.0.17 item G: one sign-in and the unread count; the address, the password and the mails stay out of the answer.
             import mail

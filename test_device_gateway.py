@@ -24,7 +24,7 @@ from pathlib import Path
 from server import App, Handler, Server
 from wearables.service import Service
 
-ENV = {'JARVIS_PROVIDER': 'qwen', 'DASHSCOPE_API_KEY': 'qwen-test-key'}
+ENV = {'JARVIS_PROVIDER': 'openrouter', 'OPENROUTER_API_KEY': 'qwen-test-key'}
 DONE = {'choices': [{'finish_reason': 'stop', 'message': {'content': 'Done.'}}]}
 
 

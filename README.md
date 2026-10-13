@@ -1,6 +1,6 @@
 # JARVIS
 
-Local personal assistant with a cyan command centre inspired by your two reference images. OpenAI or Qwen (Alibaba Cloud Model Studio) supplies AI conversation and vision, chosen with `JARVIS_PROVIDER`; Fish Audio or a Qwen cloned voice supplies speech. Groq, Gemini and ElevenLabs were removed in 1.0.15.
+Local personal assistant with a cyan command centre inspired by your two reference images. OpenRouter supplies AI conversation, vision and web search, with Qwen models only (the owner's rule); Fish Audio supplies speech. Groq, Gemini and ElevenLabs were removed in 1.0.15; OpenAI, Qwen through Alibaba Cloud and Brave Search on 2026-10-13.
 
 ## Launch
 
@@ -32,15 +32,14 @@ Your supplied credentials are saved in **.env**, ignored by Git and never served
 
 | Service | Status |
 |---|---|
-| AI chat and vision | OpenAI (`JARVIS_PROVIDER=openai`, the default) or Qwen (`JARVIS_PROVIDER=qwen`, with `QWEN_VISION_MODEL` for images) |
+| AI chat and vision | OpenRouter (`OPENROUTER_API_KEY`); optional `OPENROUTER_MODEL` and related lines, Qwen models only |
 | Fish Audio | Connected; audio generation succeeded after API credit was added |
-| Qwen voice | Optional cloned voice: `QWEN_TTS_VOICE` with the Qwen key |
-| Speech recognition | Local Whisper on this PC; no key needed; recording requires microphone permission. Since 1.0.15, optionally the chosen AI provider instead (Settings > AI > Speech recognition; docs/SPEECH.md) |
+| Speech recognition | Local Whisper on this PC; no key needed; recording requires microphone permission. Optionally OpenRouter instead, when `OPENROUTER_STT_MODEL` names a Qwen speech model (Settings > AI > Speech recognition; docs/SPEECH.md) |
 | Spotify | Optional; needs Client ID and browser sign-in |
 | YouTube search | Optional; needs YouTube API key; pasted URLs need no key |
-| Web search | Best-effort DuckDuckGo results; optional Brave API key supported |
+| Web search | OpenRouter web search with `OPENROUTER_API_KEY`; otherwise SerpApi (`SERPAPI_API_KEY`) or best-effort DuckDuckGo results |
 
-Fish voice reference: `14129c3e320149449d6bada6862f7338`. The synthesis model is `s2-pro`. A Qwen cloned voice takes priority when configured, then Fish; OpenAI Cedar can be chosen in Settings. A configured badge indicates credentials are present, not guaranteed connectivity or quota.
+Fish voice reference: `14129c3e320149449d6bada6862f7338`. The synthesis model is `s2-pro`. Fish Audio is the only cloud voice; without it the browser's own voice speaks. A configured badge indicates credentials are present, not guaranteed connectivity or quota.
 
 ## Controls
 
@@ -83,7 +82,7 @@ One run executes at a time. Tool loops are bounded. Cancellation prevents subseq
 ## Source and verification
 
 - `server.py`: authenticated loopback API, runs, approvals, uploads/downloads.
-- `providers.py`: OpenAI, Qwen, Fish, Spotify PKCE.
+- `providers.py`: OpenRouter, Fish, Spotify PKCE.
 - `actions.py`: tool schemas, commands, document handling, search and YouTube.
 - `store.py`: transactional SQLite, initial schema migration version 1.
 - `personality.txt`: editable assistant behavior.
@@ -98,9 +97,9 @@ The PDFs were reference material. Fragile recipes were replaced with structured 
 
 This app binds only to localhost and is intended for one local user. Do not publish it as a public service without additional hardening.
 
-Provider references: [OpenAI API](https://platform.openai.com/docs/api-reference), [Qwen (Alibaba Cloud Model Studio)](https://www.alibabacloud.com/help/en/model-studio/), [Fish Audio](https://docs.fish.audio/api-reference/endpoint/openapi-v1/text-to-speech), [Spotify PKCE](https://developer.spotify.com/documentation/web-api/tutorials/code-pkce-flow).
+Provider references: [OpenRouter API](https://openrouter.ai/docs/api-reference/overview), [Fish Audio](https://docs.fish.audio/api-reference/endpoint/openapi-v1/text-to-speech), [Spotify PKCE](https://developer.spotify.com/documentation/web-api/tutorials/code-pkce-flow).
 
-Provider 429 handling: a temporary rate limit is reported as temporary. For OpenAI Chat Completions models it pauses voice commands for 30 seconds; OpenAI Responses-API models (gpt-6-*) and Qwen set no pause (wait, then retry). A billing or credit refusal (for example OpenAI insufficient_quota) is reported as such, names the provider and sets no pause, because waiting will not help. Identical tool calls cannot repeat within one run. This does not increase your provider quota.
+Provider 429 handling: a temporary rate limit is reported as temporary, and for OpenRouter it pauses voice commands for 30 seconds. A billing or credit refusal (OpenRouter's HTTP 402) is reported as such, names the provider and sets no pause, because waiting will not help. Identical tool calls cannot repeat within one run. This does not increase your provider quota.
 # Backup and recovery
 
 Use **Settings → Backup & recovery** for verified local backups and restoration into a separate folder. This preserves the complete saved database and saved data folders; the older export/import flow is not a full recovery mechanism. See [RECOVERY.md](RECOVERY.md) for exclusions, CLI recovery and validation limits.

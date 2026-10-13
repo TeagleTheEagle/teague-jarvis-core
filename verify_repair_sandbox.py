@@ -16,7 +16,7 @@ checks = {}
 checks['nonroot'] = os.getuid() != 0
 checks['no_windows_mount'] = not os.path.exists('/mnt/c')
 checks['no_socket'] = not os.path.exists('/run/user/1000/podman/podman.sock')
-checks['no_credentials'] = not any(k in os.environ for k in ['OPENAI_API_KEY','WSLENV','HTTP_PROXY'])
+checks['no_credentials'] = not any(k in os.environ for k in ['OPENROUTER_API_KEY','FISH_API_KEY','WSLENV','HTTP_PROXY'])
 try:
     open('/tmp/test-write', 'w').close()
     checks['readonly'] = False

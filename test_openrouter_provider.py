@@ -200,8 +200,6 @@ class OpenRouterChatTests(unittest.TestCase):
             self.assertEqual(providers.chat_options('deep', 'Hello'), {})
             self.assertEqual(providers.chat_options(None, 'Hello'), {})
         self.assertEqual(ask(**options)[2]['reasoning']['effort'], 'high')
-        with patch.dict(os.environ, {'JARVIS_PROVIDER': 'qwen', 'DASHSCOPE_API_KEY': 'k'}, clear=True):
-            self.assertEqual(providers.chat_options('deep', 'Think hard about this plan.'), {})  # Qwen's Deep already thinks
 
     def test_a_short_rate_limit_pauses_voice_commands_and_no_credit_does_not(self):
         for limit, wait in (('rate', 30), ('billing', 0)):
@@ -212,12 +210,16 @@ class OpenRouterChatTests(unittest.TestCase):
                 providers.chat([], [], lambda *args: None, threading.Event())
             self.assertEqual(raised.exception.retry_after, wait, limit)
 
-    def test_openai_chosen_without_its_key_points_to_the_openrouter_key(self):
-        with patch.dict(os.environ, {'OPENROUTER_API_KEY': 'k'}, clear=True), self.assertRaises(providers.ProviderError) as raised:
+    def test_a_provider_line_of_another_name_is_refused_and_points_to_openrouter(self):
+        # OpenRouter is the only provider (owner, 2026-10-13): an old JARVIS_PROVIDER line is refused plainly,
+        # and a missing line means OpenRouter.
+        with patch.dict(os.environ, {'JARVIS_PROVIDER': 'qwen', 'OPENROUTER_API_KEY': 'k'}, clear=True), \
+                self.assertRaises(providers.ProviderError) as raised:
             providers.chat([], [], lambda *args: None, threading.Event())
         self.assertIn('set JARVIS_PROVIDER=openrouter', str(raised.exception))
         with patch.dict(os.environ, {'OPENROUTER_API_KEY': 'k'}, clear=True):
-            self.assertEqual(providers.capabilities()['brain'], 'OpenAI not configured')  # not "local commands"
+            self.assertEqual(providers.provider(), 'openrouter')
+            self.assertEqual(providers.capabilities()['brain'], 'OpenRouter configured')
 
     def test_an_error_inside_an_answer_or_a_cut_off_answer_is_refused(self):
         with self.assertRaises(providers.ProviderError):
@@ -412,7 +414,8 @@ class OpenRouterStatusTests(unittest.TestCase):
             self.assertIsNone(providers.capabilities()['backup'])   # turned off in the key file: none
         with patch.dict(os.environ, {'JARVIS_PROVIDER': 'openrouter', 'BRAVE_API_KEY': 'b'}, clear=True):
             caps = providers.capabilities()
-        self.assertEqual((caps['brain'], caps['vision'], caps['search']), ('OpenRouter not configured', False, 'Brave configured'))
+        # The Brave key no longer counts: its search branch is removed (owner, 2026-10-13).
+        self.assertEqual((caps['brain'], caps['vision'], caps['search']), ('OpenRouter not configured', False, 'DuckDuckGo best effort'))
 
     def test_the_health_check_proves_the_key_without_paying_for_an_answer_or_a_search(self):
         asked = []
@@ -431,7 +434,7 @@ class OpenRouterStatusTests(unittest.TestCase):
     def test_which_key_counts(self):
         with patch.dict(os.environ, {'OPENROUTER_API_KEY': 'k'}, clear=True):
             self.assertTrue(providers.any_ai_key())
-            self.assertIsNone(providers.chosen_key())  # no JARVIS_PROVIDER line: OpenAI is chosen, and it has no key
+            self.assertEqual(providers.chosen_key(), 'k')  # no JARVIS_PROVIDER line: OpenRouter, the only one, is chosen
         with patch.dict(os.environ, ENV, clear=True):
             self.assertEqual(providers.chosen_key(), KEY)
         with patch.dict(os.environ, {'JARVIS_PROVIDER': 'groq', 'OPENROUTER_API_KEY': 'k'}, clear=True):

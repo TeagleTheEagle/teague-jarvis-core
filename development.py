@@ -154,8 +154,7 @@ def _check_css(path, content):
 
 
 def guidance(installed):
-    """What the AI model is told about changing JARVIS itself (added to the instructions of every question;
-    tools/host/make_request_template.py copies the installed wording for the owner-run provider checks)."""
+    """What the AI model is told about changing JARVIS itself (added to the instructions of every question)."""
     program = ('This JARVIS is installed: its program files are never changed from here. A change to any other allowlisted file is saved as a proposal only, for the engineer and a later release; say so plainly. '
                if installed else
                'Changes to the other allowlisted source files also wait for approval; syntax checks do not prove runtime correctness. Offer computer_run_tests and explain restart requirements after approval. ')

@@ -22,7 +22,7 @@ import server
 from server import App, Handler, Run, Server
 from store import Store
 
-ENV = {'JARVIS_PROVIDER': 'qwen', 'DASHSCOPE_API_KEY': 'qwen-test-key'}
+ENV = {'JARVIS_PROVIDER': 'openrouter', 'OPENROUTER_API_KEY': 'qwen-test-key'}
 DONE = {'choices': [{'finish_reason': 'stop', 'message': {'content': 'Done.'}}]}
 
 

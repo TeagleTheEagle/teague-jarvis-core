@@ -148,7 +148,7 @@ class RememberThatThroughTheCoreTests(unittest.TestCase):
         """App.work asks memory_command only for the PC or a device with the owner's tick (decision D2)."""
         folder = tempfile.TemporaryDirectory()
         self.addCleanup(folder.cleanup)
-        with patch.dict(os.environ, {'OPENAI_API_KEY': 'test'}, clear=True), patch('providers.chat', side_effect=AssertionError('no model needed')):
+        with patch.dict(os.environ, {'OPENROUTER_API_KEY': 'test'}, clear=True), patch('providers.chat', side_effect=AssertionError('no model needed')):
             app = App(folder.name)
             for writes, expected in ((True, ['The spare key is under the pot.']), (False, [])):
                 run = Run('device-x-1')
