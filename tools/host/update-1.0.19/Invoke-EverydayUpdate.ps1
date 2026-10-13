@@ -56,7 +56,13 @@ $evidence = Join-Path $Root 'evidence'; $package = Join-Path $Root 'package'; $b
 $Utf8 = New-Object Text.UTF8Encoding $false
 function Say($t) { Write-Host $t }
 function Done($t) { Say ''; Say $t; exit 0 }
-function Halt($t) { Say ''; Say "STOPPED: $t"; Say 'Nothing further was done. Photograph this window for Hermes.'; exit 2 }
+function Halt($t) {
+    # A message built with + must be in parentheses (review of 2026-10-13, finding 1: in command mode '+' and what
+    # follows become extra arguments and the state would be dropped); a slip is still printed in full here.
+    if ($args.Count) { $t = $t + (($args | Where-Object { "$_" -ne '+' }) -join '') }
+    Say ''; Say "STOPPED: $t"; Say 'Nothing further was done. Photograph this window for Hermes.'; exit 2
+}
+$script:movedAside = $null
 function Full($p) { [IO.Path]::GetFullPath([string]$p).TrimEnd('\') }
 $switches = @($SetupSwitches -split ';' | Where-Object { $_ })
 $homeSwitch = @($switches | Where-Object { $_ -like '/HOME=*' } | ForEach-Object { $_.Substring(6).Trim('"') })
@@ -123,31 +129,37 @@ function Entry($appId) {
     if (Test-Path -LiteralPath $key) { $e = Get-ItemProperty -LiteralPath $key; [ordered]@{ present = $true; name = $e.DisplayName; version = $e.DisplayVersion; publisher = $e.Publisher; uninstall = $e.UninstallString; location = $e.InstallLocation } } else { [ordered]@{ present = $false } }
 }
 function StateNow {
-    # What the installation is in, read now, for a message after a failure (review finding 2).
-    $c = Current; $links = Links
-    'Your JARVIS is on ' + $(if ($c) { $c.release } else { 'nothing (no current.json)' }) + '; the old launcher script JARVIS.ps1 is ' + $(if (Test-Path -LiteralPath (Join-Path $InstallHome 'JARVIS.ps1')) { 'present' } else { 'gone' }) + '; the Desktop shortcut points at ' + $(if ($links.desktop) { $links.desktop } else { 'nothing (absent)' }) + '; the Startup shortcut at ' + $(if ($links.startup) { $links.startup } else { 'nothing (absent)' }) + '.'
+    # What the installation is in, read now, for a message after a failure (review finding 2 of 2026-10-07; the
+    # Settings > Apps entry and the renamed package folder added by the review of 2026-10-13, finding 4: the Setup
+    # removes the entry when the installer inside it refuses).
+    $c = Current; $links = Links; $e = Entry $appId
+    $state = 'Your JARVIS is on ' + $(if ($c) { $c.release } else { 'nothing (no current.json)' }) + '; the old launcher script JARVIS.ps1 is ' + $(if (Test-Path -LiteralPath (Join-Path $InstallHome 'JARVIS.ps1')) { 'present' } else { 'gone' }) + '; the Desktop shortcut points at ' + $(if ($links.desktop) { $links.desktop } else { 'nothing (absent)' }) + '; the Startup shortcut at ' + $(if ($links.startup) { $links.startup } else { 'nothing (absent)' }) + '; Settings > Apps lists ' + $(if ($e.present) { "$($e.name) $($e.version), uninstaller $($e.uninstall)" } else { 'no JARVIS entry' }) + '.'
+    if ($script:movedAside) { $state += " The previous Setup's package folder ($($auth.previous)'s uninstaller inside) is at $($script:movedAside), renamed, nothing deleted; the Uninstall button in Settings > Apps does not work until Hermes says how to put it back (a rollback does not need it)." }
+    $state
 }
 function NotRunning { if ((JarvisProcesses).Count) { Halt 'JARVIS is running. Quit it completely (right-click its icon near the clock > Quit JARVIS completely), then double-click update-step again.' } }
 # The key file, names only (never a value): which setting names hold something, and the provider word. 1.0.19 accepts
-# JARVIS_PROVIDER=openrouter or no provider line, and needs OPENROUTER_API_KEY; openai, qwen or anything else is refused
-# by 1.0.19 with a message naming openrouter (release-notes.json, 1.0.19).
+# JARVIS_PROVIDER=openrouter, an empty line or no provider line, and needs OPENROUTER_API_KEY; openai, qwen or anything
+# else is refused by 1.0.19 with a message naming openrouter (release-notes.json, 1.0.19; providers.py).
 function KeyFilePath { Join-Path $InstallHome 'config\.env' }
 function KeyFile {
     $f = KeyFilePath
     if (-not (Test-Path -LiteralPath $f)) { return [ordered]@{ present = $false } }
     $names = New-Object Collections.ArrayList; $provider = 'absent'
-    foreach ($line in @(Get-Content -LiteralPath $f)) {
+    # The same reading as 1.0.19's server.load_env: NAME=value, NAME of capitals, digits and _ only (case matters), no
+    # 'export', quotes around the value dropped; a line it would not read is not counted here either.
+    foreach ($line in @(Get-Content -LiteralPath $f -Encoding UTF8)) {
         $t = "$line".Trim()
         if (-not $t -or $t.StartsWith('#')) { continue }
-        if ($t -match '^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$') {
+        if ($t -cmatch '^([A-Z][A-Z0-9_]*)\s*=\s*(.*)$') {
             $name = $matches[1]; $value = $matches[2].Trim().Trim('"').Trim("'")
-            if ($name -eq 'JARVIS_PROVIDER') { $provider = $(if (-not $value) { 'empty' } elseif ($value.ToLower() -in @('openrouter', 'openai', 'qwen')) { $value.ToLower() } else { 'other' }) }
+            if ($name -ceq 'JARVIS_PROVIDER') { $provider = $(if (-not $value) { 'empty' } elseif ($value.ToLower() -in @('openrouter', 'openai', 'qwen')) { $value.ToLower() } else { 'other' }) }
             elseif ($value) { [void]$names.Add($name) }
         }
     }
-    $listed = @($names | Where-Object { $_ -like '*KEY*' -or $_ -like 'JARVIS_*' -or $_ -like '*MODEL*' } | Sort-Object -Unique)
-    [ordered]@{ present = $true; sha256 = (Sha256 $f); bytes = (Get-Item -LiteralPath $f).Length; provider = $provider
-        has_openrouter_key = [bool]($names -contains 'OPENROUTER_API_KEY'); names = $listed }
+    $listed = @($names | Where-Object { $_ -clike '*KEY*' -or $_ -clike 'JARVIS_*' -or $_ -clike '*MODEL*' } | Sort-Object -Unique)
+    [ordered]@{ present = $true; sha256 = (Sha256 $f); bytes = (Get-Item -LiteralPath $f -Force).Length; provider = $provider
+        has_openrouter_key = [bool]($names -ccontains 'OPENROUTER_API_KEY'); names = $listed }
 }
 function KeyFileCopyPath { (KeyFilePath) + '.before-' + $auth.final }
 function FreeBytes { (Get-PSDrive -Name ([IO.Path]::GetPathRoot($InstallHome).Substring(0, 1))).Free }
@@ -180,18 +192,15 @@ if (-not (Has 'check.json')) {
     if (-not $entryBefore.present -or $entryBefore.version -ne $previousVersion) {
         Halt ("Settings > Apps should list JARVIS $previousVersion (written by its Setup) before this update; it lists " + $(if ($entryBefore.present) { "$($entryBefore.name) $($entryBefore.version)" } else { 'nothing' }) + '. Tell Hermes.')
     }
-    # The key file (names only): 1.0.19 must accept it, and a copy is kept beside it for the rollback.
+    if ($entryBefore.uninstall -notlike ('*' + (Join-Path $Staging 'unins000.exe') + '*')) { Halt "Settings > Apps points its Uninstall button at '$($entryBefore.uninstall)', not at the uninstaller in $Staging. Tell Hermes." }
+    # The key file (names only): 1.0.19 must accept it. Its copy for the rollback is made at the end of this step, once
+    # every check has passed (review of 2026-10-13, finding 5).
     $keys = KeyFile
     if (-not $sandbox -or $keys.present) {   # a sandbox without a key file: 1.0.19 runs without keys there, as in the Stage 7 VM
         if (-not $keys.present) { Halt "no key file at $(KeyFilePath). Tell Hermes." }
-        if ($keys.provider -notin @('absent', 'openrouter') -or -not $keys.has_openrouter_key) {
-            Halt ("1.0.19 would refuse your key file as it stands: the provider line says '{0}' and OPENROUTER_API_KEY is {1}. Open {2} yourself (Hermes never reads or edits it): set JARVIS_PROVIDER=openrouter (or remove that line), make sure a line OPENROUTER_API_KEY=... is there, save, then double-click update-step again. The old OPENAI_* and DASHSCOPE_* lines may stay; 1.0.19 ignores them." -f $keys.provider, $(if ($keys.has_openrouter_key) { 'present' } else { 'missing' }), (KeyFilePath))
+        if ($keys.provider -notin @('absent', 'empty', 'openrouter') -or -not $keys.has_openrouter_key) {
+            Halt ("1.0.19 would refuse your key file as it stands: the provider line says '{0}' and OPENROUTER_API_KEY is {1}. Open {2} yourself (Hermes never reads or edits it): set JARVIS_PROVIDER=openrouter (or remove that line), make sure a line OPENROUTER_API_KEY=... is there (that exact name, capitals), save, then double-click update-step again. The old OPENAI_* and DASHSCOPE_* lines may stay; 1.0.19 ignores them." -f $keys.provider, $(if ($keys.has_openrouter_key) { 'present' } else { 'missing' }), (KeyFilePath))
         }
-        $copy = KeyFileCopyPath
-        if (Test-Path -LiteralPath $copy) { Halt "$copy exists already; tell Hermes." }
-        Copy-Item -LiteralPath (KeyFilePath) -Destination $copy
-        if ((Sha256 $copy) -ne $keys.sha256) { Halt 'the copy of the key file does not match the key file. Tell Hermes.' }
-        $keys['copy'] = $copy
     }
     Say 'Checking the package and the Setup against their hashes (a minute or two) ...'
     $zipHash = Sha256 $auth.final_zip
@@ -210,9 +219,10 @@ if (-not (Has 'check.json')) {
         $stagingBefore['uninstaller_present'] = (Test-Path -LiteralPath $u)
         if ($stagingBefore.uninstaller_present) { $stagingBefore['uninstaller_sha256'] = (Sha256 $u) }
         if (Test-Path -LiteralPath $a) { try { $stagingBefore['answer_release'] = (Get-Content -LiteralPath $a -Raw | ConvertFrom-Json).release } catch { $stagingBefore['answer_release'] = 'unreadable' } }
-        if (-not $sandbox -and $stagingBefore.answer_release -ne $auth.previous) { Halt "$Staging is not the package folder of $($auth.previous) (its answer says '$($stagingBefore.answer_release)'). Tell Hermes." }
+        if (-not $stagingBefore.uninstaller_present) { Halt "$Staging holds no unins000.exe, though Settings > Apps points there. Tell Hermes." }
+        if ($stagingBefore.answer_release -ne $auth.previous) { Halt "$Staging is not the package folder of $($auth.previous) (its answer says '$($stagingBefore.answer_release)'). Tell Hermes." }
         Say "The previous Setup's package folder $Staging (its uninstaller inside) will be renamed to $aside at step 3, right before the Setup runs (nothing deleted; 1.0.19's Setup makes its own)."
-    }
+    } else { Halt "$Staging (the previous Setup's package folder, which Settings > Apps points at) is missing. Tell Hermes." }
     Say 'Unpacking the package (a few minutes) ...'
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     [IO.Compression.ZipFile]::ExtractToDirectory($auth.final_zip, $package)
@@ -222,6 +232,14 @@ if (-not (Has 'check.json')) {
     Say 'Checking every file of your installed JARVIS (a minute or two) ...'
     $v = Json (Installer @('verify')) 'The verification'
     if ($v.status -ne 'verified' -or $v.release -ne $auth.previous) { Halt "your installed JARVIS does not verify ($($v.status) $($v.reason)). Tell Hermes." }
+    # The copy of the key file for the rollback, last: a copy with the same bytes from an earlier attempt is kept.
+    if ($keys.present) {
+        $copy = KeyFileCopyPath
+        if ((Test-Path -LiteralPath $copy) -and (Sha256 $copy) -ne $keys.sha256) { Halt "$copy exists already and differs from the key file; tell Hermes (nothing is deleted here)." }
+        if (-not (Test-Path -LiteralPath $copy)) { try { Copy-Item -LiteralPath (KeyFilePath) -Destination $copy } catch { Halt "the key file could not be copied to $copy ($($_.Exception.Message)). Nothing has changed. Tell Hermes." } }
+        if ((Sha256 $copy) -ne $keys.sha256) { Halt 'the copy of the key file does not match the key file. Tell Hermes.' }
+        $keys['copy'] = $copy
+    }
     Save 'check.json' ([ordered]@{ schema = 'jarvis-everyday-update-check-v3'; utc = (Now); final = $auth.final; previous = $auth.previous; key_file = $keys
         zip = $auth.final_zip; zip_sha256 = $zipHash; setup = $auth.final_setup; setup_sha256 = $setupHash; app_id = $appId; sandbox = $sandbox
         package_unpacked_to = $dir; package_release = $manifest.release_id; package_files = @($manifest.files).Count
@@ -267,20 +285,21 @@ if (-not (Has 'update.json')) {
     if ($WhatIf) { Done '(test mode) would run the Setup' }
     NotRunning
     $current = Current
-    if ($current.release -ne $auth.previous) { Halt "your JARVIS is on $($current.release), not $($auth.previous) as at step 1. Tell Hermes." }
+    if ($current.release -ne $auth.previous) { Halt ("your JARVIS is on $($current.release), not $($auth.previous) as at step 1. Tell Hermes. " + (StateNow)) }
     if (-not (Has 'backup.json')) { Halt 'no backup record: step 2 first.' }
     $check = Get-Content -LiteralPath (Join-Path $evidence 'check.json') -Raw | ConvertFrom-Json
     $aside = $Staging + '-before-' + $auth.final
-    if (Test-Path -LiteralPath $aside) { Halt "$aside exists already (an earlier attempt of this step?). Tell Hermes; nothing is deleted here. " + (StateNow) }
+    if (Test-Path -LiteralPath $aside) { Halt ("$aside exists already (an earlier attempt of this step?). Tell Hermes; nothing is deleted here. " + (StateNow)) }
     if (Test-Path -LiteralPath $Staging) {
-        if (-not $check.staging_before.present) { Halt "$Staging appeared after step 1. Tell Hermes; nothing is deleted here. " + (StateNow) }
+        if (-not $check.staging_before.present) { Halt ("$Staging appeared after step 1. Tell Hermes; nothing is deleted here. " + (StateNow)) }
         $u = Join-Path $Staging 'unins000.exe'
-        if ($check.staging_before.uninstaller_present -and (-not (Test-Path -LiteralPath $u) -or (Sha256 $u) -ne $check.staging_before.uninstaller_sha256)) { Halt "$Staging changed since step 1 (an earlier attempt of this step?). Tell Hermes; nothing is deleted here. " + (StateNow) }
-    } elseif ($check.staging_before.present) { Halt "$Staging is gone since step 1. Tell Hermes. " + (StateNow) }
+        if ($check.staging_before.uninstaller_present -and (-not (Test-Path -LiteralPath $u) -or (Sha256 $u) -ne $check.staging_before.uninstaller_sha256)) { Halt ("$Staging changed since step 1 (an earlier attempt of this step?). Tell Hermes; nothing is deleted here. " + (StateNow)) }
+    } elseif ($check.staging_before.present) { Halt ("$Staging is gone since step 1. Tell Hermes. " + (StateNow)) }
     $free = FreeBytes
     if ($free -lt $MinFreeBytes) { Halt ('only {0:N1} GB free on the install drive now (the backup took some); {1:N1} GB are needed.' -f ($free / 1GB), ($MinFreeBytes / 1GB)) }
     $dbBefore = DatabaseHash; $linksBefore = Links; $entryBefore = Entry $appId
-    if (-not $entryBefore.present -or $entryBefore.version -ne $previousVersion) { Halt "Settings > Apps no longer lists JARVIS $previousVersion as at step 1. Tell Hermes." }
+    $keyBefore = $(if (Test-Path -LiteralPath (KeyFilePath)) { Sha256 (KeyFilePath) } else { $null })   # the update must not touch the key file either
+    if (-not $entryBefore.present -or $entryBefore.version -ne $previousVersion) { Halt ("Settings > Apps no longer lists JARVIS $previousVersion as at step 1. Tell Hermes. " + (StateNow)) }
     # The previous Setup's package folder renamed aside now (seen at step 1): the Setup would delete its release folder
     # and installer before unpacking, and the records rule says nothing is deleted; the Setup's own answer must also be
     # the only setup-result.json there. From here until the Setup has written its own uninstaller, the entry's
@@ -289,15 +308,15 @@ if (-not (Has 'update.json')) {
     if (Test-Path -LiteralPath $Staging) {
         try { Move-Item -LiteralPath $Staging -Destination $aside } catch { Halt "the previous Setup's package folder $Staging could not be renamed aside ($($_.Exception.Message)). Close any window showing it and double-click update-step again. Nothing has changed." }
         if ((Test-Path -LiteralPath $Staging) -or -not (Test-Path -LiteralPath $aside)) { Halt 'the previous Setup''s package folder could not be moved aside. Tell Hermes.' }
-        $moved = $aside
-        Say "The previous Setup's package folder $Staging was renamed to $aside (nothing deleted)."
+        $moved = $aside; $script:movedAside = $aside
+        Say "The previous Setup's package folder $Staging was renamed to $aside (nothing deleted). Until the Setup has written its own uninstaller (a few minutes) the Uninstall button in Settings > Apps points at the old place: do not press it."
     }
     $setupLog = Join-Path $evidence ('setup-update-' + (Get-Date).ToUniversalTime().ToString('yyyyMMdd-HHmmss') + '.log')
     $quoted = @($switches | ForEach-Object { if ($_ -match '^(/(?:DIR|HOME)=)(.*)$' -and $matches[2] -match ' ' -and $matches[2] -notmatch '^"') { $matches[1] + '"' + $matches[2] + '"' } else { $_ } })
     $arguments = @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', ('/LOG="' + $setupLog + '"')) + $quoted
     Say 'Running the Setup (several minutes: it unpacks the package, then its installer copies and checks every file; a line every half minute) ...'
     $t = [Diagnostics.Stopwatch]::StartNew()
-    try { $p = Start-Process -FilePath $auth.final_setup -ArgumentList $arguments -PassThru } catch { Halt "the Setup could not be started ($($_.Exception.Message)). " + (StateNow) + $(if ($moved) { " The previous Setup's package folder is renamed to $moved; the Settings > Apps Uninstall button points at the old place until Hermes says how to put it back." } else { '' }) }
+    try { $p = Start-Process -FilePath $auth.final_setup -ArgumentList $arguments -PassThru } catch { Halt ("the Setup could not be started ($($_.Exception.Message)). " + (StateNow)) }
     $null = $p.Handle
     $next = 30
     while (-not $p.HasExited) {
@@ -307,29 +326,32 @@ if (-not (Has 'update.json')) {
     $p.WaitForExit()
     $seconds = [Math]::Round($t.Elapsed.TotalSeconds, 1)
     $resultFile = Join-Path $Staging 'setup-result.json'
-    if (-not (Test-Path -LiteralPath $resultFile)) { Halt "the Setup left no answer ($resultFile; Setup exit $($p.ExitCode); its log is $setupLog). " + (StateNow) + ' Tell Hermes.' }
-    $in = $null; try { $in = Get-Content -LiteralPath $resultFile -Raw | ConvertFrom-Json } catch { Halt "the Setup's answer could not be read (its log is $setupLog). " + (StateNow) + ' Tell Hermes.' }
+    $refused = ' When the installer inside the Setup refuses, the Setup removes the Settings > Apps entry; a rollback does not need it, and Hermes will say how to put the entry and the renamed folder back (nothing deleted).'
+    if (-not (Test-Path -LiteralPath $resultFile)) { Halt ("the Setup left no answer ($resultFile; Setup exit $($p.ExitCode); its log is $setupLog). " + (StateNow) + $refused + ' Tell Hermes.') }
+    $in = $null; try { $in = Get-Content -LiteralPath $resultFile -Raw | ConvertFrom-Json } catch { Halt ("the Setup's answer could not be read (its log is $setupLog). " + (StateNow) + $refused + ' Tell Hermes.') }
     if ($in.status -ne 'installed' -or $in.release -ne $auth.final -or $in.previous -ne $auth.previous) {
         $now = Current
         $still = $(if ($now -and $now.release -eq $auth.previous) { ' The previous release is still current.' } else { '' })
-        Halt "the installer inside the Setup answered '$($in.status)' $($in.reason) (Setup exit $($p.ExitCode); its log is $setupLog).$still " + (StateNow) + ' Tell Hermes.'
+        Halt ("the installer inside the Setup answered '$($in.status)' $($in.reason) (Setup exit $($p.ExitCode); its log is $setupLog).$still " + (StateNow) + $refused + ' Tell Hermes.')
     }
     $v = Json (Installer @('verify')) 'The verification'
-    if ($v.status -ne 'verified' -or $v.release -ne $auth.final) { Halt 'the updated JARVIS does not verify. ' + (StateNow) + ' Tell Hermes (the previous release is still installed beside it).' }
+    if ($v.status -ne 'verified' -or $v.release -ne $auth.final) { Halt ('the updated JARVIS does not verify. ' + (StateNow) + ' Tell Hermes (the previous release is still installed beside it).') }
     $entry = Entry $appId
-    if (-not $entry.present -or $entry.version -ne $setupRecord.version -or $entry.uninstall -notlike ('*' + (Join-Path $Staging 'unins000.exe') + '*')) { Halt "Settings > Apps does not list JARVIS $($setupRecord.version) with the uninstaller in $Staging (the update itself is in place and verified). " + (StateNow) + ' Tell Hermes.' }
+    if (-not $entry.present -or $entry.version -ne $setupRecord.version -or $entry.uninstall -notlike ('*' + (Join-Path $Staging 'unins000.exe') + '*')) { Halt ("Settings > Apps does not list JARVIS $($setupRecord.version) with the uninstaller in $Staging (the update itself is in place and verified). " + (StateNow) + ' Tell Hermes.') }
     $links = Links
     $program = Join-Path $InstallHome ('releases\' + $auth.final + '\electron\JARVIS.exe')
     if (-not $sandbox) {
-        if ($in.shortcuts -ne 'written') { Halt "the installer did not write the shortcuts ($($in.shortcuts)) (the update itself is in place and verified). " + (StateNow) + ' Tell Hermes.' }
+        if ($in.shortcuts -ne 'written') { Halt ("the installer did not write the shortcuts ($($in.shortcuts)) (the update itself is in place and verified). " + (StateNow) + ' Tell Hermes.') }
         foreach ($pair in @(@('Desktop', $links.desktop), @('Startup', $links.startup))) { if ($pair[1] -ne $program) { Halt "the $($pair[0]) shortcut points at '$($pair[1])', not at $program (the update itself is in place and verified). Tell Hermes." } }
         if (Test-Path -LiteralPath (Join-Path $InstallHome 'JARVIS.ps1')) { Halt 'the old launcher script JARVIS.ps1 is still in the install folder (the update itself is in place and verified). Tell Hermes.' }
     } elseif ($in.shortcuts -notlike 'withheld*' -and $in.shortcuts -notlike 'skipped*') { Halt "a sandbox run must not write shortcuts ($($in.shortcuts))." }
     $dbAfter = DatabaseHash
-    if ($dbBefore -ne $dbAfter) { Halt "the database file changed during the update ($dbBefore -> $dbAfter); an update must not touch it. " + (StateNow) + ' Tell Hermes before starting JARVIS.' }
+    if ($dbBefore -ne $dbAfter) { Halt ("the database file changed during the update ($dbBefore -> $dbAfter); an update must not touch it. " + (StateNow) + ' Tell Hermes before starting JARVIS.') }
+    $keyAfter = $(if (Test-Path -LiteralPath (KeyFilePath)) { Sha256 (KeyFilePath) } else { $null })
+    if ($keyBefore -ne $keyAfter) { Halt ("the key file changed during the update; an update must not touch it. " + (StateNow) + ' Tell Hermes before starting JARVIS.') }
     Save 'update.json' ([ordered]@{ schema = 'jarvis-everyday-update-v3'; utc = (Now); setup = $auth.final_setup; setup_exit = $p.ExitCode; setup_switches = $arguments; setup_log = $setupLog; staging_moved_aside = $moved
         setup_wall_seconds = $seconds; installer = $in; installer_seconds = $in.seconds; verify = $v.status; current = (Current); entry_before = $entryBefore; entry = $entry
-        database_sha256_before = $dbBefore; database_sha256_after = $dbAfter; database_unchanged = ($dbBefore -eq $dbAfter); free_bytes_before = $free
+        database_sha256_before = $dbBefore; database_sha256_after = $dbAfter; database_unchanged = ($dbBefore -eq $dbAfter); key_file_sha256_before = $keyBefore; key_file_sha256_after = $keyAfter; key_file_unchanged = ($keyBefore -eq $keyAfter); free_bytes_before = $free
         shortcuts_before = $linksBefore; shortcuts_after = $links; program = $program; launcher_script_left = (Test-Path -LiteralPath (Join-Path $InstallHome 'JARVIS.ps1')); jarvis_started = $false })
     $where = $(if ($sandbox) { 'the sandbox entry registered, the shortcuts withheld as a sandbox run must' } else { 'listed in Settings > Apps, the shortcuts pointing at its own JARVIS.exe' })
     Done "STEP 3 PASSED: your JARVIS is now $($auth.final), every file verified, $where. It was not started. Tell Hermes ""step 3 done""; Hermes gives you the short check to do when you start it."
@@ -340,29 +362,46 @@ if ((Has 'rollback-approved.json') -and -not (Has 'rollback.json')) {
     Say "ROLLBACK: switch your JARVIS back to $($auth.previous)"
     if ($WhatIf) { Done '(test mode) would roll back' }
     NotRunning
+    # Only from the new release (review of 2026-10-13, finding 2): an earlier attempt that switched back and then stopped
+    # before its record must not be followed by a second installer rollback, which would switch FORWARD again.
+    $c = Current
+    if (-not $c -or $c.release -ne $auth.final) {
+        if ($c -and $c.release -eq $auth.previous -and $c.previous -eq $auth.final) { Halt ("an earlier attempt already switched your JARVIS back to $($auth.previous) but did not finish its checks; nothing is switched again. Tell Hermes. " + (StateNow)) }
+        Halt ("your JARVIS is on " + $(if ($c) { $c.release } else { 'nothing (no current.json)' }) + ", not $($auth.final); nothing is switched. Tell Hermes. " + (StateNow))
+    }
+    Save ('rollback-attempt-' + (Get-Date).ToUniversalTime().ToString('yyyyMMdd-HHmmss') + '.json') ([ordered]@{ schema = 'jarvis-everyday-update-rollback-attempt-v1'; utc = (Now); from = $c.release; to = $auth.previous })
     $back = Json (Installer @('rollback')) 'The rollback'
-    if ($back.status -ne 'rolled_back' -or $back.release -ne $auth.previous) { Halt "the rollback answered '$($back.status)' $($back.reason). " + (StateNow) }
+    if ($back.status -ne 'rolled_back' -or $back.release -ne $auth.previous) { Halt ("the rollback answered '$($back.status)' $($back.reason). " + (StateNow)) }
     $v = Json (Installer @('verify')) 'The verification'
-    if ($v.status -ne 'verified' -or $v.release -ne $auth.previous) { Halt 'the previous release does not verify after the rollback. ' + (StateNow) + ' Tell Hermes.' }
-    # The key file back as it stood at step 1 (1.0.17 knows no OpenRouter); the file as it stands now is kept beside it.
+    if ($v.status -ne 'verified' -or $v.release -ne $auth.previous) { Halt ('the previous release does not verify after the rollback. ' + (StateNow) + ' Tell Hermes.') }
+    # The key file back as it stood at step 1 (undoing any change made on the new release); the file as it stands now is
+    # kept beside it. The step 1 file was already the one for 1.0.19 (its provider line openrouter), which 1.0.17 does
+    # not know: the owner sets that line himself before starting 1.0.17 (said below and in the plan).
     $keyBack = [ordered]@{ restored = $false }
     $copy = KeyFileCopyPath
+    $check = $(if (Has 'check.json') { Get-Content -LiteralPath (Join-Path $evidence 'check.json') -Raw | ConvertFrom-Json } else { $null })
     if (Test-Path -LiteralPath $copy) {
+        if ($check -and $check.key_file.sha256 -and (Sha256 $copy) -ne $check.key_file.sha256) { Halt ("the copy of the key file ($copy) is not the one step 1 made (its hash differs from the record); the key file is left as it is. " + (StateNow) + ' Tell Hermes.') }
         $now = KeyFile
         $kept = (KeyFilePath) + '.rolled-back-from-' + $auth.final
-        if (Test-Path -LiteralPath $kept) { Halt "$kept exists already; tell Hermes." }
-        if ($now.present) { Copy-Item -LiteralPath (KeyFilePath) -Destination $kept }
-        Copy-Item -LiteralPath $copy -Destination (KeyFilePath) -Force
-        if ((Sha256 (KeyFilePath)) -ne (Sha256 $copy)) { Halt 'the key file could not be put back from its copy. ' + (StateNow) + ' Tell Hermes.' }
-        $keyBack = [ordered]@{ restored = $true; from = $copy; kept_as = $(if ($now.present) { $kept } else { $null }); sha256 = (Sha256 $copy) }
-    }
+        if (Test-Path -LiteralPath $kept) { Halt ("$kept exists already; the key file is left as it is. " + (StateNow) + ' Tell Hermes.') }
+        try {
+            if ($now.present) { Copy-Item -LiteralPath (KeyFilePath) -Destination $kept; if ((Sha256 $kept) -ne $now.sha256) { throw 'the kept copy does not match the key file' } }
+            Copy-Item -LiteralPath $copy -Destination (KeyFilePath) -Force
+            if ((Sha256 (KeyFilePath)) -ne (Sha256 $copy)) { throw 'the key file does not match its copy after the restore' }
+        } catch { Halt ("the key file could not be put back ($($_.Exception.Message)). Nothing is lost: the file as it stood on $($auth.final) is at " + $(if (Test-Path -LiteralPath $kept) { $kept } else { (KeyFilePath) }) + " and the step 1 copy at $copy. " + (StateNow) + ' Tell Hermes.') }
+        $after = KeyFile
+        $keyBack = [ordered]@{ restored = $true; from = $copy; kept_as = $(if ($now.present) { $kept } else { $null }); sha256 = (Sha256 $copy); provider_after = $after.provider }
+    } elseif (-not $sandbox) { $keyBack = [ordered]@{ restored = $false; reason = "the copy $copy is missing"; provider_now = (KeyFile).provider } }
     $links = Links
     if (-not $sandbox) {
         $program = Join-Path $InstallHome ('releases\' + $auth.previous + '\electron\JARVIS.exe')
-        foreach ($pair in @(@('Desktop', $links.desktop), @('Startup', $links.startup))) { if ($pair[1] -ne $program) { Halt "after the rollback the $($pair[0]) shortcut points at '$($pair[1])', not at $program (the rollback itself is in place and verified). Tell Hermes." } }
+        foreach ($pair in @(@('Desktop', $links.desktop), @('Startup', $links.startup))) { if ($pair[1] -ne $program) { Halt ("after the rollback the $($pair[0]) shortcut points at '$($pair[1])', not at $program (the rollback itself is in place and verified). " + (StateNow) + ' Tell Hermes.') } }
     }
     Save 'rollback.json' ([ordered]@{ schema = 'jarvis-everyday-update-rollback-v3'; utc = (Now); result = $back; verify = $v.status; current = (Current); shortcuts = $links; key_file = $keyBack; launcher_script_present = (Test-Path -LiteralPath (Join-Path $InstallHome 'JARVIS.ps1')); entry_still = (Entry $appId) })
-    Done "ROLLBACK PASSED: your JARVIS is back on $($auth.previous), its shortcuts at that release's JARVIS.exe, the key file as it stood before the update (the Settings > Apps entry still says $($setupRecord.version) until the next update). Tell Hermes ""rollback done""."
+    $where = $(if ($sandbox) { 'the shortcuts withheld as a sandbox run must' } else { "its shortcuts at that release's JARVIS.exe" })
+    $keyWord = $(if ($keyBack.restored) { "the key file as it stood at step 1 (its provider line says '$($keyBack.provider_after)'" + $(if ($keyBack.provider_after -in @('openrouter', 'absent', 'empty')) { ", which $($auth.previous) does not know: open $(KeyFilePath) yourself and set JARVIS_PROVIDER=qwen or openai before starting JARVIS)" } else { ')' }) } else { "BUT the key file was NOT put back ($($keyBack.reason)): it stands as it was on $($auth.final)" })
+    Done "ROLLBACK PASSED: your JARVIS is back on $($auth.previous), $where, $keyWord (the Settings > Apps entry still says $($setupRecord.version) until the next update). Tell Hermes ""rollback done""."
 }
 if (Has 'rollback.json') { Done "This launcher's work is complete and recorded: the update to $($auth.final) was rolled back to $($auth.previous). Nothing more to do here." }
 Done "The update to $($auth.final) is complete and recorded. Nothing more to do here."

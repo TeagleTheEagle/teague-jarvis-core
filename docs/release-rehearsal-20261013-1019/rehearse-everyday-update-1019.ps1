@@ -14,7 +14,7 @@
 # recorded at the start and must be the same at the end, and the cleanup (the sandbox JARVIS ended, the sandbox
 # uninstalled through its own entry) runs whatever happened above, a thrown stop included.
 param(
-    [string] $Base = 'D:\JARVIS-release-work\update-rehearsal-1.0.19-2',
+    [string] $Base = 'D:\JARVIS-release-work\update-rehearsal-1.0.19-3',
     [string] $PreviousSetup = 'D:\JARVIS-release-work\pkg-1.0.17\JARVIS-Setup-1.0.17-0d38218c4e1d.exe',
     [string] $PreviousId = '1.0.17-0d38218c4e1d',
     [string] $FinalZip = 'D:\JARVIS-release-work\pkg-1.0.19\JARVIS-1.0.19-629bb5621d34.zip',
@@ -124,6 +124,9 @@ function RunSetup([string] $setup, [string] $logName) {
     [pscustomobject]@{ exit = $p.ExitCode; answer = $(if (Test-Path -LiteralPath $answer) { Get-Content -LiteralPath $answer -Raw | ConvertFrom-Json } else { $null }) }
 }
 
+# The launcher's own rule (review of 2026-10-13, finding 1): a Halt message built with + must be in parentheses.
+$slips = @(Select-String -LiteralPath $Launcher -Pattern 'Halt ("[^"]*"|''[^'']*'') \+')
+Check 'the launcher has no Halt message that would drop its state (static)' (-not $slips.Count) "$($slips.Count) line(s)"
 $liveBefore = LiveCount
 $realEntryAtStart = RealEntry
 Note "live JARVIS processes at the start: $liveBefore; real shortcuts: $($shortcutsBefore.desktop) $($shortcutsBefore.startup); real entry: $realEntryAtStart"
@@ -166,7 +169,7 @@ $keyHashBefore = Hash $keyFile
 # 3. The three steps.
 $r = Step 'step 1 check' $auth
 $check = $(if ((Records) -contains 'check.json') { Get-Content -LiteralPath (Join-Path $root 'evidence\check.json') -Raw | ConvertFrom-Json } else { $null })
-Check 'step 1 check' ($r.exit -eq 0 -and $null -ne $check) "exit $($r.exit)"
+Check 'step 1 check (no key value in the output)' ($r.exit -eq 0 -and $null -ne $check -and $r.text -notlike '*rehearsal-not-a-key*') "exit $($r.exit)"
 Check 'step 1: 1.0.17 package folder seen (its uninstaller inside), not yet moved' ($null -ne $check -and $check.staging_before.present -and $check.staging_before.uninstaller_sha256 -eq $previousUninstaller -and $check.staging_before.answer_release -eq $PreviousId -and $check.staging_to_be_moved_aside -and (Test-Path -LiteralPath $staging) -and (Entry).uninstall -like ('*' + (Join-Path $staging 'unins000.exe') + '*')) "$($check.staging_to_be_moved_aside)"
 Check 'step 1: the entry 1.0.17 before' ($null -ne $check -and $check.entry_before.present -and $check.entry_before.version -eq $previousRecord.version) "$($check.entry_before.version)"
 Check 'step 1: the key file accepted, names only recorded, a copy made' ($null -ne $check -and $check.key_file.provider -eq 'openrouter' -and [bool]$check.key_file.has_openrouter_key -and (@($check.key_file.names) -contains 'OPENROUTER_API_KEY') -and (@($check.key_file.names) -contains 'DASHSCOPE_API_KEY') -and $check.key_file.sha256 -eq $keyHashBefore -and (Test-Path -LiteralPath $check.key_file.copy) -and (Hash $check.key_file.copy) -eq $keyHashBefore -and ((Get-Content -LiteralPath (Join-Path $root 'evidence\check.json') -Raw) -notlike '*rehearsal-not-a-key*')) "$($check.key_file.names -join ',')"
@@ -195,6 +198,13 @@ StopSandbox
 $before = Records
 $r = Step 'rerun after the update: nothing to do' $auth
 Check 'rerun changes nothing' ($r.exit -eq 0 -and $r.text -like '*complete and recorded*' -and ((Records) -join ',') -eq ($before -join ',')) "exit $($r.exit)"
+# A second attempt of step 3 after the update (the record renamed aside for the test): refused with the state said
+# in full (review of 2026-10-13, finding 1: the state line was being dropped; finding 4: the entry is part of it).
+Rename-Item -LiteralPath (Join-Path $root 'evidence\update.json') -NewName 'update.json.aside-for-the-test'
+$r = Step 'step 3 again after the update: refused with the state' $auth
+Rename-Item -LiteralPath (Join-Path $root 'evidence\update.json.aside-for-the-test') -NewName 'update.json'
+$current = Get-Content -LiteralPath (Join-Path $sandboxHome 'current.json') -Raw | ConvertFrom-Json
+Check 'step 3 again: refused, the state said in full (release, shortcuts, the entry)' ($r.exit -eq 2 -and $r.text -like "*your JARVIS is on $FinalId, not $PreviousId*" -and $r.text -like "*Your JARVIS is on $FinalId;*" -and $r.text -like "*Settings > Apps lists $($setupRecord.sandbox_display_name) $($setupRecord.version), uninstaller*" -and $current.release -eq $FinalId) "exit $($r.exit)"
 
 # 5. Rollback, only with its approval file. The key file is changed first (as the owner might have, on 1.0.19), so the
 #    rollback's restore from the step 1 copy is seen to do something, and the changed file is kept beside it.
@@ -202,7 +212,9 @@ KeyFileText "JARVIS_PROVIDER=openrouter`nOPENROUTER_API_KEY=rehearsal-not-a-key-
 [IO.File]::WriteAllText((Join-Path $root 'evidence\rollback-approved.json'), '{"note": "rehearsal"}', (New-Object Text.UTF8Encoding $false))
 $r = Step 'rollback (approved)' $auth
 $current = Get-Content -LiteralPath (Join-Path $sandboxHome 'current.json') -Raw | ConvertFrom-Json
-Check 'rollback to 1.0.17' ($r.exit -eq 0 -and ((Records) -contains 'rollback.json') -and $current.release -eq $PreviousId) "$($current.release)"
+Check 'rollback to 1.0.17 (no key value in the output)' ($r.exit -eq 0 -and ((Records) -contains 'rollback.json') -and $current.release -eq $PreviousId -and $r.text -notlike '*rehearsal-not-a-key*') "$($current.release)"
+Check 'rollback: the attempt recorded before the switch' ((@(Records) | Where-Object { $_ -like 'rollback-attempt-*.json' }).Count -eq 1) ((Records) -join ',')
+Check 'rollback: the final line says the provider line is one 1.0.17 does not know' ($r.text -like "*provider line says 'openrouter'*does not know*set JARVIS_PROVIDER=qwen or openai*") 'said'
 Check 'rollback: the entry still says 1.0.19 (as the plan says)' ((Entry).present -and (Entry).version -eq $setupRecord.version) "$((Entry).version)"
 $rollback = $(if ((Records) -contains 'rollback.json') { Get-Content -LiteralPath (Join-Path $root 'evidence\rollback.json') -Raw | ConvertFrom-Json } else { $null })
 Check 'rollback: the key file put back from the step 1 copy, the changed file kept beside it' ($null -ne $rollback -and [bool]$rollback.key_file.restored -and (Hash $keyFile) -eq $keyHashBefore -and $rollback.key_file.kept_as -and (Test-Path -LiteralPath $rollback.key_file.kept_as) -and ((Get-Content -LiteralPath $rollback.key_file.kept_as -Raw) -like '*changed*') -and ((Get-Content -LiteralPath (Join-Path $root 'evidence\rollback.json') -Raw) -notlike '*rehearsal-not-a-key*')) "$($rollback.key_file.kept_as)"
@@ -212,6 +224,14 @@ Check 'sandbox: 1.0.17 running again on the same data' ($state.updates.installed
 StopSandbox
 $r = Step 'rerun after the rollback: nothing to do' $auth
 Check 'rerun after rollback changes nothing' ($r.exit -eq 0 -and $r.text -like '*complete and recorded*') "exit $($r.exit)"
+# A rollback entered again after one that switched back but left no record (the record renamed aside for the test):
+# nothing is switched forward again (review of 2026-10-13, finding 2), the state said in full.
+Rename-Item -LiteralPath (Join-Path $root 'evidence\rollback.json') -NewName 'rollback.json.aside-for-the-test'
+$attemptsBefore = (@(Records) | Where-Object { $_ -like 'rollback-attempt-*.json' }).Count
+$r = Step 'rollback again without its record: refused, nothing switched' $auth
+Rename-Item -LiteralPath (Join-Path $root 'evidence\rollback.json.aside-for-the-test') -NewName 'rollback.json'
+$current = Get-Content -LiteralPath (Join-Path $sandboxHome 'current.json') -Raw | ConvertFrom-Json
+Check 'rollback again: refused, still on 1.0.17, no new attempt, the state said' ($r.exit -eq 2 -and $r.text -like '*already switched your JARVIS back*nothing is switched again*' -and $r.text -like "*Your JARVIS is on $PreviousId;*" -and $current.release -eq $PreviousId -and $current.previous -eq $FinalId -and (@(Records) | Where-Object { $_ -like 'rollback-attempt-*.json' }).Count -eq $attemptsBefore) "$($current.release) exit $($r.exit)"
 } catch { $aborted = $_.Exception.Message }
 
 # 6. Cleanup, whatever happened above: the sandbox JARVIS ended, then the sandbox uninstalled through its own entry

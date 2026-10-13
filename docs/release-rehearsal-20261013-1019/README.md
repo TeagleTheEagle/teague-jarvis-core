@@ -101,3 +101,13 @@ VirtualBox command run by Hermes.
 The update of the owner's everyday JARVIS from 1.0.17 to 1.0.19 (his separate decision; `docs/UPDATE-EVERYDAY-1.0.19.md`
 for approval, through the Setup). Before it: his key file must hold `OPENROUTER_API_KEY` (1.0.19) and keep the old
 provider lines while a rollback to 1.0.17 is still wanted.
+
+## The everyday update's launcher (version 3), rehearsed: run 3, 37 of 37 (2026-10-13, 20:31 to 20:37 local)
+
+`rehearse-everyday-update-1019.ps1` runs `tools/host/update-1.0.19/Invoke-EverydayUpdate.ps1` in a sandbox on D: that
+mirrors the owner's PC (1.0.17 installed by its own Setup with the sandbox switches, the sandbox entry and package
+folder, a planted key file with fake values). Run 3 is on the launcher after its independent review (2 high, 6
+medium, 8 low; `docs/UPDATE-EVERYDAY-1.0.19.md`, section "Independent review"): records in `update-rehearsal-3/`
+(the summary, the output, the launcher's records; the fake key value appears in none, checked). Run 2 (before the
+review, 32 of 32, `D:\JARVIS-release-work\update-rehearsal-1.0.19-2\`) and run 1 (a harness defect, nothing of the
+update ran) stay on D:.

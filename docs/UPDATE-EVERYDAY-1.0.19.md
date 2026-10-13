@@ -1,11 +1,12 @@
 # Updating your everyday JARVIS to 1.0.19 (plan for your approval)
 
-Status: **2026-10-13 20:20 local: the launcher's sandbox rehearsal passed (run 2, 32 of 32, below); its
-independent review is running. APPROVED BY THE OWNER at this point ("I approve the update of my everyday JARVIS to
-1.0.19", first clock reading 2026-10-13T09:20:02Z, 20:20 local; record
-`../governance/UPDATE-1.0.19-APPROVAL-RECORD.json`), the review's findings to be applied before the launcher is
-placed; if a finding changes the launcher, the rehearsal is run again and the owner told before step 1. Step 0 (the
-key file) is the owner's.**
+Status: **APPROVED BY THE OWNER 2026-10-13 20:20 local ("I approve the update of my everyday JARVIS to 1.0.19",
+first clock reading 2026-10-13T09:20:02Z; record `../governance/UPDATE-1.0.19-APPROVAL-RECORD.json`), given while
+the launcher's independent review was still running (the plan as committed then: `f3b0e29`). The review (2 high, 6
+medium, 8 low, section below) was applied in full and the reviewed launcher rehearsed again, run 3, 37 of 37. One
+finding corrected a promise of this plan (the rollback and the provider line, items 1 and 6, "Your data and a
+rollback", row R): put to the owner for his word before step 1. Step 0 (the key file) was done by the owner at
+20:23.**
 Updating the everyday JARVIS is your decision (`CLAUDE.md`). 1.0.19 (`1.0.19-629bb5621d34`) passed its Stage 7 check
 in the test VM today, 17:34 to 19:41 local (`STAGE_7_COMPLETE`, 29 of 29 checks, every timing inside the bound,
 `docs/stage7-1.0.19-evidence/`, commit `90f7f83`). The launcher for this update is **version 3** of the one that
@@ -52,8 +53,10 @@ From the 1.0.18 and 1.0.19 entries of `release-notes.json`, in short:
    provider" just as 1.0.17 does now. **Fix it yourself before step 1** (I never open or edit the file); step 1 then
    checks it for you and, if 1.0.19 would still refuse it, stops with a message naming the provider word and whether
    the OpenRouter line is there, and nothing else. **Keep the old `OPENAI_API_KEY` and `DASHSCOPE_API_KEY` lines for
-   now**: 1.0.17 does not know OpenRouter, so a rollback needs them (and the rollback sets the provider line back by
-   restoring the whole file as it stood at step 1). Optional lines you may add from the release's `env.template`:
+   now**: 1.0.17 does not know OpenRouter, so a rollback needs them. (A rollback puts the file back as it stood at
+   step 1, which is this OpenRouter-ready file; 1.0.17 refuses `JARVIS_PROVIDER=openrouter`, so after a rollback you
+   set that line back to `qwen` or `openai` yourself before starting JARVIS; the launcher's last line tells you so.
+   Review finding 3 of 2026-10-13.) Optional lines you may add from the release's `env.template`:
    `OPENROUTER_MODEL`, `OPENROUTER_FAST_MODEL`, `OPENROUTER_VISION_MODEL`, `OPENROUTER_CODING_MODEL`,
    `OPENROUTER_FALLBACK_MODEL`, `OPENROUTER_STT_MODEL`, `OPENROUTER_STT_LANGUAGE`, `FISH_API_KEY`, `FISH_MODEL`,
    `FISH_VOICE_ID`.
@@ -83,13 +86,17 @@ From the 1.0.18 and 1.0.19 entries of `release-notes.json`, in short:
   exception; 1.0.19 needs none). Not covered there: an AI conversation (no keys in the VM) and a real microphone.
 - **Your data and a rollback.** 1.0.19 adds no table or column. If you roll back, 1.0.17 runs on the same data; its
   shortcuts come back at its own `JARVIS.exe`; the Settings > Apps entry stays, saying 1.0.19, until the next update
-  (it still uninstalls the program with the data kept); your key file is put back from the copy step 1 made, so the
-  provider line and the OpenAI or Qwen keys are as they were, and the file as it stood at the rollback is kept beside
-  it as `config\.env.rolled-back-from-1.0.19-629bb5621d34`. What 1.0.17 does not know it does not do: OpenRouter,
-  Fish Audio, the backup model, the time sentence.
+  (it still uninstalls the program with the data kept); your key file is put back from the copy step 1 made (undoing
+  any change made while on 1.0.19; the file as it stood at the rollback is kept beside it as
+  `config\.env.rolled-back-from-1.0.19-629bb5621d34`). That step 1 file already says `JARVIS_PROVIDER=openrouter`,
+  which 1.0.17 refuses: **after a rollback you set that line to `qwen` or `openai` yourself** (the OpenAI and Qwen key
+  lines you kept make it work again); the launcher's last line says so. What 1.0.17 does not know it does not do:
+  OpenRouter, Fish Audio, the backup model, the time sentence.
 - **This launcher, version 3, rehearsed in a sandbox on D:** (`docs/release-rehearsal-20261013-1019/
-  rehearse-everyday-update-1019.ps1`, records in `D:\JARVIS-release-work\update-rehearsal-1.0.19-2\`, run 2,
-  2026-10-13 20:14 to 20:19 local, **32 of 32 checks**). The sandbox mirrors your PC:
+  rehearse-everyday-update-1019.ps1`; **run 3, on the reviewed launcher, 2026-10-13 20:31 to 20:37 local, 37 of 37
+  checks**, records in `D:\JARVIS-release-work\update-rehearsal-1.0.19-3\` and copied to
+  `docs/release-rehearsal-20261013-1019/update-rehearsal-3/`; run 2 before the review, 20:14 to 20:19, 32 of 32,
+  in `update-rehearsal-1.0.19-2\`). The sandbox mirrors your PC:
   1.0.17 installed by its own Setup with the sandbox switches (the entry "JARVIS (sandbox) 1.0.17" under the sandbox
   id, which both Setups share, the package folder with its uninstaller), started once; then the launcher: refused
   without approval; refused while JARVIS runs; refused on a key file 1.0.19 would refuse (planted as provider qwen,
@@ -97,13 +104,16 @@ From the 1.0.18 and 1.0.19 entries of `release-notes.json`, in short:
   1.0.17 before, the key file accepted with its names recorded and a copy made, the package folder seen and not yet
   moved, 1.0.17 verified); step 2 (backup with 1.0.17's own backup code, 201 files, test-restored, copied to D: and
   hash-checked); step 3 (the package folder renamed aside with its uninstaller intact, 1.0.19's Setup silently in
-  110.7 s wall: the installer inside it verify package 9.0 s, copy 28.1 s, verify copy 26.6 s, stop 0.7 s, switch
-  0.4 s; the entry now 1.0.19 with the new uninstaller, the database file unchanged, the key file untouched, JARVIS
-  not started); 1.0.19 started on the same data through its own `JARVIS.exe` (only `JARVIS.exe` and `python.exe`
-  running); a rerun changed nothing; rollback (only with
-  its approval file): 1.0.17 verified and started again, the key file put back from the copy and the changed file kept
-  beside it, the entry still saying 1.0.19; a rerun after the rollback changed nothing; the sandbox uninstalled through
-  its own entry at the end. Your real Desktop and Startup shortcuts hashed before, after every step and at the end;
+  125.0 s wall: the installer inside it verify package 9.1 s, copy 16.6 s, verify copy 22.7 s, stop 0.8 s, switch
+  0.1 s; the entry now 1.0.19 with the new uninstaller, the database file and the key file byte-for-byte unchanged,
+  JARVIS not started); 1.0.19 started on the same data through its own `JARVIS.exe` (only `JARVIS.exe` and
+  `python.exe` running); a rerun changed nothing; a second attempt of step 3 (its record renamed aside for the test)
+  refused with the state said in full, the release, the shortcuts and the Settings > Apps entry; rollback (only with
+  its approval file): the attempt recorded before the switch, 1.0.17 verified and started again, the key file put
+  back from the copy and the changed file kept beside it, the last line naming the provider word 1.0.17 does not know,
+  the entry still saying 1.0.19; a rerun after the rollback changed nothing; a rollback entered again without its
+  record (renamed aside for the test) refused, still on 1.0.17, nothing switched; the sandbox uninstalled through its
+  own entry at the end. Your real Desktop and Startup shortcuts hashed before, after every step and at the end;
   your real Settings > Apps entry (JARVIS 1.0.17) read at the start and at the end, both the same; your installed
   JARVIS never addressed (0 of its processes before and after: it was not running); no sandbox process left; the fake
   key value appears in no record and no line of output (checked by search). Run 1 (20:10 to 20:16,
@@ -142,7 +152,7 @@ a STOP. Nothing is deleted anywhere.
 | 3 | Launcher | Renames the 1.0.17 package folder aside (item 3), then runs `JARVIS-Setup-1.0.19-629bb5621d34.exe` silently with its defaults (a line every half minute; 3 to 10 minutes: 187 s for 1.0.17 on this PC, 538 s in the VM). The installer inside it adds 1.0.19 beside 1.0.17, checks every file, switches your JARVIS to it, writes the Desktop and Startup shortcuts at the new `JARVIS.exe`; the Setup rewrites the Settings > Apps entry to JARVIS 1.0.19 with its new uninstaller. The launcher checks all of it, that the database file is byte-for-byte unchanged and the key file untouched; JARVIS is not started. | step R |
 | 4 | You | Start JARVIS from its Desktop icon and check (list below). | |
 | 5 | You | Restart the PC once (Start > Power > Restart, jonny) and check JARVIS starts by itself after you sign in (3.6 minutes after sign-in for 1.0.17). | |
-| R | Launcher, **only on your word** | If anything is wrong in step 4 or 5: tell me; I record your word and one more double-click switches your JARVIS back to 1.0.17 (still installed): its shortcuts come back at its `JARVIS.exe`, your key file is put back as it stood at step 1 (the current file kept beside it), the Settings > Apps entry stays saying 1.0.19. | update again later |
+| R | Launcher, **only on your word** | If anything is wrong in step 4 or 5: tell me; I record your word and one more double-click switches your JARVIS back to 1.0.17 (still installed): its shortcuts come back at its `JARVIS.exe`, your key file is put back as it stood at step 1 (the current file kept beside it), the Settings > Apps entry stays saying 1.0.19. Then you set `JARVIS_PROVIDER=qwen` (or `openai`) in the key file yourself before starting 1.0.17. | update again later |
 
 **Your check in step 4** (10 minutes): the window, the taskbar and the tray say JARVIS; Settings > About shows
 `Version 1.0.19-629bb5621d34 (installed)`; the "AI configuration" line names a Qwen model through OpenRouter, not
@@ -172,8 +182,9 @@ word), never a value, never your messages. I never read your key file or the con
    earned its keep (I will ask).
 5. **1.0.19 answers only through OpenRouter.** If OpenRouter is down or the key is wrong, JARVIS says so; there is no
    second service. The backup model is a second Qwen model on the same service.
-6. **A rollback to 1.0.17 keeps your data** and puts the key file back; 1.0.17 knows none of the 1.0.19 items; the
-   Settings > Apps entry stays saying 1.0.19.
+6. **A rollback to 1.0.17 keeps your data** and puts the key file back as it stood at step 1; 1.0.17 refuses that
+   file's `openrouter` provider line, so you set it to `qwen` or `openai` by hand before starting 1.0.17; 1.0.17 knows
+   none of the 1.0.19 items; the Settings > Apps entry stays saying 1.0.19.
 7. **Known limits that remain:** install under a non-administrator Windows account is untested (your account is an
    administrator; the update itself needs no administrator rights; a UAC prompt is a STOP); a program JARVIS opened
    should be closed before an update; the interactive Setup wizard (Next, Install) was not used: this update runs it
@@ -187,12 +198,50 @@ The next release from the merge branch (the Workshop, goals, skills, standing re
 through the same chain, with the changed-files-only updater you chose (point 1 of the efficiency list); the C: cleanup
 (1.0.16, the renamed folder, the key-file copy) on your word.
 
-## Independent review
+## Independent review (one reviewer agent, 2026-10-13 20:15 to 20:27: 2 high, 6 medium, 8 low; all applied, rehearsed again, run 3 below)
 
-Pending (one reviewer agent, started 20:20): the launcher's changes from version 2, the key-file handling (no value
-may leak into output or records), the step 3 rename and its failure paths, the rollback order, PowerShell 5.1
-pitfalls, and the harness's separation from the real installation. Findings and what was applied are listed here
-before approval.
+1. **High:** every failure message of step 3 and the rollback that was written as `Halt "text" + (StateNow) + ...`
+   lost everything after the first string (PowerShell takes `+` as another argument there), so on those paths the
+   launcher never said what state the installation was in. Present in the 1.0.17 launcher too, where the 2026-10-07
+   review's finding 2 was thought fixed; it never showed because every rehearsal and real run passed. Fixed: every
+   such call parenthesised; `Halt` itself now prints any extra arguments it is given; the harness checks the file for
+   the pattern and now exercises two failing paths and asserts the state line appears in full.
+2. **High:** a rollback that stopped after the installer had switched back but before its record was written would,
+   on the next double-click, call the installer's rollback again, which switches FORWARD to 1.0.19 (current.json then
+   says 1.0.17 with 1.0.19 as previous) and rewrites the real shortcuts, with no decision. In the 1.0.17 launcher too.
+   Fixed: the rollback reads the state first and runs the installer only from 1.0.19; already on 1.0.17 with 1.0.19
+   as previous it stops, says so and the state, and switches nothing; an attempt record is written before the switch.
+3. **Medium:** the plan promised that the rollback puts "the provider line and the OpenAI or Qwen keys back as they
+   were"; the copy is made at step 1, after your step 0 edit, so it already says `openrouter`, which 1.0.17 refuses.
+   Corrected in this plan (items 1 and 6, "Your data and a rollback", row R): the rollback restores the step 1 file
+   and tells you to set the provider line to `qwen` or `openai` yourself; the record holds the provider word after
+   the restore.
+4. **Medium:** the state line named the release and the shortcuts but not the Settings > Apps entry nor the renamed
+   package folder; when the installer inside the Setup refuses, the Setup removes the entry. Fixed: the state line
+   says what the entry lists and where the renamed folder is; the step 3 messages say the entry is removed in that
+   case and a rollback does not need it.
+5. **Medium:** the key-file copy was made before the later step 1 checks, so a failed step 1 left it and the next
+   attempt stopped on "exists already". Fixed: the copy is made last, after the verify, and an existing copy with
+   the same bytes is accepted.
+6. **Medium:** a missing copy at rollback was skipped silently and the final line still claimed the key file was put
+   back. Fixed: the record says `restored: false` with the reason and the final line says "BUT the key file was NOT
+   put back".
+7. **Medium:** the key-file copies in the rollback had no error handling. Fixed: wrapped; the kept copy is checked
+   by hash before the overwrite; the failure message says where both files are ("nothing is lost").
+8. **Medium:** the plan said step 3 checks the key file untouched; the launcher did not. Fixed: the key file's hash
+   before and after the Setup, a change stops the step, both hashes in the record.
+9. Low: the key-file reading now mirrors 1.0.19's own (`NAME=value`, capitals only, no `export`, case-sensitive;
+   an empty provider line accepted as 1.0.19 accepts it). 10. `Get-Item -Force` so a hidden key file does not end
+   step 1 with a raw error. 11. Step 1 stops when the entry's Uninstall button does not point at the package folder,
+   or the folder or its uninstaller is missing. 12. The package folder's answer is checked in the sandbox too. 13.
+   The copy is compared with the hash step 1 recorded before it is restored. 14. The rollback's last line no longer
+   claims shortcuts in a sandbox. 15. The console line after the rename says not to press Uninstall for the next few
+   minutes. 16. The harness also checks the passing step 1 and rollback output for the fake key value.
+
+Found sound by the reviewer: the sandbox/real guard; no key value in any output or record (tested on a synthetic
+file); the PowerShell 5.1 constructs; the step 3 order (every stop before the rename, the rename atomic, a second
+attempt blocked with nothing deleted); the rollback order; nothing deleted anywhere; the Setup's switches; the
+harness's separation from your installation.
 
 ## Approval
 
