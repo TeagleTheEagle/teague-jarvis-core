@@ -154,6 +154,31 @@ The owner asked that JARVIS and VERONICA "work and adopt goals on their own, jus
 - The record (who suggested it, why, the owner's answer, the mission it became) is shown in Settings > Workshop under
   the missions. Tests: `test_goals.py`.
 
+### The standing purpose, fuller goals and the verification (owner, 2026-10-13, "add them all", items 1 and 3)
+
+From the owner's two documents ("JARVIS Permission Breakdown", "Build Autonomous AI"): "give him a mission that can
+produce new goals" and "every goal should have a reason, success condition, priority, cost limit, and stopping
+condition"; "verify_progress ... success should depend on a meaningful test passing, not just the model saying I fixed
+it"; "save explicit progress records and checkpoints so the next session can resume accurately".
+
+- **The standing purpose** (Settings > Workshop, the setting `purpose`, up to 2,000 characters): what JARVIS is for, in
+  the owner's words. It rides in every question's instructions ("Your standing purpose, set by the owner (the goals you
+  suggest serve it): ..."); empty, he suggests from what he sees, as before.
+- **A goal says when it is done**: `goal_propose` now needs `success` (what must be true, and checkable, when it is
+  done) beside the goal and the reason, and takes `priority` (low, normal, high), `minutes` (a cost limit, 1 to 180) and
+  `stop` (when to give up). All of it is on the approval card and in Settings > Workshop. On yes, the mission is given
+  the goal with its success condition and stopping condition (`goals.Goals.mission_goal`), and the cost limit bounds
+  the mission, never past the owner's time limit (`workshop.Desk._minutes_for`).
+- **The verification**: `workshop_mission finish` takes `verified`: whether the success condition was met and exactly
+  what was run to check it; the guidance says "done" without a check seen in a result is not done. Kept on the mission
+  record (`verified`) and shown under the mission in Settings > Workshop ("Checked: ...").
+- **Picking up where he left off** (`Missions.interrupted`, `Desk.resume_interrupted`): a mission still running when
+  the Core ended is kept as `interrupted` with its plan, log and count (it was marked stopped before). About 45 s
+  after the next start the Core takes it up again, once (`resumed`), if it was cut off less than a day ago and nothing
+  else runs: no new plan is asked for; the model is told which steps were reported done and to look before redoing one.
+  The owner's approval it carried (`covered`) and its cost limit go with it. Older, or already resumed once, it stays
+  interrupted for the owner to read. Tests: `test_workshop.py` (`ResumeTests`), `test_goals.py`.
+
 ## Changes JARVIS proposes to his own program (`development.py`, widened the same day)
 
 The owner also asked that they "have the ability to edit, improve, fix the core and themselves; they'll propose a

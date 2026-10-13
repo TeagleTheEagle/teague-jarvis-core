@@ -7,6 +7,10 @@ assert.equal(w.stateText('failed'),'Not completed','a mission that did not reach
 assert.equal(w.stateText('stopped'),'Stopped');
 assert.equal(w.stateText('planning'),'Planning');
 assert.equal(w.missionLine({state:'running',goal:'List the largest files'}),'Running: List the largest files');
+assert.equal(w.stateText('interrupted'),'Interrupted (JARVIS was closed; taken up again at his next start)');
+assert.equal(w.goalTerms({success:'the folder is sorted and a listing proves it',priority:'high',minutes:20,stop:'after 20 minutes or the second failure'}),'Done when: the folder is sorted and a listing proves it · Priority: high · Time limit: 20 min · Give up when: after 20 minutes or the second failure');
+assert.equal(w.goalTerms({success:'x',priority:'normal'}),'Done when: x','a normal priority is not shown');
+assert.equal(w.goalTerms({}),'');
 assert.equal(w.goalState('proposed'),'Waiting for your answer');
 assert.equal(w.goalState('adopted'),'Approved');
 assert.equal(w.goalState('declined'),'Declined');

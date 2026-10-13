@@ -248,6 +248,16 @@ stops at its first write), the emergency authority (a restart after a crash thro
 and the warning before a risky action, asked once on the card. Six switches in Settings > Permissions, on as shipped.
 Tests: `test_standing.py` (14), `desktop/test/core-watch.test.cjs`; the launcher's restart gets its real test in the
 next release's regression and Stage 7.
+**Then (about 20:10), from the owner's two documents and "add them all" (five items, in the order 1, 3, 2, 4, 5):
+items 1 and 3 built** (docs/WORKSHOP.md "The standing purpose, fuller goals and the verification"): the standing purpose
+in Settings > Workshop; a goal with its success condition (required), priority, cost limit and stopping condition, all
+on the card; the mission's `finish` with `verified`; and an interrupted mission taken up again once at the next start
+with its plan and log. **Still to build:** item 2 (facts vs guesses: confirmed/inferred with source and date, corrections
+superseding; re-check a changeable fact before acting), item 4 (the yardstick: about 20 representative tasks, some held
+out, scored over time; ASI roadmap Phase 0) and item 5 (self-improvement as an experiment: a proposal tried in an
+isolated copy with the tests and the yardstick, before-and-after numbers on the card; after item 4). Items 4 and 5 are
+two to three sessions each. **STAGE_7_COMPLETE for 1.0.19 at 19:49** (record on `claude/release-1.0.19`, commit
+`90f7f83`, `docs/stage7-1.0.19-evidence/`); the everyday update to 1.0.19 waits for the owner's word.
 
 ## 2026-10-13, about 16:40 local (Hermes Agent, same chat resumed; owner: "give them those abilities", then "dont restore her limits and dont move anything", "go")
 

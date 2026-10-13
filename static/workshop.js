@@ -4,9 +4,18 @@
 // and sends the owner's clicks.
 const JarvisWorkshop = {
   stateText(state) {
-    return {planning: 'Planning', running: 'Running', finished: 'Done', failed: 'Not completed', stopped: 'Stopped'}[state] || String(state || '');
+    return {planning: 'Planning', running: 'Running', finished: 'Done', failed: 'Not completed', stopped: 'Stopped', interrupted: 'Interrupted (JARVIS was closed; taken up again at his next start)'}[state] || String(state || '');
   },
   missionLine(mission) { return JarvisWorkshop.stateText(mission.state) + ': ' + (mission.goal || ''); },
+  // A goal's success condition, priority, cost limit and stopping condition (goals.py, owner 2026-10-13), one line.
+  goalTerms(g) {
+    const parts = [];
+    if (g.success) parts.push('Done when: ' + g.success);
+    if (g.priority && g.priority !== 'normal') parts.push('Priority: ' + g.priority);
+    if (g.minutes) parts.push('Time limit: ' + g.minutes + ' min');
+    if (g.stop) parts.push('Give up when: ' + g.stop);
+    return parts.join(' · ');
+  },
   goalState(state) {
     return {proposed: 'Waiting for your answer', adopted: 'Approved', declined: 'Declined', expired: 'Lapsed unanswered', failed: 'Approved, but could not start'}[state] || String(state || '');
   },
@@ -65,9 +74,9 @@ if (typeof document !== 'undefined') (() => {
     'obeys its switch in Settings > Permissions; the emergency stop ends a mission at once.');
   const folderLine = el('p', 'workshop-folder'), foldersBox = el('div', 'workshop-folders'), minutesBox = el('div', 'workshop-minutes'),
         pythonLine = el('p', 'workshop-python'), missionBox = el('div', 'workshop-missions'), lessonBox = el('div', 'workshop-lessons'),
-        skillBox = el('div', 'workshop-skills');
+        skillBox = el('div', 'workshop-skills'), purposeBox = el('div', 'workshop-purpose');
   missionBox.setAttribute('aria-live', 'polite');
-  panel.append(intro, folderLine, pythonLine, foldersBox, minutesBox, missionBox, skillBox, lessonBox);
+  panel.append(intro, folderLine, pythonLine, foldersBox, minutesBox, purposeBox, missionBox, skillBox, lessonBox);
   const category = q('.ti-settings-group[data-setting="Workshop"]'), settingsView = q('#settingsView');
   if (category) category.append(panel); else if (settingsView) { panel.prepend(el('h2', '', 'Workshop')); settingsView.prepend(panel); }
 
@@ -105,6 +114,17 @@ if (typeof document !== 'undefined') (() => {
       button('SAVE', 'outline', () => save({workshop_minutes: Number(input.value)}, 'Time limit saved.')));
   }
 
+  // The standing purpose (goals.py, owner 2026-10-13): what JARVIS is for, in the owner's words; the goals he suggests serve it.
+  function renderPurpose(data) {
+    if (purposeBox.contains(document.activeElement)) return;
+    const input = el('textarea'); input.rows = 3; input.maxLength = 2000; input.value = data.purpose || '';
+    input.placeholder = 'For example: Help me build and maintain my AI assistant. Find problems, propose improvements, finish useful work and reduce repeated failures, within what I allow.';
+    input.setAttribute('aria-label', 'JARVIS\'s standing purpose');
+    purposeBox.replaceChildren(el('h3', '', 'Standing purpose'),
+      el('p', 'workshop-note', 'What JARVIS is for, in your words. The goals he suggests serve it; every goal he suggests comes with what "done" means, a priority, a time limit and when to give up, and you still approve each one. Leave it empty and he suggests from what he sees.'),
+      input, button('SAVE', 'outline', () => save({purpose: input.value.trim()}, 'Purpose saved.')));
+  }
+
   function renderMissions(data) {
     const goalBox = missionBox.querySelector('textarea');
     const typed = goalBox && goalBox.value;
@@ -122,6 +142,7 @@ if (typeof document !== 'undefined') (() => {
       if (m.plan && m.plan.length) { const ol = el('ol', 'workshop-plan'); m.plan.forEach(s => ol.append(el('li', '', s))); node.append(ol); }
       if (m.log && m.log.length) { const ul = el('ul', 'workshop-log'); m.log.slice(-8).forEach(e => ul.append(el('li', '', JarvisWorkshop.logLine(e)))); node.append(ul); }
       if (m.result) node.append(el('p', 'workshop-result', m.result));
+      if (m.verified) node.append(el('p', 'workshop-note', 'Checked: ' + m.verified));
       node.append(el('small', '', 'Chat: ' + m.chat + ' · ' + m.tool_calls + ' tool calls'));
       return node;
     });
@@ -131,6 +152,7 @@ if (typeof document !== 'undefined') (() => {
       const node = el('article', 'workshop-mission ' + (g.state === 'adopted' ? 'ok' : g.state === 'proposed' ? '' : 'warn'));
       node.append(el('b', '', JarvisWorkshop.goalState(g.state) + ': ' + (g.goal || '')));
       if (g.why) node.append(el('p', 'workshop-result', 'Why: ' + g.why));
+      const terms = JarvisWorkshop.goalTerms(g); if (terms) node.append(el('p', 'workshop-note', terms));
       node.append(el('small', '', 'Suggested by ' + (g.by || 'JARVIS') + ' ' + new Date(g.created * 1000).toLocaleString() + (g.mission && g.state === 'adopted' ? ' · mission ' + g.mission : '')));
       return node;
     });
@@ -184,7 +206,7 @@ if (typeof document !== 'undefined') (() => {
     folderLine.replaceChildren(el('span', '', 'Folder: '), el('code', '', data.folder || ''), button('REFRESH', 'text-button', load),
       el('span', 'workshop-note', ' Replaced and deleted files are kept in ' + (data.recycle || '') + '.'));
     pythonLine.textContent = JarvisWorkshop.interpreterText(data.interpreters);
-    renderFolders(data); renderMinutes(data); renderMissions(data); renderSkills(data); renderLessons(data);
+    renderFolders(data); renderMinutes(data); renderPurpose(data); renderMissions(data); renderSkills(data); renderLessons(data);
   }
   async function load() {
     if (inspecting()) { missionBox.textContent = 'Not shown during an inspection.'; return; }

@@ -20,7 +20,7 @@ import providers
 import workshop
 from store import Store
 from test_device_gateway import DONE, ENV, DeviceCase, calls
-from workshop import Desk, Files, Folders, Interpreters, Lessons, Mission, Runner, WorkshopError, parse_plan
+from workshop import Desk, Files, Folders, Interpreters, Lessons, Mission, Missions, Runner, WorkshopError, parse_plan
 
 # A cleared environment still needs Windows' own variables for cmd.exe and the test Python to work.
 WINDOWS = {k: os.environ[k] for k in ('SystemRoot', 'PATH', 'TEMP', 'TMP', 'USERPROFILE', 'LOCALAPPDATA', 'APPDATA', 'HOMEDRIVE', 'HOMEPATH',
@@ -604,22 +604,23 @@ class ReviewFixTests(unittest.TestCase):
         with patch('workshop.subprocess.run', return_value=fake):
             self.assertEqual(python._probe(['py', '-3']), {'path': str(exe), 'version': '3.13.1'})
 
-    def test_a_mission_cut_off_by_the_core_ending_is_marked_stopped_at_the_next_start(self):
+    def test_a_mission_cut_off_by_the_core_ending_is_marked_interrupted_at_the_next_start(self):
         store = Store(self.temp.name)
         missions = workshop.Missions(store)
         row = missions.create('Left running.')
         missions.update(row['id'], state='running')
-        # The next Core start (a new Desk and its Missions) marks it stopped, writes the chat line and, once the
-        # activity rows are wired, the row.
+        # The next Core start (a new Desk and its Missions) marks it interrupted (kept for resume_interrupted, owner
+        # 2026-10-13; 'stopped' before), writes the chat line and, once the activity rows are wired, the row.
         desk = Desk(store, self.home)
         self.assertEqual([r['goal'] for r in desk.missions.recovered], ['Left running.'])
-        self.assertEqual((desk.missions.get(row['id'])['state'], desk.missions.get(row['id'])['result']), ('stopped', workshop.Missions.CUT_OFF))
+        self.assertEqual((desk.missions.get(row['id'])['state'], desk.missions.get(row['id'])['result']), ('interrupted', workshop.Missions.CUT_OFF))
         audits = []
         desk.connect(audit=lambda action, status, run=None: audits.append((action, status)))
-        self.assertEqual(audits, [('mission stopped', 'Left running.')])
+        self.assertEqual(audits, [('mission interrupted', 'Left running.')])
         self.assertEqual(workshop.Missions(store).recovered, [], 'marked once')
-        self.assertEqual(store.history(row['conversation'])[-1]['content'], 'Mission stopped: ' + workshop.Missions.CUT_OFF)
-        self.assertEqual(desk.context('anything')['latest_mission']['state'], 'stopped')
+        self.assertEqual(store.history(row['conversation'])[-1]['content'], 'Mission interrupted: ' + workshop.Missions.CUT_OFF)
+        self.assertEqual(desk.context('anything')['latest_mission']['state'], 'interrupted')
+        self.assertEqual([r['id'] for r in desk.missions.interrupted()], [row['id']], 'waiting to be taken up again')
 
     def test_jarvis_own_folders_cannot_be_added_and_a_command_naming_them_is_refused(self):
         config, data, program = self.root / 'install' / 'config', self.root / 'install' / 'data', self.root / 'install' / 'releases' / 'x' / 'app'
@@ -726,6 +727,67 @@ class ReviewFixTests(unittest.TestCase):
         blocked['why'] = 'still stopped'
         with self.assertRaises(WorkshopError):
             desk.start_mission('Not while stopped.')
+
+
+class ResumeTests(MissionTests):
+    """A mission cut off by the Core's end is taken up again (owner, 2026-10-13: picking up where he left off), with its
+    plan and log, once, within a day; the approval it carried goes with it; the finish's verification is kept."""
+
+    def test_a_cut_off_mission_is_interrupted_then_resumed_from_its_plan(self):
+        # The first Core: the plan, step 1 done, then the Core "ends" (the row is left running in the record).
+        desk, seen, notices, audits = self.desk([
+            text('{"steps": ["Write note.txt", "Append a second line", "Report"]}'),
+            tool_call('workshop_files', action='write', path='note.txt', content='one\n'),
+            tool_call('workshop_mission', action='progress', step=1, text='note.txt written'),
+        ])
+        desk.start_mission('Write a two-line note.', covered=True, minutes=3)
+        row = self.wait(desk)
+        self.assertEqual(row['state'], 'stopped', 'the replies ran out, which this fake model reports as a stop; the record is set back to running below, as a cut-off Core leaves it')
+        self.assertEqual((row['covered'], row['minutes']), (1, 3))
+        with self.store.connect() as db:
+            db.execute("UPDATE missions SET state='running' WHERE id=?", (row['id'],))
+        # The next Core: the record says interrupted; nothing runs by itself in a test.
+        desk2, seen2, notices2, audits2 = self.desk([
+            tool_call('workshop_files', action='append', path='note.txt', content='two\n'),
+            tool_call('workshop_mission', action='progress', step=2, text='second line appended'),
+            tool_call('workshop_mission', action='finish', outcome='done', text='note.txt holds two lines.', verified='workshop_files read note.txt showed "one" and "two"'),
+        ])
+        self.assertIn(('mission interrupted', 'Write a two-line note.'), audits2)
+        self.assertEqual(desk2.missions.get(row['id'])['state'], 'interrupted')
+        self.assertEqual(desk2.resume_interrupted(), row['id'])
+        done = self.wait(desk2)
+        self.assertEqual((done['state'], done['resumed'], done['result']), ('finished', 1, 'note.txt holds two lines.'))
+        self.assertEqual(done['verified'], 'workshop_files read note.txt showed "one" and "two"')
+        self.assertEqual(done['plan'], ['Write note.txt', 'Append a second line', 'Report'], 'the plan was kept, not asked for again')
+        self.assertEqual([e['kind'] for e in done['log']][:4], ['plan', 'tool', 'step', 'resumed'])
+        self.assertEqual((self.home / 'note.txt').read_text(encoding='utf-8'), 'one\ntwo\n')
+        self.assertTrue(seen2[0][1], 'the first request offered the tools: no planning round')
+        self.assertIn('Reported done before the cut: step 1: note.txt written', seen2[0][0][-1]['content'])
+        self.assertIn('Your plan:\n1. Write note.txt', seen2[0][0][0]['content'])
+        self.assertTrue(desk2.current.carrier.covered, 'the owner\'s approval it carried goes with it')
+        self.assertEqual(desk2.current.minutes, 3)
+        self.assertIn(('mission resumed', 'Write a two-line note.'), audits2)
+        self.assertIsNone(desk2.resume_interrupted(), 'once')
+        self.assertTrue(any('Resumed: JARVIS was closed' in m['content'] for m in self.store.history(done['conversation'])))
+
+    def test_old_or_already_resumed_missions_stay_interrupted(self):
+        desk, *_ = self.desk([])
+        row = desk.missions.create('An old one.')
+        with self.store.connect() as db:
+            db.execute("UPDATE missions SET state='running', updated=? WHERE id=?", (time.time() - Missions.RESUME_WITHIN - 10, row['id']))
+        again = Missions(Store(self.temp.name))
+        self.assertEqual(again.get(row['id'])['state'], 'interrupted')
+        self.assertEqual(again.interrupted(), [], 'older than a day: not taken up')
+        desk2, *_ = self.desk([])
+        self.assertIsNone(desk2.resume_interrupted())
+        self.assertEqual(desk2.missions.get(row['id'])['state'], 'interrupted')
+
+    def test_a_goals_cost_limit_never_passes_the_owners_setting(self):
+        desk, *_ = self.desk([], minutes=10)
+        self.assertEqual(desk._minutes_for(None), 10)
+        self.assertEqual(desk._minutes_for(3), 3)
+        self.assertEqual(desk._minutes_for(500), 10)
+        self.assertEqual(desk._minutes_for('x'), 10)
 
 
 class ApprovalTests(DeviceCase):

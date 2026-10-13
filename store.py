@@ -219,7 +219,7 @@ class Store:
             db.execute('DELETE FROM reminders WHERE id=?', (item_id,))
 
     def settings(self):
-        result = {'name': '', 'voice': False, 'continuous': False, 'response_length': 'balanced', 'tone': 'cinematic', 'humor': True, 'speech_rate': 'natural', 'wake_sensitivity': 'normal', 'quiet_hours': False, 'briefing_time': '', 'proactive': False, 'lockdown': False, 'watch_problems': True, 'mission_covers': True, 'emergency_restart': True, 'emergency_backup': True, 'emergency_lockdown': True, 'warn_risky': True, 'answer_mode': DEFAULT_ANSWER_MODE, 'provider_backup': True, 'speech_recognition': 'local', 'offline_answers': True, 'reply_stream': False, 'music_volume': 80, 'music_startup': '', 'workshop_minutes': 15, 'workshop_folders': ''}
+        result = {'name': '', 'voice': False, 'continuous': False, 'response_length': 'balanced', 'tone': 'cinematic', 'humor': True, 'speech_rate': 'natural', 'wake_sensitivity': 'normal', 'quiet_hours': False, 'briefing_time': '', 'proactive': False, 'purpose': '', 'lockdown': False, 'watch_problems': True, 'mission_covers': True, 'emergency_restart': True, 'emergency_backup': True, 'emergency_lockdown': True, 'warn_risky': True, 'answer_mode': DEFAULT_ANSWER_MODE, 'provider_backup': True, 'speech_recognition': 'local', 'offline_answers': True, 'reply_stream': False, 'music_volume': 80, 'music_startup': '', 'workshop_minutes': 15, 'workshop_folders': ''}
         with self.connect() as db:
             result.update({r['key']: json.loads(r['value']) for r in db.execute('SELECT * FROM settings')})
         if result.get('voice_profile', 'auto') not in VOICE_PROFILES:  # e.g. an ElevenLabs (1.0.15) or OpenAI/Qwen (2026-10-13) choice saved before
@@ -231,12 +231,12 @@ class Store:
         return result
 
     def save_settings(self, values):
-        permitted = {'voice_profile': str, 'name': str, 'voice': bool, 'continuous': bool, 'response_length': str, 'tone': str, 'humor': bool, 'speech_rate': str, 'wake_sensitivity': str, 'quiet_hours': bool, 'briefing_time': str, 'proactive': bool, 'lockdown': bool, 'watch_problems': bool, 'mission_covers': bool, 'emergency_restart': bool, 'emergency_backup': bool, 'emergency_lockdown': bool, 'warn_risky': bool, 'answer_mode': str, 'provider_backup': bool, 'speech_recognition': str, 'offline_answers': bool, 'reply_stream': bool, 'music_volume': int, 'music_startup': str, 'workshop_minutes': int, 'workshop_folders': str}
+        permitted = {'voice_profile': str, 'name': str, 'voice': bool, 'continuous': bool, 'response_length': str, 'tone': str, 'humor': bool, 'speech_rate': str, 'wake_sensitivity': str, 'quiet_hours': bool, 'briefing_time': str, 'proactive': bool, 'purpose': str, 'lockdown': bool, 'watch_problems': bool, 'mission_covers': bool, 'emergency_restart': bool, 'emergency_backup': bool, 'emergency_lockdown': bool, 'warn_risky': bool, 'answer_mode': str, 'provider_backup': bool, 'speech_recognition': str, 'offline_answers': bool, 'reply_stream': bool, 'music_volume': int, 'music_startup': str, 'workshop_minutes': int, 'workshop_folders': str}
         with self.connect() as db:
             for key, val in values.items():
                 if key not in permitted or not isinstance(val, permitted[key]):
                     raise ValueError('Invalid setting.')
-                if isinstance(val, str) and len(val) > (2000 if key == 'workshop_folders' else 255 if key == 'music_startup' else 100):   # a file name may be long; folders are several paths
+                if isinstance(val, str) and len(val) > (2000 if key in ('workshop_folders', 'purpose') else 255 if key == 'music_startup' else 100):   # a file name may be long; folders are several paths
                     raise ValueError('Setting too long.')
                 if key == 'voice_profile' and val not in VOICE_PROFILES: raise ValueError('Invalid voice profile.')
                 if key == 'music_volume' and (isinstance(val, bool) or not 0 <= val <= 100): raise ValueError('The music volume is a whole number from 0 to 100.')

@@ -6,7 +6,7 @@
 .workshop-python{margin:0;opacity:.85;font-size:.9rem}
 .workshop-folders input,.workshop-minutes input{width:100%;max-width:560px;box-sizing:border-box;margin:0 8px 8px 0}
 .workshop-minutes input{max-width:120px}
-.workshop-missions textarea{width:100%;max-width:720px;box-sizing:border-box;resize:vertical}
+.workshop-purpose textarea,.workshop-missions textarea{width:100%;max-width:720px;box-sizing:border-box;resize:vertical}
 .workshop-controls{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}
 .workshop-mission{padding:8px 10px;margin:0 0 8px;border-left:3px solid rgba(255,255,255,.25);background:rgba(255,255,255,.03)}
 .workshop-mission.ok{border-left-color:#39f5b5}

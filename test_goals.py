@@ -3,6 +3,7 @@ the wider set of program files he may propose a change to (development.py): a su
 owner; yes makes a mission, no is kept; nothing starts by itself. Also what is protected: the gateway, the permission
 table, the guard, the tests, the launchers.
 """
+import functools
 import tempfile
 import time
 import unittest
@@ -22,10 +23,19 @@ class GoalsRecordTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.goals = goals.Goals(Store(self.temp.name))
+        self.goals.propose = functools.partial(self._propose_with_success, self.goals.propose)
+
+    @staticmethod
+    def _propose_with_success(propose, goal, why, success='it is done and a listing shows it', **more):
+        return propose(goal, why, success, **more)
 
     def test_a_suggestion_is_kept_and_answered_once(self):
-        row = self.goals.propose('Tidy the downloads folder into dated subfolders', 'the owner asked three times this week')
+        row = self.goals.propose('Tidy the downloads folder into dated subfolders', 'the owner asked three times this week',
+                                 success='every file in Downloads sits in a folder named by its month, and a listing shows it', priority='high', minutes=20, stop='after 20 minutes or a second failure')
         self.assertEqual((row['state'], row['by'], row['mission']), ('proposed', 'JARVIS', None))
+        self.assertEqual((row['success'][:10], row['priority'], row['minutes'], row['stop'][:8]), ('every file', 'high', 20, 'after 20'))
+        self.assertIn('Success condition (check it and say in "verified" what you ran): every file', goals.Goals.mission_goal(row))
+        self.assertIn('Stop when: after 20 minutes', goals.Goals.mission_goal(row))
         self.assertEqual(self.goals.list()[0]['id'], row['id'])
         done = self.goals.answer(row['id'], True)
         self.assertEqual(done['state'], 'adopted')
@@ -38,7 +48,14 @@ class GoalsRecordTests(unittest.TestCase):
         with self.assertRaises(goals.GoalError): self.goals.propose('short', 'because')
         with self.assertRaises(goals.GoalError): self.goals.propose('a' * 601, 'because')
         with self.assertRaises(goals.GoalError): self.goals.propose('A fair goal in words', '')
-        self.assertEqual(self.goals.propose('  Sort   the\nphotos  ', 'they pile up')['goal'], 'Sort the photos')
+        with self.assertRaises(goals.GoalError): self.goals.propose('A fair goal in words', 'because', success='')   # done when? always
+        with self.assertRaises(goals.GoalError): self.goals.propose('A fair goal in words', 'because', success='the photos are sorted', priority='urgent')
+        with self.assertRaises(goals.GoalError): self.goals.propose('A fair goal in words', 'because', success='the photos are sorted', minutes=0)
+        with self.assertRaises(goals.GoalError): self.goals.propose('A fair goal in words', 'because', success='the photos are sorted', minutes='soon')
+        row = self.goals.propose('  Sort   the\nphotos  ', 'they pile up', success='the photos are sorted by year')
+        self.assertEqual((row['goal'], row['priority'], row['minutes'], row['stop']), ('Sort the photos', 'normal', None, ''))
+        self.assertEqual(goals.Goals.purpose({'purpose': '  Help  me\nbuild  '}), 'Help me build')
+        self.assertEqual(goals.Goals.purpose({}), '')
 
     def test_caps_the_same_goal_twice_and_the_day(self):
         for n in range(goals.PENDING_MAX):
@@ -54,9 +71,9 @@ class GoalsRecordTests(unittest.TestCase):
         # The daily cap counts adoptions, from the record.
         g = goals.Goals(Store(tempfile.mkdtemp(dir=self.temp.name)))
         for n in range(goals.DAILY_MAX):
-            g.answer(g.propose(f'Adopted goal {n}', 'worth it')['id'], True)
+            g.answer(g.propose(f'Adopted goal {n}', 'worth it', 'it is done')['id'], True)
         with self.assertRaises(goals.GoalError) as caught:
-            g.propose('A sixth goal today', 'worth it')
+            g.propose('A sixth goal today', 'worth it', 'it is done')
         self.assertIn('today', str(caught.exception))
 
     def test_unanswered_suggestions_lapse_and_a_core_start_lapses_them_all(self):
@@ -68,7 +85,7 @@ class GoalsRecordTests(unittest.TestCase):
             self.goals.answer(old['id'], True)
         again = goals.Goals(self.goals.store)   # the Core starts again: the cards are gone, so the waiting suggestions lapse
         self.assertEqual({r['state'] for r in again.list()}, {'expired'})
-        self.assertEqual(again.propose('A fresh idea', 'noticed')['state'], 'proposed', 'a lapsed goal may be suggested again')
+        self.assertEqual(again.propose('A fresh idea', 'noticed', 'it is done')['state'], 'proposed', 'a lapsed goal may be suggested again')
 
 
 class GoalsInTheCoreTests(unittest.TestCase):
@@ -82,17 +99,26 @@ class GoalsInTheCoreTests(unittest.TestCase):
         self.run.user_text = 'what should we do about the photos?'
         self.app.runs[self.run.id] = self.run
 
-    def suggest(self, run=None, goal='Sort the photo folder by year and month', why='the owner asked about it twice'):
-        return self.app.tool('goal_propose', {'goal': goal, 'why': why}, run if run is not None else self.run)
+    def suggest(self, run=None, goal='Sort the photo folder by year and month', why='the owner asked about it twice', **more):
+        args = {'goal': goal, 'why': why, 'success': 'every photo sits in a year/month folder and a listing proves it', **more}
+        return self.app.tool('goal_propose', args, run if run is not None else self.run)
 
     def test_the_tool_and_its_rule(self):
-        self.assertTrue(actions.validate('goal_propose', {'goal': 'x', 'why': 'y'}))
+        self.assertTrue(actions.validate('goal_propose', {'goal': 'x', 'why': 'y', 'success': 'z', 'priority': 'high', 'minutes': 20, 'stop': 's'}))
+        with self.assertRaises(ValueError):
+            actions.validate('goal_propose', {'goal': 'x', 'why': 'y'})   # a goal says when it is done
+        with self.assertRaises(ValueError):
+            actions.validate('goal_propose', {'goal': 'x', 'why': 'y', 'success': 'z', 'minutes': 500})
         rule = permissions.TABLE['goal_propose']
         self.assertEqual((rule.asks, rule.effect, rule.receipt), (permissions.ALWAYS, permissions.CHANGES, True))
         self.assertIn('goal_propose', [t['function']['name'] for t in self.app.offered_tools()])
         self.assertNotIn('goal_propose', [t['function']['name'] for t in self.app.workshop.mission_tools()], 'a mission cannot propose more work')
         self.assertIn('goal_propose', self.app.instructions())
         self.assertIn('nothing starts until they say yes', self.app.instructions())
+        self.assertNotIn('standing purpose', self.app.instructions())
+        self.app.save_settings({'purpose': 'Help me build and maintain my AI assistant; find problems, propose improvements.'})
+        self.assertIn('Your standing purpose, set by the owner (the goals you suggest serve it): Help me build', self.app.instructions())
+        self.assertEqual(self.app.workshop_listing()['purpose'], 'Help me build and maintain my AI assistant; find problems, propose improvements.')
 
     def test_a_suggestion_waits_as_a_card_and_starts_nothing(self):
         result = self.suggest()
@@ -101,6 +127,8 @@ class GoalsInTheCoreTests(unittest.TestCase):
         card = self.app.approvals[result['approval']['id']]
         self.assertEqual((card['tool'], card['generic'], card['label']), ('goal_propose', True, goals.LABEL))
         self.assertEqual(card['args']['goal'], 'Sort the photo folder by year and month')
+        self.assertEqual((card['args']['success'][:11], card['args']['priority']), ('every photo', 'normal'))
+        self.assertNotIn('minutes', card['args'], 'a limit not given is not shown')
         self.assertAlmostEqual(card['expires'] - card['created'], goals.ANSWER_SECONDS, delta=5, msg='the card waits as long as the suggestion')
         self.assertEqual(self.app.goals.list()[0]['state'], 'proposed')
         self.assertIsNone(self.app.workshop.running())
@@ -109,6 +137,7 @@ class GoalsInTheCoreTests(unittest.TestCase):
         self.assertEqual(rows[0]['label'], 'Suggest a goal of his own')
         self.assertIn('Sort the photo folder', rows[0]['detail'])
         self.assertIn('twice', rows[0]['detail'])
+        self.assertIn('success: every photo', rows[0]['detail'], 'a device sees what done means')
 
     def test_no_declines_it_and_keeps_it(self):
         result = self.suggest()
@@ -122,16 +151,18 @@ class GoalsInTheCoreTests(unittest.TestCase):
             self.suggest()   # the same goal is not suggested again this week
 
     def test_yes_adopts_it_and_starts_a_mission(self):
-        result = self.suggest()
+        result = self.suggest(minutes=20, stop='after two failed attempts')
         started = {}
-        def start_mission(goal, covered=False):
-            started['goal'], started['covered'] = goal, covered
+        def start_mission(goal, covered=False, minutes=None):
+            started['goal'], started['covered'], started['minutes'] = goal, covered, minutes
             return {'status': 'started', 'id': 'm-1', 'chat': 'mission-chat', 'minutes': 15, 'note': 'runs'}
         with patch.object(self.app.workshop, 'start_mission', start_mission):
             done = self.app.approve(result['approval']['id'], True)
         self.assertEqual(done['status'], 'applied')
         self.assertEqual(done['result']['status'], 'started')
-        self.assertEqual((started['goal'], started['covered']), ('Sort the photo folder by year and month', True), 'the owner\'s yes covers its workshop work (standing.py)')
+        self.assertTrue(started['goal'].startswith('Sort the photo folder by year and month Success condition (check it and say in "verified" what you ran): every photo'), started['goal'])
+        self.assertIn('Stop when: after two failed attempts', started['goal'])
+        self.assertEqual((started['covered'], started['minutes']), (True, 20), 'the owner\'s yes covers its workshop work (standing.py); the cost limit goes with it')
         row = self.app.goals.list()[0]
         self.assertEqual((row['state'], row['mission']), ('adopted', 'm-1'))
         with self.assertRaises(ValueError):
