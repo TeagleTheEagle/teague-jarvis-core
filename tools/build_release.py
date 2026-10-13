@@ -239,7 +239,7 @@ def build(version, make_zip=True, out_root=None):
               'release_bytes': sum(f['bytes'] for f in files),
               'canonical_data_path': '%LOCALAPPDATA%\\JARVIS\\data', 'config_path': '%LOCALAPPDATA%\\JARVIS\\config',
               'backup_format': 'recovery.py format 1 (zip + manifest.json)',
-              'deferred': ['Qwen/OpenAI provider selection is owner configuration (config\\.env)',
+              'deferred': ['the OpenRouter key and models are owner configuration (config\\.env)',
                            'physical glasses integration not included']}
     (out_root / (name + '.release.json')).write_text(json.dumps(record, indent=2), encoding='utf-8')
     return record

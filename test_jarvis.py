@@ -174,15 +174,15 @@ class LocalTests(unittest.TestCase):
         self.assertFalse(any('local command mode' in str(e['data']) for e in run.events))
 
     def test_billing_refusal_reaches_the_interface_without_a_pause(self):
-        error = providers.ProviderError('OpenAI chat: The OpenAI account has no API credits left. (HTTP 429, insufficient_quota)')
-        error.limit, error.service = 'billing', 'OpenAI'
+        error = providers.ProviderError('OpenRouter chat: ' + providers.OPENROUTER_402 + ' (HTTP 402)')
+        error.limit, error.service = 'billing', 'OpenRouter'
         with patch.dict(os.environ, {'OPENROUTER_API_KEY': 'test-not-a-real-key'}), patch('providers.chat', side_effect=error) as chat:
             run = Run('test')
             self.app.work(run, 'Explain something', None)
         self.assertEqual(chat.call_count, 1)  # no stream retry for a billing refusal
         failed = run.events[-1]
         self.assertEqual(failed['event'], 'run.failed')
-        self.assertEqual((failed['data']['retry_after'], failed['data']['provider'], failed['data']['limit']), (0, 'OpenAI', 'billing'))
+        self.assertEqual((failed['data']['retry_after'], failed['data']['provider'], failed['data']['limit']), (0, 'OpenRouter', 'billing'))
 
     def test_attachment_is_data_and_does_not_launch(self):
         captured = []

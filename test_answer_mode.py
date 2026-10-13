@@ -1,4 +1,4 @@
-"""Settings > Answer speed: which Qwen model answers and whether it thinks first (providers.qwen_plan)."""
+"""Settings > Answer speed: which Qwen model answers through OpenRouter and how hard it thinks (providers.openrouter_plan)."""
 import json
 import os
 import tempfile

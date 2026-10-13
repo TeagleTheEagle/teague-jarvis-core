@@ -146,7 +146,7 @@ class Service:
                 self.app.require_running()  # while the emergency stop holds, nothing is spoken for a device
                 started=time.perf_counter()
                 audio=self.app.voice_engine.synthesize(body['text'],self.app.store.settings().get('voice_profile','auto'))
-                # The voice in use decides the format (the Qwen voice returns WAV): say what it really is.
+                # The voice in use decides the format: say what it really is.
                 return {'audio':base64.b64encode(audio).decode(),'mime':providers.audio_mime(audio),'tts_ms':round((time.perf_counter()-started)*1000)}
             if op=='status':return {'available':True,'protocol':1,'scope':'same-PC wearable analysis','voice_profile':self.app.store.settings().get('voice_profile','auto')}
             raise ValueError('Operation unavailable.')

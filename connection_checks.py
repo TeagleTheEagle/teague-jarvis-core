@@ -53,8 +53,13 @@ def check(service, mode=None, full=None):
                 raise ValueError('Search completed but returned no results.')
             detail = 'OpenRouter web search returned a live result for a public test query (about US$0.007).'
         elif service == 'search':
-            # Brave is removed (owner, 2026-10-13: only the Fish Audio and OpenRouter keys): search is OpenRouter's.
-            return {**result, 'status': 'not_configured', 'detail': 'Add OPENROUTER_API_KEY locally (with JARVIS_PROVIDER=openrouter) and restart JARVIS.', 'latency_ms': 0}
+            # Brave is removed (owner, 2026-10-13). Without an OpenRouter key, search uses SerpApi when its key is set,
+            # else best-effort DuckDuckGo (actions.search): the test runs that same search.
+            import actions
+            engine = 'SerpApi' if os.getenv('SERPAPI_API_KEY') else 'DuckDuckGo (best effort, no key)'
+            if not actions.search('Sydney Opera House').get('results'):
+                raise ValueError('Search completed but returned no results.')
+            detail = f'{engine} returned a result for a public test query (a result from the last few minutes may be reused).'
         elif service == 'mail':
             # 1.0.17 item G: one sign-in and the unread count; the address, the password and the mails stay out of the answer.
             import mail

@@ -443,6 +443,45 @@ class OpenRouterStatusTests(unittest.TestCase):
         with patch.dict(os.environ, {}, clear=True):
             self.assertFalse(providers.any_ai_key())
 
+    def test_an_old_provider_line_is_a_setting_to_fix_with_or_without_a_key(self):
+        # Review of the provider removal, finding 2: a key file still saying qwen or openai is shown as CHECK SETTING,
+        # not as "no key", and the refusal names both lines to change.
+        for env in ({'JARVIS_PROVIDER': 'qwen'}, {'JARVIS_PROVIDER': 'openai', 'OPENROUTER_API_KEY': 'k'}):
+            with self.subTest(env=env), patch.dict(os.environ, env, clear=True):
+                self.assertTrue(providers.capabilities()['brain'].startswith('Unsupported provider'))
+                message = str(providers.unsupported_error())
+                self.assertIn('JARVIS_PROVIDER=openrouter', message)
+                self.assertIn('OPENROUTER_API_KEY', message)
+
+    def test_without_an_openrouter_key_search_is_still_checked_honestly(self):
+        # Review finding 4: SerpApi or DuckDuckGo still answer without the OpenRouter key; the checks say so.
+        with patch.dict(os.environ, {'SERPAPI_API_KEY': 's'}, clear=True):
+            self.assertEqual(providers.live_health()['Web search']['status'], 'configured')
+            with patch.object(actions, 'search', return_value={'results': [{'title': 't', 'url': 'https://example.com'}]}) as ran:
+                result = connection_checks.check('search')
+            self.assertEqual(result['status'], 'passed')
+            self.assertIn('SerpApi', result['detail'])
+            ran.assert_called_once()
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertEqual(providers.live_health()['Web search']['status'], 'manual_check')
+            with patch.object(actions, 'search', return_value={'results': []}):
+                self.assertEqual(connection_checks.check('search')['status'], 'failed')
+
+
+class VisionRefusalTests(unittest.TestCase):
+    """Review finding 3: the phone's "analyse my screen" is refused before any capture when the PC has no vision model.
+    With OpenRouter the key is also the vision model, so this is driven directly rather than through a key file."""
+    def test_no_vision_model_means_no_capture_is_asked_of_the_window(self):
+        folder = tempfile.TemporaryDirectory()
+        self.addCleanup(folder.cleanup)
+        app = App(folder.name)
+        run = Run('vision-refusal')
+        with patch.object(providers, 'capabilities', return_value={'vision': False}), \
+                patch.object(app.controls, 'request', side_effect=AssertionError('nothing is asked of the window')):
+            result = app.device_control(run, 'analyse_screen')
+        self.assertEqual(result, {'status': 'unavailable', 'action': 'analyse_screen',
+                                  'error': 'No vision model is configured on the PC.'})
+
 
 class OpenRouterRunTests(unittest.TestCase):
     """A whole question through the Core with OpenRouter chosen."""

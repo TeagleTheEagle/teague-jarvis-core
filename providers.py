@@ -41,7 +41,7 @@ def provider():
 
 
 def unsupported_error():
-    return ProviderError(f'JARVIS_PROVIDER={provider()} is not supported. OpenRouter is the only AI provider: set JARVIS_PROVIDER=openrouter in your local .env and restart JARVIS.')
+    return ProviderError(f'JARVIS_PROVIDER={provider()} is not supported. OpenRouter is the only AI provider: set JARVIS_PROVIDER=openrouter (or remove the line) and add OPENROUTER_API_KEY in your local .env, then restart JARVIS.')
 
 
 def any_ai_key():
@@ -156,7 +156,7 @@ def capabilities(mode=None):
         result.update(brain='OpenRouter configured' if configured else 'OpenRouter not configured',
                       model=openrouter_plan(mode)[0], vision_provider='OpenRouter', vision=configured)
     else:
-        result.update(brain=f'Unsupported provider {provider()}: use openrouter' if any_ai_key() else 'local commands', model=None, vision_provider=None, vision=False)
+        result.update(brain=f'Unsupported provider {provider()}: use openrouter', model=None, vision_provider=None, vision=False)
     result['backup'] = PROVIDER_NAMES.get(backup_provider())  # which provider could stand in, or None
     if provider() == 'openrouter' and os.getenv('OPENROUTER_API_KEY'):
         # With OpenRouter the stand-in is its own backup model (plan D8), used only while Settings > AI > Backup is on.
@@ -183,7 +183,6 @@ def _base_capabilities():
 
 def live_health(mode=None):
     checks = {}
-    targets = []
     caps = capabilities(mode)
     use_openrouter = provider() == 'openrouter'
     key = chosen_key()
@@ -206,15 +205,9 @@ def live_health(mode=None):
         # Each search is paid for, so the health check does not run one (Settings > Connections > Search does).
         checks['Web search'] = {'status': 'configured', 'detail': 'OpenRouter web search (about US$0.007 a search); not run by this check. Use the search connection test.'}
     else:
-        checks['Web search'] = {'status':'not_configured','detail':'Add OPENROUTER_API_KEY locally for OpenRouter web search.'}
-    for name, url, headers in targets:
-        started = time.perf_counter()
-        try:
-            data = request(url, headers=headers, timeout=15)
-            valid = bool(data.get('id')) if name == 'Chat model access' else bool(data.get('web', {}).get('results'))
-            checks[name] = {'status':'reachable' if valid else 'unexpected_response','latency_ms':round((time.perf_counter()-started)*1000), 'detail':'Model access confirmed; generation not tested.' if name == 'Chat model access' and valid else 'Live search returned results.' if valid else 'No expected results returned.'}
-        except ProviderError as exc:
-            checks[name] = {'status':'unavailable','latency_ms':round((time.perf_counter()-started)*1000), 'detail':str(exc)}
+        checks['Web search'] = ({'status': 'configured', 'detail': 'SerpApi web search; not run by this check. Use the search connection test.'}
+                                if os.getenv('SERPAPI_API_KEY') else
+                                {'status': 'manual_check', 'detail': 'DuckDuckGo best effort, no key needed; add OPENROUTER_API_KEY for OpenRouter web search.'})
     checks['Voice']={'status':'configured' if caps['voice_provider'] != 'browser' else 'manual_check','detail':'Use Settings connection tests for synthesis. Speaker playback requires a device test.'}
     checks['Maps']={'status':'configured' if os.getenv('GOOGLE_MAPS_ROUTES_KEY') and os.getenv('GOOGLE_MAPS_EMBED_KEY') else 'not_configured','detail':'Configuration only. Use Settings to test Routes; open Maps to test display.'}
     return checks
@@ -230,9 +223,9 @@ BACKUP_NOTE = re.compile(r'\s*\[\s*(?:OpenAI|Qwen|OpenRouter)\s+(?:answered|had\
 
 
 def backup_provider(vision=False):
-    """The other AI provider, when its key is in place and it can take this kind of request, else
-    None. The Core uses it only when the owner has switched the backup on (Settings) and the
-    chosen provider has failed on a question in which no tool has run yet."""
+    """Always None: OpenRouter is the only AI provider (owner, 2026-10-13), so no second provider can stand in.
+    Kept so the Core's backup branch in server.py keeps its shape; OpenRouter's own backup model is
+    openrouter_fallback()."""
     # OpenRouter is the only provider (owner, 2026-10-13), so there is no other provider to stand in; the backup is
     # OpenRouter's own backup model (openrouter_fallback, plan D8). Kept so the Core's backup path stays one shape.
     return None
