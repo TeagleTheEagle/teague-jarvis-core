@@ -244,21 +244,40 @@ only records where the work stands. Historical handover context: `docs/PROJECT-C
   `docs/AI-PROVIDER-PLAN.md`'s "credits do not expire" is wrong (not yet corrected); a spending limit on the key; the
   Routing page's allow-list only governs `openrouter/auto`, the Guardrails page restricts a key.
 
+- **VERONICA on Qwen through OpenRouter** (owner: "yes do this as well"; "DONT CHANGE ANYTHING" about safety): in
+  `..\veronica`, uncommitted (her working tree already held other uncommitted changes, below, so nothing was
+  committed there): `agent.py` chat from Groq to `qwen/qwen3.8-max-0902` through the `openai` package at
+  openrouter.ai (key `OPENROUTER_API_KEY`, `OPENROUTER_MODEL` to change the model; reasoning minimal and excluded,
+  reply limit 16384; 401, 404 and 402 said plainly); `research.py` from `ChatAnthropic` to `ChatOpenAI` at
+  openrouter.ai, the same model (`OPENROUTER_RESEARCH_MODEL`), the key passed explicitly (no other key can reach
+  openrouter.ai); Qwen's prices added for the US$3 task cost limit (unknown names still counted at Opus 5.5's, the
+  dearest); `tasks.py` retries a dropped OpenRouter connection as it did Anthropic's; `app.py` and `ui\index.html`
+  show "Qwen 3.8 Max"; `requirements.txt` pins `langchain-openai==1.7.0` and `openai==3.29.0` (installed in her
+  `.venv` with `tiktoken` and `regex`; nothing she had was upgraded); her `CLAUDE.md` updated. `safety.py`, Fish
+  Audio and local Whisper untouched. Tests on throwaway copies: the same 20 fail before and after (safety, approval
+  and defusing tests whose rules were removed on 2026-10-12, and the speech model file not copied); 4 new tests pass.
+  **She needs `OPENROUTER_API_KEY` in her `.env` (the owner's step) before her next start.**
+
 **Found, for the owner (nothing changed)**
 - **VERONICA's working tree** (`..\veronica`, branch `master` at 445facc) has uncommitted changes from 2026-10-12
   22:05-23:43: the Groq switch of her chat (`agent.py`, `CLAUDE.md`, `requirements.txt`, two test files), and
   `safety.py` emptied (every folder allowed, JARVIS's included; `.env` and key files no longer refused; the
-  `[VERONICA]`/`[Owner]` marker defusing removed), with `README.md` saying she has "full, unrestricted access". Her
-  `CLAUDE.md` still says `safety.py` refuses JARVIS's folders. Left exactly as found on the owner's word ("DONT CHANGE
-  ANY SAFTEY RULES").
-- **The workspace checkout `repo\`** is on branch `my-change` (7 commits after `claude/main` by "bteaguey",
-  2026-10-12 21:02-21:14, docs on autonomy repositories) with uncommitted changes to `permissions.py`, `server.py`,
-  `docs/CURRENT-STATUS.md` and a new `autonomous_core.py`. Not touched; this session worked in
-  `D:\JARVIS-release-work\src-merge` only.
+  `[VERONICA]`/`[Owner]` marker defusing removed), with `README.md` saying she has "full, unrestricted access".
+  Left exactly as found on the owner's word ("DONT CHANGE ANY SAFTEY RULES", then "DONT CHANGE ANYTHING").
+- **JARVIS's safety limits.** On `claude/main` and `claude/veronica-merge` they are intact (`permissions.py`,
+  `safety.py` and `content_guard.py` identical on both; this session's commit touched no safety file). But the
+  workspace checkout `repo\` is on branch `my-change` (7 commits after `claude/main` by "bteaguey", 2026-10-12
+  21:02-21:14, docs only) with **uncommitted** changes of 2026-10-12 20:13-22:23: `permissions.py` rewritten so that
+  `decide()` always returns "run" (no ask-first, `mail_send` sends at once, no emergency stop, `STOP_PHRASE` never
+  matches, no taint rule, every tool open to paired devices, `development_*` "modifies its program files directly");
+  a new untracked `autonomous_core.py` ("unbounded": no permission gates, any path read, any Python expression
+  evaluated), imported by nothing; `server.py` changed only in how the 6-round and 8-tool limits end a question
+  (they stay). Not in any release; it would take effect only if JARVIS were run or built from `repo\`. Not touched.
+  Hermes (`%LOCALAPPDATA%\hermes`) was running on the PC during this session.
 
 **Next (the owner is asked before each)**
-- VERONICA on Qwen through OpenRouter (her chat on Groq today, her research on Claude): needs `OPENROUTER_API_KEY` in
-  her `.env` (the owner's step) and a decision about her uncommitted working tree first.
+- The owner places `OPENROUTER_API_KEY` in `..\veronica\.env`, then starts VERONICA and says hello; then the
+  guardrail.
 - The rest as in the section below.
 
 ## 2026-10-12 evening (Opus 5.5, from about 16:55 local; a new session)
