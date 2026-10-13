@@ -18,7 +18,7 @@ from server import App, Run
 KEY = 'or-test-key'
 ENV = {'JARVIS_PROVIDER': 'openrouter', 'OPENROUTER_API_KEY': KEY}
 MAIN, FAST = 'qwen/qwen3.8-max-0902', 'qwen/qwen3.8-flash'
-CODING, FALLBACK = 'anthropic/claude-opus-5.5', 'anthropic/claude-sonnet-5.5'
+CODING, FALLBACK = MAIN, FAST  # Qwen only (owner, 2026-10-13): coding on the main model, the fast model as backup
 ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions'
 
 
@@ -146,15 +146,19 @@ class OpenRouterChatTests(unittest.TestCase):
         self.assertNotIn('_fallback', ask(env={**ENV, 'OPENROUTER_FALLBACK_MODEL': ''}, reply=answer('Hi', model=FALLBACK))[0])
 
     def test_the_backup_model_is_recognised_under_another_name_of_its_maker(self):
-        # OpenRouter may answer with a canonical slug (review of 2026-10-12, M2): the maker decides.
-        for model in (FALLBACK + '-20260101', 'anthropic/claude-5.5-sonnet-20260101'):
-            self.assertEqual(ask(reply=answer('Hi', model=model))[0]['_fallback'], {'asked': MAIN, 'used': model}, model)
+        # OpenRouter may answer with a canonical slug (review of 2026-10-12, M2): the maker decides, when the key file
+        # names a backup from another maker than the main model's.
+        other = {**ENV, 'OPENROUTER_FALLBACK_MODEL': 'anthropic/claude-sonnet-5.5'}
+        for model in ('anthropic/claude-sonnet-5.5-20260101', 'anthropic/claude-5.5-sonnet-20260101'):
+            self.assertEqual(ask(env=other, reply=answer('Hi', model=model))[0]['_fallback'], {'asked': MAIN, 'used': model}, model)
+        # The default backup (Qwen's own fast model) under a dated name.
+        self.assertEqual(ask(reply=answer('Hi', model=FALLBACK + '-20260101'))[0]['_fallback'], {'asked': MAIN, 'used': FALLBACK + '-20260101'})
         # One name starting with the other: the longer match wins.
         self.assertTrue(providers.is_fallback('x/m-fast', 'x/m', 'x/m-fast'))
         self.assertTrue(providers.is_fallback('x/m-fast-2026', 'x/m', 'x/m-fast'))
         self.assertFalse(providers.is_fallback('x/m-2026', 'x/m', 'x/m-fast'))
         self.assertTrue(providers.is_fallback('x/m', 'x/m-fast', 'x/m'))   # the backup model's own name exactly: it answered
-        self.assertFalse(providers.is_fallback('anthropic/claude-x', 'anthropic/claude-opus-5.5', FALLBACK))  # same maker: not decidable, not marked
+        self.assertFalse(providers.is_fallback('qwen/qwen-x', MAIN, FALLBACK))  # same maker: not decidable, not marked
         self.assertFalse(providers.is_fallback(None, MAIN, FALLBACK))
         self.assertFalse(providers.is_fallback(FALLBACK, MAIN, None))
 
@@ -294,9 +298,33 @@ class OpenRouterSearchTests(unittest.TestCase):
             self.assertEqual(connection_checks.check('search')['status'], 'failed')
 
 
+STT = {**ENV, 'OPENROUTER_STT_MODEL': 'openai/whisper-1'}  # the cloud option for hearing, named in the key file
+
+
 class OpenRouterSpeechTests(unittest.TestCase):
+    def test_without_a_speech_model_the_cloud_option_is_off_and_this_pc_hears(self):
+        # Qwen only (owner, 2026-10-13): OpenRouter's speech-to-text models are not Qwen, so none is named by default.
+        with patch.dict(os.environ, ENV, clear=True), patch.object(providers, 'request') as request:
+            self.assertIsNone(providers.cloud_speech())
+            caps = providers.capabilities()
+            self.assertEqual((caps['transcription'], caps['transcription_provider']), (False, None))
+            with self.assertRaises(providers.ProviderError) as raised:
+                providers.transcribe(b'RIFFdata', 'audio/wav')
+        self.assertIn('OPENROUTER_STT_MODEL', str(raised.exception))
+        request.assert_not_called()
+        folder = tempfile.TemporaryDirectory()
+        self.addCleanup(folder.cleanup)
+        app = App(folder.name)
+        app.store.save_settings({'speech_recognition': 'cloud'})
+        pcm = base64.b64encode(bytes(32000)).decode('ascii')
+        with patch.dict(os.environ, ENV, clear=True), patch.object(providers, 'request') as request, \
+                patch.object(app.local_stt, 'transcribe', return_value={'text': 'hello'}) as local:
+            self.assertEqual(app.transcribe_speech({'data': pcm})['engine'], 'this PC')
+        local.assert_called_once()
+        request.assert_not_called()
+
     def test_cloud_speech_recognition_sends_the_recording_as_openrouter_documents(self):
-        with patch.dict(os.environ, ENV, clear=True), patch.object(providers, 'request', return_value={'text': '  set a timer  '}) as request:
+        with patch.dict(os.environ, STT, clear=True), patch.object(providers, 'request', return_value={'text': '  set a timer  '}) as request:
             self.assertEqual(providers.cloud_speech(), 'openrouter')
             self.assertEqual(providers.capabilities()['transcription_provider'], 'OpenRouter')
             self.assertEqual(providers.transcribe(b'RIFFdata', 'audio/wav', timeout=7), {'text': 'set a timer'})
@@ -307,13 +335,13 @@ class OpenRouterSpeechTests(unittest.TestCase):
         self.assertEqual(request.call_args.kwargs['timeout'], 7)
 
     def test_formats_language_size_and_a_bad_answer(self):
-        with patch.dict(os.environ, {**ENV, 'OPENROUTER_STT_LANGUAGE': ''}, clear=True), \
+        with patch.dict(os.environ, {**STT, 'OPENROUTER_STT_LANGUAGE': ''}, clear=True), \
                 patch.object(providers, 'request', return_value={'text': 'hi'}) as request:
             providers.transcribe(b'x', 'audio/webm;codecs=opus')
             body = request.call_args.args[1]
         self.assertEqual(body['input_audio']['format'], 'webm')
         self.assertNotIn('language', body)
-        with patch.dict(os.environ, ENV, clear=True):
+        with patch.dict(os.environ, STT, clear=True):
             with self.assertRaises(ValueError):
                 providers.transcribe(b'x', 'audio/flac')
             with self.assertRaises(ValueError):
