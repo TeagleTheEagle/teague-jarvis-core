@@ -318,7 +318,8 @@ def chat_options(mode, text):
 OPENROUTER_BASE = 'https://openrouter.ai/api/v1'
 OPENROUTER_DEFAULT_MODEL = 'anthropic/claude-haiku-5.5'        # everyday chat, tools, pictures: 0.10 / 0.50; sees pictures, 1M context
 OPENROUTER_DEFAULT_FAST_MODEL = 'anthropic/claude-haiku-5.5'   # Economy (no thinking), and the small request behind a web search
-OPENROUTER_DEFAULT_CODING_MODEL = 'anthropic/claude-sonnet-5.5'  # coding and research jobs: 2 / 10 (Opus 5.5 is twice the price for a little more)
+OPENROUTER_DEFAULT_CODING_MODEL = 'deepseek/deepseek-v4-pro'    # coding and research jobs: 0.96 / 1.91, 1M context (owner, 2026-10-14:
+                                                               # "jarvis uses DeepSeek V4 Pro" in Sonnet 5.5's place, 2 / 10; a fifth of the output price)
 OPENROUTER_DEFAULT_FALLBACK_MODEL = 'qwen/qwen3.7-plus'        # the backup when the first model fails (plan D8): 0.32 / 1.28, from ANOTHER
                                                                # maker on purpose, so one maker's outage does not take the backup with it
 OPENROUTER_MODELS = {'chat': OPENROUTER_DEFAULT_MODEL, 'fast': OPENROUTER_DEFAULT_FAST_MODEL,
@@ -348,7 +349,7 @@ _MODEL_NAME = re.compile(r'[A-Za-z0-9][A-Za-z0-9._:/-]{0,95}')
 # owner's OpenRouter key): a model from any other maker is refused at the point a request would be built, so it can
 # never be sent. With the models fixed this guard matters for the one line the key file may still carry (hearing) and
 # as a second check on the fixed models themselves.
-OPENROUTER_MAKERS = ('anthropic', 'qwen', 'google')
+OPENROUTER_MAKERS = ('anthropic', 'qwen', 'google', 'deepseek')
 
 
 def _allowed_maker(name):

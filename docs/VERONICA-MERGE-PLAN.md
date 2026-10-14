@@ -28,7 +28,7 @@ in code; the owner widens the guardrail on the key to match). The fixed models:
 |---|---|---|---|
 | Everyday chat, tools, pictures | `anthropic/claude-haiku-5.5` | US$0.10 / 0.50 | Sees pictures, 1M context; 20× cheaper than Qwen 3.8 Max and judged at least its equal on everyday work |
 | Economy, and the web search's small request | `anthropic/claude-haiku-5.5` | US$0.10 / 0.50 | The same model with thinking off |
-| Coding and research jobs (missions) | `anthropic/claude-sonnet-5.5` | US$2 / 10 | Opus 5.5 is twice the price for a little more |
+| Coding and research jobs (missions) | `deepseek/deepseek-v4-pro` | US$0.96 / 1.91 | Owner, 2026-10-14: in Sonnet 5.5's (US$2 / 10) place; 1M context, tools; a fifth of the output price. Ships in 1.0.21. |
 | Backup when the first model fails | `qwen/qwen3.7-plus` | US$0.32 / 1.28 | Another maker on purpose, so one outage does not take both |
 | Hearing | this PC (Whisper), as before | free | `OPENROUTER_STT_MODEL=qwen/qwen3-asr-1.7b` (or `google/gemini-3.5-transcribe`) offers the cloud choice in Settings |
 | Voice | Fish Audio, unchanged | | OpenRouter's two speaking models do no voice cloning |

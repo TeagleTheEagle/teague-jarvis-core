@@ -18,7 +18,7 @@ from server import App, Run
 KEY = 'or-test-key'
 ENV = {'JARVIS_PROVIDER': 'openrouter', 'OPENROUTER_API_KEY': KEY}
 MAIN, FAST = 'anthropic/claude-haiku-5.5', 'anthropic/claude-haiku-5.5'
-CODING, FALLBACK = 'anthropic/claude-sonnet-5.5', 'qwen/qwen3.7-plus'  # fixed in the program (owner, 2026-10-13 evening: performance for
+CODING, FALLBACK = 'deepseek/deepseek-v4-pro', 'qwen/qwen3.7-plus'  # fixed in the program (owner, 2026-10-13 evening: performance for
 # the money, locked); the backup from another maker on purpose
 ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions'
 
@@ -141,11 +141,11 @@ class OpenRouterChatTests(unittest.TestCase):
             self.assertEqual(providers.openrouter_allowed_model(' ' + model + ' ', 'model'), model)
         for model in ('google/gemini-3.1-pro-preview', 'ANTHROPIC/claude-haiku-5.5'):
             self.assertTrue(providers._allowed_maker(model), model)
-        for other in ('openai/gpt-5.5', 'x-ai/grok-4.3', 'deepseek/deepseek-v4-pro', 'claude-sonnet-5.5', '', None):
+        for other in ('openai/gpt-5.5', 'x-ai/grok-4.3', 'moonshotai/kimi-k2.7-code', 'claude-sonnet-5.5', '', None):
             self.assertFalse(providers._allowed_maker(other), other)
             with self.assertRaises(providers.ProviderError) as raised:
                 providers.openrouter_allowed_model(other, 'backup model')
-            self.assertIn('anthropic, qwen, google', str(raised.exception))
+            self.assertIn('anthropic, qwen, google, deepseek', str(raised.exception))
             self.assertIn('backup model', str(raised.exception))
         # The request path checks every model it sends: a fixed model replaced by another maker's (as a later edit of the
         # program might) is refused before any request.
@@ -300,7 +300,7 @@ class OpenRouterSearchTests(unittest.TestCase):
         with patch.dict(os.environ, ENV, clear=True), patch.dict(providers.OPENROUTER_MODELS, {'fast': 'openai/gpt-4o'}), \
                 patch.object(providers, 'request') as request, self.assertRaises(providers.ProviderError) as raised:
             providers.openrouter_search('the news')
-        self.assertIn('anthropic, qwen, google', str(raised.exception))
+        self.assertIn('anthropic, qwen, google, deepseek', str(raised.exception))
         request.assert_not_called()
 
     def test_results_are_the_pages_it_cited(self):
@@ -403,7 +403,7 @@ class OpenRouterSpeechTests(unittest.TestCase):
             self.assertEqual((caps['transcription'], caps['transcription_provider']), (False, None))
             with self.assertRaises(providers.ProviderError) as raised:
                 providers.transcribe(b'RIFFdata', 'audio/wav')
-        self.assertIn('anthropic, qwen, google', str(raised.exception))
+        self.assertIn('anthropic, qwen, google, deepseek', str(raised.exception))
         self.assertIn('openai/whisper-1', str(raised.exception))
         request.assert_not_called()
 
