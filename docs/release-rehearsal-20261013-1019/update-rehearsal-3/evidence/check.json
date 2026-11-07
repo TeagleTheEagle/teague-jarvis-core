@@ -1,0 +1,57 @@
+{
+    "schema":  "jarvis-everyday-update-check-v3",
+    "utc":  "2026-10-13T09:33:15.3814946Z",
+    "final":  "1.0.19-629bb5621d34",
+    "previous":  "1.0.17-0d38218c4e1d",
+    "key_file":  {
+                     "present":  true,
+                     "sha256":  "1289f90d3559ded1193328bc391fab981e5dcae3bfd232d63406c890d9720fe7",
+                     "bytes":  139,
+                     "provider":  "openrouter",
+                     "has_openrouter_key":  true,
+                     "names":  [
+                                   "DASHSCOPE_API_KEY",
+                                   "OPENAI_API_KEY",
+                                   "OPENROUTER_API_KEY"
+                               ],
+                     "copy":  "D:\\JARVIS-release-work\\update-rehearsal-1.0.19-3\\home\\config\\.env.before-1.0.19-629bb5621d34"
+                 },
+    "zip":  "D:\\JARVIS-release-work\\pkg-1.0.19\\JARVIS-1.0.19-629bb5621d34.zip",
+    "zip_sha256":  "838371836d31758082d191738ebc3b41d0e34fe4b6598af6153d970ab8b21541",
+    "setup":  "D:\\JARVIS-release-work\\pkg-1.0.19\\JARVIS-Setup-1.0.19-629bb5621d34.exe",
+    "setup_sha256":  "8e5bb3dceef85fc486f3d03b3864dfa3479c8833ffe471646cdd33dbcc36092f",
+    "app_id":  "{7A3F1C52-9E4B-4D16-8C0D-2B5E6F7A9D31}",
+    "sandbox":  true,
+    "package_unpacked_to":  "D:\\JARVIS-release-work\\update-rehearsal-1.0.19-3\\update\\package\\JARVIS-1.0.19-629bb5621d34",
+    "package_release":  "1.0.19-629bb5621d34",
+    "package_files":  10766,
+    "install_home":  "D:\\JARVIS-release-work\\update-rehearsal-1.0.19-3\\home",
+    "current":  {
+                    "release":  "1.0.17-0d38218c4e1d",
+                    "previous":  null,
+                    "switched_at":  1791883943.2971418
+                },
+    "installed_verified":  "verified",
+    "free_bytes":  1284986687488,
+    "jarvis_processes":  0,
+    "staging":  "D:\\JARVIS-release-work\\update-rehearsal-1.0.19-3\\staging",
+    "staging_before":  {
+                           "present":  true,
+                           "uninstaller_present":  true,
+                           "uninstaller_sha256":  "e35175f50dd276057bfdc0ae1fbaee1cbfaae7aaf7b921805711ee5f57f18eb5",
+                           "answer_release":  "1.0.17-0d38218c4e1d"
+                       },
+    "staging_to_be_moved_aside":  "D:\\JARVIS-release-work\\update-rehearsal-1.0.19-3\\staging-before-1.0.19-629bb5621d34",
+    "entry_before":  {
+                         "present":  true,
+                         "name":  "JARVIS (sandbox)",
+                         "version":  "1.0.17",
+                         "publisher":  "Teague Industries",
+                         "uninstall":  "\"D:\\JARVIS-release-work\\update-rehearsal-1.0.19-3\\staging\\unins000.exe\"",
+                         "location":  "D:\\JARVIS-release-work\\update-rehearsal-1.0.19-3\\staging\\"
+                     },
+    "shortcuts":  {
+                      "desktop":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS\\releases\\1.0.17-0d38218c4e1d\\electron\\JARVIS.exe",
+                      "startup":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS\\releases\\1.0.17-0d38218c4e1d\\electron\\JARVIS.exe"
+                  }
+}

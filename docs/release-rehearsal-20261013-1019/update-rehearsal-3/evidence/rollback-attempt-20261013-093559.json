@@ -1,0 +1,6 @@
+{
+    "schema":  "jarvis-everyday-update-rollback-attempt-v1",
+    "utc":  "2026-10-13T09:35:59.5511787Z",
+    "from":  "1.0.19-629bb5621d34",
+    "to":  "1.0.17-0d38218c4e1d"
+}

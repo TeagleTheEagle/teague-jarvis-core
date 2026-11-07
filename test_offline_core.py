@@ -16,8 +16,7 @@ import providers
 from ollama_provider import OllamaError
 from server import App, Handler, Run, Server
 
-QWEN = {'JARVIS_PROVIDER': 'qwen', 'DASHSCOPE_API_KEY': 'qwen-test-key'}
-BOTH = {**QWEN, 'OPENAI_API_KEY': 'openai-test-key'}
+QWEN = {'JARVIS_PROVIDER': 'openrouter', 'OPENROUTER_API_KEY': 'qwen-test-key'}
 DONE = {'choices': [{'finish_reason': 'stop', 'message': {'content': 'Done.'}}]}
 NOTE = '[Answered offline by the local model qwen3:4b on this PC.'
 
@@ -93,14 +92,6 @@ class WhenItAnswers(OfflineCase):
         self.assertNotIn('tools', chat)
         self.assertEqual(chat['messages'][-1], {'role': 'user', 'content': 'What is a transistor?'})
 
-    def test_neither_provider_can_be_reached(self):
-        self.app.store.save_settings({'provider_backup': True})
-        # Qwen is tried twice, then the backup provider (OpenAI) twice: none can be reached.
-        with patch.object(providers.threading.Event, 'wait', return_value=False):  # do not sit out the pauses between tries
-            run, events = self.ask('What is a transistor?', [unreachable(), unreachable(), unreachable('OpenAI'), unreachable('OpenAI')], env=BOTH)
-        self.assertIn(NOTE + ' Qwen chat: Connection failed.', events['assistant.completed']['text'])
-        self.assertEqual(len(self.sent), 4)
-
     def test_a_cut_short_local_answer_says_so(self):
         Local.chat = {'done': True, 'done_reason': 'length', 'message': {'content': 'Let me think about it.</think>A transistor is'}}
         _, events = self.ask('What is a transistor?', [unreachable(), unreachable()])
@@ -155,16 +146,8 @@ class WhenItMustNot(OfflineCase):
         self.assertIn('tool.completed', events)
         self.assertIn('Connection failed', self.failed(events))
         picture = {'id': 'a', 'type': 'image', 'name': 'photo.jpg', 'data': 'data:image/jpeg;base64,AAAA'}
-        with patch.dict(os.environ, {'QWEN_VISION_MODEL': 'qwen3.8-max'}):
-            _, events = self.ask('What is this?', [unreachable(), unreachable()], env={**QWEN, 'QWEN_VISION_MODEL': 'qwen3.8-max'}, attachment=picture)
+        _, events = self.ask('What is this?', [unreachable(), unreachable()], attachment=picture)  # OpenRouter's main model takes pictures
         self.assertIn('Connection failed', self.failed(events))
-
-    def test_when_the_backup_provider_answers_the_local_model_is_not_asked(self):
-        self.app.store.save_settings({'provider_backup': True})
-        _, events = self.ask('What is a transistor?', [unreachable(), unreachable(), DONE], env=BOTH)
-        self.assertIn('Done.', events['assistant.completed']['text'])
-        self.assertIn('OpenAI answered this question', events['assistant.completed']['text'])
-        self.assertEqual(Local.asked, [])
 
 
 class ReviewTests(OfflineCase):

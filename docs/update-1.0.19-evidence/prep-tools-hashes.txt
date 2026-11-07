@@ -1,0 +1,3 @@
+f022a4ab82622ca098d37086c25b3cf5d7bd58e7bd66de6e2a0970a9a0fceca2  Invoke-EverydayUpdate.ps1
+fc830fb860032844e5b41f1b26ca1efe6670a34d1fd4302470fd3f13987ec66f  update-authorized.json
+b2e18b0459a59849743255adeefe755b4ed45ab6f66bd28b3521eba6f59c049e  update-step.cmd

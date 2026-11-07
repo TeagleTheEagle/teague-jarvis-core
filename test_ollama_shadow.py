@@ -212,7 +212,7 @@ class ShadowTests(unittest.TestCase):
 
     def test_cloud_request_still_uses_existing_provider(self):
         app = App(Path(self.tmp.name)/'core'); app.ollama_shadow = self.s
-        with patch.dict(os.environ, {'OPENAI_API_KEY': 'fixture', 'JARVIS_PROVIDER': 'openai'}), patch('providers.chat', return_value={'role': 'assistant', 'content': 'A test explanation.'}) as cloud:
+        with patch.dict(os.environ, {'OPENROUTER_API_KEY': 'fixture', 'JARVIS_PROVIDER': 'openrouter'}), patch('providers.chat', return_value={'role': 'assistant', 'content': 'A test explanation.'}) as cloud:
             run = Run('test'); app.work(run, 'Explain the colour blue', None)
         cloud.assert_called_once()
         self.p.classify_intent.assert_not_called()

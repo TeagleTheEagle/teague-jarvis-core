@@ -333,7 +333,7 @@ class ApprovalTests(DeviceCase):
 # Items C and D (docs/PHONE-ACCESS-1.0.17.md sections 2 and 3)
 
 VISION_REPLY = {'choices': [{'finish_reason': 'stop', 'message': {'content': 'A browser with the news, and a terminal.'}}]}
-VISION_ENV = {**ENV, 'QWEN_VISION_MODEL': 'qwen-vision-test'}  # the vision step needs a vision model named
+VISION_ENV = ENV  # OpenRouter's main model takes pictures too (providers.capabilities): its key is the vision model
 
 
 def tiny_jpeg():
@@ -458,12 +458,6 @@ class ScreenTests(DeviceCase):
             events = self.finished(key, started['run_id'])
         result = events['tool.completed']['result']
         self.assertEqual((result['status'], result['error']), ('unavailable', "The PC's window is not open or did not answer, so this cannot be done from here."))
-        # No vision model on the PC: said before anything is captured; nothing is asked of the window.
-        replies = [calls('assistant_control', action='analyse_screen'), DONE]
-        with patch.dict(os.environ, ENV, clear=True), patch.object(providers, 'request', side_effect=lambda *a, **k: replies.pop(0)):
-            status, started = self.device('start', {'text': 'analyse my screen'}, key)
-            events = self.finished(key, started['run_id'])
-        self.assertEqual(events['tool.completed']['result'], {'status': 'unavailable', 'action': 'analyse_screen', 'error': 'No vision model is configured on the PC.'})
         # The window answering without a capture: failed, nothing described.
         thread, seen = self.window(answer=False)
         replies = [calls('assistant_control', action='analyse_screen'), DONE]

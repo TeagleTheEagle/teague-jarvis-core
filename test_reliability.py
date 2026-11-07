@@ -126,7 +126,7 @@ class ConnectionTests(unittest.TestCase):
             self.assertEqual(connection_checks.check('voice')['status'],'failed')
 
     def test_search_checks_results_and_does_not_return_payload(self):
-        with patch.dict(os.environ,{'BRAVE_API_KEY':'private-test-key'}),patch('providers.request',return_value={'web':{'results':[{'url':'private-payload'}]}}):
+        with patch.dict(os.environ,{'JARVIS_PROVIDER':'openrouter','OPENROUTER_API_KEY':'private-test-key'}),patch('providers.openrouter_search',return_value=[{'url':'private-payload'}]):
             result=connection_checks.check('search');self.assertEqual(result['status'],'passed')
             self.assertNotIn('private',str(result))
 

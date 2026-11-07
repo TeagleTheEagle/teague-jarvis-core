@@ -80,7 +80,7 @@ class WorkEvidenceTests(unittest.TestCase):
     def test_model_cannot_claim_preview_applied(self):
         run=Run('pending')
         responses=[{'role':'assistant','content':'Saved!','tool_calls':[{'id':'c1','type':'function','function':{'name':'preview_action','arguments':json.dumps({'action':'save_item','arguments_json':json.dumps({'kind':'note','body':'Draft note'})})}}]}, {'role':'assistant','content':"I've saved your note."}]
-        with patch.dict(os.environ,{'OPENAI_API_KEY':'test'}),patch('providers.chat',side_effect=responses):self.app.work(run,'Prepare a note for review',None)
+        with patch.dict(os.environ,{'OPENROUTER_API_KEY':'test'}),patch('providers.chat',side_effect=responses):self.app.work(run,'Prepare a note for review',None)
         reply=next(e['data']['text'] for e in run.events if e['event']=='assistant.completed')
         self.assertIn('awaiting approval',reply);self.assertIn('does not mean completed',reply)  # 1.0.17: the claim stays, the truth under it
         self.assertTrue(reply.startswith("I've saved your note.\n\nAction evidence"))
@@ -90,7 +90,7 @@ class WorkEvidenceTests(unittest.TestCase):
     def test_failed_tool_record_visible_and_no_false_success(self):
         run=Run('failed')
         responses=[{'role':'assistant','content':'','tool_calls':[{'id':'c1','type':'function','function':{'name':'create_file','arguments':json.dumps({'title':'Test','content':'x','format':'txt'})}}]}, {'role':'assistant','content':'I created the file.'}]
-        with patch.dict(os.environ,{'OPENAI_API_KEY':'test'}),patch('providers.chat',side_effect=responses),patch('actions.create_document',side_effect=ValueError('unavailable')):
+        with patch.dict(os.environ,{'OPENROUTER_API_KEY':'test'}),patch('providers.chat',side_effect=responses),patch('actions.create_document',side_effect=ValueError('unavailable')):
             self.app.work(run,'Make a document about testing',None)
         reply=next(e['data']['text'] for e in run.events if e['event']=='assistant.completed')
         self.assertIn('create file: failed',reply);self.assertTrue(reply.startswith('I created the file.\n\nAction evidence'))  # 1.0.17

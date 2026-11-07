@@ -1,0 +1,76 @@
+{
+    "schema":  "jarvis-everyday-update-v3",
+    "utc":  "2026-10-13T09:48:30.1532676Z",
+    "setup":  "D:\\JARVIS-release-work\\pkg-1.0.19\\JARVIS-Setup-1.0.19-629bb5621d34.exe",
+    "setup_exit":  0,
+    "setup_switches":  [
+                           "/VERYSILENT",
+                           "/SUPPRESSMSGBOXES",
+                           "/NORESTART",
+                           "/LOG=\"D:\\JARVIS-update-1.0.19\\evidence\\setup-update-20261013-094444.log\""
+                       ],
+    "setup_log":  "D:\\JARVIS-update-1.0.19\\evidence\\setup-update-20261013-094444.log",
+    "staging_moved_aside":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS-package-before-1.0.19-629bb5621d34",
+    "setup_wall_seconds":  217.8,
+    "installer":  {
+                      "status":  "installed",
+                      "release":  "1.0.19-629bb5621d34",
+                      "previous":  "1.0.17-0d38218c4e1d",
+                      "home":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS",
+                      "seconds":  {
+                                      "verify_package":  9.403,
+                                      "copy":  145.316,
+                                      "verify_copy":  7.567,
+                                      "stop":  0.767,
+                                      "switch":  0.003
+                                  },
+                      "shortcuts":  "written"
+                  },
+    "installer_seconds":  {
+                              "verify_package":  9.403,
+                              "copy":  145.316,
+                              "verify_copy":  7.567,
+                              "stop":  0.767,
+                              "switch":  0.003
+                          },
+    "verify":  "verified",
+    "current":  {
+                    "release":  "1.0.19-629bb5621d34",
+                    "previous":  "1.0.17-0d38218c4e1d",
+                    "switched_at":  1791884899.8984945
+                },
+    "entry_before":  {
+                         "present":  true,
+                         "name":  "JARVIS",
+                         "version":  "1.0.17",
+                         "publisher":  "Teague Industries",
+                         "uninstall":  "\"C:\\Users\\jonny\\AppData\\Local\\JARVIS-package\\unins000.exe\"",
+                         "location":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS-package\\"
+                     },
+    "entry":  {
+                  "present":  true,
+                  "name":  "JARVIS",
+                  "version":  "1.0.19",
+                  "publisher":  "Teague Industries",
+                  "uninstall":  "\"C:\\Users\\jonny\\AppData\\Local\\JARVIS-package\\unins000.exe\"",
+                  "location":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS-package\\"
+              },
+    "database_sha256_before":  "8110eb05893cfff79b908a0413c7c08b8d97986b652000f58cfc70046a2776a1",
+    "database_sha256_after":  "8110eb05893cfff79b908a0413c7c08b8d97986b652000f58cfc70046a2776a1",
+    "database_unchanged":  true,
+    "key_file_sha256_before":  "a838ed3a359618b6d9273b798f09a84aa566a6f2ef78ebba364fe43c33b8dacc",
+    "key_file_sha256_after":  "a838ed3a359618b6d9273b798f09a84aa566a6f2ef78ebba364fe43c33b8dacc",
+    "key_file_unchanged":  true,
+    "free_bytes_before":  19600318464,
+    "shortcuts_before":  {
+                             "desktop":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS\\releases\\1.0.17-0d38218c4e1d\\electron\\JARVIS.exe",
+                             "startup":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS\\releases\\1.0.17-0d38218c4e1d\\electron\\JARVIS.exe"
+                         },
+    "shortcuts_after":  {
+                            "desktop":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS\\releases\\1.0.19-629bb5621d34\\electron\\JARVIS.exe",
+                            "startup":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS\\releases\\1.0.19-629bb5621d34\\electron\\JARVIS.exe"
+                        },
+    "program":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS\\releases\\1.0.19-629bb5621d34\\electron\\JARVIS.exe",
+    "launcher_script_left":  false,
+    "jarvis_started":  false
+}

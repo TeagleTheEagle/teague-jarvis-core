@@ -1,0 +1,107 @@
+PASS  the launcher has no Halt message that would drop its state (static)  0 line(s)
+live JARVIS processes at the start: 0; real shortcuts: 7dca25063958c485cd63774ea296b705da59657acfc5ea8b09985800a2d7cb19 f8675687f2a435518ebafd6186c253de6b7e239901d49ba0649b1e8e6703554a; real entry: JARVIS 1.0.17 "C:\Users\jonny\AppData\Local\JARVIS-package\unins000.exe"
+PASS  the real entry recorded at the start (JARVIS 1.0.17 expected)  JARVIS 1.0.17 "C:\Users\jonny\AppData\Local\JARVIS-package\unins000.exe"
+===== install 1.0.17 into the sandbox home through its own Setup
+PASS  sandbox: 1.0.17 installed by its Setup  exit 0 installed
+PASS  sandbox: the entry JARVIS (sandbox) 1.0.17 with its uninstaller in the package folder  JARVIS (sandbox) 1.0.17
+PASS  sandbox: 1.0.17 running on its data  1.0.17-0d38218c4e1d
+===== no approval: refused  20:32:39
+STOPPED: this update has not been approved yet (no update-authorized.json beside this script).
+Nothing further was done. Photograph this window for Hermes.
+exit=2
+PASS  refused without approval  exit 2
+===== JARVIS running: refused  20:32:41
+STEP 1 of 3: checks before the update to 1.0.19-629bb5621d34 (nothing in your JARVIS changes)
+
+STOPPED: JARVIS is running. Quit it completely (right-click its icon near the clock > Quit JARVIS completely), then double-click update-step again.
+Nothing further was done. Photograph this window for Hermes.
+exit=2
+PASS  refused while JARVIS runs  exit 2
+===== key file for qwen: refused  20:32:46
+STEP 1 of 3: checks before the update to 1.0.19-629bb5621d34 (nothing in your JARVIS changes)
+
+STOPPED: 1.0.19 would refuse your key file as it stands: the provider line says 'qwen' and OPENROUTER_API_KEY is missing. Open D:\JARVIS-release-work\update-rehearsal-1.0.19-3\home\config\.env yourself (Hermes never reads or edits it): set JARVIS_PROVIDER=openrouter (or remove that line), make sure a line OPENROUTER_API_KEY=... is there (that exact name, capitals), save, then double-click update-step again. The old OPENAI_* and DASHSCOPE_* lines may stay; 1.0.19 ignores them.
+Nothing further was done. Photograph this window for Hermes.
+exit=2
+PASS  refused on a key file 1.0.19 would refuse (names only in the message)  exit 2
+===== step 1 check  20:32:46
+STEP 1 of 3: checks before the update to 1.0.19-629bb5621d34 (nothing in your JARVIS changes)
+Checking the package and the Setup against their hashes (a minute or two) ...
+The previous Setup's package folder D:\JARVIS-release-work\update-rehearsal-1.0.19-3\staging (its uninstaller inside) will be renamed to D:\JARVIS-release-work\update-rehearsal-1.0.19-3\staging-before-1.0.19-629bb5621d34 at step 3, right before the Setup runs (nothing deleted; 1.0.19's Setup makes its own).
+Unpacking the package (a few minutes) ...
+Checking every file of your installed JARVIS (a minute or two) ...
+
+STEP 1 PASSED. Tell Hermes "step 1 done". Then double-click update-step again for step 2 (the backup).
+exit=0
+PASS  step 1 check (no key value in the output)  exit 0
+PASS  step 1: 1.0.17 package folder seen (its uninstaller inside), not yet moved  D:\JARVIS-release-work\update-rehearsal-1.0.19-3\staging-before-1.0.19-629bb5621d34
+PASS  step 1: the entry 1.0.17 before  1.0.17
+PASS  step 1: the key file accepted, names only recorded, a copy made  DASHSCOPE_API_KEY,OPENAI_API_KEY,OPENROUTER_API_KEY
+===== step 2 backup  20:33:15
+STEP 2 of 3: a fresh backup of your JARVIS (the same as Settings > Backups: create, then test restore)
+Making the backup (about a minute) ...
+Backup 1996029b02a84224b8e28d4f329b3662: 201 files, verified. Testing the restore in a temporary folder ...
+
+STEP 2 PASSED: backup 1996029b02a84224b8e28d4f329b3662 made and test-restored; a copy is in D:\JARVIS-release-work\update-rehearsal-1.0.19-3\update\backup. Tell Hermes "step 2 done", then double-click update-step again for step 3 (the update).
+exit=0
+PASS  step 2 backup  exit 0
+===== step 3 update through the Setup  20:33:26
+STEP 3 of 3: update your JARVIS from 1.0.17-0d38218c4e1d to 1.0.19-629bb5621d34 with its Setup
+The previous Setup's package folder D:\JARVIS-release-work\update-rehearsal-1.0.19-3\staging was renamed to D:\JARVIS-release-work\update-rehearsal-1.0.19-3\staging-before-1.0.19-629bb5621d34 (nothing deleted). Until the Setup has written its own uninstaller (a few minutes) the Uninstall button in Settings > Apps points at the old place: do not press it.
+Running the Setup (several minutes: it unpacks the package, then its installer copies and checks every file; a line every half minute) ...
+  the Setup still running: 31 s, 457 files in the package folder
+  the Setup still running: 60 s, 5407 files in the package folder
+  the Setup still running: 91 s, 10774 files in the package folder
+  the Setup still running: 121 s, 10774 files in the package folder
+
+STEP 3 PASSED: your JARVIS is now 1.0.19-629bb5621d34, every file verified, the sandbox entry registered, the shortcuts withheld as a sandbox run must. It was not started. Tell Hermes "step 3 done"; Hermes gives you the short check to do when you start it.
+exit=0
+PASS  step 3 update  exit 0
+PASS  update: database unchanged  6cf15c2a00c4e95750dbe644ebdb7d898a5913347e6a6edc7dcbf619745ca1d1
+PASS  update: 1.0.17 package folder moved aside at step 3, nothing deleted (its uninstaller inside)  D:\JARVIS-release-work\update-rehearsal-1.0.19-3\staging-before-1.0.19-629bb5621d34
+PASS  update: current is 1.0.19, previous 1.0.17  1.0.19-629bb5621d34
+PASS  update: the installer inside the Setup withheld the shortcuts (sandbox)  withheld (the home is not this PC's own install home)
+PASS  update: the entry JARVIS (sandbox) now 1.0.19, the new uninstaller  JARVIS (sandbox) 1.0.19
+PASS  update: the real entry untouched  JARVIS 1.0.17 "C:\Users\jonny\AppData\Local\JARVIS-package\unins000.exe"
+PASS  update: the key file untouched by the update  1289f90d3559ded1193328bc391fab981e5dcae3bfd232d63406c890d9720fe7
+PASS  update: the Setup logged --no-shortcuts  setup-update-20261013-093327.log
+PASS  sandbox: 1.0.19 running on the same data through JARVIS.exe  1.0.19-629bb5621d34
+PASS  sandbox: only JARVIS.exe and python.exe run  JARVIS.exe,python.exe
+===== rerun after the update: nothing to do  20:35:57
+The update to 1.0.19-629bb5621d34 is complete and recorded. Nothing more to do here.
+exit=0
+PASS  rerun changes nothing  exit 0
+===== step 3 again after the update: refused with the state  20:35:58
+STEP 3 of 3: update your JARVIS from 1.0.17-0d38218c4e1d to 1.0.19-629bb5621d34 with its Setup
+
+STOPPED: your JARVIS is on 1.0.19-629bb5621d34, not 1.0.17-0d38218c4e1d as at step 1. Tell Hermes. Your JARVIS is on 1.0.19-629bb5621d34; the old launcher script JARVIS.ps1 is gone; the Desktop shortcut points at C:\Users\jonny\AppData\Local\JARVIS\releases\1.0.17-0d38218c4e1d\electron\JARVIS.exe; the Startup shortcut at C:\Users\jonny\AppData\Local\JARVIS\releases\1.0.17-0d38218c4e1d\electron\JARVIS.exe; Settings > Apps lists JARVIS (sandbox) 1.0.19, uninstaller "D:\JARVIS-release-work\update-rehearsal-1.0.19-3\staging\unins000.exe".
+Nothing further was done. Photograph this window for Hermes.
+exit=2
+PASS  step 3 again: refused, the state said in full (release, shortcuts, the entry)  exit 2
+===== rollback (approved)  20:35:58
+ROLLBACK: switch your JARVIS back to 1.0.17-0d38218c4e1d
+
+ROLLBACK PASSED: your JARVIS is back on 1.0.17-0d38218c4e1d, the shortcuts withheld as a sandbox run must, the key file as it stood at step 1 (its provider line says 'openrouter', which 1.0.17-0d38218c4e1d does not know: open D:\JARVIS-release-work\update-rehearsal-1.0.19-3\home\config\.env yourself and set JARVIS_PROVIDER=qwen or openai before starting JARVIS) (the Settings > Apps entry still says 1.0.19 until the next update). Tell Hermes "rollback done".
+exit=0
+PASS  rollback to 1.0.17 (no key value in the output)  1.0.17-0d38218c4e1d
+PASS  rollback: the attempt recorded before the switch  backup.json,check.json,rollback.json,rollback-approved.json,rollback-attempt-20261013-093559.json,setup-update-20261013-093327.log,update.json
+PASS  rollback: the final line says the provider line is one 1.0.17 does not know  said
+PASS  rollback: the entry still says 1.0.19 (as the plan says)  1.0.19
+PASS  rollback: the key file put back from the step 1 copy, the changed file kept beside it  D:\JARVIS-release-work\update-rehearsal-1.0.19-3\home\config\.env.rolled-back-from-1.0.19-629bb5621d34
+PASS  sandbox: 1.0.17 running again on the same data  1.0.17-0d38218c4e1d
+===== rerun after the rollback: nothing to do  20:36:22
+This launcher's work is complete and recorded: the update to 1.0.19-629bb5621d34 was rolled back to 1.0.17-0d38218c4e1d. Nothing more to do here.
+exit=0
+PASS  rerun after rollback changes nothing  exit 0
+===== rollback again without its record: refused, nothing switched  20:36:22
+ROLLBACK: switch your JARVIS back to 1.0.17-0d38218c4e1d
+
+STOPPED: an earlier attempt already switched your JARVIS back to 1.0.17-0d38218c4e1d but did not finish its checks; nothing is switched again. Tell Hermes. Your JARVIS is on 1.0.17-0d38218c4e1d; the old launcher script JARVIS.ps1 is gone; the Desktop shortcut points at C:\Users\jonny\AppData\Local\JARVIS\releases\1.0.17-0d38218c4e1d\electron\JARVIS.exe; the Startup shortcut at C:\Users\jonny\AppData\Local\JARVIS\releases\1.0.17-0d38218c4e1d\electron\JARVIS.exe; Settings > Apps lists JARVIS (sandbox) 1.0.19, uninstaller "D:\JARVIS-release-work\update-rehearsal-1.0.19-3\staging\unins000.exe".
+Nothing further was done. Photograph this window for Hermes.
+exit=2
+PASS  rollback again: refused, still on 1.0.17, no new attempt, the state said  1.0.17-0d38218c4e1d exit 2
+PASS  cleanup: the sandbox uninstalled through its own entry  exit 0
+PASS  the owner real shortcuts unchanged throughout  7dca25063958c485cd63774ea296b705da59657acfc5ea8b09985800a2d7cb19 f8675687f2a435518ebafd6186c253de6b7e239901d49ba0649b1e8e6703554a
+PASS  the real entry the same at the end  JARVIS 1.0.17 "C:\Users\jonny\AppData\Local\JARVIS-package\unins000.exe"
+live JARVIS processes at the end: 0 (start: 0); sandbox processes at the end: 0
+37 checks, 0 failed

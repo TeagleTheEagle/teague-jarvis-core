@@ -46,6 +46,9 @@ and the words it answers to), kept in `<workshop>\skills\` with a row in the dat
 matching skills into the mission's context (as lessons are today); a skill that fails is marked and not retrieved
 until fixed. This is Voyager's mechanism on JARVIS's existing loop. Small: the lessons table, the mission guidance
 and the retrieval already exist; the new parts are the skill rows, the retrieval of code, and a Settings list.
+**Built 2026-10-13** on the owner's "build skills" (`skills.py`, `skill_propose`/`skill_read`, docs/WORKSHOP.md "Skills"):
+each skill is an approval card first; the list rides in the instructions and the model reads one when the job matches;
+a skill read by two missions in a row that did not complete is paused.
 
 ## 2. Unprompted, multi-week autonomy (goal-setting)
 

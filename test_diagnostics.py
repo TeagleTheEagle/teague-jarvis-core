@@ -29,9 +29,3 @@ class DiagnosticsTests(unittest.TestCase):
         with patch.dict(os.environ,{'SERPAPI_API_KEY':'test'}), patch('actions.request',return_value={'organic_results':[{'title':'bad','link':'javascript:x'},{'title':'Good','link':'https://example.com','snippet':'Text'}]}):
             self.assertEqual(actions.search('test')['results'],[{'title':'Good','url':'https://example.com','description':'Text'}])
 
-    def test_openai_preserves_tool_call(self):
-        import threading
-        call={'id':'call1','type':'function','function':{'name':'time_now','arguments':'{}'}}
-        with patch.dict(os.environ,{'OPENAI_API_KEY':'test','JARVIS_PROVIDER':'openai','OPENAI_MODEL':'gpt-4o-mini'}), patch('providers.request',return_value={'choices':[{'message':{'content':None,'tool_calls':[call]}}]}):
-            result=providers.chat([],[],lambda *a: None,threading.Event())
-        self.assertEqual(result['tool_calls'],[call])

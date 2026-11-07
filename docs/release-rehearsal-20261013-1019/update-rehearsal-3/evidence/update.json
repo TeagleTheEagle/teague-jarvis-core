@@ -1,0 +1,79 @@
+{
+    "schema":  "jarvis-everyday-update-v3",
+    "utc":  "2026-10-13T09:35:41.7831178Z",
+    "setup":  "D:\\JARVIS-release-work\\pkg-1.0.19\\JARVIS-Setup-1.0.19-629bb5621d34.exe",
+    "setup_exit":  0,
+    "setup_switches":  [
+                           "/VERYSILENT",
+                           "/SUPPRESSMSGBOXES",
+                           "/NORESTART",
+                           "/LOG=\"D:\\JARVIS-release-work\\update-rehearsal-1.0.19-3\\update\\evidence\\setup-update-20261013-093327.log\"",
+                           "/DIR=D:\\JARVIS-release-work\\update-rehearsal-1.0.19-3\\staging",
+                           "/HOME=D:\\JARVIS-release-work\\update-rehearsal-1.0.19-3\\home",
+                           "/NOSHORTCUTS"
+                       ],
+    "setup_log":  "D:\\JARVIS-release-work\\update-rehearsal-1.0.19-3\\update\\evidence\\setup-update-20261013-093327.log",
+    "staging_moved_aside":  "D:\\JARVIS-release-work\\update-rehearsal-1.0.19-3\\staging-before-1.0.19-629bb5621d34",
+    "setup_wall_seconds":  125,
+    "installer":  {
+                      "status":  "installed",
+                      "release":  "1.0.19-629bb5621d34",
+                      "previous":  "1.0.17-0d38218c4e1d",
+                      "home":  "D:\\JARVIS-release-work\\update-rehearsal-1.0.19-3\\home",
+                      "seconds":  {
+                                      "verify_package":  9.054,
+                                      "copy":  16.572,
+                                      "verify_copy":  22.729,
+                                      "stop":  0.811,
+                                      "switch":  0.143
+                                  },
+                      "shortcuts":  "withheld (the home is not this PC\u0027s own install home)"
+                  },
+    "installer_seconds":  {
+                              "verify_package":  9.054,
+                              "copy":  16.572,
+                              "verify_copy":  22.729,
+                              "stop":  0.811,
+                              "switch":  0.143
+                          },
+    "verify":  "verified",
+    "current":  {
+                    "release":  "1.0.19-629bb5621d34",
+                    "previous":  "1.0.17-0d38218c4e1d",
+                    "switched_at":  1791884131.7673635
+                },
+    "entry_before":  {
+                         "present":  true,
+                         "name":  "JARVIS (sandbox)",
+                         "version":  "1.0.17",
+                         "publisher":  "Teague Industries",
+                         "uninstall":  "\"D:\\JARVIS-release-work\\update-rehearsal-1.0.19-3\\staging\\unins000.exe\"",
+                         "location":  "D:\\JARVIS-release-work\\update-rehearsal-1.0.19-3\\staging\\"
+                     },
+    "entry":  {
+                  "present":  true,
+                  "name":  "JARVIS (sandbox)",
+                  "version":  "1.0.19",
+                  "publisher":  "Teague Industries",
+                  "uninstall":  "\"D:\\JARVIS-release-work\\update-rehearsal-1.0.19-3\\staging\\unins000.exe\"",
+                  "location":  "D:\\JARVIS-release-work\\update-rehearsal-1.0.19-3\\staging\\"
+              },
+    "database_sha256_before":  "6cf15c2a00c4e95750dbe644ebdb7d898a5913347e6a6edc7dcbf619745ca1d1",
+    "database_sha256_after":  "6cf15c2a00c4e95750dbe644ebdb7d898a5913347e6a6edc7dcbf619745ca1d1",
+    "database_unchanged":  true,
+    "key_file_sha256_before":  "1289f90d3559ded1193328bc391fab981e5dcae3bfd232d63406c890d9720fe7",
+    "key_file_sha256_after":  "1289f90d3559ded1193328bc391fab981e5dcae3bfd232d63406c890d9720fe7",
+    "key_file_unchanged":  true,
+    "free_bytes_before":  1283772637184,
+    "shortcuts_before":  {
+                             "desktop":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS\\releases\\1.0.17-0d38218c4e1d\\electron\\JARVIS.exe",
+                             "startup":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS\\releases\\1.0.17-0d38218c4e1d\\electron\\JARVIS.exe"
+                         },
+    "shortcuts_after":  {
+                            "desktop":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS\\releases\\1.0.17-0d38218c4e1d\\electron\\JARVIS.exe",
+                            "startup":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS\\releases\\1.0.17-0d38218c4e1d\\electron\\JARVIS.exe"
+                        },
+    "program":  "D:\\JARVIS-release-work\\update-rehearsal-1.0.19-3\\home\\releases\\1.0.19-629bb5621d34\\electron\\JARVIS.exe",
+    "launcher_script_left":  false,
+    "jarvis_started":  false
+}

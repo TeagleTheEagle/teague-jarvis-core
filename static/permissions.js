@@ -37,6 +37,12 @@ const JarvisPermissions = {
     if (row.asks === 'your own words') return 'Only when your own words ask for exactly this.';
     return row.effect === 'changes' ? 'Does not ask first.' : '';
   },
+  // Standing responsibilities (standing.py): the words of the lockdown line.
+  lockdownText(standing) {
+    if (!standing) return '';
+    return standing.lockdown ? 'LOCKDOWN IS ON: every action asks you first, whatever its switch. JARVIS locked himself down because several questions read text that tried to instruct the AI. End it when you have looked.'
+                             : 'No lockdown. JARVIS locks himself down when several questions in a row read text that tried to instruct the AI (if the switch below is on).';
+  },
   // The line of the stop banner: when and from where.
   stopText(control, now) {
     if (!control || !control.stopped) return '';
@@ -113,7 +119,29 @@ if (typeof document !== 'undefined') (() => {
   const stopToggle = el('button'); stopToggle.type = 'button';
   stopWords.append(stopState, stopDetail); stopRow.append(stopWords, stopToggle);
   const table = el('div', 'perm-table'); table.setAttribute('aria-live', 'polite');
-  panel.append(intro, stopRow, table);
+  // Standing responsibilities and emergency authority (standing.py, owner 2026-10-13): six on/off switches saved as
+  // settings, and the lockdown with its END button. The Core decides; this only shows and sends the clicks.
+  const standingBox = el('div', 'perm-standing');
+  panel.append(intro, stopRow, standingBox, table);
+  function renderStanding(data) {
+    const s = data && data.standing;
+    if (!s) { standingBox.replaceChildren(); return; }
+    const lock = el('div', 'perm-lockdown' + (s.lockdown ? ' on' : '')), lockWords = el('span', '', JarvisPermissions.lockdownText(s));
+    lock.append(lockWords);
+    if (s.lockdown) { const end = el('button', 'es-resume', 'END LOCKDOWN'); end.type = 'button'; end.onclick = async () => { end.disabled = true; try { await api('/api/settings', {lockdown: false}); toast('Lockdown ended.'); } catch (e) { toast(e.message, true); } await load(); }; lock.append(end); }
+    const rows = (s.switches || []).map(row => {
+      const node = el('div', 'perm-row' + (row.on ? '' : ' changed'));
+      const name = el('div', 'perm-name'); name.append(el('b', '', row.label)); if (row.note) name.append(el('small', '', row.note));
+      const facts = el('div', 'perm-facts'); facts.append(el('span', '', row.on ? 'On.' : 'Off.'));
+      const select = el('select'); select.setAttribute('aria-label', 'Your switch for: ' + row.label);
+      select.add(new Option('On', 'on')); select.add(new Option('Off', 'off')); select.value = row.on ? 'on' : 'off';
+      select.onchange = async () => { select.disabled = true; try { await api('/api/settings', {[row.name]: select.value === 'on'}); toast(row.label + ': ' + (select.value === 'on' ? 'on' : 'off') + '.'); } catch (e) { toast(e.message, true); } await load(); };
+      node.append(name, facts, select); return node;
+    });
+    standingBox.replaceChildren(el('h3', 'perm-group', 'STANDING RESPONSIBILITIES AND EMERGENCY AUTHORITY (' + rows.length + ')'),
+      el('p', 'perm-note', 'What JARVIS does on his own, without being asked, and what he may do alone in an emergency. Each one is on unless you switch it off here. None of them spends, sends, deletes or changes JARVIS himself.'),
+      lock, ...rows);
+  }
   // Its own category in Settings (static/teague.js builds the categories); without them, the top of the page.
   const category = q('.ti-settings-group[data-setting="Permissions"]'), settingsView = q('#settingsView');
   if (category) category.append(panel); else if (settingsView) { panel.prepend(el('h2', '', 'Permissions')); settingsView.prepend(panel); }
@@ -139,6 +167,7 @@ if (typeof document !== 'undefined') (() => {
     node.append(name, facts, select); return node;
   }
   function render(data) {
+    renderStanding(data);
     const rows = (data && data.tools) || [], changes = rows.filter(r => r.effect === 'changes'), reads = rows.filter(r => r.effect !== 'changes');
     const open = !!table.querySelector('details[open]');
     table.replaceChildren(el('h3', 'perm-group', 'CHANGES SOMETHING (' + changes.length + ')'), ...changes.map(rowNode));

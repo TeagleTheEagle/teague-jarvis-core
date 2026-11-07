@@ -22,7 +22,7 @@ import server
 from server import App, Handler, Run, Server
 from store import Store
 
-ENV = {'JARVIS_PROVIDER': 'qwen', 'DASHSCOPE_API_KEY': 'qwen-test-key'}
+ENV = {'JARVIS_PROVIDER': 'openrouter', 'OPENROUTER_API_KEY': 'qwen-test-key'}
 DONE = {'choices': [{'finish_reason': 'stop', 'message': {'content': 'Done.'}}]}
 
 
@@ -48,7 +48,9 @@ class TableTests(unittest.TestCase):
             'development_edit', 'development_propose', 'development_rollback', 'assistant_control', 'navigate_panel',
             'inspect_interface', 'create_file', 'project_save_document', 'project_link_chat', 'open_app', 'spotify', 'play_music', 'mail_send',
             'workshop_files', 'workshop_run', 'workshop_mission',  # the Workshop (docs/WORKSHOP.md): its changes are receipts too
-            'remember_about_you'})  # 1.0.19: an offer kept on the You page
+            'remember_about_you',  # 1.0.19: an offer kept on the You page
+            'goal_propose',  # a goal JARVIS suggests (goals.py; owner, 2026-10-13)
+            'skill_propose'})  # a skill JARVIS suggests keeping (skills.py; owner, 2026-10-13)
         self.assertEqual(permissions.EVIDENCE_TOOLS, {'calculate', 'create_file', 'save_item', 'set_timer', 'suit_diagram',
             'project_link_chat', 'project_save_document'})
         self.assertEqual(permissions.PREVIEW_TOOLS, ('save_item', 'set_timer', 'create_file'))
@@ -147,7 +149,10 @@ class TableTests(unittest.TestCase):
         self.assertEqual((rows['workshop_run']['mode'], rows['workshop_run']['shipped'], rows['set_timer']['shipped']), ('ask', 'ask', 'default'))
         self.assertEqual(permissions.effective({})['workshop_run'], 'ask')
         self.assertEqual(permissions.effective({'workshop_run': 'default'})['workshop_run'], 'default')
-        self.assertEqual({n for n, r in permissions.TABLE.items() if r.shipped != permissions.DEFAULT}, {'workshop_run'})
+        self.assertEqual({n for n, r in permissions.TABLE.items() if r.shipped != permissions.DEFAULT},
+                         {'workshop_run', 'workshop_files', 'workshop_python', 'workshop_mission', 'computer_open_page', 'open_app'})  # owner, 2026-10-13
+        for name in ('workshop_files', 'workshop_python', 'workshop_mission', 'computer_open_page', 'open_app'):
+            self.assertIn(permissions.ASK, permissions.modes_for(name), name)   # a shipped position the owner can choose
         self.assertEqual(rows['development_edit']['asks'], permissions.ALWAYS)
         self.assertEqual(rows['manage_timer']['reads_for'], ['list'])
         json.dumps(list(rows.values()))

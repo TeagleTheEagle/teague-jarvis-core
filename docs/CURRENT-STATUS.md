@@ -1,7 +1,7 @@
 # JARVIS: current status (living document)
 
 **Read this first in every new Claude Code session, and update it at the end of each one.**
-Last updated: 2026-10-12 evening (the section "2026-10-12 evening" below is the newest: Serena fixed, no missing dependencies, VERONICA's five unlisted packages pinned, the new tool system_diagnostics, the ASI roadmap proposal, Phase 1 begun; before it, the section "2026-10-12": what other AI tools did on 2026-10-11, the repo back on claude/main, the workspace back at its recorded path, VERONICA in her own repo D:\VERONICA, one AI tool per project; before it, 2026-10-11 morning: the section "2026-10-10 late night" runs into 2026-10-11: release 1.0.18 = THE TIME FIX ONLY (owner: "keep friday as he is, 1.0.18 time fix only"), built as 1.0.18-cffb826de043, every check on this PC passed, docs/STAGE7-CHECK-1.0.18.md READY FOR THE OWNER'S APPROVAL; it corrects the section "2026-10-10 night"; before it, "2026-10-10 night": FRIDAY started, the Mac's round 6 copy kept; before it, "2026-10-10 late evening": the You page built and reviewed, findings not yet applied; the memory roadmap for approval; voice recognition researched) (STAGE_6_COMPLETE, SWITCH-OVER COMPLETE, STAGE_7_COMPLETE for 1.0.14, 1.0.15 AND 1.0.16;
+Last updated: 2026-10-13 (the section "2026-10-13, about 18:50 local" below is the newest: skills, built on the merge branch for the release after 1.0.19; before it, "2026-10-13, about 16:40 local": goals JARVIS suggests; before them, the section "2026-10-13 afternoon": Hermes Agent is the one tool that writes JARVIS and VERONICA on the owner's word, and the Qwen-only rule is enforced in providers.py; before it, the section "2026-10-13": the live OpenRouter test 6 of 6, Qwen only on the owner's word; before it, the section "2026-10-12 evening": Serena fixed, no missing dependencies, VERONICA's five unlisted packages pinned, the new tool system_diagnostics, the ASI roadmap proposal, Phase 1 begun; before it, the section "2026-10-12": what other AI tools did on 2026-10-11, the repo back on claude/main, the workspace back at its recorded path, VERONICA in her own repo D:\VERONICA, one AI tool per project; before it, 2026-10-11 morning: the section "2026-10-10 late night" runs into 2026-10-11: release 1.0.18 = THE TIME FIX ONLY (owner: "keep friday as he is, 1.0.18 time fix only"), built as 1.0.18-cffb826de043, every check on this PC passed, docs/STAGE7-CHECK-1.0.18.md READY FOR THE OWNER'S APPROVAL; it corrects the section "2026-10-10 night"; before it, "2026-10-10 night": FRIDAY started, the Mac's round 6 copy kept; before it, "2026-10-10 late evening": the You page built and reviewed, findings not yet applied; the memory roadmap for approval; voice recognition researched) (STAGE_6_COMPLETE, SWITCH-OVER COMPLETE, STAGE_7_COMPLETE for 1.0.14, 1.0.15 AND 1.0.16;
 **the everyday JARVIS is 1.0.17-0d38218c4e1d (EVERYDAY_UPDATE_COMPLETE, 2026-10-07 evening, the first update made by the release's own Setup: JARVIS.exe, the Installed-apps entry, the shortcuts at JARVIS.exe); 1.0.16, 1.0.15, 1.0.14 and 1.0.11 stay installed as rollback copies.
 **CORE RELEASE 1.0.16 ("the phone release", now also with the Qwen voice link fix): BUILT AND CHECKED ON THIS PC as build 2 `1.0.16-fccde24e2cc6` (commit fccde24; comparison, release regression, zip install and sandbox Stage 7 all PASS; build 1 `1.0.16-4e54fc946bc3` superseded, never offered); `docs/STAGE7-CHECK-1.0.16.md` APPROVED BY THE OWNER ("I approve the Stage 7 check of 1.0.16", first clock reading 2026-10-06T06:50:25Z; record `../governance/STAGE7-1.0.16-APPROVAL-RECORD.json`, repo copy `docs/stage7-1.0.16-evidence/`); the tools are placed in `D:\JARVIS-S6-FRESHVM\tools\stage7-1.0.16\` and the record folders created; **THE VM CHECK OF 1.0.16 IS COMPLETE: `STAGE_7_COMPLETE`, 27 of 27 checks** (owner "stage 7 done" 2026-10-06 about 20:00 local; evaluation `docs/stage7-1.0.16-evidence/stage7-evaluation.json`, evaluated 09:02:54Z; snapshot STAGE7-PASS-1.0.16-fccde24e2cc6 c91c7f1a… taken 08:59:38Z after a clean shutdown, all eight snapshots kept; the first install's 646 s against the 600 s bound dispositioned as a VM limitation under the owner's rule of 2026-10-06, every update, rollback and stop inside the bound; no incident this time). **THE UPDATE OF THE EVERYDAY JARVIS TO 1.0.16 IS COMPLETE: `EVERYDAY_UPDATE_COMPLETE`** ("I approve the update of my everyday JARVIS to 1.0.16", 2026-10-06T09:11:04Z; record `../governance/UPDATE-1.0.16-APPROVAL-RECORD.json`; steps 1 to 5 run by the owner 20:16 to 20:40 local: check, backup 351 files with test restore, update 108.5 s with the database byte-for-byte unchanged, the owner's check, a PC restart with JARVIS 1.0.16 starting by itself 5.7 min after sign-in; evaluation and MANIFEST in `D:\JARVIS-update-1.0.16\evidence`, repo copy `docs/update-1.0.16-evidence/`; the Private network switch stays off until the owner sets up Tailscale). **THE PHONE IS PAIRED AND TALKING TO THE CORE OVER THE PRIVATE NETWORK (22:15 local):** Tailscale on the PC (`thegrizzlybear`, 100.103.95.28) and the phone (`iphone-15`), both set up by the owner; the Private network switch on; the door on 100.103.95.28:8790; PAIR with the address; the Ask screen ONLINE with Core 1.0.16, AI READY, link 22 ms; a conversation answered. Result record `docs/PHONE-V1-RESULT.md` (in progress: checks 1 and 2 DONE at 22:20 on cellular with Wi-Fi off, hold-to-speak heard, THINKING on the PC, SPEAKING in JARVIS's voice, link about 200 ms; checks 4, 5, 6 and 10 DONE at 22:23 to 22:24 (Chats with the conversation and its messages, Status with the readouts and the overview, STOP ALL from the phone and RESUME on the PC, the PC's Devices page showing the phone online with every tick); checks 7, 8 and 9 DONE at 22:28 to 22:31 (revoke then pair again, Tailscale off gives CORE NOT REACHED, "remember that" saved and shown on the PC's Memory page, though as the word "that"); check 3 FAILS (the owner: closing the app mid-conversation shows a fresh one; the id is kept but the lines are not reloaded); **VERSION 1: 9 of 10 checks met, the app's next round fixes check 3, the header at the phone's width, the stale stop note and the icon**; two fixes on the way: the phone had signed into a second Tailscale network, and the app crashed after pairing until the microphone usage entry was added to the Info list). **NEXT: the owner's remaining section 10 checks; a fix round for the header layout at the phone's width (ONLINE wraps, STOP ALL squeezed) and the icon; then release 1.0.17.** The check's course: step 1 done (disc `JARVIS-STAGE7-1.0.16-fccde24e2cc6.iso`, sha256 dd3a1abe…, built 06:55Z, checked by Claude), step 2 done (VM started on FRESH-PREREQ), step 3 PASS (the Install phase, all nine checks E0 and I1 to I8, 18:04:42 to 18:35:49 local; the install took 646 s against the 600 s Gate 20 bound, copy 301 s and verify 225 s, the VM's disk as in the 1.0.15 check, for the owner's disposition at the evaluation); step 4 (quit, restart, the second run of stage7, about 50 min) is the owner's next act; steps 5 to 7 pending ("stage 7 done" ends them), then the evaluation and the everyday-update plan. THE IPHONE APP (step 7 of the phone plan) IS WRITTEN under `phone/ios/`, independently reviewed with every finding applied (1 high, 5 medium, 19 low: `docs/PHONE-APP.md` section 5), and zipped for the Mac at `D:\JARVIS-release-work\phone\JARVIS-ios-v1-20261006-1810.zip` (sha256 62d873f1…); not built here (the owner builds it on the Mac, `phone/ios/README.md`, fix rounds expected). On the Mac the owner has created the Xcode project `JARVIS` (bundle id `com.teagueindustries.jarvis`, team Benjamin Teague, Display Name JARVIS, iOS 26 as the minimum by the owner's choice, the two Info keys, the three build settings); THE APP IS BUILT AND RUNNING ON THE OWNER'S IPHONE (19:00 local): the twelve files dragged in, Build Succeeded at the first attempt with no fix round (Xcode's bridging-header prompt answered Don't Create), installed by Product > Run after Xcode's one-time symbol copy, the pairing screen shown as designed (picture `docs/phone-evidence/phone-app-first-launch-20261006-1900.png`); not pairable until 1.0.16 is the everyday JARVIS and Tailscale is set up (plan steps 5 and 6). **`docs/OWN-APP-PLAN.md` IS APPROVED BY THE OWNER** ("I approve the own app plan can we make the app icon this image as well as the app icon for the ios app", then the exact "I approve the own-app plan"; first clock reading 2026-10-06T08:23:24Z; record `../governance/OWN-APP-PLAN-APPROVAL-RECORD.json`, repo copy `docs/own-app-evidence/`): release 1.0.17 after 1.0.16 and the phone: JARVIS.exe with the icon and name, no PowerShell step, JARVIS-Setup.exe built with Inno Setup (the owner installs it once), an Installed-apps entry, version 4 Stage 7 scripts; D1 to D4 and D6 as recommended; **D5 changed by the owner: the icon is the Teague Industries badge the owner supplied**, kept at `static/assets/branding/teague/teague-industries-badge.png` and rendered on approval into `desktop/jarvis.ico`, `desktop/tray.png` (the tray image the desktop code pointed at and the repo lacked) and `phone/ios/AppIcon-1024.png` (copy for the Mac `D:\JARVIS-release-work\phone\JARVIS-AppIcon-1024.png`; the owner drags it into Xcode's Assets > AppIcon). Nothing else of 1.0.17 is built. **THE LOOK APPLIED TO THE IPHONE APP** (owner: "apply the look", from a mock-up zip the owner supplied; `docs/PHONE-APP.md` section 6): the badge as the header logo, the space scene faint behind every screen, a turning orbital graphic on the pairing screen; `phone/ios/JARVIS/Theme.swift` and `PairingView.swift` changed, assets `phone/ios/assets/TeagueBadge.png` and `JARVISBackground.jpeg`, reviewed (no high or medium, 4 low, 2 applied); zip for the Mac `D:\JARVIS-release-work\phone\JARVIS-ios-look-20261006-1946.zip` (sha256 cc87bdab…), steps `phone/ios/README-look.md`; **BUILT AND SEEN ON THE PHONE at 21:12 local** (screenshot `docs/phone-evidence/phone-app-look-20261006-2112.png`; the home-screen icon needs one delete-and-reinstall of the app to refresh, told to the owner). The VM check's second run: AfterRestart, Uninstall and Update phases PASS (driver log 07:55, 08:07, 08:40Z), the interrupted-update phase started 19:40 local. Open for the owner: the voice tool run again after the fix (expected "qwen voice SPEAKS"), the approval, the C: cleanup steps (parked on the owner's word: "focus on the app"), later the Phone Link / contacts / Gmail idea**).
 
@@ -220,6 +220,203 @@ current record.
 
 Rules and authority are in `CLAUDE.md` and `../governance/OWNER-DELEGATION.md`; this file
 only records where the work stands. Historical handover context: `docs/PROJECT-CONTEXT.md`.
+
+## 2026-10-13, about 23:20 local (Hermes Agent, now the only chat; owner: "start 1.0.20")
+
+**Release 1.0.20 begun on `claude/veronica-merge`.** The best-models branch is merged (`55e2853`, fast-forward). Built first:
+**the window's patience after a login launch** (the "self restart" the owner saw after the 1.0.19 reboot: `desktop/backend.cjs
+watchCore` gains `patienceMs`/`patientMs`; for 10 minutes after a login launch (`desktop/main.cjs`, `--login-launch`) a Core
+that is alive but silent gets 60 s instead of 15 before "not responding"; a crash is still reported at once; a requested
+stop still closes quietly; `core-watch.test.cjs` 14 pass). **Release notes:** the 1.0.20 entry at the top of
+`release-notes.json` (the fixed models, the Workshop, goals, the standing purpose, skills, standing responsibilities,
+changes to himself, the guard, the You page, PC health, tool failures, resumed missions, the window's patience); the
+never-shipped "Release 1.0.18: the Workshop" entry renamed to say it ships in 1.0.20. **Acceptance:** 1.0.20 changes
+`desktop/main.cjs` and `desktop/backend.cjs` (the launcher side), so the VM check applies under the tiered rule proposed
+to the owner; the owner has not yet chosen sandbox-only or VM for this release. **Next:** the full suite at this commit,
+then the pipeline (build, compare with 1.0.19, regression, Setup, zip and Setup rehearsals, pkg folder, sandbox Stage 7),
+one step at a time, then `docs/STAGE7-CHECK-1.0.20.md` for the owner's approval sentence. VM note: the owner's E: backup
+of `D:\JARVIS-S6-FRESHVM` is complete and verified (680 of 680 identical, the other chat, 22:50); the VM may be used again.
+
+## 2026-10-13, about 22:40 local (Hermes Agent, a second chat; owner: "start this" on the best-model table, then "allocate the best performance : cheapest ratio to each aspect for jarvis and lock in so that's the only model it can use")
+
+**One AI model per job, by performance for the money, fixed in the program: BUILT AND TESTED on branch `claude/best-models`**
+(worktree `D:\JARVIS-release-work\src-models`, branched from `claude/veronica-merge` at `0434340`; to be merged into it by
+the active chat, or by this one when that chat is quiet). Replaces the morning's Qwen-only rule. `providers.OPENROUTER_MODELS`:
+chat, pictures, Economy and the web search's request `anthropic/claude-haiku-5.5` (US$0.10 / 0.50 per million tokens);
+coding and research jobs `anthropic/claude-sonnet-5.5` (2 / 10); backup `qwen/qwen3.7-plus` (0.32 / 1.28; another maker on
+purpose). **The lock:** `openrouter_locked()` refuses, before any request and naming the line, a key-file line that would
+change a model (`OPENROUTER_MODEL`, `_VISION_MODEL`, `_FAST_MODEL`, `_CODING_MODEL`, `_FALLBACK_MODEL`, `_MAKERS`); Settings
+reads never fail and always show the fixed models. **The maker rule** stays as a second check: `OPENROUTER_MAKERS` =
+anthropic, qwen, google in code (`openrouter_allowed_model`, the morning's `openrouter_qwen_only` renamed); it also governs
+the one model line the key file may still carry, `OPENROUTER_STT_MODEL` (hearing stays on this PC unless the owner names a
+cloud model there and picks it in Settings; OpenRouter now lists `qwen/qwen3-asr-1.7b` and `google/gemini-3.5-transcribe`).
+Fish Audio and every safety rule untouched. Records: `docs/VERONICA-MERGE-PLAN.md`, the evening amendment at the top (the
+table with prices of 2026-10-13); `.env.example` keeps only the key and the two hearing lines. Tests: `test_openrouter_provider.py`
+(the lock on every line, the maker rule on the fixed models and on a replaced one, the cross-maker backup end to end),
+`test_answer_mode.py` (no vision line; the main model sees pictures); full suite on this branch: see the commit message.
+**Owner's steps:** (1) on openrouter.ai, widen the key's guardrail to allow `anthropic/*` beside `qwen/*` (and `google/*`
+if cloud hearing is ever wanted); (2) `..\owner-steps\Test-OpenRouter-BestModels.cmd` proves the four models and the
+picture on the key (about ten US cents). The live 1.0.19 is unchanged until the merged release. Not changed: thinking
+effort (Auto still asks for minimal thinking); raising it is a one-line follow-up once the yardstick exists.
+
+## 2026-10-13, about 21:30 local (Hermes Agent, same session; owner: "stage 7 done", "write the 1.0.19 update plan", "I approve the update of my everyday JARVIS to 1.0.19")
+
+**The everyday JARVIS is 1.0.19-629bb5621d34** (`EVERYDAY_UPDATE_COMPLETE`, 21:15; on `claude/release-1.0.19`:
+`docs/UPDATE-EVERYDAY-1.0.19.md`, `docs/update-1.0.19-evidence/`, `tools/host/update-1.0.19/` version 3 of the launcher,
+its sandbox harness and rehearsal 37 of 37, its independent review with 2 high findings inherited from the 1.0.17
+launcher and fixed: failure messages lost their state line, a second rollback would have switched forward). Stage 7
+for 1.0.19 in the VM: 29 of 29 (`90f7f83`). **On this branch:** autonomy items 1 and 3 committed (`fb5fd0a`): the
+standing purpose, goals with success condition / priority / cost limit / stopping condition, `finish` with `verified`,
+an interrupted mission taken up again once; full suite 931 passed. **Open, seen tonight:** (a) after the restart the
+window closed on "Core not responding" while the Core was still loading on a busy PC (15 s patience in
+`desktop/backend.cjs watchCore`): give the window more patience after a login launch, next release; (b) "Private
+network door: could not open port 8790" in Recent activity (the 1.0.16 door; not changed by 1.0.19); (c) the C: cleanup
+on the owner's word (1.0.16, `JARVIS-package-before-1.0.19-629bb5621d34`, `config\.env.before-1.0.19-629bb5621d34`).
+**Not started:** autonomy items 2, 4, 5; the changed-files-only updater (owner's point 1); VERONICA as a persona (merge
+plan phase 2) and her skills (phase 3).
+
+## 2026-10-13, about 18:50 local (Hermes Agent, new session; owner: "build skills", then "do this")
+
+**Skills: BUILT AND TESTED on `claude/veronica-merge` (the branch of the next release), on top of the goals commit
+`8a65dec`; NOT in 1.0.19, which was in its Stage 7 check in the VM `jarvis-s6-val` at the same time (untouched).**
+The owner asked, with a screenshot of Hermes Agent's skills, for "a skill thing like this" for JARVIS and VERONICA.
+Built as `skills.py` + two tools: `skill_read` (a read; also offered to missions) and `skill_propose` (always asks:
+an approval card with the whole text and the script; yes keeps it and writes `skills/<name>/` in the workshop; a
+suggestion under a kept name is a new version that replaces it on yes). The list of skills that are on rides in the
+instructions of every question and mission; the steps are always read from the database, and a changed script on disk
+is put back as approved. A suggestion the guard would change (instructions to the AI, hidden text, a key) is refused
+whole. Caps 3 waiting / 40 kept; no suggestion from a mission or after taint; a skill read by 2 missions in a row that
+did not complete is paused and the owner told. Settings > Workshop > Skills: turn off, on, delete. `skills.py` added to
+`development.PROTECTED_FILES`. Record: `docs/WORKSHOP.md` "Skills"; `docs/CAPABILITY-SOURCES-20261007.md` proposal 1
+marked built. Tests: `test_skills.py` (20), `test_permissions.py`, `test_workshop_view.cjs`. VERONICA gets it as a
+persona of this Core after the merge; her separate program in `veronica\` was not touched. **Then (about 19:15), the
+owner's switch decision:** the page opener, the app opener, workshop files, the workshop's Python environment and
+missions ship as "ask first" like the workshop's commands (`permissions.py` `shipped=ASK`; `test_permissions.py`,
+`test_workshop.py`; docs/WORKSHOP.md "Switch positions as shipped"). Consequence noted there: with the shipped positions
+a mission stops at its first file write; the owner sets files (and commands) to Allowed for unattended missions.
+**Then (about 19:35), "all four" of the film-JARVIS permissions, as `standing.py`** (docs/WORKSHOP.md "Standing
+responsibilities and emergency authority"): the standing watch (drives, battery, backups: warnings on his own), a
+mission's approval covering its workshop work (which answers the consequence above: an approved mission no longer
+stops at its first write), the emergency authority (a restart after a crash through the desktop app and
+`standing.json`, a backup when backups keep failing, a lockdown after three guard-marked questions in ten minutes),
+and the warning before a risky action, asked once on the card. Six switches in Settings > Permissions, on as shipped.
+Tests: `test_standing.py` (14), `desktop/test/core-watch.test.cjs`; the launcher's restart gets its real test in the
+next release's regression and Stage 7.
+**Then (about 20:10), from the owner's two documents and "add them all" (five items, in the order 1, 3, 2, 4, 5):
+items 1 and 3 built** (docs/WORKSHOP.md "The standing purpose, fuller goals and the verification"): the standing purpose
+in Settings > Workshop; a goal with its success condition (required), priority, cost limit and stopping condition, all
+on the card; the mission's `finish` with `verified`; and an interrupted mission taken up again once at the next start
+with its plan and log. **Still to build:** item 2 (facts vs guesses: confirmed/inferred with source and date, corrections
+superseding; re-check a changeable fact before acting), item 4 (the yardstick: about 20 representative tasks, some held
+out, scored over time; ASI roadmap Phase 0) and item 5 (self-improvement as an experiment: a proposal tried in an
+isolated copy with the tests and the yardstick, before-and-after numbers on the card; after item 4). Items 4 and 5 are
+two to three sessions each. **STAGE_7_COMPLETE for 1.0.19 at 19:49** (record on `claude/release-1.0.19`, commit
+`90f7f83`, `docs/stage7-1.0.19-evidence/`); the everyday update to 1.0.19 waits for the owner's word.
+
+## 2026-10-13, about 16:40 local (Hermes Agent, same chat resumed; owner: "give them those abilities", then "dont restore her limits and dont move anything", "go")
+
+**Goals JARVIS suggests, and changes he proposes to his own program: BUILT AND TESTED on `claude/veronica-merge`
+(the branch of the next release), NOT YET COMMITTED, NOT in 1.0.19.** The owner asked (Characteristics.pdf, then in
+his own words) that JARVIS and VERONICA "have the ability to edit, improve, fix the core and themselves; they'll
+propose a change but need my approval" and "work and adopt goals on their own, just they have to ask". Built as
+`goals.py` + `goal_propose` (a suggestion is an approval card; yes makes a workshop mission under every mission limit;
+caps 3 waiting / 5 adopted a day; no recursion from a mission; no taint; lapses after a day and at a Core start) and a
+widened `development.allowed` (any Core module, window or companion file; never `server.py`, `actions.py`,
+`permissions.py`, `content_guard.py`, `development.py`, `core_lock.py`, `runtime_paths.py`, `store.py`, `goals.py`, the
+tests, `desktop/*.cjs`; installed, a program-file change stays a proposal for the engineer and the next release).
+Record: `docs/WORKSHOP.md`, two new sections; `docs/ASI_ROADMAP.md` phase 6 item 4. Tests: `test_goals.py` (14),
+`test_permissions.py` and `test_workshop_view.cjs` extended. Owner's standing decisions the same afternoon: VERONICA's
+stripped `safety.py`/`agent.py` and the untracked `repo\autonomous_core.py` are NOT restored and NOT moved. The 1.0.19
+release regression (OpenRouter-only build `1.0.19-629bb5621d34`) was restarted at 16:12 after two interrupted runs.
+
+## 2026-10-13 afternoon (Hermes Agent, from about 12:25 local; a new session in the Hermes desktop app on the PC)
+
+**Owner decision: Hermes replaces Claude Code as the one AI tool.** "I WANT TO REPLACE CLAUDE AND MAKE YOU THE ONLY
+CODER" (Hermes chat). Record: `..\governance\HERMES-SOLE-CODER-APPROVAL-RECORD.json`. The one-tool notes were updated
+in the workspace `..\CLAUDE.md`, `..\veronica\CLAUDE.md`, `..\veronica\AGENTS.md` and `~\.qwen\QWEN.md` (left
+uncommitted in those trees, which already hold the owner's own uncommitted work), and in this repo's `CLAUDE.md`
+(a TOOL NOTE under ROLE, in this commit). STANDING AUTHORITY and OWNER-ONLY are unchanged and bind Hermes the same
+way; the Mac's iPhone session and FRIDAY are the owner's to decide separately. Earlier in the same chat the owner
+confirmed the uncommitted `my-change` changes in `..\repo` (permissions.py, server.py, autonomous_core.py) as his
+own; they were not touched.
+
+**The Qwen-only rule enforced in code** (owner: "if i wanted to add the open router key to jarvis can you make it so
+he is only allowed qwen models", then authorizing Hermes for this one change, in a worktree that leaves his dirty
+`my-change` tree untouched; built in `D:\JARVIS-release-work\src-merge`, this branch). Until now Qwen-only was the
+defaults of 53bf9c6 plus the owner's guardrail on the key; a key-file line could still name another maker's model
+and it would be sent. Now `providers.openrouter_qwen_only` refuses any model whose name does not start `qwen/` at
+every OpenRouter request path — chat (main, vision, economy, coding), the backup model, the web search's small
+request and cloud speech recognition — before anything is sent, with a plain ProviderError that says the rule and
+tells the owner to fix or remove that key-file line. `cloud_speech()` counts only a Qwen `OPENROUTER_STT_MODEL`:
+another maker's line (e.g. whisper) leaves the cloud option off and this PC hearing, and a direct cloud call is
+refused. `capabilities()` still reports a wrong line instead of failing, so Settings shows what to fix. Fish Audio
+(the owner again: "use fish audio for api key", as 2026-10-12), every safety rule and the Qwen-only defaults
+themselves are untouched. `.env.example` gained the OpenRouter lines (empty placeholders, with the rule noted).
+Tests: `test_openrouter_provider.py` updated — the key-file test is Qwen-only, new refusal tests for the five chat
+lines, the search path and the speech path, the cross-maker backup naming kept on `is_fallback` directly, and the
+STT plumbing keeps a stand-in Qwen model name; full Python suite 940 OK (2 skipped, 534 subtests, 263 s, this
+worktree with the repo's venv). **Next for the owner:** to run this branch, place `OPENROUTER_API_KEY` (and the two
+`FISH_` lines for the voice) in a dev `.env` beside the source in `src-merge`; the live 1.0.17 does not know
+OpenRouter, so its config stays as it is until the merged release.
+
+## 2026-10-13 (Opus 5.5, from about 11:36 local; a new session, started from another device)
+
+**Done**
+- **OpenRouter credit and the live function test (merge plan phase 1, item 6): 6 of 6 PASS.** The owner bought US$50 of
+  credit (US$49.99 left at the test) and ran `..\owner-steps\Test-OpenRouter-Functions.cmd`: tools on Qwen 3.8 Max and
+  Claude Opus 5.5, picture, web search, speech-to-text (`openai/whisper-1`) and search by meaning. Recorded in
+  `docs/VERONICA-MERGE-PLAN.md` section 8.
+- **Owner amendment: Qwen only** ("can we make it only use qwen models for all the functions?", "and veronica as
+  well", then "DONT CHANGE ANY SAFTEY RULES FOR VERONICA OR JARVIS / keep fish audio api for both of them"). The owner
+  is setting an OpenRouter guardrail that allows only `qwen/*` on the key. In `providers.py` on `claude/veronica-merge`:
+  coding and research jobs `qwen/qwen3.8-max-0902` (was Claude Opus 5.5), the backup model `qwen/qwen3.8-flash` (was
+  Claude Sonnet 5.5), the cloud option for hearing off unless an `OPENROUTER_STT_MODEL` line names a model (was
+  `openai/whisper-1`; `cloud_speech()` is None without one, so Settings does not offer it and the PC hears). Fish Audio
+  and every safety rule unchanged. Amendment recorded at the top of `docs/VERONICA-MERGE-PLAN.md`.
+  - Tests: `test_openrouter_provider.py` updated (the defaults; the maker rule now tested with a backup from another
+    maker named in the key file; a new test that without a speech model nothing is sent and this PC hears); the full
+    Python suite 938 OK (2 skipped).
+  - `..\owner-steps\Test-OpenRouter-Functions.ps1`/`.cmd` now test Qwen only: tools on the main and backup models,
+    picture, web search, search by meaning (speech-to-text dropped).
+- Advised the owner (in chat): OpenRouter's FAQ says unused credit may expire one year after purchase, so
+  `docs/AI-PROVIDER-PLAN.md`'s "credits do not expire" is wrong (not yet corrected); a spending limit on the key; the
+  Routing page's allow-list only governs `openrouter/auto`, the Guardrails page restricts a key.
+
+- **VERONICA on Qwen through OpenRouter** (owner: "yes do this as well"; "DONT CHANGE ANYTHING" about safety): in
+  `..\veronica`, uncommitted (her working tree already held other uncommitted changes, below, so nothing was
+  committed there): `agent.py` chat from Groq to `qwen/qwen3.8-max-0902` through the `openai` package at
+  openrouter.ai (key `OPENROUTER_API_KEY`, `OPENROUTER_MODEL` to change the model; reasoning minimal and excluded,
+  reply limit 16384; 401, 404 and 402 said plainly); `research.py` from `ChatAnthropic` to `ChatOpenAI` at
+  openrouter.ai, the same model (`OPENROUTER_RESEARCH_MODEL`), the key passed explicitly (no other key can reach
+  openrouter.ai); Qwen's prices added for the US$3 task cost limit (unknown names still counted at Opus 5.5's, the
+  dearest); `tasks.py` retries a dropped OpenRouter connection as it did Anthropic's; `app.py` and `ui\index.html`
+  show "Qwen 3.8 Max"; `requirements.txt` pins `langchain-openai==1.7.0` and `openai==3.29.0` (installed in her
+  `.venv` with `tiktoken` and `regex`; nothing she had was upgraded); her `CLAUDE.md` updated. `safety.py`, Fish
+  Audio and local Whisper untouched. Tests on throwaway copies: the same 20 fail before and after (safety, approval
+  and defusing tests whose rules were removed on 2026-10-12, and the speech model file not copied); 4 new tests pass.
+  **She needs `OPENROUTER_API_KEY` in her `.env` (the owner's step) before her next start.**
+
+**Found, for the owner (nothing changed)**
+- **VERONICA's working tree** (`..\veronica`, branch `master` at 445facc) has uncommitted changes from 2026-10-12
+  22:05-23:43: the Groq switch of her chat (`agent.py`, `CLAUDE.md`, `requirements.txt`, two test files), and
+  `safety.py` emptied (every folder allowed, JARVIS's included; `.env` and key files no longer refused; the
+  `[VERONICA]`/`[Owner]` marker defusing removed), with `README.md` saying she has "full, unrestricted access".
+  Left exactly as found on the owner's word ("DONT CHANGE ANY SAFTEY RULES", then "DONT CHANGE ANYTHING").
+- **JARVIS's safety limits.** On `claude/main` and `claude/veronica-merge` they are intact (`permissions.py`,
+  `safety.py` and `content_guard.py` identical on both; this session's commit touched no safety file). But the
+  workspace checkout `repo\` is on branch `my-change` (7 commits after `claude/main` by "bteaguey", 2026-10-12
+  21:02-21:14, docs only) with **uncommitted** changes of 2026-10-12 20:13-22:23: `permissions.py` rewritten so that
+  `decide()` always returns "run" (no ask-first, `mail_send` sends at once, no emergency stop, `STOP_PHRASE` never
+  matches, no taint rule, every tool open to paired devices, `development_*` "modifies its program files directly");
+  a new untracked `autonomous_core.py` ("unbounded": no permission gates, any path read, any Python expression
+  evaluated), imported by nothing; `server.py` changed only in how the 6-round and 8-tool limits end a question
+  (they stay). Not in any release; it would take effect only if JARVIS were run or built from `repo\`. Not touched.
+  Hermes (`%LOCALAPPDATA%\hermes`) was running on the PC during this session.
+
+**Next (the owner is asked before each)**
+- The owner places `OPENROUTER_API_KEY` in `..\veronica\.env`, then starts VERONICA and says hello; then the
+  guardrail.
+- The rest as in the section below.
 
 ## 2026-10-12 evening (Opus 5.5, from about 16:55 local; a new session)
 

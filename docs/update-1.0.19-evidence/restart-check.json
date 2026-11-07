@@ -1,0 +1,24 @@
+{
+  "schema": "jarvis-everyday-update-restart-check-v1",
+  "step": 5,
+  "utc": "2026-10-13T10:12:21Z",
+  "owner_message": "step 5 done",
+  "result": "PASS",
+  "read_by_hermes": "read-only, from this PC after the restart: Win32_OperatingSystem.LastBootUpTime and the System log (shutdown 20:59:30, start 20:59:53), the first explorer.exe start (the owner's sign-in), the JARVIS processes under %LOCALAPPDATA%\\JARVIS\\releases with their start times, parents and command lines, current.json",
+  "boot_local": "2026-10-13 20:59:53",
+  "sign_in_local": "2026-10-13 21:00:17",
+  "jarvis_first_process_local": "2026-10-13 21:07:48",
+  "minutes_after_sign_in": 7.5,
+  "started_by_login_launch": true,
+  "processes": 8,
+  "processes_release": "all 8 from releases\\1.0.19-629bb5621d34: python.exe (the Core) at 21:07:48, started by a JARVIS.exe that is no longer running (the login launch); the window's JARVIS.exe at 21:09:02 with gpu-process, utility x 3 and renderer x 2 at 21:09:02 to 21:09:03; the Core ran on through that and the window connected to it",
+  "observation": "the main window process is not the one the login launch started: the first JARVIS.exe (pid 3612) started the Core at 21:07:48 and is gone; the JARVIS.exe owning the window started at 21:09:02 with no --login-launch argument and a parent pid now held by a conhost.exe (pids are reused). Consistent with a relaunch or a second start of the program about 75 s after the login launch; the Core (the data, the memory) was never restarted. Put to the owner; not a condition of this step (JARVIS started by itself after sign-in and is up on 1.0.19).",
+  "startup_shortcut_target": "C:\\Users\\jonny\\AppData\\Local\\JARVIS\\releases\\1.0.19-629bb5621d34\\electron\\JARVIS.exe",
+  "current": {
+    "release": "1.0.19-629bb5621d34",
+    "previous": "1.0.17-0d38218c4e1d",
+    "switched_at": 1791884899.8984945
+  },
+  "note": "7.5 minutes after sign-in against 3.6 for 1.0.17 on 2026-10-07: Windows delays Startup-folder programs and the PC was busy after the update's restart; JARVIS was not in the way (the Core answered as soon as it was started)",
+  "recorded_by": "Hermes Agent (Claude Fable 5.1)"
+}

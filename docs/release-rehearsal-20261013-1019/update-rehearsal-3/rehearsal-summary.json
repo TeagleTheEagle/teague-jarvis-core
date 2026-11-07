@@ -1,0 +1,207 @@
+{
+    "base":  "D:\\JARVIS-release-work\\update-rehearsal-1.0.19-3",
+    "launcher_sha256":  "f022a4ab82622ca098d37086c25b3cf5d7bd58e7bd66de6e2a0970a9a0fceca2",
+    "setup_sha256":  "8e5bb3dceef85fc486f3d03b3864dfa3479c8833ffe471646cdd33dbcc36092f",
+    "checks":  [
+                   {
+                       "check":  "the launcher has no Halt message that would drop its state (static)",
+                       "passed":  true,
+                       "detail":  "0 line(s)"
+                   },
+                   {
+                       "check":  "the real entry recorded at the start (JARVIS 1.0.17 expected)",
+                       "passed":  true,
+                       "detail":  "JARVIS 1.0.17 \"C:\\Users\\jonny\\AppData\\Local\\JARVIS-package\\unins000.exe\""
+                   },
+                   {
+                       "check":  "sandbox: 1.0.17 installed by its Setup",
+                       "passed":  true,
+                       "detail":  "exit 0 installed"
+                   },
+                   {
+                       "check":  "sandbox: the entry JARVIS (sandbox) 1.0.17 with its uninstaller in the package folder",
+                       "passed":  true,
+                       "detail":  "JARVIS (sandbox) 1.0.17"
+                   },
+                   {
+                       "check":  "sandbox: 1.0.17 running on its data",
+                       "passed":  true,
+                       "detail":  "1.0.17-0d38218c4e1d"
+                   },
+                   {
+                       "check":  "refused without approval",
+                       "passed":  true,
+                       "detail":  "exit 2"
+                   },
+                   {
+                       "check":  "refused while JARVIS runs",
+                       "passed":  true,
+                       "detail":  "exit 2"
+                   },
+                   {
+                       "check":  "refused on a key file 1.0.19 would refuse (names only in the message)",
+                       "passed":  true,
+                       "detail":  "exit 2"
+                   },
+                   {
+                       "check":  "step 1 check (no key value in the output)",
+                       "passed":  true,
+                       "detail":  "exit 0"
+                   },
+                   {
+                       "check":  "step 1: 1.0.17 package folder seen (its uninstaller inside), not yet moved",
+                       "passed":  true,
+                       "detail":  "D:\\JARVIS-release-work\\update-rehearsal-1.0.19-3\\staging-before-1.0.19-629bb5621d34"
+                   },
+                   {
+                       "check":  "step 1: the entry 1.0.17 before",
+                       "passed":  true,
+                       "detail":  "1.0.17"
+                   },
+                   {
+                       "check":  "step 1: the key file accepted, names only recorded, a copy made",
+                       "passed":  true,
+                       "detail":  "DASHSCOPE_API_KEY,OPENAI_API_KEY,OPENROUTER_API_KEY"
+                   },
+                   {
+                       "check":  "step 2 backup",
+                       "passed":  true,
+                       "detail":  "exit 0"
+                   },
+                   {
+                       "check":  "step 3 update",
+                       "passed":  true,
+                       "detail":  "exit 0"
+                   },
+                   {
+                       "check":  "update: database unchanged",
+                       "passed":  true,
+                       "detail":  "6cf15c2a00c4e95750dbe644ebdb7d898a5913347e6a6edc7dcbf619745ca1d1"
+                   },
+                   {
+                       "check":  "update: 1.0.17 package folder moved aside at step 3, nothing deleted (its uninstaller inside)",
+                       "passed":  true,
+                       "detail":  "D:\\JARVIS-release-work\\update-rehearsal-1.0.19-3\\staging-before-1.0.19-629bb5621d34"
+                   },
+                   {
+                       "check":  "update: current is 1.0.19, previous 1.0.17",
+                       "passed":  true,
+                       "detail":  "1.0.19-629bb5621d34"
+                   },
+                   {
+                       "check":  "update: the installer inside the Setup withheld the shortcuts (sandbox)",
+                       "passed":  true,
+                       "detail":  "withheld (the home is not this PC\u0027s own install home)"
+                   },
+                   {
+                       "check":  "update: the entry JARVIS (sandbox) now 1.0.19, the new uninstaller",
+                       "passed":  true,
+                       "detail":  "JARVIS (sandbox) 1.0.19"
+                   },
+                   {
+                       "check":  "update: the real entry untouched",
+                       "passed":  true,
+                       "detail":  "JARVIS 1.0.17 \"C:\\Users\\jonny\\AppData\\Local\\JARVIS-package\\unins000.exe\""
+                   },
+                   {
+                       "check":  "update: the key file untouched by the update",
+                       "passed":  true,
+                       "detail":  "1289f90d3559ded1193328bc391fab981e5dcae3bfd232d63406c890d9720fe7"
+                   },
+                   {
+                       "check":  "update: the Setup logged --no-shortcuts",
+                       "passed":  true,
+                       "detail":  "setup-update-20261013-093327.log"
+                   },
+                   {
+                       "check":  "sandbox: 1.0.19 running on the same data through JARVIS.exe",
+                       "passed":  true,
+                       "detail":  "1.0.19-629bb5621d34"
+                   },
+                   {
+                       "check":  "sandbox: only JARVIS.exe and python.exe run",
+                       "passed":  true,
+                       "detail":  "JARVIS.exe,python.exe"
+                   },
+                   {
+                       "check":  "rerun changes nothing",
+                       "passed":  true,
+                       "detail":  "exit 0"
+                   },
+                   {
+                       "check":  "step 3 again: refused, the state said in full (release, shortcuts, the entry)",
+                       "passed":  true,
+                       "detail":  "exit 2"
+                   },
+                   {
+                       "check":  "rollback to 1.0.17 (no key value in the output)",
+                       "passed":  true,
+                       "detail":  "1.0.17-0d38218c4e1d"
+                   },
+                   {
+                       "check":  "rollback: the attempt recorded before the switch",
+                       "passed":  true,
+                       "detail":  "backup.json,check.json,rollback.json,rollback-approved.json,rollback-attempt-20261013-093559.json,setup-update-20261013-093327.log,update.json"
+                   },
+                   {
+                       "check":  "rollback: the final line says the provider line is one 1.0.17 does not know",
+                       "passed":  true,
+                       "detail":  "said"
+                   },
+                   {
+                       "check":  "rollback: the entry still says 1.0.19 (as the plan says)",
+                       "passed":  true,
+                       "detail":  "1.0.19"
+                   },
+                   {
+                       "check":  "rollback: the key file put back from the step 1 copy, the changed file kept beside it",
+                       "passed":  true,
+                       "detail":  "D:\\JARVIS-release-work\\update-rehearsal-1.0.19-3\\home\\config\\.env.rolled-back-from-1.0.19-629bb5621d34"
+                   },
+                   {
+                       "check":  "sandbox: 1.0.17 running again on the same data",
+                       "passed":  true,
+                       "detail":  "1.0.17-0d38218c4e1d"
+                   },
+                   {
+                       "check":  "rerun after rollback changes nothing",
+                       "passed":  true,
+                       "detail":  "exit 0"
+                   },
+                   {
+                       "check":  "rollback again: refused, still on 1.0.17, no new attempt, the state said",
+                       "passed":  true,
+                       "detail":  "1.0.17-0d38218c4e1d exit 2"
+                   },
+                   {
+                       "check":  "cleanup: the sandbox uninstalled through its own entry",
+                       "passed":  true,
+                       "detail":  "exit 0"
+                   },
+                   {
+                       "check":  "the owner real shortcuts unchanged throughout",
+                       "passed":  true,
+                       "detail":  "7dca25063958c485cd63774ea296b705da59657acfc5ea8b09985800a2d7cb19 f8675687f2a435518ebafd6186c253de6b7e239901d49ba0649b1e8e6703554a"
+                   },
+                   {
+                       "check":  "the real entry the same at the end",
+                       "passed":  true,
+                       "detail":  "JARVIS 1.0.17 \"C:\\Users\\jonny\\AppData\\Local\\JARVIS-package\\unins000.exe\""
+                   }
+               ],
+    "failed":  0,
+    "real_shortcuts_before":  {
+                                  "desktop":  "7dca25063958c485cd63774ea296b705da59657acfc5ea8b09985800a2d7cb19",
+                                  "startup":  "f8675687f2a435518ebafd6186c253de6b7e239901d49ba0649b1e8e6703554a"
+                              },
+    "real_shortcuts_after":  {
+                                 "desktop":  "7dca25063958c485cd63774ea296b705da59657acfc5ea8b09985800a2d7cb19",
+                                 "startup":  "f8675687f2a435518ebafd6186c253de6b7e239901d49ba0649b1e8e6703554a"
+                             },
+    "live_processes_before":  0,
+    "live_processes_after":  0,
+    "sandbox_processes_after":  0,
+    "real_entry_at_start":  "JARVIS 1.0.17 \"C:\\Users\\jonny\\AppData\\Local\\JARVIS-package\\unins000.exe\"",
+    "real_entry_at_end":  "JARVIS 1.0.17 \"C:\\Users\\jonny\\AppData\\Local\\JARVIS-package\\unins000.exe\"",
+    "aborted":  null
+}

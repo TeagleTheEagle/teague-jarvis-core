@@ -1,0 +1,56 @@
+{
+    "schema":  "jarvis-stage7-run-v1",
+    "overall":  "PASS",
+    "phase":  "Install",
+    "home":  "C:\\Users\\jarvis-s6-guest\\AppData\\Local\\JARVIS",
+    "package":  "E:\\",
+    "started_utc":  "2026-10-13T06:34:48.4647070Z",
+    "finished_utc":  "2026-10-13T07:01:47.2131603Z",
+    "steps":  [
+                  {
+                      "step":  "E0-not-elevated",
+                      "status":  "PASS",
+                      "at":  "2026-10-13T06:34:49.8655731Z"
+                  },
+                  {
+                      "step":  "I1-package",
+                      "status":  "PASS",
+                      "at":  "2026-10-13T06:35:27.3862326Z"
+                  },
+                  {
+                      "step":  "I2-setup-install",
+                      "status":  "PASS",
+                      "at":  "2026-10-13T06:48:20.1569774Z"
+                  },
+                  {
+                      "step":  "I3-installed-apps",
+                      "status":  "PASS",
+                      "at":  "2026-10-13T06:48:20.1785011Z"
+                  },
+                  {
+                      "step":  "I4-verify",
+                      "status":  "PASS",
+                      "at":  "2026-10-13T06:53:18.4212551Z"
+                  },
+                  {
+                      "step":  "I5-launch",
+                      "status":  "PASS",
+                      "at":  "2026-10-13T06:54:17.0295829Z"
+                  },
+                  {
+                      "step":  "I6-duplicate-core",
+                      "status":  "PASS",
+                      "at":  "2026-10-13T06:54:29.4792241Z"
+                  },
+                  {
+                      "step":  "I7-local-stt",
+                      "status":  "PASS",
+                      "at":  "2026-10-13T06:55:01.8709161Z"
+                  },
+                  {
+                      "step":  "I8-restart",
+                      "status":  "PASS",
+                      "at":  "2026-10-13T07:01:47.2086436Z"
+                  }
+              ]
+}

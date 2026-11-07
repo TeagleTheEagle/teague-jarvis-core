@@ -1,0 +1,91 @@
+{
+  "schema": "jarvis-owner-decision-record-v1",
+  "subject": "Owner approval of the update of the everyday JARVIS from 1.0.17 to 1.0.19 (the OpenRouter release; the second update made by the release's own Setup)",
+  "issued_utc": "2026-10-13T09:20:02Z",
+  "issued_utc_basis": "first clock reading by Hermes in the turn that received the message (2026-10-13 20:20 local, AUSEDT)",
+  "recorded_utc": "2026-10-13T09:22:00Z",
+  "owner_messages": [
+    {
+      "text": "I approve the update of my everyday JARVIS to 1.0.19",
+      "taken_as": "approval of docs/UPDATE-EVERYDAY-1.0.19.md as presented in the chat and committed (the plan's own wording), with its eight acceptances and the three things the owner checks (the key file fit for 1.0.19 with the old key lines kept, step 0; space on C:; the 1.0.17 package folder renamed aside at step 3). Given while the plan's status still said the independent review of the launcher was running: the owner approved the plan ahead of the review's findings. Hermes applies the findings before placing the launcher; a finding that changes the launcher means the rehearsal is run again and the owner is told before step 1; a finding that changes the plan beyond its review section and status line means the owner is asked again."
+    }
+  ],
+  "approved_plan": {
+    "path": "D:\\JARVIS-release-work\\src-1.0.18\\docs\\UPDATE-EVERYDAY-1.0.19.md",
+    "sha256": "2356d577fe7ef6757cc14cda2c2f217fafc8f1b0d5572e62a2580f4e2f70b850",
+    "repo_commit": "f3b0e29",
+    "repo_branch": "claude/release-1.0.19 (worktree D:\\JARVIS-release-work\\src-1.0.18)",
+    "note": "the hash is of the plan as committed in f3b0e29 (status line carrying this approval, the rehearsal result 32 of 32 and 'independent review running'); a later commit fills the plan's section 'Independent review' and the status line, and changes nothing else in it unless the owner is asked again"
+  },
+  "builds": {
+    "final": "1.0.19-629bb5621d34",
+    "final_zip": "D:\\JARVIS-release-work\\pkg-1.0.19\\JARVIS-1.0.19-629bb5621d34.zip",
+    "final_zip_sha256": "838371836d31758082d191738ebc3b41d0e34fe4b6598af6153d970ab8b21541",
+    "final_zip_bytes": 533398008,
+    "final_setup": "D:\\JARVIS-release-work\\pkg-1.0.19\\JARVIS-Setup-1.0.19-629bb5621d34.exe",
+    "final_setup_sha256": "8e5bb3dceef85fc486f3d03b3864dfa3479c8833ffe471646cdd33dbcc36092f",
+    "final_setup_bytes": 406914757,
+    "final_setup_record": "D:\\JARVIS-release-work\\pkg-1.0.19\\JARVIS-Setup-1.0.19-629bb5621d34.setup.json (app_id {DC2C8033-1BBF-5E1C-99A0-BE0E70DC9937} for the real JARVIS, the same id 1.0.17's Setup registered; sandbox_app_id {7A3F1C52-9E4B-4D16-8C0D-2B5E6F7A9D31})",
+    "hashes_basis": "read again from the files at this record (2026-10-13 20:21 local); equal to the Stage 7 approval record governance/STAGE7-1.0.19-APPROVAL-RECORD.json",
+    "previous": "1.0.17-0d38218c4e1d"
+  },
+  "preconditions_met": {
+    "stage7_check": "STAGE_7_COMPLETE for 1.0.19-629bb5621d34 (D:\\JARVIS-stage7\\1.0.19-629bb5621d34\\evidence\\stage7-evaluation.json, 29 of 29 checks with the version 4 driver, run 2026-10-13 17:34 to 19:41 local, evaluated and committed as 90f7f83 on claude/release-1.0.19 with docs/stage7-1.0.19-evidence; every timing inside the 600 s bound)",
+    "sandbox_rehearsal": "32 of 32 PASS on this launcher (run 2, D:\\JARVIS-release-work\\update-rehearsal-1.0.19-2\\rehearsal-summary.json, 2026-10-13 20:14 to 20:19 local): 1.0.17 installed into the sandbox by its own Setup (the sandbox entry 1.0.17, the package folder with its uninstaller); refused without approval, while JARVIS ran, and on a key file 1.0.19 would refuse (names only in the message); step 1 with the key file accepted, names only recorded, a copy made, the package folder seen; step 2 backup 201 files test-restored; step 3 the package folder renamed aside with its uninstaller intact, the Setup silently in 110.7 s wall (the installer inside it verify package 9.0 s, copy 28.1 s, verify copy 26.6 s, stop 0.7 s, switch 0.4 s), the entry now 1.0.19 with the new uninstaller, the database byte-for-byte unchanged, the key file untouched; 1.0.19 started on the same data; rollback verified with the key file put back and the changed file kept beside it, 1.0.17 started again; the owner's real shortcuts and real Settings > Apps entry (JARVIS 1.0.17) the same before and after; the live JARVIS not running and never addressed; the fake key value in no record or output line. Run 1 (update-rehearsal-1.0.19) stopped on a harness defect before any launcher step did anything; nothing in the launcher changed for it.",
+    "independent_review": "RUNNING at the time of the approval (one reviewer agent, started 2026-10-13 20:20 local): the launcher's changes from version 2, the key-file handling, the step 3 rename and its failure paths, the rollback order, PowerShell 5.1 pitfalls, the harness's separation from the real installation. Its findings and what was applied are written into the plan's section 'Independent review' and into this record's field review_outcome before the launcher is placed."
+  },
+  "review_outcome": {
+    "reviewed_utc": "2026-10-13T09:15:00Z to 2026-10-13T09:27:00Z (20:15 to 20:27 local)",
+    "findings": "2 high, 6 medium, 8 low; all applied (the plan's section 'Independent review')",
+    "high_1": "failure messages of step 3 and the rollback built as Halt \"text\" + (StateNow) lost everything after the first string (PowerShell argument mode); inherited from the 1.0.17 launcher; fixed (parenthesised, Halt prints extra arguments, the harness checks the pattern and exercises two failing paths)",
+    "high_2": "a rollback stopped after the installer's switch and before its record would, on the next attempt, switch forward to the new release again; inherited from the 1.0.17 launcher; fixed (the rollback reads the state first and runs the installer only from the new release; an attempt record before the switch)",
+    "plan_change_put_to_owner": "finding 3: the plan promised the rollback puts the provider line back; the step 1 copy is the OpenRouter-ready file, which 1.0.17 refuses; corrected in the plan (items 1 and 6, 'Your data and a rollback', row R): after a rollback the owner sets JARVIS_PROVIDER=qwen or openai himself. Put to the owner at 20:38 local for his word before the launcher is placed.",
+    "rehearsed_again": "run 3 on the reviewed launcher, 2026-10-13 20:31 to 20:37 local, 37 of 37 (D:\\JARVIS-release-work\\update-rehearsal-1.0.19-3; copied to docs/release-rehearsal-20261013-1019/update-rehearsal-3): the Setup silently in 125.0 s wall (the installer inside it verify package 9.1 s, copy 16.6 s, verify copy 22.7 s, stop 0.8 s, switch 0.1 s); the database and the key file unchanged; a second attempt of step 3 refused with the full state line; the rollback's attempt recorded, the key file put back, the last line naming the provider word; a rollback entered again refused with nothing switched; the owner's real shortcuts and entry the same; the fake key value in no record or output line",
+    "plan_after_review": {
+      "sha256": "b8020cbadbe9d6031b8641609f63c1a45c3a3ca539857d3f9b3c75dad3378ad2",
+      "repo_commit": "2fcc6a0",
+      "changed": "the status line, the section 'Independent review', and the rollback/provider-line wording in items 1 and 6, 'Your data and a rollback', 'What is proven first' (the run 3 result) and row R; nothing else"
+    },
+    "tool_hashes_after_review": {
+      "tools/host/update-1.0.19/Invoke-EverydayUpdate.ps1": "f022a4ab82622ca098d37086c25b3cf5d7bd58e7bd66de6e2a0970a9a0fceca2",
+      "tools/host/update-1.0.19/update-step.cmd": "b2e18b0459a59849743255adeefe755b4ed45ab6f66bd28b3521eba6f59c049e",
+      "note": "these are the hashes to be placed in D:\\JARVIS-update-1.0.19\\tools and written into update-authorized.json; the hashes in tool_hashes above are the launcher as first committed (f3b0e29), before the review"
+    },
+    "owner_word_on_the_plan_change": {
+      "text": "rollback change accepted",
+      "issued_utc": "2026-10-13T09:39:47Z",
+      "taken_as": "acceptance of the corrected rollback wording (the step 1 key file restored; the provider line set to qwen or openai by the owner himself before starting 1.0.17) and of the plan as committed in 2fcc6a0"
+    }
+  },
+  "tool_hashes": {
+    "tools/host/update-1.0.19/Invoke-EverydayUpdate.ps1": "7e688bf1d6155408960e6cb230b423c1ac1738fbf01fa445b116983bf832be18",
+    "tools/host/update-1.0.19/update-step.cmd": "b2e18b0459a59849743255adeefe755b4ed45ab6f66bd28b3521eba6f59c049e"
+  },
+  "tool_hashes_basis": "the launcher version 3 as committed in f3b0e29 and rehearsed in run 2: the 1.0.17 launcher (version 2, sha256 66c8cce6…, as the 1.0.17 approval recorded it) with the Settings > Apps entry expected with the previous version at step 1 and checked at step 3, the previous Setup's package folder examined at step 1 and renamed aside at step 3 right before the Setup, the key file read for the names of its lines only and copied for the rollback, the rollback putting the key file back and checking the shortcuts at the previous release's JARVIS.exe, and 'Claude' replaced by 'Hermes' in its messages; update-step.cmd is 1.0.17's with that name change in its two comment lines. If the review changes the launcher, the new hashes replace these here and in update-authorized.json before placement, with the rehearsal run again.",
+  "places": {
+    "launcher_folder": "D:\\JARVIS-update-1.0.19\\tools",
+    "records": "D:\\JARVIS-update-1.0.19\\evidence",
+    "package_unpacked_to": "D:\\JARVIS-update-1.0.19\\package",
+    "backup_copy": "D:\\JARVIS-update-1.0.19\\backup",
+    "setup_package_folder": "%LOCALAPPDATA%\\JARVIS-package (1.0.17's Setup package with its uninstaller, real; renamed to %LOCALAPPDATA%\\JARVIS-package-before-1.0.19-629bb5621d34 at step 3 right before the Setup, nothing deleted; 1.0.19's Setup makes its own there)",
+    "key_file": "%LOCALAPPDATA%\\JARVIS\\config\\.env (the owner edits it for step 0; the launcher reads the names of its lines only, records names only, and copies it to config\\.env.before-1.0.19-629bb5621d34 at step 1 for the rollback)",
+    "install_home": "%LOCALAPPDATA%\\JARVIS (the owner's everyday JARVIS, 1.0.17-0d38218c4e1d, 1.0.16-fccde24e2cc6 beside it)",
+    "repo_copy": "D:\\JARVIS-release-work\\src-1.0.18\\docs\\update-1.0.19-evidence (claude/release-1.0.19)",
+    "launcher_placed": {
+      "utc": "2026-10-13T09:40:00Z",
+      "folder": "D:\\JARVIS-update-1.0.19\\tools",
+      "files": {
+        "Invoke-EverydayUpdate.ps1": "f022a4ab82622ca098d37086c25b3cf5d7bd58e7bd66de6e2a0970a9a0fceca2",
+        "update-step.cmd": "b2e18b0459a59849743255adeefe755b4ed45ab6f66bd28b3521eba6f59c049e"
+      },
+      "authorized_file": "D:\\JARVIS-update-1.0.19\\tools\\update-authorized.json",
+      "zip_and_setup_read_again_equal": true
+    }
+  },
+  "effect": {
+    "authorized": "the owner first makes his key file fit for 1.0.19 himself (step 0); then runs D:\\JARVIS-update-1.0.19\\tools\\update-step.cmd in the jonny account, once per step (check, backup, update through the Setup), with JARVIS quit; the Setup writes the Desktop and Startup shortcuts at the new JARVIS.exe and rewrites the Settings > Apps entry to JARVIS 1.0.19 with its new uninstaller; Hermes places the launcher with update-authorized.json after the review and checks each record before the next step; the owner then starts JARVIS and checks it, and restarts the PC once",
+    "not_authorized": "Hermes running the launcher, the Setup or any installer, recovery or switch-over command against %LOCALAPPDATA%\\JARVIS; opening, reading the values of, or editing config\\.env or its copies; reading the contents of the backup; the rollback (only on the owner's separate word, recorded as rollback-approved.json); removing the 1.0.16 or 1.0.17 release folders, the renamed package folder, the key-file copies or any backup",
+    "stop_rules": "a failed step stops and says what state the installation is in, nothing repeated without the owner's decision; a UAC prompt is a STOP"
+  },
+  "recorded_by": "Hermes Agent (Claude Fable 5.1). This record documents the owner's act; it grants no authority of its own."
+}

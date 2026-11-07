@@ -4,6 +4,41 @@
 record `../governance/VERONICA-MERGE-PLAN-APPROVAL-RECORD.json`). Written 2026-10-12 by Claude Code, on the owner's "go".
 Phase 0 done the same day (see `docs/CURRENT-STATUS.md`).
 
+**Owner amendment of 2026-10-13: Qwen only.** "can we make it only use qwen models for all the functions?", then
+"and veronica as well", then "DONT CHANGE ANY SAFTEY RULES FOR VERONICA OR JARVIS / keep fish audio api for both of
+them". The owner is restricting the OpenRouter key to `qwen/*` with an OpenRouter guardrail. So, in place of D2, D3, D7
+and D8 where they name other makers:
+- coding and research jobs use **Qwen 3.8 Max** (`qwen/qwen3.8-max-0902`), not Claude Opus;
+- OpenRouter's backup model is **Qwen 3.8 Flash** (`qwen/qwen3.8-flash`), not Claude Sonnet;
+- the cloud option for hearing is **off** by default (OpenRouter's speech-to-text models are not Qwen); JARVIS hears on
+  the PC, as before. An `OPENROUTER_STT_MODEL` line turns it back on;
+- both voices stay on **Fish Audio**; no safety rule changes, for JARVIS or VERONICA.
+Each model can still be changed in the key file. Done in `providers.py` on `claude/veronica-merge`, 2026-10-13.
+
+**Owner amendment of 2026-10-13 evening: one model per job, by performance for the money, locked (replaces the
+morning's Qwen only).** After a read of OpenRouter's whole model list with that day's prices (459 chat models, 33
+search-by-meaning models, 25 speech-to-text models), the owner first chose the "best overall" column ("start this"), then
+amended it: "allocate the best performance : cheapest ratio to each aspect for jarvis and lock in so that's the only
+model it can use". So the models are fixed in `providers.py` (`OPENROUTER_MODELS`); a key-file line that would change one
+(`OPENROUTER_MODEL`, `_VISION_MODEL`, `_FAST_MODEL`, `_CODING_MODEL`, `_FALLBACK_MODEL`, `_MAKERS`) is refused plainly
+before any request, naming the line to remove. The allowed makers are **Anthropic, Qwen and Google** (`OPENROUTER_MAKERS`
+in code; the owner widens the guardrail on the key to match). The fixed models:
+
+| Job | Model | Price per million tokens (in / out) | Why this one |
+|---|---|---|---|
+| Everyday chat, tools, pictures | `anthropic/claude-haiku-5.5` | US$0.10 / 0.50 | Sees pictures, 1M context; 20× cheaper than Qwen 3.8 Max and judged at least its equal on everyday work |
+| Economy, and the web search's small request | `anthropic/claude-haiku-5.5` | US$0.10 / 0.50 | The same model with thinking off |
+| Coding and research jobs (missions) | `deepseek/deepseek-v4-pro` | US$0.96 / 1.91 | Owner, 2026-10-14: in Sonnet 5.5's (US$2 / 10) place; 1M context, tools; a fifth of the output price. Ships in 1.0.21. |
+| Backup when the first model fails | `qwen/qwen3.7-plus` | US$0.32 / 1.28 | Another maker on purpose, so one outage does not take both |
+| Hearing | this PC (Whisper), as before | free | `OPENROUTER_STT_MODEL=qwen/qwen3-asr-1.7b` (or `google/gemini-3.5-transcribe`) offers the cloud choice in Settings |
+| Voice | Fish Audio, unchanged | | OpenRouter's two speaking models do no voice cloning |
+| Search by meaning (memory, roadmap phase 3; not built) | `qwen/qwen3-embedding-8b` when it comes | US$0.01 | Among the best open embedding models, and the cheapest |
+
+Roughly: 100 plain questions cost about US$0.25 (about US$4.40 before, on Qwen 3.8 Max); a question that uses tools runs
+several rounds, so count two to three times that. The quality rankings are Hermes's judgement from general knowledge;
+the yardstick (ASI roadmap phase 0) is what would measure them on the owner's own questions. Fish Audio and every safety
+rule unchanged. Built on `claude/best-models` (a worktree beside `claude/veronica-merge`), 2026-10-13.
+
 ## 1. What the owner asked for (2026-10-12)
 
 - "can you make veronica and jarvis one. add veroinca to jarvis's core and make one folder that has all the files of
@@ -152,6 +187,10 @@ About **8 to 10 sessions** in all. Phases 0 to 3 need no OpenRouter credit excep
 - Owner's function test: tools PASS on both models (`set_timer` with 5 minutes); web search PASS (3 sources); search by
   meaning PASS (0.96 vs 0.46); picture FAIL as a test fault (Qwen's thinking used the small reply limit; limit raised);
   speech-to-text not run (OpenRouter needs a balance of at least US$0.50 for audio).
+- Owner's re-run after adding US$50 of credit (2026-10-13, phase 1 item 6): **6 of 6 PASS**: tools on Qwen 3.8 Max and
+  Claude Opus 5.5 (`set_timer` with 5 minutes), picture ("TEAGUE 4271" read), web search (3 sources), speech-to-text
+  (`openai/whisper-1` heard the sentence word for word), search by meaning (0.95 vs 0.45). The same day the owner chose
+  Qwen only (amendment at the top), so the test now checks Qwen models only.
 
 ---
 

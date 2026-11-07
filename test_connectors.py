@@ -22,9 +22,16 @@ GMAIL = {'GMAIL_ADDRESS': 'owner@gmail.com', 'GMAIL_APP_PASSWORD': 'abcd efgh ij
 ICS = {'GOOGLE_CALENDAR_ICS': 'https://calendar.google.com/calendar/ical/x/private-y/basic.ics'}
 
 
+# The clock the calendar tests run under: 10:00 local on a fixed day. The Core reads the real clock inside
+# calendar_feed.upcoming(); with the real clock, "two hours from now" crossed midnight after 22:00 and the all-day event
+# sorted first, and after midnight the timed event fell outside the window (failures at 23:20 and 00:20, 2026-10-13/14).
+# Fakes() pins calendar_feed's clock to this moment, so the fixture holds at any hour.
+CLOCK = datetime.datetime(2026, 10, 20, 10, 0, 0).astimezone()
+
+
 def feed(now=None):
-    """A calendar with one timed event two hours from now and an all-day event tomorrow (times in UTC)."""
-    now = now or datetime.datetime.now(datetime.timezone.utc)
+    """A calendar with one timed event two hours after the pinned clock and an all-day event tomorrow (times in UTC)."""
+    now = (now or CLOCK).astimezone(datetime.timezone.utc)
     soon = (now + datetime.timedelta(hours=2)).strftime('%Y%m%dT%H%M%SZ')
     later = (now + datetime.timedelta(hours=2, minutes=30)).strftime('%Y%m%dT%H%M%SZ')
     tomorrow = (now.astimezone() + datetime.timedelta(days=1)).strftime('%Y%m%d')
@@ -44,9 +51,22 @@ class Fakes:
 
     def __init__(self):
         self.box = mailbox()
+        class Clock(datetime.datetime):
+            """datetime.datetime with now() pinned to CLOCK; everything else as the real class."""
+            @classmethod
+            def now(cls, tz=None):
+                return CLOCK.astimezone(tz) if tz else CLOCK.replace(tzinfo=None)
+
+        class PinnedModule:
+            """The datetime module as calendar_feed sees it, with its datetime class replaced by Clock. Only
+            calendar_feed's name is replaced, never the shared module."""
+            datetime = Clock
+            def __getattr__(self, name):
+                return getattr(datetime, name)
         self.patches = [patch.object(mail.imaplib, 'IMAP4_SSL', lambda *a, **k: self.box),
                         patch.object(mail.smtplib, 'SMTP_SSL', FakeSMTP),
-                        patch.object(calendar_feed, 'fetch', lambda url, opener=None: (feed(), False))]
+                        patch.object(calendar_feed, 'fetch', lambda url, opener=None: (feed(), False)),
+                        patch.object(calendar_feed, 'datetime', PinnedModule())]
 
     def __enter__(self):
         FakeSMTP.sent = []

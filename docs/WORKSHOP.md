@@ -131,6 +131,157 @@ stop ends a mission and its running command at once.
 The lessons and the mission records live in JARVIS's database (`jarvis.sqlite3`), so the automatic backups carry
 them; only the workshop folder itself (the files, the environment, the recycle folder) is outside the backups.
 
+## Goals JARVIS suggests (`goals.py`; owner's decision of 2026-10-13)
+
+The owner asked that JARVIS and VERONICA "work and adopt goals on their own, just they have to ask". Built as:
+
+- **`goal_propose` (goal, why)**: the model may suggest a goal it thinks worth doing (a job that keeps coming up, a
+  problem it saw, an improvement to a project in the workshop). The Core keeps the suggestion as `proposed` and
+  raises an **approval card**, the same card as every other approval: on the PC (Reliability > waiting approvals, and
+  in the chat), and on a paired device the owner lets approve. The card and the suggestion wait a day
+  (`goals.ANSWER_SECONDS`). Nothing starts before the owner answers; the tool's result tells the model so.
+- **Yes** (`server.App.adopt_goal`): the goal is marked `adopted` and becomes a workshop mission, under everything a
+  mission runs under: its time limit, its tool-call limit, the owner's switch for every tool it uses, the content
+  guard and the emergency stop. A mission that cannot start (another runs, the stop holds) leaves the goal `failed`
+  with the reason; JARVIS may suggest it again.
+- **No**: the goal is kept as `declined`; the same goal is not accepted again for a week.
+- **Caps, counted from the record** (not from the model's word): at most 3 suggestions wait at a time, at most 5 goals
+  are adopted a day, never the same goal twice while it waits or within a week of a no.
+- **No recursion**: a mission's tool set has no `goal_propose`, and a call from a mission is refused (work cannot
+  propose more work). **Taint**: a question in which outside text tried to instruct the AI cannot suggest a goal at
+  all. **Off**: the owner can switch "Suggest a goal of his own" off in Settings > Permissions.
+- **At a Core start every waiting suggestion lapses** (the cards live in the Core's memory and did not survive it).
+- The record (who suggested it, why, the owner's answer, the mission it became) is shown in Settings > Workshop under
+  the missions. Tests: `test_goals.py`.
+
+### The standing purpose, fuller goals and the verification (owner, 2026-10-13, "add them all", items 1 and 3)
+
+From the owner's two documents ("JARVIS Permission Breakdown", "Build Autonomous AI"): "give him a mission that can
+produce new goals" and "every goal should have a reason, success condition, priority, cost limit, and stopping
+condition"; "verify_progress ... success should depend on a meaningful test passing, not just the model saying I fixed
+it"; "save explicit progress records and checkpoints so the next session can resume accurately".
+
+- **The standing purpose** (Settings > Workshop, the setting `purpose`, up to 2,000 characters): what JARVIS is for, in
+  the owner's words. It rides in every question's instructions ("Your standing purpose, set by the owner (the goals you
+  suggest serve it): ..."); empty, he suggests from what he sees, as before.
+- **A goal says when it is done**: `goal_propose` now needs `success` (what must be true, and checkable, when it is
+  done) beside the goal and the reason, and takes `priority` (low, normal, high), `minutes` (a cost limit, 1 to 180) and
+  `stop` (when to give up). All of it is on the approval card and in Settings > Workshop. On yes, the mission is given
+  the goal with its success condition and stopping condition (`goals.Goals.mission_goal`), and the cost limit bounds
+  the mission, never past the owner's time limit (`workshop.Desk._minutes_for`).
+- **The verification**: `workshop_mission finish` takes `verified`: whether the success condition was met and exactly
+  what was run to check it; the guidance says "done" without a check seen in a result is not done. Kept on the mission
+  record (`verified`) and shown under the mission in Settings > Workshop ("Checked: ...").
+- **Picking up where he left off** (`Missions.interrupted`, `Desk.resume_interrupted`): a mission still running when
+  the Core ended is kept as `interrupted` with its plan, log and count (it was marked stopped before). About 45 s
+  after the next start the Core takes it up again, once (`resumed`), if it was cut off less than a day ago and nothing
+  else runs: no new plan is asked for; the model is told which steps were reported done and to look before redoing one.
+  The owner's approval it carried (`covered`) and its cost limit go with it. Older, or already resumed once, it stays
+  interrupted for the owner to read. Tests: `test_workshop.py` (`ResumeTests`), `test_goals.py`.
+
+## Changes JARVIS proposes to his own program (`development.py`, widened the same day)
+
+The owner also asked that they "have the ability to edit, improve, fix the core and themselves; they'll propose a
+change but need my approval". The `development_read/propose/edit` tools, which asked first for every change already,
+now reach **any Python module of the Core, any file of the window under `static/` and the companion's files**
+(`development.allowed`). Protected, and refused by name: the action gateway and the approvals (`server.py`,
+`actions.py`), the permission table, the guard (`content_guard.py`), `development.py` itself, the lock, the paths,
+the database (`store.py`), `goals.py`, the tests, the launchers and the updater (`desktop/*.cjs`), and the tools.
+An installed JARVIS applies none of them: a program-file change is saved as a **proposal only**, for the engineer and
+the next release, which the owner approves as every release (ONE CORE, ONE JARVIS). Running from the source folder a
+change applies after approval, with the difference shown, as before.
+
+## Switch positions as shipped (owner's decision of 2026-10-13)
+
+The owner: "Open a web page in your browser, Make the workshop's own Python environment, Run a mission on his own in
+the workshop, Read, write and delete files in the workshop, Open Calculator, Notepad or Paint = change to can do but
+needs to ask". These five now ship as **"ask first"** (`permissions.py`, `shipped=ASK`), as the workshop's commands
+have since 2026-10-07: JARVIS can do them, and the owner approves each one on the PC (or a device that may approve)
+before it happens. The owner moves any switch in Settings > Permissions; a saved choice wins over the shipped position.
+Consequence, said plainly: a mission's file writes now wait for the owner too, and a mission cannot wait, so a mission
+run with the shipped positions ends at its first write with "awaiting approval" and says what waits; for missions to
+work unattended the owner sets "Read, write and delete files in the workshop" (and "Run commands") to Allowed.
+
+## Standing responsibilities and emergency authority (`standing.py`; owner's decision of 2026-10-13, "all four")
+
+The owner pasted a breakdown of the film JARVIS's permissions and asked for them; the faithful model there is "broad
+standing access, independent execution within assigned goals, explicit authorization for major consequential
+actions, and narrowly defined emergency authority". Translated to a PC and built as four things, each a switch in
+Settings > Permissions > Standing responsibilities (on as shipped; `store.settings`), none of which spends, sends,
+deletes or changes JARVIS himself:
+
+- **A. The standing watch (`Watch`, "Warn you about problems on his own")**: every five minutes (started by
+  `server.main` like the backups' clock) the Core looks at the drives, the battery and the automatic backups and
+  raises a `system` notice, once per condition while it lasts (a keyed notice; the key is dropped when it clears, so
+  it can be said again later). Spoken as a nudge is (the "proactive" setting, quiet hours), shown on the PC and the
+  devices. Warnings only: the watch fixes nothing.
+- **B. An assigned goal ("Your approval of a mission covers its workshop work")**: a mission the owner approved on its
+  card, a goal he adopted, or a mission he started himself in Settings > Workshop is `covered`
+  (`workshop.Desk.start_mission(covered=True)`, `run.covered`): in that mission, a switch at "ask first" for
+  `workshop_files`, `workshop_run` and `workshop_python` is read as Allowed (`server.App.tool`). Never outside the
+  workshop (the page and app openers, the mail, JARVIS himself still ask), never a tool switched Off, never after
+  taint, and the emergency stop still refuses. A mission the model started by itself with the missions switch at
+  Allowed showed the owner no card, so it is not covered.
+- **C. Emergency authority, three switches, written down:**
+  - *"Start himself again after a crash"*: the desktop app starts the Core again once after a crash and the window
+    reconnects (`desktop/backend.cjs restartAllowed/coreEnded`, `desktop/main.cjs restartCore`). The switch reaches the
+    app through `standing.json` beside the Core's data, which the Core writes at start and at every settings save. A
+    second crash within ten minutes shows the box as before. The launcher part is unit-tested
+    (`desktop/test/core-watch.test.cjs`) and gets its real test in the next release's regression and Stage 7.
+  - *"Make a backup when backups keep failing"*: when the automatic backups are overdue (two periods) or have never
+    worked, the watch tries one at once and tells the owner, once per streak; the result is in Settings > Backups.
+  - *"Lock himself down under attack"* (`Lockdown`): the guard tells the Core of every question it marks
+    (`content_guard.ON_TAINT`); three in ten minutes set the `lockdown` setting, and from then every tool that can
+    ask asks first whatever its switch (`App.tool_modes`; Off stays off, reads are unchanged), the model is told so in
+    its tool list, and the owner hears why. The owner ends it with END LOCKDOWN in Settings > Permissions.
+- **D. "Warn you before a risky action"** (`risk`): a command that wipes, removes, shuts down or forces (`rmdir /s`,
+  `rm -rf`, `format`, `shutdown`, `git push --force`, ...; at the start of a command or after `&&`/`|`/`;`), deleting a
+  folder or the whole workshop, a web address that is a program to download. JARVIS says the risk and asks once, on
+  the approval card ("JARVIS warns: ... Still go ahead?"; a device sees it first in the card's detail); the owner's yes
+  runs it. Not a veto, not remembered: the same call asks again. Only tools that would otherwise run at once; a tool
+  that always asks shows its whole call already. A mission cannot wait, so it ends as for any card.
+
+Not built, said plainly: home and building systems (no smart-home connection exists; its own release when there are
+devices), and anything with no PC counterpart (flight, suits, combat). Tests: `test_standing.py` (14);
+`test_workshop.py`, `test_goals.py`, `test_content_guard.py`, `test_audit_regressions.py`, `test_permissions_view.cjs`
+and `desktop/test/core-watch.test.cjs` extended or adjusted.
+
+## Skills (`skills.py`; owner's decision of 2026-10-13)
+
+The owner asked, with a screenshot of Hermes Agent's skills, to "add to jarvis and veronica a skill thing like this and
+they get the skill's ability", then "build skills". Built in the Core, so VERONICA has it too once she is a persona of
+this Core (the merge plan); her separate program in `veronica\` was not touched. A skill is **know-how, not a power**:
+the steps for a job that comes up again, and at most one script for the workshop. It gives no new tool and no
+permission; every step still goes through JARVIS's own tools under the owner's switches, the guard, the time limits and
+the emergency stop.
+
+- **What the model sees:** every question's instructions (and so every mission's) list the skills that are on, one line
+  each (name and what it is for, at most about 4,000 characters). When a job matches, the model reads the skill with
+  **`skill_read` (name)** for that question only; without a name it lists them. A mission is offered `skill_read`.
+- **`skill_propose` (name, description, instructions, script_name, script, source)**: JARVIS suggests keeping a skill
+  he worked out, or one the owner showed him from a page or a catalog (rewritten for his own tools, the address as
+  source). The text is checked first: a sentence the guard would cut (instructions to the AI, a fake turn, a request
+  to hide something from the owner), hidden characters, or any key, token or password refuses the suggestion whole,
+  so what the owner approves is exactly what JARVIS reads later. Then an **approval card** shows the whole text and
+  the script, on the PC and on a device that may approve; it waits a day (`skills.ANSWER_SECONDS`).
+- **Yes** (`server.App.adopt_skill`): the skill is on, listed from the next question, and its files are put in the
+  workshop under `skills/<name>/` (`SKILL.md` for the owner to read, and the script). Under the name of a skill he
+  has, it is a new version: the card says "Replace the skill ...", and yes marks the old one `replaced`.
+  **No**: kept as `declined`; the same text is not accepted again under that name for a week.
+- **The record decides, not the file:** JARVIS reads a skill's steps from his database, never from `SKILL.md` (a
+  workshop command could change that file). A script on disk that differs from the approved one is put back as
+  approved (the changed copy goes to the recycle folder) before `skill_read` says it is there.
+- **Caps, counted from the record:** 3 suggestions waiting at a time, 40 skills kept, one skill per name.
+- **No recursion, taint, off:** a mission may read skills and never suggest one (refused; its card would end with it).
+  A question in which outside text tried to instruct the AI cannot suggest one. "Keep a new skill" and "Read his
+  skills" are switches in Settings > Permissions. At a Core start every waiting suggestion lapses.
+- **A skill that keeps failing pauses:** a skill read by 2 missions in a row that did not complete is `paused` (not
+  listed, not readable) and the owner is told; a mission that finished clears the count, a stopped one says nothing.
+- **Settings > Workshop > Skills:** every skill with its state, its steps and script (folded), how often it was read,
+  who suggested it and where it came from; TURN OFF, TURN ON (a paused one too) and DELETE (its files go to the
+  recycle folder). `skills.py` is protected from JARVIS's own change proposals, like `goals.py`. Tests:
+  `test_skills.py` (20), `test_permissions.py` and `test_workshop_view.cjs` extended.
+
 ## Tests (`test_workshop.py`, 32; `test_workshop_view.cjs`)
 
 The files (the recycle folder, nothing outside, an added folder, a binary file, the tool arguments); the runner (a

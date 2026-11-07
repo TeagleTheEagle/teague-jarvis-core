@@ -4,9 +4,32 @@
 // and sends the owner's clicks.
 const JarvisWorkshop = {
   stateText(state) {
-    return {planning: 'Planning', running: 'Running', finished: 'Done', failed: 'Not completed', stopped: 'Stopped'}[state] || String(state || '');
+    return {planning: 'Planning', running: 'Running', finished: 'Done', failed: 'Not completed', stopped: 'Stopped', interrupted: 'Interrupted (JARVIS was closed; taken up again at his next start)'}[state] || String(state || '');
   },
   missionLine(mission) { return JarvisWorkshop.stateText(mission.state) + ': ' + (mission.goal || ''); },
+  // A goal's success condition, priority, cost limit and stopping condition (goals.py, owner 2026-10-13), one line.
+  goalTerms(g) {
+    const parts = [];
+    if (g.success) parts.push('Done when: ' + g.success);
+    if (g.priority && g.priority !== 'normal') parts.push('Priority: ' + g.priority);
+    if (g.minutes) parts.push('Time limit: ' + g.minutes + ' min');
+    if (g.stop) parts.push('Give up when: ' + g.stop);
+    return parts.join(' · ');
+  },
+  goalState(state) {
+    return {proposed: 'Waiting for your answer', adopted: 'Approved', declined: 'Declined', expired: 'Lapsed unanswered', failed: 'Approved, but could not start'}[state] || String(state || '');
+  },
+  // A skill (skills.py): know-how JARVIS keeps for a job that comes up again, each one approved by the owner.
+  skillState(state) {
+    return {proposed: 'Waiting for your answer', active: 'On', off: 'Off', paused: 'Paused', declined: 'Declined',
+            expired: 'Lapsed unanswered', replaced: 'Replaced by a newer version'}[state] || String(state || '');
+  },
+  skillLine(skill) { return JarvisWorkshop.skillState(skill.state) + ': ' + (skill.name || '') + (skill.description ? ' (' + skill.description + ')' : ''); },
+  skillUse(skill) {
+    const used = Number(skill.used) || 0;
+    return 'Read ' + (used === 0 ? 'not yet' : used === 1 ? 'once' : used + ' times') + (skill.script_name ? ' · script ' + skill.script_name : ' · no script') +
+      (skill.source ? ' · taken from ' + skill.source : '');
+  },
   minutesText(minutes) { return 'A mission may run for up to ' + minutes + ' minute' + (minutes === 1 ? '' : 's') + ' and ' + 60 + ' tool calls; then it stops and reports.'; },
   foldersText(folders) {
     if (!folders || !folders.length) return 'No other folder: JARVIS may use the workshop folder only.';
@@ -50,9 +73,10 @@ if (typeof document !== 'undefined') (() => {
     'checks and corrects on his own, then reports. Say "Jarvis, start a mission: ..." or type a goal below. Every tool a mission uses ' +
     'obeys its switch in Settings > Permissions; the emergency stop ends a mission at once.');
   const folderLine = el('p', 'workshop-folder'), foldersBox = el('div', 'workshop-folders'), minutesBox = el('div', 'workshop-minutes'),
-        pythonLine = el('p', 'workshop-python'), missionBox = el('div', 'workshop-missions'), lessonBox = el('div', 'workshop-lessons');
+        pythonLine = el('p', 'workshop-python'), missionBox = el('div', 'workshop-missions'), lessonBox = el('div', 'workshop-lessons'),
+        skillBox = el('div', 'workshop-skills'), purposeBox = el('div', 'workshop-purpose');
   missionBox.setAttribute('aria-live', 'polite');
-  panel.append(intro, folderLine, pythonLine, foldersBox, minutesBox, missionBox, lessonBox);
+  panel.append(intro, folderLine, pythonLine, foldersBox, minutesBox, purposeBox, missionBox, skillBox, lessonBox);
   const category = q('.ti-settings-group[data-setting="Workshop"]'), settingsView = q('#settingsView');
   if (category) category.append(panel); else if (settingsView) { panel.prepend(el('h2', '', 'Workshop')); settingsView.prepend(panel); }
 
@@ -90,6 +114,17 @@ if (typeof document !== 'undefined') (() => {
       button('SAVE', 'outline', () => save({workshop_minutes: Number(input.value)}, 'Time limit saved.')));
   }
 
+  // The standing purpose (goals.py, owner 2026-10-13): what JARVIS is for, in the owner's words; the goals he suggests serve it.
+  function renderPurpose(data) {
+    if (purposeBox.contains(document.activeElement)) return;
+    const input = el('textarea'); input.rows = 3; input.maxLength = 2000; input.value = data.purpose || '';
+    input.placeholder = 'For example: Help me build and maintain my AI assistant. Find problems, propose improvements, finish useful work and reduce repeated failures, within what I allow.';
+    input.setAttribute('aria-label', 'JARVIS\'s standing purpose');
+    purposeBox.replaceChildren(el('h3', '', 'Standing purpose'),
+      el('p', 'workshop-note', 'What JARVIS is for, in your words. The goals he suggests serve it; every goal he suggests comes with what "done" means, a priority, a time limit and when to give up, and you still approve each one. Leave it empty and he suggests from what he sees.'),
+      input, button('SAVE', 'outline', () => save({purpose: input.value.trim()}, 'Purpose saved.')));
+  }
+
   function renderMissions(data) {
     const goalBox = missionBox.querySelector('textarea');
     const typed = goalBox && goalBox.value;
@@ -107,10 +142,24 @@ if (typeof document !== 'undefined') (() => {
       if (m.plan && m.plan.length) { const ol = el('ol', 'workshop-plan'); m.plan.forEach(s => ol.append(el('li', '', s))); node.append(ol); }
       if (m.log && m.log.length) { const ul = el('ul', 'workshop-log'); m.log.slice(-8).forEach(e => ul.append(el('li', '', JarvisWorkshop.logLine(e)))); node.append(ul); }
       if (m.result) node.append(el('p', 'workshop-result', m.result));
+      if (m.verified) node.append(el('p', 'workshop-note', 'Checked: ' + m.verified));
       node.append(el('small', '', 'Chat: ' + m.chat + ' · ' + m.tool_calls + ' tool calls'));
       return node;
     });
-    missionBox.replaceChildren(el('h3', '', 'Missions'), goal, controls, ...(rows.length ? rows : [el('p', 'workshop-note', 'No mission has run yet.')]));
+    // Goals JARVIS suggested on his own (goals.py): the owner answers on the approval card (Reliability > waiting
+    // approvals, or the chat); this is the record. Nothing starts from here.
+    const goalRows = (data.goals || []).map(g => {
+      const node = el('article', 'workshop-mission ' + (g.state === 'adopted' ? 'ok' : g.state === 'proposed' ? '' : 'warn'));
+      node.append(el('b', '', JarvisWorkshop.goalState(g.state) + ': ' + (g.goal || '')));
+      if (g.why) node.append(el('p', 'workshop-result', 'Why: ' + g.why));
+      const terms = JarvisWorkshop.goalTerms(g); if (terms) node.append(el('p', 'workshop-note', terms));
+      node.append(el('small', '', 'Suggested by ' + (g.by || 'JARVIS') + ' ' + new Date(g.created * 1000).toLocaleString() + (g.mission && g.state === 'adopted' ? ' · mission ' + g.mission : '')));
+      return node;
+    });
+    missionBox.replaceChildren(el('h3', '', 'Missions'), goal, controls, ...(rows.length ? rows : [el('p', 'workshop-note', 'No mission has run yet.')]),
+      el('h3', '', 'Goals JARVIS suggested'),
+      el('p', 'workshop-note', 'JARVIS may suggest a goal he thinks worth doing. Each waits for your answer on screen for a day, like any approval; a goal you approve runs as a mission above, under every mission limit. Nothing starts until you say yes.'),
+      ...(goalRows.length ? goalRows : [el('p', 'workshop-note', 'No goal has been suggested yet.')]));
   }
 
   function renderLessons(data) {
@@ -122,11 +171,42 @@ if (typeof document !== 'undefined') (() => {
     }) : [el('p', 'workshop-note', 'Nothing yet. JARVIS saves a lesson when a job taught him something worth keeping.')]));
   }
 
+  // Skills (skills.py): the owner answers a suggestion on its approval card (Reliability > waiting approvals, or the
+  // chat); here he reads every skill and turns it off, on, or deletes it. JARVIS reads the steps from his database,
+  // so nothing typed into the files in the workshop changes a skill.
+  const openSkills = new Set();
+  function renderSkills(data) {
+    const rows = (data.skills || []).map(s => {
+      const kept = s.state === 'active' || s.state === 'off' || s.state === 'paused';
+      const node = el('article', 'workshop-mission workshop-skill ' + (s.state === 'active' ? 'ok' : s.state === 'proposed' ? '' : 'warn'));
+      node.append(el('b', '', JarvisWorkshop.skillLine(s)));
+      if (s.note) node.append(el('p', 'workshop-note warn', s.note));
+      const steps = el('details'); steps.open = openSkills.has(s.id);
+      steps.ontoggle = () => { if (steps.open) openSkills.add(s.id); else openSkills.delete(s.id); };
+      steps.append(el('summary', '', 'Steps' + (s.script_name ? ' and script' : '')), el('pre', 'workshop-result', s.instructions || ''));
+      if (s.script_name) steps.append(el('p', 'workshop-note', s.script_name + ' (in the workshop: skills/' + s.name + '/)'), el('pre', 'workshop-result', s.script || ''));
+      node.append(steps, el('small', '', JarvisWorkshop.skillUse(s) + ' · suggested by ' + (s.by || 'JARVIS') + ' ' + new Date(s.created * 1000).toLocaleString()));
+      if (kept) {
+        const controls = el('div', 'workshop-controls');
+        controls.append(s.state === 'active' ? button('TURN OFF', 'text-button', () => act({action: 'skill_off', id: s.id}))
+                                             : button('TURN ON', 'text-button', () => act({action: 'skill_on', id: s.id})),
+          button('DELETE', 'text-button', () => { if (window.confirm('Delete the skill "' + s.name + '"? Its files go to the workshop\'s recycle folder.')) act({action: 'delete_skill', id: s.id}); }));
+        node.append(controls);
+      } else if (s.state !== 'proposed') {
+        node.append(button('DELETE', 'text-button', () => act({action: 'delete_skill', id: s.id})));
+      }
+      return node;
+    });
+    skillBox.replaceChildren(el('h3', '', 'Skills'),
+      el('p', 'workshop-note', 'Know-how JARVIS keeps for jobs that come up again: the steps, and at most one script. He suggests one when he has worked out a job, or when you show him one; you read the whole text on the approval card and it is kept only if you say yes. A skill gives him no new tool and no permission.'),
+      ...(rows.length ? rows : [el('p', 'workshop-note', 'No skill yet.')]));
+  }
+
   function render(data) {
     folderLine.replaceChildren(el('span', '', 'Folder: '), el('code', '', data.folder || ''), button('REFRESH', 'text-button', load),
       el('span', 'workshop-note', ' Replaced and deleted files are kept in ' + (data.recycle || '') + '.'));
     pythonLine.textContent = JarvisWorkshop.interpreterText(data.interpreters);
-    renderFolders(data); renderMinutes(data); renderMissions(data); renderLessons(data);
+    renderFolders(data); renderMinutes(data); renderPurpose(data); renderMissions(data); renderSkills(data); renderLessons(data);
   }
   async function load() {
     if (inspecting()) { missionBox.textContent = 'Not shown during an inspection.'; return; }

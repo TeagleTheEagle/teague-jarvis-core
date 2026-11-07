@@ -37,6 +37,10 @@ html.es-stopped .toasts{bottom:96px}
 .perm-group{margin:20px 0 6px;font:700 11px/1.3 var(--sans,system-ui);letter-spacing:.18em;color:#7fd4ff}
 .perm-table details{margin-top:8px}
 .perm-table summary.perm-group{cursor:pointer}
+.perm-standing{margin:4px 0 10px}
+.perm-note{color:#b4c5cf;line-height:1.6;font-size:13px;margin:0 0 8px}
+.perm-lockdown{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:10px 14px;margin:6px 0 10px;border:1px solid #2f8fdc55;border-radius:10px;color:#b4c5cf;font-size:13px;line-height:1.5}
+.perm-lockdown.on{border-color:#ff6b6b;background:#2a0d12cc;color:#ffd9d9}
 .perm-row{display:grid;grid-template-columns:minmax(170px,1.1fr) minmax(220px,2fr) 172px;gap:16px;align-items:start;padding:12px 6px;border-top:1px solid #2f8fdc33}
 .perm-row.changed{background:#38b6ff12}
 .perm-name b{display:block;font-size:14px;line-height:1.35;color:#e6f1fa}

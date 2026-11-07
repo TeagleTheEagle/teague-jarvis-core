@@ -1,0 +1,61 @@
+{
+  "schema": "jarvis-everyday-update-evaluation-v1",
+  "utc": "2026-10-13T10:12:21Z",
+  "result": "EVERYDAY_UPDATE_COMPLETE",
+  "subject": "Update of the owner's everyday JARVIS (%LOCALAPPDATA%\\JARVIS) from 1.0.17-0d38218c4e1d to 1.0.19-629bb5621d34, the OpenRouter release, by the release's own Setup (JARVIS-Setup-1.0.19-629bb5621d34.exe), by the owner on the owner's approval",
+  "approval": {
+    "owner_text": "I approve the update of my everyday JARVIS to 1.0.19",
+    "issued_utc": "2026-10-13T09:20:02Z",
+    "plan_change": "rollback change accepted, 2026-10-13T09:39:47Z",
+    "record": "C:\\Users\\jonny\\JARVIS-claude-workspace\\governance\\UPDATE-1.0.19-APPROVAL-RECORD.json",
+    "plan": "docs/UPDATE-EVERYDAY-1.0.19.md, sha256 b8020cbadbe9d6031b8641609f63c1a45c3a3ca539857d3f9b3c75dad3378ad2 at commit 2fcc6a0 (first approved as committed in f3b0e29, sha256 2356d577...)"
+  },
+  "preconditions": {
+    "stage7_check": "STAGE_7_COMPLETE for 1.0.19-629bb5621d34 in the test VM, 29 of 29 checks (docs/stage7-1.0.19-evidence/stage7-evaluation.json, commit 90f7f83)",
+    "sandbox_rehearsal": "37 of 37 PASS on the reviewed launcher, run 3 (docs/release-rehearsal-20261013-1019/update-rehearsal-3/)",
+    "independent_review": "2 high, 6 medium, 8 low, all applied before run 3 (the plan's section 'Independent review')",
+    "launcher": "tools/host/update-1.0.19/Invoke-EverydayUpdate.ps1 sha256 f022a4ab82622ca098d37086c25b3cf5d7bd58e7bd66de6e2a0970a9a0fceca2, update-step.cmd b2e18b0459a59849743255adeefe755b4ed45ab6f66bd28b3521eba6f59c049e, placed in D:\\JARVIS-update-1.0.19\\tools at 2026-10-13T09:40:00Z (prep-tools-hashes.txt)"
+  },
+  "steps": {
+    "0_key_file": "done by the owner (the file's clock 20:23, then again before 20:43 after step 1's first refusal): JARVIS_PROVIDER=openrouter, OPENROUTER_API_KEY present; names only read by the launcher",
+    "1_check": "PASS at the second attempt, check.json 2026-10-13T09:43:25.8523392Z: the first attempt (about 20:41) stopped as designed, the key file saying provider 'qwen' (the owner edited it; nothing changed). Then: the zip (sha256 838371...) and the Setup (sha256 8e5bb3...) equal their approved hashes and the Setup's record; the installed 1.0.17 verified with 1.0.16 beside it; 0 JARVIS processes; 19.6 GB free; Settings > Apps JARVIS 1.0.17 with its uninstaller in %LOCALAPPDATA%\\JARVIS-package (its answer 1.0.17); the key file: provider openrouter, OPENROUTER_API_KEY present, names recorded ['ELEVENLABS_MODEL', 'FISH_API_KEY', 'FISH_MODEL', 'GOOGLE_MAPS_EMBED_KEY', 'GOOGLE_MAPS_ROUTES_KEY', 'GROQ_MODEL', 'GROQ_VISION_MODEL', 'JARVIS_PORT', 'OPENROUTER_API_KEY'], no OPENAI_API_KEY or DASHSCOPE_API_KEY line (a rollback to 1.0.17 would need one back), copy made beside it; 10766 package files unpacked to D:\\JARVIS-update-1.0.19\\package",
+    "2_backup": "PASS, backup.json 2026-10-13T09:44:11.6176425Z: backup feac7d9622c54c469627ffede600645a made with 1.0.17's own backup code, 383 files, backup_verified; test restore restore_rehearsal_passed; the copy in D:\\JARVIS-update-1.0.19\\backup hash-equal; the program still verified",
+    "3_update": "PASS, update.json 2026-10-13T09:48:30.1532676Z: the previous Setup's package folder renamed to C:\\Users\\jonny\\AppData\\Local\\JARVIS-package-before-1.0.19-629bb5621d34 (nothing deleted); the Setup run silently with the owner's defaults, exit 0, 217.8 s wall; the installer inside it answered installed (verify package 9.403 s, copy 145.316 s, verify copy 7.567 s, stop 0.767 s, switch 0.003 s; shortcuts written); 1.0.19 verified; current.json release 1.0.19-629bb5621d34, previous 1.0.17-0d38218c4e1d; Settings > Apps JARVIS 1.0.19 Teague Industries with the new uninstaller; both shortcuts at 1.0.19's JARVIS.exe; no JARVIS.ps1; the database and the key file byte-for-byte unchanged; JARVIS not started",
+    "4_owner_check": "PASS, owner-check.json 2026-10-13T09:55:52Z: 'all working as perfect' with three screenshots (the dashboard v1.0.19: AI OpenRouter with the Qwen model named, Voice Fish Audio, Search OpenRouter, memories and conversations present; Settings > General v1.0.19; Windows Settings > Apps JARVIS 1.0.19 Teague Industries 1.11 GB)",
+    "5_restart": "PASS, restart-check.json: PC restarted 20:59; JARVIS started by itself 7.5 minutes after sign-in (the Core at 21:07:48), 8 processes all from 1.0.19; one observation on the window process recorded there and put to the owner"
+  },
+  "incidents": {
+    "none": "no incident; step 1's first stop was the launcher's key-file check doing its job"
+  },
+  "timing": {
+    "owner_steps_local": "step 1 (second attempt) 20:43, step 2 20:44, step 3 20:44 to 20:48, step 4 20:50 to 20:55, restart 20:59, JARVIS up 21:07 to 21:09",
+    "setup_wall_seconds": 217.8,
+    "installer_seconds": {
+      "verify_package": 9.403,
+      "copy": 145.316,
+      "verify_copy": 7.567,
+      "stop": 0.767,
+      "switch": 0.003
+    }
+  },
+  "state_after": {
+    "current": "1.0.19-629bb5621d34",
+    "previous_installed": "1.0.17-0d38218c4e1d (1.0.16-fccde24e2cc6 also present)",
+    "entry": "JARVIS 1.0.19, Teague Industries, uninstaller %LOCALAPPDATA%\\JARVIS-package\\unins000.exe",
+    "renamed_aside": "%LOCALAPPDATA%\\JARVIS-package-before-1.0.19-629bb5621d34 (1.0.17's Setup package, 1.2 GB, may be removed on the owner's word)",
+    "key_file_copy": "%LOCALAPPDATA%\\JARVIS\\config\\.env.before-1.0.19-629bb5621d34 (holds the keys; remove on the owner's word once 1.0.19 has earned its keep)",
+    "free_on_c_gb": 17.2,
+    "noted": "the dashboard's Recent activity showed 'Private network door: could not open port 8790' four times at 20:50; the private-network door is from 1.0.16 and 1.0.19 changed nothing in it; to be looked at separately"
+  },
+  "not_done": "nothing of the plan is outstanding; the rollback (R) was not needed. Outside the plan: the private-network door message; the C: cleanup (1.0.16, the renamed folder, the key-file copy) on the owner's word",
+  "records": {
+    "backup.json": "375fa1318c957333c4a95036fd64ad96504504952a9940632c0a4ac594aa10e8",
+    "check.json": "eac028eb7d422ad432549d8d206a624115407646646b1ab4509e20c632bbed5c",
+    "owner-check.json": "f34115b5ec1704ecb5309be5c43cc0d5ca89ccd86a54d13cb7a7a3ab6d62a4f0",
+    "prep-tools-hashes.txt": "3d0a6e1573d785d15680795a5f7b9fe6b38080be0a10957146ce8e86809aca61",
+    "restart-check.json": "9a629d42748191aba2cf90285611785d5b7aeaf42fe9c9601b0a382c2e95ac36",
+    "setup-update-20261013-094444.log": "cdefef8fcc7ad26a09e8b0cc9f414955a68baf728410387bf5c51ec8b8999547",
+    "update.json": "620c43171b2ecb459b67fab0928baadda129dc2fc8c2c1a4ef7d018903734b7f"
+  },
+  "recorded_by": "Hermes Agent (Claude Fable 5.1)"
+}

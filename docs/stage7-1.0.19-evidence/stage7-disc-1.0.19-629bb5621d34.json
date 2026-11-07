@@ -1,0 +1,48 @@
+{
+    "schema":  "jarvis-stage7-disc-v4",
+    "utc":  "2026-10-13T06:26:02.8614619Z",
+    "performed_by":  "THEGRIZZLYBEAR\\jonny",
+    "release_id":  "1.0.19-629bb5621d34",
+    "label":  "1.0.19-629bb5621d34",
+    "target":  {
+                   "schema":  "jarvis-stage7-target-v1",
+                   "release_id":  "1.0.19-629bb5621d34",
+                   "label":  "1.0.19-629bb5621d34",
+                   "egress_folder":  "stage7-1.0.19-629bb5621d34"
+               },
+    "commit":  "629bb5621d3428572094d0cd8f8b5f6bd0908d2a",
+    "zip":  "JARVIS-1.0.19-629bb5621d34.zip",
+    "zip_bytes":  533398008,
+    "zip_sha256":  "838371836d31758082d191738ebc3b41d0e34fe4b6598af6153d970ab8b21541",
+    "setup":  "JARVIS-Setup-1.0.19-629bb5621d34.exe",
+    "setup_bytes":  406914757,
+    "setup_sha256":  "8e5bb3dceef85fc486f3d03b3864dfa3479c8833ffe471646cdd33dbcc36092f",
+    "setup_record":  "JARVIS-Setup-1.0.19-629bb5621d34.setup.json",
+    "setup_record_sha256":  "d43ec915f60669a33c165803f250b163d559d3819c890d80921ad7416044c520",
+    "setup_version":  "1.0.19",
+    "guest_version":  4,
+    "disc_builder":  "New-PackageIso.ps1",
+    "disc_builder_sha256":  "cc5962c6a61f82539c178aa58c238b3691a44b559e73f34fcf3303a9ffec8961",
+    "guest_files":  [
+                        {
+                            "name":  "Invoke-Stage7.ps1",
+                            "sha256":  "d2c8257e09f58b682bf9cbff667cd48e1ce0f743e908d00c83e53cc301b60e89"
+                        },
+                        {
+                            "name":  "Invoke-Stage7Pass.ps1",
+                            "sha256":  "99085e0c5d31324d575ba6a04cc335f68e1b919667b37b6dea98f18c463396c9"
+                        },
+                        {
+                            "name":  "stage7.cmd",
+                            "sha256":  "a72b44d5a22a3273bf33f0607c3dd930af0bbd1b76ac3fa33a8793e2fc49c3fb"
+                        }
+                    ],
+    "iso":  "D:\\JARVIS-release-work\\stage7-media\\JARVIS-STAGE7-1.0.19-629bb5621d34.iso",
+    "iso_sha256":  "2fc442f91ce4504a03f06b1ac2e5d28149a5829c3171ec7c0d7c4237981d3bca",
+    "iso_bytes":  941621248,
+    "payload_files":  9,
+    "payload_manifest_sha256":  "fc67dd87b35804a328d07d8515d2396b14fdceebd5d14d2fc599872678792e10",
+    "readback":  "every payload file read back from the mounted ISO with its recorded SHA-256",
+    "copy":  "D:\\JARVIS-S6-FRESHVM\\media\\JARVIS-STAGE7-1.0.19-629bb5621d34.iso",
+    "copy_sha256":  "2fc442f91ce4504a03f06b1ac2e5d28149a5829c3171ec7c0d7c4237981d3bca"
+}

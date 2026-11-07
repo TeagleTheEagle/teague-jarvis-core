@@ -1,0 +1,41 @@
+{
+    "schema":  "jarvis-everyday-update-rollback-v3",
+    "utc":  "2026-10-13T09:36:16.5729113Z",
+    "result":  {
+                   "status":  "rolled_back",
+                   "release":  "1.0.17-0d38218c4e1d",
+                   "previous":  "1.0.19-629bb5621d34",
+                   "seconds":  {
+                                   "verify_target":  7.382,
+                                   "stop":  0.747,
+                                   "switch":  0.236
+                               },
+                   "shortcuts":  "withheld (the home is not this PC\u0027s own install home)"
+               },
+    "verify":  "verified",
+    "current":  {
+                    "release":  "1.0.17-0d38218c4e1d",
+                    "previous":  "1.0.19-629bb5621d34",
+                    "switched_at":  1791884167.8092258
+                },
+    "shortcuts":  {
+                      "desktop":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS\\releases\\1.0.17-0d38218c4e1d\\electron\\JARVIS.exe",
+                      "startup":  "C:\\Users\\jonny\\AppData\\Local\\JARVIS\\releases\\1.0.17-0d38218c4e1d\\electron\\JARVIS.exe"
+                  },
+    "key_file":  {
+                     "restored":  true,
+                     "from":  "D:\\JARVIS-release-work\\update-rehearsal-1.0.19-3\\home\\config\\.env.before-1.0.19-629bb5621d34",
+                     "kept_as":  "D:\\JARVIS-release-work\\update-rehearsal-1.0.19-3\\home\\config\\.env.rolled-back-from-1.0.19-629bb5621d34",
+                     "sha256":  "1289f90d3559ded1193328bc391fab981e5dcae3bfd232d63406c890d9720fe7",
+                     "provider_after":  "openrouter"
+                 },
+    "launcher_script_present":  false,
+    "entry_still":  {
+                        "present":  true,
+                        "name":  "JARVIS (sandbox)",
+                        "version":  "1.0.19",
+                        "publisher":  "Teague Industries",
+                        "uninstall":  "\"D:\\JARVIS-release-work\\update-rehearsal-1.0.19-3\\staging\\unins000.exe\"",
+                        "location":  "D:\\JARVIS-release-work\\update-rehearsal-1.0.19-3\\staging\\"
+                    }
+}
